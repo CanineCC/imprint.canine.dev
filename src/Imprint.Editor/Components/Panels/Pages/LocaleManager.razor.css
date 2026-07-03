@@ -1,0 +1,52 @@
+.locale-manager { margin-top: 18px; }
+
+.group-label {
+    margin: 0 0 2px;
+    padding: 0 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--ed-text-muted);
+}
+
+.locale-list {
+    display: grid;
+    gap: 2px;
+    margin: 0 0 8px;
+    padding: 0;
+    list-style: none;
+}
+
+.locale-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    border-radius: var(--ed-radius-sm);
+}
+
+.locale-row:hover { background: var(--ed-surface-2); }
+
+.locale-tag {
+    flex: 1;
+    font-weight: 600;
+    font-family: var(--ed-mono);
+}
+
+.locale-action {
+    min-height: 24px;
+    padding: 0 8px;
+    font-size: 12px;
+}
+
+.locale-add {
+    display: flex;
+    gap: 6px;
+}
+
+.locale-hint {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: var(--ed-warn);
+}

@@ -1,2 +1,146 @@
-@* STUB — replaced by the editor-UI milestone (docs/editor-ux.md). *@
-<div class="ed-stub" data-stub="BlocksPanel"></div>
+@* The Blocks panel (docs/editor-ux.md §7): the reusable-content library. Cards show
+   live usage counts; rename is inline; delete is guarded by the slice (toasts explain).
+   Creation deliberately lives on the canvas — the hint row points there. *@
+@using Imprint.Authoring.Domain.Blocks
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject BlockLibrary Library
+@inject PageDrafts Drafts
+@inject ContentUsage Usage
+@inject CommandRunner Commands
+@inject ToastService Toasts
+
+<link rel="stylesheet" href="Imprint.Editor.styles.css" />
+
+<div class="blocks-panel">
+    <div class="panel-heading">
+        <h2>Blocks</h2>
+    </div>
+    <p class="panel-hint">
+        Blocks are pieces of content you reuse across pages — edit one, and every copy
+        follows. Make one from the canvas: select any element and press <b aria-hidden="true">◈</b>
+        <span class="ed-visually-hidden">the “Make reusable block” button</span> in its toolbar.
+    </p>
+
+    @{ var blocks = Library.All(); }
+    @if (blocks.Count == 0)
+    {
+        <p class="panel-empty">No blocks yet.</p>
+    }
+
+    <ul class="block-list">
+        @foreach (var block in blocks)
+        {
+            var instances = Usage.BlockInstanceCount(block.Id);
+            var pagesUsing = Usage.PagesUsingBlock(block.Id).Count;
+            <li @key="block.Id" class="block-card">
+                <div class="block-head">
+                    @if (_renamingId == block.Id)
+                    {
+                        <input class="ed-input" aria-label="Block name" value="@_renameValue"
+                               @ref="_renameInput"
+                               @oninput="args => _renameValue = args.Value?.ToString() ?? string.Empty"
+                               @onblur="() => CommitRename(block)"
+                               @onkeydown="args => OnRenameKey(args, block)" />
+                    }
+                    else
+                    {
+                        <span class="block-name">@block.Name</span>
+                        <button type="button" class="ed-btn ed-btn-ghost block-action"
+                                title="Rename" aria-label="Rename @block.Name"
+                                @onclick="() => StartRename(block)">✎</button>
+                    }
+                    <button type="button" class="ed-btn ed-btn-ghost ed-btn-danger block-action"
+                            title="Delete" aria-label="Delete @block.Name"
+                            @onclick="() => Delete(block)">🗑</button>
+                </div>
+                <span class="block-usage">@UsageText(instances, pagesUsing)</span>
+            </li>
+        }
+    </ul>
+</div>
+
+@code {
+    private BlockDefinitionId? _renamingId;
+    private string _renameValue = "";
+    private ElementReference _renameInput;
+    private bool _focusPending;
+
+    protected override void OnInitialized()
+    {
+        Library.Changed += Refresh;
+        Drafts.Changed += Refresh;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusPending && _renamingId is not null)
+        {
+            _focusPending = false;
+            await _renameInput.FocusAsync();
+        }
+    }
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    private void StartRename(BlockDefinition block)
+    {
+        _renamingId = block.Id;
+        _renameValue = block.Name;
+        _focusPending = true;
+    }
+
+    private async Task CommitRename(BlockDefinition block)
+    {
+        if (_renamingId != block.Id)
+        {
+            return;
+        }
+
+        _renamingId = null;
+        var name = _renameValue.Trim();
+        if (name == block.Name)
+        {
+            return;
+        }
+
+        await Commands.Run(
+            new Authoring.Features.Blocks.RenameBlock.RenameBlock(block.Id, name),
+            new Authoring.Features.Blocks.RenameBlock.RenameBlock(block.Id, block.Name),
+            "block rename");
+    }
+
+    private async Task OnRenameKey(KeyboardEventArgs args, BlockDefinition block)
+    {
+        if (args.Key == "Enter")
+        {
+            await CommitRename(block);
+        }
+        else if (args.Key == "Escape")
+        {
+            _renamingId = null;
+        }
+    }
+
+    private async Task Delete(BlockDefinition block)
+    {
+        if (await Commands.Run(new Authoring.Features.Blocks.DeleteBlock.DeleteBlock(block.Id)))
+        {
+            Toasts.Show($"Deleted the block '{block.Name}'.");
+        }
+    }
+
+    private static string UsageText(int instances, int pagesUsing) => instances switch
+    {
+        0 => "Not placed on any page yet.",
+        1 => "Used once on 1 page.",
+        _ => $"Used {instances} times on {pagesUsing} page{(pagesUsing == 1 ? "" : "s")}.",
+    };
+
+    public void Dispose()
+    {
+        Library.Changed -= Refresh;
+        Drafts.Changed -= Refresh;
+    }
+}

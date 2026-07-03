@@ -1,0 +1,120 @@
+@* The site's languages: list, add (validated live), remove and change the default.
+   Domain guards (default removal, duplicates, the 10-locale cap) speak via toasts. *@
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject SiteOverview Site
+@inject CommandRunner Commands
+
+@if (Site.Current is { } site)
+{
+    <section class="locale-manager">
+        <h3 class="group-label">Languages</h3>
+        <ul class="locale-list">
+            @foreach (var locale in site.Locales)
+            {
+                var value = locale.Value;
+                <li class="locale-row">
+                    <span class="locale-tag">@value</span>
+                    @if (locale == site.DefaultLocale)
+                    {
+                        <span class="ed-badge ed-badge-accent">Default</span>
+                    }
+                    else
+                    {
+                        <button type="button" class="ed-btn ed-btn-ghost locale-action"
+                                @onclick="() => MakeDefault(value)">Make default</button>
+                        <button type="button" class="ed-btn ed-btn-ghost ed-btn-danger locale-action"
+                                title="Remove @value" aria-label="Remove @value"
+                                @onclick="() => Remove(value)">✕</button>
+                    }
+                </li>
+            }
+        </ul>
+        <div class="locale-add">
+            <label class="ed-visually-hidden" for="pp-add-locale">Add a language</label>
+            <input id="pp-add-locale" class="ed-input" placeholder="Add a language (en, da, de-AT)"
+                   @bind="_input" @bind:event="oninput" @onkeydown="OnKey" />
+            <button type="button" class="ed-btn" disabled="@(_input.Trim().Length == 0)"
+                    @onclick="Add">Add</button>
+        </div>
+        @if (_hint is { } hint)
+        {
+            <p class="locale-hint">@hint</p>
+        }
+    </section>
+}
+
+@code {
+    private string _input = "";
+    private string? _hint;
+
+    protected override void OnInitialized() => Site.Changed += Refresh;
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    private async Task Add()
+    {
+        if (Site.Current is not { } site)
+        {
+            return;
+        }
+
+        var candidate = _input.Trim();
+        if (candidate.Length == 0)
+        {
+            return;
+        }
+
+        if (!Locale.TryCreate(candidate, out var locale))
+        {
+            _hint = $"'{candidate}' does not look like a language code. Try 'en', 'da' or 'de-AT'.";
+            return;
+        }
+
+        _hint = null;
+        if (await Commands.Run(
+                new Authoring.Features.Sites.AddLocale.AddLocale(site.Id, locale.Value),
+                new Authoring.Features.Sites.RemoveLocale.RemoveLocale(site.Id, locale.Value),
+                "language addition"))
+        {
+            _input = "";
+        }
+    }
+
+    private async Task OnKey(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await Add();
+        }
+    }
+
+    private async Task MakeDefault(string value)
+    {
+        if (Site.Current is not { } site)
+        {
+            return;
+        }
+
+        await Commands.Run(
+            new Authoring.Features.Sites.ChangeDefaultLocale.ChangeDefaultLocale(site.Id, value),
+            new Authoring.Features.Sites.ChangeDefaultLocale.ChangeDefaultLocale(site.Id, site.DefaultLocale.Value),
+            "default language change");
+    }
+
+    private async Task Remove(string value)
+    {
+        if (Site.Current is not { } site)
+        {
+            return;
+        }
+
+        await Commands.Run(
+            new Authoring.Features.Sites.RemoveLocale.RemoveLocale(site.Id, value),
+            new Authoring.Features.Sites.AddLocale.AddLocale(site.Id, value),
+            "language removal");
+    }
+
+    public void Dispose() => Site.Changed -= Refresh;
+}

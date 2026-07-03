@@ -1,31 +1,104 @@
-@* STUB body — the editor-UI milestone replaces this with the real first-run flow
-   (name, locales, template picker with previews). Kept functional so the walking
-   skeleton can create a site end-to-end. *@
+@* The first-run flow: name + languages, then a starting template. Both steps live in
+   one form so the page works top-to-bottom without ceremony; the redirect after
+   creation belongs to Home.razor (it watches SiteOverview), not to this component. *@
 @using Imprint.Authoring.Domain
 @using Imprint.Editor.Services
 @inject CommandRunner Commands
 
-<main class="ed-onboarding">
+<link rel="stylesheet" href="Imprint.Editor.styles.css" />
+
+<main class="ed-onboarding ob">
     <h1>Welcome to Imprint</h1>
-    <p>Name your site and pick a starting point.</p>
-    <div class="ed-field">
-        <label for="ob-name">Site name</label>
-        <input id="ob-name" class="ed-input" @bind="_name" />
-    </div>
-    <div class="ed-field">
-        <label for="ob-locale">Default language</label>
-        <input id="ob-locale" class="ed-input" @bind="_locale" placeholder="en" />
-    </div>
-    <div class="ed-field">
-        <label for="ob-template">Template</label>
-        <select id="ob-template" class="ed-select" @bind="_template">
-            @foreach (var template in Authoring.Features.Sites.CreateSiteFromTemplate.SiteTemplates.All)
+    <p class="ob-lede">Two quick steps and your site is ready to edit.</p>
+
+    <section class="ob-step" aria-labelledby="ob-step-name">
+        <h2 id="ob-step-name"><span class="ob-step-no" aria-hidden="true">1</span> Name your site</h2>
+
+        @* Everything stays disabled until the circuit is live: values typed into the
+           prerendered page would silently vanish when interactivity takes over. *@
+        <div class="ed-field">
+            <label for="ob-name">Site name</label>
+            <input id="ob-name" class="ed-input" disabled="@(!_interactive)" @bind="_name" />
+        </div>
+
+        <div class="ob-locale-grid">
+            <div class="ed-field">
+                <label for="ob-locale">Main language</label>
+                <input id="ob-locale" class="ed-input" placeholder="en" disabled="@(!_interactive)"
+                       @bind="_locale" @bind:event="oninput" />
+            </div>
+            <div class="ed-field">
+                <label for="ob-extra">More languages <span class="ob-optional">(optional)</span></label>
+                <div class="ob-add-row">
+                    <input id="ob-extra" class="ed-input" placeholder="da, de-AT, …" disabled="@(!_interactive)"
+                           @bind="_extraInput" @bind:event="oninput" @onkeydown="OnExtraKey" />
+                    <button type="button" class="ed-btn"
+                            disabled="@(!_interactive || _extraInput.Trim().Length == 0)"
+                            @onclick="AddExtra">Add</button>
+                </div>
+            </div>
+        </div>
+
+        @if (LanguageHint is { } hint)
+        {
+            <p class="ob-hint">@hint</p>
+        }
+
+        @if (_extras.Count > 0)
+        {
+            <ul class="ob-chips" aria-label="Extra languages">
+                @foreach (var extra in _extras)
+                {
+                    <li class="ob-chip">
+                        @extra
+                        <button type="button" aria-label="Remove @extra" title="Remove @extra"
+                                @onclick="() => _extras.Remove(extra)">✕</button>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+
+    <section class="ob-step" aria-labelledby="ob-step-template">
+        <h2 id="ob-step-template"><span class="ob-step-no" aria-hidden="true">2</span> Pick a starting point</h2>
+
+        <div class="ob-templates">
+            @foreach (var template in Templates)
             {
-                <option value="@template.Key">@template.Name — @template.Description</option>
+                <button type="button" class="ob-template" aria-pressed="@(_template == template.Key)"
+                        disabled="@(!_interactive)"
+                        @onclick="() => _template = template.Key">
+                    <span class="ob-scheme" aria-hidden="true">
+                        @if (template.Key == "blank")
+                        {
+                            <span class="ob-scheme-empty"></span>
+                        }
+                        else
+                        {
+                            <span class="ob-scheme-hero"></span>
+                            <span class="ob-scheme-cols"><span></span><span></span><span></span></span>
+                            <span class="ob-scheme-split"><span></span><span></span></span>
+                            <span class="ob-scheme-cta"></span>
+                        }
+                    </span>
+                    <span class="ob-template-name">@template.Name</span>
+                    <span class="ob-template-desc">@template.Description</span>
+                </button>
             }
-        </select>
-    </div>
-    <button type="button" class="ed-btn ed-btn-primary" disabled="@_busy" @onclick="Create">
+        </div>
+
+        <div class="ed-field ob-template-field">
+            <label for="ob-template">Template</label>
+            <select id="ob-template" class="ed-select" disabled="@(!_interactive)" @bind="_template">
+                @foreach (var template in Templates)
+                {
+                    <option value="@template.Key">@template.Name — @template.Description</option>
+                }
+            </select>
+        </div>
+    </section>
+
+    <button type="button" class="ed-btn ed-btn-primary ob-create" disabled="@(_busy || !_interactive)" @onclick="Create">
         Create site
     </button>
 </main>
@@ -33,14 +106,72 @@
 @code {
     private string _name = "My site";
     private string _locale = "en";
+    private string _extraInput = "";
     private string _template = "launch";
     private bool _busy;
+    private bool _interactive;
+    private string? _extraHint;
+    private readonly List<string> _extras = [];
+
+    // OnAfterRender never runs during static SSR, so this flips exactly when the
+    // circuit is live and input can actually reach the server.
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _interactive = true;
+            StateHasChanged();
+        }
+    }
+
+    private static IReadOnlyList<Authoring.Features.Sites.CreateSiteFromTemplate.SiteTemplate> Templates =>
+        Authoring.Features.Sites.CreateSiteFromTemplate.SiteTemplates.All;
+
+    private string? LanguageHint =>
+        _locale.Trim().Length > 0 && !Locale.TryCreate(_locale, out _)
+            ? $"'{_locale}' does not look like a language code. Try 'en', 'da' or 'de-AT'."
+            : _extraHint;
+
+    private void AddExtra()
+    {
+        var candidate = _extraInput.Trim();
+        if (candidate.Length == 0)
+        {
+            return;
+        }
+
+        if (!Locale.TryCreate(candidate, out var locale))
+        {
+            _extraHint = $"'{candidate}' does not look like a language code. Try 'en', 'da' or 'de-AT'.";
+            return;
+        }
+
+        _extraHint = null;
+        _extraInput = "";
+        var isMain = Locale.TryCreate(_locale, out var main) && main == locale;
+        if (!isMain && !_extras.Contains(locale.Value))
+        {
+            _extras.Add(locale.Value);
+        }
+    }
+
+    private void OnExtraKey(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            AddExtra();
+        }
+    }
 
     private async Task Create()
     {
         _busy = true;
+        // The main language may have been typed after the extras — drop any overlap.
+        var extras = _extras
+            .Where(value => !Locale.TryCreate(_locale, out var main) || value != main.Value)
+            .ToList();
         await Commands.Run(new Authoring.Features.Sites.CreateSiteFromTemplate.CreateSiteFromTemplate(
-            SiteId.New(), _name, _locale, _template, []));
+            SiteId.New(), _name, _locale.Trim(), _template, extras));
         _busy = false;
     }
 }
