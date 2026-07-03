@@ -1,7 +1,8 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <Description>The file-system projection: renders published content to static HTML/CSS with content-hashed assets, islands, sitemap and precompression.</Description>
+    <AddRazorSupportForMvc>false</AddRazorSupportForMvc>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,6 +12,13 @@
   <ItemGroup>
     <ProjectReference Include="../Imprint.Authoring/Imprint.Authoring.csproj" />
     <ProjectReference Include="../Imprint.Rendering/Imprint.Rendering.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The two inline scripts, embedded so the publisher needs no loose files at
+         runtime: it inlines them into page markup verbatim (never rewritten). -->
+    <EmbeddedResource Include="assets/theme-toggle.js" LogicalName="Imprint.Publishing.assets.theme-toggle.js" />
+    <EmbeddedResource Include="assets/island-loader.js" LogicalName="Imprint.Publishing.assets.island-loader.js" />
   </ItemGroup>
 
 </Project>
