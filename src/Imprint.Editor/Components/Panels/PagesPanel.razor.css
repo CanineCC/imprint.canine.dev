@@ -1,0 +1,67 @@
+/* Pages panel layout; shared primitives (fields, buttons, badges) come from editor.css. */
+
+.pages-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    padding: 14px 12px;
+}
+
+.panel-empty {
+    padding: 24px 8px;
+    color: var(--ed-text-muted);
+    text-align: center;
+}
+
+.panel-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 6px 0 4px;
+}
+
+.panel-heading h2 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--ed-text-muted);
+}
+
+.group-label {
+    margin: 10px 0 2px;
+    padding: 0 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--ed-text-muted);
+}
+
+.page-list {
+    display: grid;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.new-page-form {
+    margin: 4px 0 10px;
+    padding: 10px;
+    background: var(--ed-bg);
+    border: 1px solid var(--ed-border);
+    border-radius: var(--ed-radius-sm);
+}
+
+.field-hint {
+    font-size: 12px;
+    color: var(--ed-text-muted);
+    font-family: var(--ed-mono);
+}
+
+.form-row {
+    display: flex;
+    gap: 6px;
+}

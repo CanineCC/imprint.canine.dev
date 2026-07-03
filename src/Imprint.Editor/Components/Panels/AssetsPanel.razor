@@ -1,2 +1,327 @@
-@* STUB — replaced by the editor-UI milestone (docs/editor-ux.md). *@
-<div class="ed-stub" data-stub="AssetsPanel"></div>
+@* The Assets panel (docs/editor-ux.md §7): upload (button or drop anywhere on the
+   panel), a live grid — processing states flip without a refresh — and an expandable
+   detail per file: rename, alt text per language, sizes, usage and a guarded delete. *@
+@using Imprint.Authoring.Domain.Assets
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Components.Panels.Assets
+@using Imprint.Editor.Services
+@implements IAsyncDisposable
+@inject AssetLibrary Library
+@inject BlockLibrary Blocks
+@inject PageDrafts Drafts
+@inject SiteOverview Site
+@inject ContentUsage Usage
+@inject CommandRunner Commands
+@inject ToastService Toasts
+@inject IJSRuntime Js
+
+<link rel="stylesheet" href="Imprint.Editor.styles.css" />
+
+<div class="assets-panel" @ref="_panel">
+    <div class="panel-heading">
+        <h2>Assets</h2>
+        <label class="ed-btn ed-btn-primary upload-btn">
+            Upload
+            <InputFile OnChange="OnFiles" multiple class="ed-visually-hidden" aria-label="Upload files" />
+        </label>
+    </div>
+    <p class="drop-hint">…or drop files anywhere on this panel.</p>
+
+    @foreach (var name in _uploading)
+    {
+        <div class="upload-row" role="status">Uploading @name…</div>
+    }
+
+    @{ var entries = Library.All(); }
+    @if (entries.Count == 0 && _uploading.Count == 0)
+    {
+        <p class="panel-empty">Nothing here yet. Upload images, videos or files and they will appear on this shelf.</p>
+    }
+
+    <ul class="asset-list">
+        @foreach (var asset in entries)
+        {
+            var isOpen = _openId == asset.Id;
+            <li @key="asset.Id" class="asset-card @(isOpen ? "asset-card-open" : null)">
+                <button type="button" class="asset-card-main" aria-expanded="@isOpen"
+                        @onclick="() => Toggle(asset.Id)">
+                    <AssetThumb Asset="asset" />
+                    <span class="asset-card-text">
+                        <span class="asset-name">@asset.Name</span>
+                        <span class="asset-kind">@AssetUi.KindLabel(asset.Kind)</span>
+                    </span>
+                    <span class="ed-badge @StatusClass(asset.Status)" title="@asset.StatusReason">
+                        @StatusText(asset.Status)
+                    </span>
+                </button>
+                @if (isOpen)
+                {
+                    <div class="asset-detail">
+                        @if (asset.Status is AssetStatus.Failed or AssetStatus.ReadyDegraded &&
+                             asset.StatusReason is { Length: > 0 } reason)
+                        {
+                            <p class="asset-reason">@reason</p>
+                        }
+
+                        <div class="ed-field">
+                            <label for="ap-rename">Name</label>
+                            <input id="ap-rename" class="ed-input"
+                                   value="@(_nameEdit ?? asset.Name)"
+                                   @oninput="args => _nameEdit = args.Value?.ToString() ?? string.Empty"
+                                   @onblur="() => CommitRename(asset)"
+                                   @onkeydown="args => OnRenameKey(args, asset)" />
+                        </div>
+
+                        @if (asset.Kind is AssetKind.Image or AssetKind.Vector && Site.Current is { } site)
+                        {
+                            @foreach (var locale in site.Locales)
+                            {
+                                var altLocale = locale;
+                                <div class="ed-field">
+                                    <label for="@($"ap-alt-{altLocale.Value}")">Alt text (@altLocale.Value)</label>
+                                    <input id="@($"ap-alt-{altLocale.Value}")" class="ed-input"
+                                           value="@AltValue(asset, altLocale)"
+                                           @oninput="args => _altEdits[altLocale.Value] = args.Value?.ToString() ?? string.Empty"
+                                           @onblur="() => CommitAlt(asset, altLocale)"
+                                           @onkeydown="args => OnAltKey(args, asset, altLocale)" />
+                                </div>
+                            }
+                        }
+
+                        @if (asset.Variants.Count > 0)
+                        {
+                            <h3 class="asset-subhead">Sizes</h3>
+                            <ul class="asset-variants">
+                                @foreach (var variant in asset.Variants)
+                                {
+                                    <li><span>@variant.Width × @variant.Height</span><span>@AssetUi.Bytes(variant.ByteSize)</span></li>
+                                }
+                            </ul>
+                        }
+
+                        @{
+                            var pagesUsing = Usage.PagesUsingAsset(asset.Id).Count;
+                            var blocksUsing = Usage.BlocksUsingAsset(asset.Id).Count;
+                            var inUse = pagesUsing > 0 || blocksUsing > 0;
+                        }
+                        <p class="asset-usage">@UsageText(pagesUsing, blocksUsing)</p>
+                        <div class="asset-actions">
+                            <button type="button" class="ed-btn ed-btn-danger" disabled="@inUse"
+                                    title="@(inUse ? "Still in use — remove it from those places first." : "Delete this file")"
+                                    @onclick="() => Delete(asset)">Delete</button>
+                            <span class="asset-meta">Original @AssetUi.Bytes(asset.ByteSize)</span>
+                        </div>
+                    </div>
+                }
+            </li>
+        }
+    </ul>
+</div>
+
+@code {
+    private const long MaxUploadBytes = 500L * 1024 * 1024;
+
+    private ElementReference _panel;
+    private IJSObjectReference? _module;
+    private AssetId? _openId;
+    private string? _nameEdit;
+    private readonly Dictionary<string, string> _altEdits = [];
+    private readonly List<string> _uploading = [];
+
+    protected override void OnInitialized()
+    {
+        Library.Changed += Refresh;
+        Drafts.Changed += Refresh;
+        Blocks.Changed += Refresh;
+        Site.Changed += Refresh;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await Js.InvokeAsync<IJSObjectReference>("import", "./js/file-drop.js");
+            await _module.InvokeVoidAsync("init", _panel);
+        }
+    }
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    // ----------------------------------------------------------------- upload
+
+    private async Task OnFiles(InputFileChangeEventArgs args)
+    {
+        foreach (var file in args.GetMultipleFiles(50))
+        {
+            if (file.Size > MaxUploadBytes)
+            {
+                Toasts.Error($"'{file.Name}' is larger than the 500 MB upload limit.");
+                continue;
+            }
+
+            if (file.Size == 0)
+            {
+                Toasts.Error($"'{file.Name}' is empty, so there is nothing to upload.");
+                continue;
+            }
+
+            _uploading.Add(file.Name);
+            StateHasChanged();
+            try
+            {
+                // The Stream-carrying command is by design: the bus is in-process and
+                // the handler reads it exactly once (UploadAsset.cs).
+                await using var content = file.OpenReadStream(maxAllowedSize: MaxUploadBytes);
+                await Commands.Run(new Authoring.Features.Assets.UploadAsset.UploadAsset(
+                    AssetId.New(), file.Name, ContentTypeOf(file), file.Size, content));
+            }
+            catch (Exception)
+            {
+                Toasts.Error($"Reading '{file.Name}' from the browser failed — please try again.");
+            }
+            finally
+            {
+                _uploading.Remove(file.Name);
+                StateHasChanged();
+            }
+        }
+    }
+
+    private static string ContentTypeOf(IBrowserFile file) =>
+        string.IsNullOrWhiteSpace(file.ContentType) || !file.ContentType.Contains('/')
+            ? "application/octet-stream"
+            : file.ContentType;
+
+    // ----------------------------------------------------------------- detail
+
+    private void Toggle(AssetId id)
+    {
+        _openId = _openId == id ? null : id;
+        _nameEdit = null;
+        _altEdits.Clear();
+    }
+
+    private async Task CommitRename(Asset asset)
+    {
+        if (_nameEdit is not { } edited)
+        {
+            return;
+        }
+
+        _nameEdit = null;
+        var name = edited.Trim();
+        if (name == asset.Name)
+        {
+            return;
+        }
+
+        await Commands.Run(
+            new Authoring.Features.Assets.RenameAsset.RenameAsset(asset.Id, name),
+            new Authoring.Features.Assets.RenameAsset.RenameAsset(asset.Id, asset.Name),
+            "asset rename");
+    }
+
+    private async Task OnRenameKey(KeyboardEventArgs args, Asset asset)
+    {
+        if (args.Key == "Enter")
+        {
+            await CommitRename(asset);
+        }
+        else if (args.Key == "Escape")
+        {
+            _nameEdit = null;
+        }
+    }
+
+    private string AltValue(Asset asset, Locale locale) =>
+        _altEdits.TryGetValue(locale.Value, out var editing)
+            ? editing
+            : asset.DefaultAlt.Get(locale) ?? string.Empty;
+
+    private async Task CommitAlt(Asset asset, Locale locale)
+    {
+        if (!_altEdits.TryGetValue(locale.Value, out var edited))
+        {
+            return;
+        }
+
+        _altEdits.Remove(locale.Value);
+        var previous = asset.DefaultAlt.Get(locale) ?? string.Empty;
+        if (edited == previous)
+        {
+            return;
+        }
+
+        await Commands.Run(
+            new Authoring.Features.Assets.SetAssetAlt.SetAssetAlt(asset.Id, locale.Value, edited),
+            new Authoring.Features.Assets.SetAssetAlt.SetAssetAlt(asset.Id, locale.Value, previous),
+            "alt text change");
+    }
+
+    private async Task OnAltKey(KeyboardEventArgs args, Asset asset, Locale locale)
+    {
+        if (args.Key == "Enter")
+        {
+            await CommitAlt(asset, locale);
+        }
+        else if (args.Key == "Escape")
+        {
+            _altEdits.Remove(locale.Value);
+        }
+    }
+
+    private async Task Delete(Asset asset)
+    {
+        if (await Commands.Run(new Authoring.Features.Assets.DeleteAsset.DeleteAsset(asset.Id)))
+        {
+            Toasts.Show($"Deleted '{asset.Name}'.");
+            _openId = null;
+        }
+    }
+
+    // ---------------------------------------------------------------- display
+
+    private static string StatusText(AssetStatus status) => status switch
+    {
+        AssetStatus.Pending => "Processing…",
+        AssetStatus.Ready => "Ready",
+        AssetStatus.ReadyDegraded => "Ready (limited)",
+        _ => "Failed",
+    };
+
+    private static string StatusClass(AssetStatus status) => status switch
+    {
+        AssetStatus.Ready => "ed-badge-ok",
+        AssetStatus.ReadyDegraded => "ed-badge-warn",
+        AssetStatus.Failed => "badge-failed",
+        _ => "",
+    };
+
+    private static string UsageText(int pagesUsing, int blocksUsing) => (pagesUsing, blocksUsing) switch
+    {
+        (0, 0) => "Not used on any page.",
+        (_, 0) => $"Used on {pagesUsing} page{(pagesUsing == 1 ? "" : "s")}.",
+        (0, _) => $"Used in {blocksUsing} block{(blocksUsing == 1 ? "" : "s")}.",
+        _ => $"Used on {pagesUsing} page{(pagesUsing == 1 ? "" : "s")} and in {blocksUsing} block{(blocksUsing == 1 ? "" : "s")}.",
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        Library.Changed -= Refresh;
+        Drafts.Changed -= Refresh;
+        Blocks.Changed -= Refresh;
+        Site.Changed -= Refresh;
+        if (_module is not null)
+        {
+            try
+            {
+                await _module.InvokeVoidAsync("dispose", _panel);
+                await _module.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // circuit already gone — nothing to clean on the client
+            }
+        }
+    }
+}

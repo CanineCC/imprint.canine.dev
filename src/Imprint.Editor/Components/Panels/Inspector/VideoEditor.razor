@@ -1,0 +1,23 @@
+@using Imprint.Authoring.Domain.Assets
+@inherits NodeEditorBase<VideoNode>
+
+<AssetPicker Kind="AssetKind.Video" Label="Video" Selected="Node.AssetId" SelectedChanged="SetAsset" />
+<div class="ed-field">
+    <label>Playback</label>
+    <Segmented TValue="VideoMode" Label="Playback" Value="Node.Mode"
+               Options="ModeOptions" ValueChanged="SetMode" />
+    <p class="ed-insp-hint">@ModeHint</p>
+</div>
+
+@code {
+    private static readonly (string, VideoMode)[] ModeOptions =
+        [("Ambient", VideoMode.Ambient), ("Player", VideoMode.Player)];
+
+    private string ModeHint => Node.Mode == VideoMode.Ambient
+        ? "Plays by itself, silent and looping — like a moving background."
+        : "Shows play controls; visitors press play and hear the sound.";
+
+    private Task SetAsset(AssetId? assetId) => Apply(Node with { AssetId = assetId }, "video choice");
+
+    private Task SetMode(VideoMode mode) => Apply(Node with { Mode = mode }, "video playback");
+}

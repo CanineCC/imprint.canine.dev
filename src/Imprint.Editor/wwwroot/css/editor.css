@@ -291,6 +291,8 @@ button { font: inherit; color: inherit; }
 
 .ed-ov-handle:active { cursor: grabbing; }
 
+.ed-ov-selection.ed-handle-inside .ed-ov-handle { left: 4px; top: 4px; }
+
 .ed-ov-indicator {
   background: var(--ed-accent);
   border-radius: 2px;

@@ -12,21 +12,7 @@ public sealed class WalkingSkeletonTests(EditorFixture fixture)
     [Fact]
     public async Task Onboarding_to_published_static_site()
     {
-        var page = await fixture.NewPage();
-        await page.GotoAsync("/");
-
-        // ---- onboarding (only on a fresh data dir; rerun-safe by checking first)
-        if (await page.Locator("#ob-name").CountAsync() > 0)
-        {
-            await page.FillAsync("#ob-name", "Skeleton Works");
-            await page.FillAsync("#ob-locale", "en");
-            await page.SelectOptionAsync("#ob-template", "launch");
-            await page.ClickAsync("button:has-text('Create site')");
-        }
-
-        // ---- the editor shell opens on the home page with a rendered canvas
-        await page.WaitForURLAsync("**/edit/**", new PageWaitForURLOptions { Timeout = 30_000 });
-        await page.WaitForSelectorAsync(".ed-canvas [data-node-id]");
+        var page = await fixture.OpenEditor();
         var sections = await page.Locator(".ed-canvas [data-node-type='section']").CountAsync();
         Assert.True(sections >= 4, $"expected the Launch template's sections, found {sections}");
 

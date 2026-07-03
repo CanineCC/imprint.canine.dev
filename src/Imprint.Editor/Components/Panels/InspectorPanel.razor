@@ -1,2 +1,96 @@
-@* STUB — replaced by the editor-UI milestone (docs/editor-ux.md). *@
-<div class="ed-stub" data-stub="InspectorPanel"></div>
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Components.Panels.Inspector
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject EditorSession Session
+@inject PageDrafts Drafts
+
+@* The right-hand inspector (docs/editor-ux.md §7): typed prop editors for the
+   selected node, page settings when nothing is selected. The @key per node id resets
+   editor-local state (debounce buffers, link tabs) whenever the subject changes. *@
+
+<HeadContent>
+    <link rel="stylesheet" href="Imprint.Editor.styles.css" />
+</HeadContent>
+
+<div class="ed-insp">
+    @if (Session.CurrentPage is null)
+    {
+        <p class="ed-insp-empty">Open a page to see its settings here.</p>
+    }
+    else if (Session.SelectedNode is { } node)
+    {
+        <header class="ed-insp-header">
+            <button type="button" class="ed-btn ed-btn-ghost" title="Select parent"
+                    aria-label="Select parent" @onclick="Session.SelectParent">↑</button>
+            <h2 class="ed-insp-title">@node.DisplayName</h2>
+        </header>
+        <div class="ed-insp-body" @key="node.Id">
+            @switch (node)
+            {
+                case SectionNode section:
+                    <SectionEditor Node="section" />
+                    break;
+                case StackNode stack:
+                    <StackEditor Node="stack" />
+                    break;
+                case ColumnsNode columns:
+                    <ColumnsEditor Node="columns" />
+                    break;
+                case GridNode grid:
+                    <GridEditor Node="grid" />
+                    break;
+                case HeadingNode heading:
+                    <HeadingEditor Node="heading" />
+                    break;
+                case RichTextNode:
+                    <RichTextEditor />
+                    break;
+                case ButtonNode button:
+                    <ButtonEditor Node="button" />
+                    break;
+                case ImageNode image:
+                    <ImageEditor Node="image" />
+                    break;
+                case VideoNode video:
+                    <VideoEditor Node="video" />
+                    break;
+                case SvgNode svg:
+                    <SvgEditor Node="svg" />
+                    break;
+                case SpacerNode spacer:
+                    <SpacerEditor Node="spacer" />
+                    break;
+                case DividerNode:
+                    <DividerEditor />
+                    break;
+                case WidgetNode widget:
+                    <WidgetEditor Node="widget" />
+                    break;
+                case BlockInstanceNode instance:
+                    <BlockInstanceEditor Node="instance" />
+                    break;
+            }
+        </div>
+    }
+    else
+    {
+        <PageSettings @key="Session.CurrentPageId" />
+    }
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Session.Changed += Refresh;
+        Drafts.Changed += Refresh;
+    }
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Session.Changed -= Refresh;
+        Drafts.Changed -= Refresh;
+    }
+}

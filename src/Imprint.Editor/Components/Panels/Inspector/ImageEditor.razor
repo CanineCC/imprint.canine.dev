@@ -1,0 +1,41 @@
+@using Imprint.Authoring.Domain.Assets
+@inherits NodeEditorBase<ImageNode>
+
+<AssetPicker Kind="AssetKind.Image" Label="Image" Selected="Node.AssetId" SelectedChanged="SetAsset" />
+<div class="ed-field">
+    <label for="insp-image-alt">Description@(LocaleSuffix)</label>
+    <DebouncedText Id="insp-image-alt" Placeholder="What does the picture show?"
+                   Value="@(Node.Alt.Get(Session.EditLocale) ?? "")" OnCommit="CommitAlt" />
+    <p class="ed-insp-hint">Read aloud by screen readers, and shown if the image cannot load.</p>
+</div>
+<div class="ed-field">
+    <label>Shape</label>
+    <Segmented TValue="ImageAspect" Label="Shape" Value="Node.Aspect"
+               Options="AspectOptions" ValueChanged="SetAspect" />
+</div>
+<div class="ed-field">
+    <label class="ed-insp-toggle">
+        <input type="checkbox" checked="@Node.Rounded" @onchange="SetRounded" />
+        <span>Rounded corners</span>
+    </label>
+</div>
+
+@code {
+    private static readonly (string, ImageAspect)[] AspectOptions =
+        [
+            ("Natural", ImageAspect.Natural),
+            ("Square", ImageAspect.Square),
+            ("16:9", ImageAspect.Wide16x9),
+            ("3:4", ImageAspect.Portrait3x4),
+        ];
+
+    private Task SetAsset(AssetId? assetId) => Apply(Node with { AssetId = assetId }, "image choice");
+
+    private Task CommitAlt(string value) =>
+        CommitText("alt", Node.Alt.Get(Session.EditLocale) ?? "", value, "image description");
+
+    private Task SetAspect(ImageAspect aspect) => Apply(Node with { Aspect = aspect }, "image shape");
+
+    private Task SetRounded(ChangeEventArgs args) =>
+        Apply(Node with { Rounded = args.Value is bool rounded && rounded }, "corner rounding");
+}

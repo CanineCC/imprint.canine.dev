@@ -29,14 +29,19 @@ public sealed class EditorFixture : IAsyncLifetime
         Directory.CreateDirectory(_dataDirectory);
 
         var editorProject = FindRepoPath("src/Imprint.Editor");
-        _app = Process.Start(new ProcessStartInfo
+        var startInfo = new ProcessStartInfo
         {
             FileName = "dotnet",
             Arguments = $"run --project \"{editorProject}\" --no-build --ImprintData=\"{_dataDirectory}\" --urls={BaseUrl}",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             WorkingDirectory = FindRepoPath("."),
-        }) ?? throw new InvalidOperationException("Failed to start the editor process.");
+        };
+        // Circuit-level detail: a dead circuit is invisible at Information level, and
+        // "the click did nothing" bugs live exactly there.
+        startInfo.Environment["Logging__LogLevel__Microsoft.AspNetCore.Components"] = "Debug";
+        startInfo.Environment["Logging__LogLevel__Microsoft.AspNetCore.SignalR"] = "Debug";
+        _app = Process.Start(startInfo) ?? throw new InvalidOperationException("Failed to start the editor process.");
 
         // The app's console is the first place to look when an E2E step goes quiet.
         AppLogPath = Path.Combine(_dataDirectory, "editor-console.log");
@@ -62,7 +67,19 @@ public sealed class EditorFixture : IAsyncLifetime
             ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
             BaseURL = BaseUrl,
         });
-        return await context.NewPageAsync();
+        var page = await context.NewPageAsync();
+
+        // Browser-side failures otherwise vanish silently in headless runs.
+        var jsLog = Path.Combine(DataDirectory, "js-console.log");
+        page.Console += (_, message) =>
+        {
+            if (message.Type is "error" or "warning")
+            {
+                File.AppendAllText(jsLog, $"[console.{message.Type}] {message.Text}\n");
+            }
+        };
+        page.PageError += (_, error) => File.AppendAllText(jsLog, $"[pageerror] {error}\n");
+        return page;
     }
 
     public async ValueTask DisposeAsync()

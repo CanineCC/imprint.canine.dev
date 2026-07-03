@@ -1,0 +1,131 @@
+@using Imprint.Authoring.Features.Blocks.UpdateBlockFromInstance
+@using Imprint.Authoring.Features.Pages.DetachBlockInstance
+@using Imprint.Authoring.Features.Pages.SetBlockOverride
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Services
+@inherits NodeEditorBase<BlockInstanceNode>
+@inject BlockLibrary Blocks
+@inject ToastService Toasts
+
+@* A placed block: its structure follows the definition; only the text-bearing fields
+   can be reworded per instance. Overrides ride on the instance and clear when empty. *@
+@if (Blocks.Get(Node.DefinitionId) is not { } definition)
+{
+    <p class="ed-insp-hint">
+        The block this element came from has been deleted, so there is nothing to edit.
+        You can delete this element from the page.
+    </p>
+}
+else
+{
+    <p class="ed-insp-hint">
+        This is a placed copy of the “@definition.Name” block. Reword its text just
+        here — leave a field empty to use the block's own words.
+    </p>
+
+    @foreach (var field in OverridableFields(definition.Spec))
+    {
+        var target = field;
+        var fieldId = $"insp-override-{target.NodeId.Compact}-{target.Field}";
+        <div class="ed-field">
+            <label for="@fieldId">@target.Label@(LocaleSuffix)</label>
+            <DebouncedText Id="@fieldId" Multiline="@target.IsHtml"
+                           Placeholder="@target.DefinitionText"
+                           Value="@(CurrentOverride(target) ?? "")"
+                           OnCommit="value => CommitOverride(target, value)" />
+        </div>
+    }
+
+    <div class="ed-insp-actions">
+        <button type="button" class="ed-btn" @onclick="UpdateDefinition">Update block from this instance</button>
+        <p class="ed-insp-hint">Applies this element's wording to the block everywhere it is used.</p>
+        <button type="button" class="ed-btn" @onclick="Detach">Detach from block</button>
+        <p class="ed-insp-hint">Turns this into ordinary content that no longer follows the block.</p>
+    </div>
+}
+
+@code {
+    private readonly record struct OverridableField(
+        NodeId NodeId, string Field, string Label, bool IsHtml, string DefinitionText);
+
+    // The same field set BlockContentResolver overlays when the instance renders:
+    // heading text, rich text, button labels, image and graphic descriptions.
+    private IEnumerable<OverridableField> OverridableFields(Node spec)
+    {
+        foreach (var node in PageTree.Flatten(spec))
+        {
+            OverridableField? found = node switch
+            {
+                HeadingNode heading =>
+                    new OverridableField(node.Id, "text", $"{heading.DisplayName} text", false, Resolve(heading.Text)),
+                RichTextNode richText =>
+                    new OverridableField(node.Id, "html", "Text", true, Resolve(richText.Html)),
+                ButtonNode button =>
+                    new OverridableField(node.Id, "label", "Button label", false, Resolve(button.Label)),
+                ImageNode image =>
+                    new OverridableField(node.Id, "alt", "Image description", false, Resolve(image.Alt)),
+                SvgNode svg =>
+                    new OverridableField(node.Id, "alt", "Graphic description", false, Resolve(svg.Alt)),
+                _ => null,
+            };
+            if (found is { } field)
+            {
+                yield return field;
+            }
+        }
+    }
+
+    private string Resolve(LocalizedText text) =>
+        text.Resolve(Session.EditLocale, Site.Current?.DefaultLocale ?? Session.EditLocale);
+
+    private string? CurrentOverride(OverridableField field) =>
+        Node.Overrides.Get(field.NodeId, field.Field, Session.EditLocale);
+
+    private Task CommitOverride(OverridableField field, string raw)
+    {
+        if (Session.CurrentPageId is not { } pageId)
+        {
+            return Task.CompletedTask;
+        }
+
+        var value = string.IsNullOrWhiteSpace(raw) ? null : raw;
+        if (value is not null && field.IsHtml && !value.TrimStart().StartsWith('<'))
+        {
+            // Plain words are welcome for text fields: wrap them as one paragraph in
+            // the canonical shape instead of bouncing the edit back with an error.
+            value = $"<p>{value.Replace("&", "&amp;").Replace("<", "&lt;")}</p>";
+        }
+
+        var old = CurrentOverride(field);
+        if (old == value)
+        {
+            return Task.CompletedTask;
+        }
+
+        var locale = Session.EditLocale.Value;
+        return Commands.Run(
+            new SetBlockOverride(pageId, Node.Id, field.NodeId, field.Field, locale, value),
+            new SetBlockOverride(pageId, Node.Id, field.NodeId, field.Field, locale, old),
+            "block wording");
+    }
+
+    private async Task UpdateDefinition()
+    {
+        if (Session.CurrentPageId is { } pageId &&
+            await Commands.Run(new UpdateBlockFromInstance(pageId, Node.Id)))
+        {
+            Toasts.Show("The block now matches this element everywhere it is used.");
+        }
+    }
+
+    private async Task Detach()
+    {
+        if (Session.CurrentPageId is { } pageId &&
+            await Commands.Run(new DetachBlockInstance(pageId, Node.Id)))
+        {
+            // The detached content gets fresh ids, so the old selection points nowhere.
+            Session.Select(null);
+            Toasts.Show("Detached — this content now stands on its own.");
+        }
+    }
+}

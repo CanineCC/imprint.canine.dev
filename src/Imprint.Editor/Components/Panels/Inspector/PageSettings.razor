@@ -1,0 +1,246 @@
+@using Imprint.Authoring.Features.Pages.ChangePageMeta
+@using Imprint.Authoring.Features.Pages.ChangePageTitle
+@using Imprint.Authoring.Features.Pages.ChangeSlug
+@using Imprint.Authoring.Features.Pages.DeletePage
+@using Imprint.Authoring.Features.Pages.UnpublishPage
+@using Imprint.Authoring.Features.Sites.ChangeNavigation
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject EditorSession Session
+@inject PageDrafts Drafts
+@inject PageList Pages
+@inject SiteOverview Site
+@inject CommandRunner Commands
+@inject ToastService Toasts
+@inject NavigationManager Navigation
+
+@* Nothing selected → the page itself is the subject: title, address, search info,
+   navigation membership and the publish/delete actions (docs/editor-ux.md §7). *@
+<header class="ed-insp-header">
+    <h2 class="ed-insp-title">Page</h2>
+</header>
+<div class="ed-insp-body">
+    @if (Session.CurrentPageId is not { } pageId ||
+         Drafts.Get(pageId) is not { } draft ||
+         Pages.Get(pageId) is not { } summary)
+    {
+        <p class="ed-insp-empty">This page is no longer available.</p>
+    }
+    else
+    {
+        <div class="ed-field">
+            <label for="insp-page-title">Title@(LocaleSuffix)</label>
+            <DebouncedText Id="insp-page-title" Placeholder="Page title"
+                           Value="@(draft.Title.Get(Session.EditLocale) ?? "")" OnCommit="CommitTitle" />
+        </div>
+
+        <div class="ed-field">
+            <label for="insp-page-slug">Web address</label>
+            <DebouncedText Id="insp-page-slug" Value="@summary.Slug.Value"
+                           OnCommit="CommitSlug" OnLiveChange="OnSlugTyping" />
+            @if (_slugError is { } slugError)
+            {
+                <p class="ed-insp-error">@slugError</p>
+            }
+            else if (summary.IsHome)
+            {
+                <p class="ed-insp-hint">This is the home page — visitors see it at /</p>
+            }
+            else
+            {
+                <p class="ed-insp-hint">Visitors see this page at /@(_slugPreview ?? summary.Slug.Value)/</p>
+            }
+            <div>
+                <button type="button" class="ed-btn" @onclick="SuggestSlug">Suggest from title</button>
+            </div>
+        </div>
+
+        <div class="ed-field">
+            <label for="insp-meta-title">Search result title@(LocaleSuffix)</label>
+            <DebouncedText Id="insp-meta-title"
+                           Placeholder="@(draft.Title.Get(Session.EditLocale) ?? "")"
+                           Value="@(draft.MetaTitle.Get(Session.EditLocale) ?? "")" OnCommit="CommitMetaTitle" />
+            <p class="ed-insp-hint">The headline search engines show. Leave empty to use the page title.</p>
+        </div>
+
+        <div class="ed-field">
+            <label for="insp-meta-description">Search result description@(LocaleSuffix)</label>
+            <DebouncedText Id="insp-meta-description" Multiline
+                           Value="@(draft.MetaDescription.Get(Session.EditLocale) ?? "")"
+                           OnCommit="CommitMetaDescription" />
+            <p class="ed-insp-hint">A short summary search engines can show under the title.</p>
+        </div>
+
+        <div class="ed-field">
+            <label class="ed-insp-toggle">
+                <input type="checkbox" checked="@summary.IsInNavigation" @onchange="ToggleNavigation" />
+                <span>Show in site navigation</span>
+            </label>
+        </div>
+
+        <div class="ed-insp-actions">
+            @if (summary.PublishedVersion is not null)
+            {
+                <button type="button" class="ed-btn" @onclick="Unpublish">Unpublish</button>
+                <p class="ed-insp-hint">Takes the page off the public site. Your draft stays as it is.</p>
+            }
+            <button type="button" class="ed-btn ed-btn-danger" @onclick="Delete">Delete page</button>
+        </div>
+    }
+</div>
+
+@code {
+    private string? _slugPreview;
+    private string? _slugError;
+
+    private string LocaleSuffix =>
+        Site.Current is { Locales.Count: > 1 } ? $" ({Session.EditLocale.Value})" : string.Empty;
+
+    private Task CommitTitle(string value)
+    {
+        if (Session.CurrentPageId is not { } pageId || Drafts.Get(pageId) is not { } draft)
+        {
+            return Task.CompletedTask;
+        }
+
+        var locale = Session.EditLocale.Value;
+        var old = draft.Title.Get(Session.EditLocale) ?? "";
+        return old == value
+            ? Task.CompletedTask
+            : Commands.Run(
+                new ChangePageTitle(pageId, locale, value),
+                new ChangePageTitle(pageId, locale, old),
+                "title change");
+    }
+
+    private void OnSlugTyping(string value)
+    {
+        _slugPreview = value;
+        _slugError = null;
+    }
+
+    private async Task CommitSlug(string raw)
+    {
+        if (Session.CurrentPageId is not { } pageId || Pages.Get(pageId) is not { } summary)
+        {
+            return;
+        }
+
+        // Shape problems speak inline while typing; taken-by-another-page speaks via
+        // toast from the slice — both in human words.
+        if (!Slug.TryCreate(raw, out var slug, out var error))
+        {
+            _slugError = error;
+            return;
+        }
+
+        _slugError = null;
+        _slugPreview = null;
+        if (slug.Value == summary.Slug.Value)
+        {
+            return;
+        }
+
+        await Commands.Run(
+            new ChangeSlug(pageId, slug.Value),
+            new ChangeSlug(pageId, summary.Slug.Value),
+            "address change");
+    }
+
+    private async Task SuggestSlug()
+    {
+        if (Session.CurrentPageId is not { } pageId || Drafts.Get(pageId) is not { } draft ||
+            Site.Current is not { } site)
+        {
+            return;
+        }
+
+        var title = draft.Title.Resolve(Session.EditLocale, site.DefaultLocale);
+        await CommitSlug(Slug.Suggest(title));
+    }
+
+    private Task CommitMetaTitle(string value) => CommitMeta(value, null);
+
+    private Task CommitMetaDescription(string value) => CommitMeta(null, value);
+
+    // One command carries both fields, so each commit sends the sibling's current value.
+    private Task CommitMeta(string? metaTitle, string? metaDescription)
+    {
+        if (Session.CurrentPageId is not { } pageId || Drafts.Get(pageId) is not { } draft)
+        {
+            return Task.CompletedTask;
+        }
+
+        var locale = Session.EditLocale.Value;
+        var oldTitle = draft.MetaTitle.Get(Session.EditLocale) ?? "";
+        var oldDescription = draft.MetaDescription.Get(Session.EditLocale) ?? "";
+        var newTitle = metaTitle ?? oldTitle;
+        var newDescription = metaDescription ?? oldDescription;
+        return newTitle == oldTitle && newDescription == oldDescription
+            ? Task.CompletedTask
+            : Commands.Run(
+                new ChangePageMeta(pageId, locale, newTitle, newDescription),
+                new ChangePageMeta(pageId, locale, oldTitle, oldDescription),
+                "search info change");
+    }
+
+    private async Task ToggleNavigation(ChangeEventArgs args)
+    {
+        if (Session.CurrentPageId is not { } pageId || Site.Current is not { } site)
+        {
+            return;
+        }
+
+        var include = args.Value is bool on && on;
+        var current = site.Navigation;
+        if (include == current.Any(item => item.PageId == pageId))
+        {
+            return;
+        }
+
+        // Append at the end / drop this page; everything else keeps its order.
+        IReadOnlyList<NavigationItem> updated = include
+            ? [.. current, new NavigationItem(pageId, null)]
+            : [.. current.Where(item => item.PageId != pageId)];
+        await Commands.Run(
+            new ChangeNavigation(site.Id, updated),
+            new ChangeNavigation(site.Id, [.. current]),
+            "navigation change");
+    }
+
+    private async Task Unpublish()
+    {
+        if (Session.CurrentPageId is { } pageId && await Commands.Run(new UnpublishPage(pageId)))
+        {
+            Toasts.Show("The page is no longer on the public site.");
+        }
+    }
+
+    private async Task Delete()
+    {
+        if (Session.CurrentPageId is { } pageId && await Commands.Run(new DeletePage(pageId)))
+        {
+            Toasts.Show("Page deleted.");
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        Session.Changed += Refresh;
+        Drafts.Changed += Refresh;
+        Pages.Changed += Refresh;
+        Site.Changed += Refresh;
+    }
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Session.Changed -= Refresh;
+        Drafts.Changed -= Refresh;
+        Pages.Changed -= Refresh;
+        Site.Changed -= Refresh;
+    }
+}

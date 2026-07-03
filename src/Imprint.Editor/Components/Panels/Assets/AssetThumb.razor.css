@@ -1,0 +1,19 @@
+.asset-thumb {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    flex: none;
+    overflow: hidden;
+    background: var(--ed-surface-2);
+    border: 1px solid var(--ed-border);
+    border-radius: var(--ed-radius-sm);
+}
+
+.asset-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.asset-glyph { font-size: 18px; }

@@ -1,0 +1,25 @@
+@* A bounded integer control: minus/plus, immediate dispatch, no free typing —
+   the domain's ranges are the UI's ranges. *@
+<div class="ed-stepper" role="group" aria-label="@Label">
+    <button type="button" class="ed-btn"
+            aria-label="@($"Decrease {Label.ToLowerInvariant()}")"
+            disabled="@(Value - Step < Min)"
+            @onclick="() => Nudge(-Step)">−</button>
+    <span class="ed-stepper-value" aria-live="polite">@Value@(Unit is null ? "" : $" {Unit}")</span>
+    <button type="button" class="ed-btn"
+            aria-label="@($"Increase {Label.ToLowerInvariant()}")"
+            disabled="@(Value + Step > Max)"
+            @onclick="() => Nudge(+Step)">+</button>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter] public int Min { get; set; }
+    [Parameter] public int Max { get; set; } = int.MaxValue;
+    [Parameter] public int Step { get; set; } = 1;
+    [Parameter] public string? Unit { get; set; }
+    [Parameter, EditorRequired] public int Value { get; set; }
+    [Parameter] public EventCallback<int> ValueChanged { get; set; }
+
+    private Task Nudge(int delta) => ValueChanged.InvokeAsync(Math.Clamp(Value + delta, Min, Max));
+}

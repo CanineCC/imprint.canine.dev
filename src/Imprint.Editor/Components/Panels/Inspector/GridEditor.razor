@@ -1,0 +1,21 @@
+@inherits NodeEditorBase<GridNode>
+
+<div class="ed-field">
+    <label>Smallest card width</label>
+    <Stepper Label="Smallest card width" Min="160" Max="480" Step="20" Unit="px"
+             Value="Node.MinItemPx" ValueChanged="SetMinItem" />
+    <p class="ed-insp-hint">Cards never get narrower than this — the grid adds or drops columns to fit.</p>
+</div>
+<div class="ed-field">
+    <label>Gap</label>
+    <Segmented TValue="Gap" Label="Gap" Value="Node.Gap" Options="GapOptions" ValueChanged="SetGap" />
+</div>
+
+@code {
+    private static readonly (string, Gap)[] GapOptions =
+        [("Tight", Gap.Tight), ("Normal", Gap.Normal), ("Loose", Gap.Loose)];
+
+    private Task SetMinItem(int minItemPx) => Apply(Node with { MinItemPx = minItemPx }, "card size");
+
+    private Task SetGap(Gap gap) => Apply(Node with { Gap = gap }, "grid gap");
+}
