@@ -20,6 +20,15 @@ public sealed class AssetEventSamples : IEventSampleProvider
         new VideoTranscoded("derived/intro.webm", 5_242_880),
         new ProcessingFailed("The file is not a decodable image."),
         new ProcessingSkipped("ffmpeg is not installed; the original file will be published as-is."),
+        new DarkVariantUploaded("originals/harbour-sunset-dark.png", "image/png"),
+        new DarkImageVariantsGenerated(
+        [
+            new ImageVariant(480, 320, "variants/harbour-sunset-dark-480.webp", 22_048),
+            new ImageVariant(960, 640, "variants/harbour-sunset-dark-960.webp", 66_910),
+        ]),
+        new DarkSvgSanitized("derived/logo-dark-clean.svg", 2),
+        new DarkVariantFailed("The dark file is not a decodable image."),
+        new DarkVariantRemoved(),
         new AssetAltChanged(new Locale("da-DK"), "En solnedgang over havnen"),
         new AssetRenamed("Harbour sunset"),
         new AssetDeleted(),

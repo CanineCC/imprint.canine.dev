@@ -1,5 +1,8 @@
 using Imprint.Authoring.Domain;
+using Imprint.Authoring.Domain.Assets;
+using Imprint.Authoring.Features.Assets.ProcessAssetDarkVariant;
 using Imprint.Authoring.Features.Assets.ProcessUploadedAsset;
+using Imprint.Authoring.Features.Assets.UploadAssetDarkVariant;
 using Imprint.Authoring.Projections;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -33,7 +36,7 @@ public sealed class AssetProcessingWorkerTests
         worker.RecoverPendingAssets();
 
         Assert.True(freshQueue.Reader.TryRead(out var recovered));
-        Assert.Equal(pending, recovered);
+        Assert.Equal(new AssetProcessingItem(pending, AssetProcessingKind.Base), recovered);
         Assert.False(freshQueue.Reader.TryRead(out _), "only the Pending asset should be re-enqueued");
     }
 
@@ -44,6 +47,46 @@ public sealed class AssetProcessingWorkerTests
         var assetId = AssetId.New();
         await host.Ok(SliceTestHelpers.NewUpload(assetId, "photo.jpg", "image/jpeg"));
         await host.Ok(new ProcessUploadedAsset(assetId));
+
+        var freshQueue = new AssetProcessingQueue();
+        var worker = new AssetProcessingWorker(
+            freshQueue, host.Get<AssetLibrary>(), host.Dispatcher, NullLogger<AssetProcessingWorker>.Instance);
+
+        worker.RecoverPendingAssets();
+
+        Assert.False(freshQueue.Reader.TryRead(out _));
+    }
+
+    [Fact]
+    public async Task Startup_recovery_re_enqueues_a_pending_dark_variant()
+    {
+        await using var host = SliceTestHelpers.NewAssetHost();
+        var id = AssetId.New();
+        await host.Ok(SliceTestHelpers.NewUpload(id, "logo.png", "image/png"));
+        await host.Ok(new ProcessUploadedAsset(id)); // base → Ready
+        await host.Ok(new UploadAssetDarkVariant(id, "logo-dark.png", "image/png", 1024, new MemoryStream(new byte[1024])));
+        // Dark variant left Pending (its ProcessAssetDarkVariant never ran).
+
+        var freshQueue = new AssetProcessingQueue();
+        var worker = new AssetProcessingWorker(
+            freshQueue, host.Get<AssetLibrary>(), host.Dispatcher, NullLogger<AssetProcessingWorker>.Instance);
+
+        worker.RecoverPendingAssets();
+
+        Assert.True(freshQueue.Reader.TryRead(out var recovered));
+        Assert.Equal(new AssetProcessingItem(id, AssetProcessingKind.DarkVariant), recovered);
+        Assert.False(freshQueue.Reader.TryRead(out _), "the base is already Ready — only the dark variant is Pending");
+    }
+
+    [Fact]
+    public async Task Startup_recovery_with_a_ready_dark_variant_enqueues_nothing()
+    {
+        await using var host = SliceTestHelpers.NewAssetHost();
+        var id = AssetId.New();
+        await host.Ok(SliceTestHelpers.NewUpload(id, "logo.png", "image/png"));
+        await host.Ok(new ProcessUploadedAsset(id));
+        await host.Ok(new UploadAssetDarkVariant(id, "logo-dark.png", "image/png", 1024, new MemoryStream(new byte[1024])));
+        await host.Ok(new ProcessAssetDarkVariant(id)); // dark → Ready
 
         var freshQueue = new AssetProcessingQueue();
         var worker = new AssetProcessingWorker(

@@ -46,6 +46,42 @@ public sealed record ProcessingFailed(string Reason);
 [EventType("asset.processing-skipped")]
 public sealed record ProcessingSkipped(string Reason);
 
+// The optional dark-mode variant's slice of the lifecycle. It layers onto an already
+// processed Image/Vector asset and has its own Pending→Ready|dropped machine, so the
+// base asset stays usable whatever happens to the variant.
+
+[EventType("asset.dark-variant-uploaded")]
+public sealed record DarkVariantUploaded(string StorageKey, string ContentType);
+
+[EventType("asset.dark-image-variants-generated")]
+public sealed record DarkImageVariantsGenerated(IReadOnlyList<ImageVariant> Variants)
+{
+    // A record holding a list compares by reference, but events must compare by value
+    // (specs and round-trip tests rely on it) — same precedent as ImageVariantsGenerated.
+    public bool Equals(DarkImageVariantsGenerated? other) =>
+        other is not null && Variants.SequenceEqual(other.Variants);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        foreach (var variant in Variants)
+        {
+            hash.Add(variant);
+        }
+
+        return hash.ToHashCode();
+    }
+}
+
+[EventType("asset.dark-svg-sanitized")]
+public sealed record DarkSvgSanitized(string StorageKey, int RemovedNodeCount);
+
+[EventType("asset.dark-variant-failed")]
+public sealed record DarkVariantFailed(string Reason);
+
+[EventType("asset.dark-variant-removed")]
+public sealed record DarkVariantRemoved;
+
 [EventType("asset.alt-changed")]
 public sealed record AssetAltChanged(Locale Locale, string Alt);
 

@@ -35,11 +35,11 @@ public sealed class UploadAssetTests
         var media = (InMemoryMediaStore)host.Get<IMediaStore>();
         Assert.Equal(2048, media.Files[asset.OriginalStorageKey].Length);
 
-        // And the id is on the processing queue (File kind included — the processing
-        // handler no-ops for it; one queue, one rule).
+        // And the id is on the processing queue as a Base item (File kind included —
+        // the processing handler no-ops for it; one queue, one rule).
         var queue = host.Get<AssetProcessingQueue>();
         Assert.True(queue.Reader.TryRead(out var queued));
-        Assert.Equal(assetId, queued);
+        Assert.Equal(new AssetProcessingItem(assetId, AssetProcessingKind.Base), queued);
         Assert.False(queue.Reader.TryRead(out _));
     }
 
