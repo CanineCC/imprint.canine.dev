@@ -121,6 +121,32 @@ internal sealed class PublishedAssetCatalog
             sources[(sources.Count - 1) / 2].Url,
             sources, largest.Width, largest.Height,
             InlineSvg: null, asset.DefaultAlt);
+
+        // Optional dark rendition: copied like the base variants under a "-dark-" name.
+        // Its hashes are added to this entry so a re-processed dark variant flips the
+        // referencing pages' asset-staleness key and they re-render.
+        if (asset.HasDarkVariant && asset.DarkVariants.Count > 0)
+        {
+            var darkSources = new List<ImageSource>();
+            foreach (var variant in asset.DarkVariants.OrderBy(v => v.Width))
+            {
+                var hash = await HashOf(media, variant.StorageKey, ct);
+                var relative = $"assets/{asset.Id.Compact}-dark-{variant.Width}.{hash}.webp";
+                files.Add(new AssetFile(relative, variant.StorageKey));
+                hashes.Add(hash);
+                darkSources.Add(new ImageSource($"/{relative}", variant.Width, variant.Height));
+            }
+
+            var darkLargest = darkSources[^1];
+            info = info with
+            {
+                DarkImageVariants = darkSources,
+                DarkIntrinsicWidth = darkLargest.Width,
+                DarkIntrinsicHeight = darkLargest.Height,
+                DarkUrl = darkSources[(darkSources.Count - 1) / 2].Url,
+            };
+        }
+
         return new Entry(info, files, hashes);
     }
 
@@ -151,9 +177,30 @@ internal sealed class PublishedAssetCatalog
         // content hash still participates in page staleness: a re-sanitized SVG must
         // re-render the pages that embed it.
         var hash = Hashing.Hash16(System.Text.Encoding.UTF8.GetBytes(svg));
+        var hashes = new List<string> { hash };
         var info = new AssetRenderInfo(
             AssetKind.Vector, AssetStatus.Ready, "", [], null, null, svg, asset.DefaultAlt);
-        return new Entry(info, [], [hash]);
+
+        // Optional dark SVG: inlined too (never a file), re-checked by the same guard.
+        // A dark variant that fails the re-check is dropped; the asset still publishes
+        // its safe light rendition, neutrally.
+        if (asset.HasDarkVariant && asset.DarkDerivedStorageKey is { } darkKey)
+        {
+            var darkSvg = await media.ReadAllText(darkKey, ct);
+            if (SvgPublishGuard.IsSafe(darkSvg))
+            {
+                info = info with { DarkInlineSvg = darkSvg };
+                hashes.Add(Hashing.Hash16(System.Text.Encoding.UTF8.GetBytes(darkSvg)));
+            }
+            else
+            {
+                logger.LogWarning(
+                    "Sanitized dark SVG for asset {AssetId} failed the publish-time safety re-check; publishing without it.",
+                    asset.Id);
+            }
+        }
+
+        return new Entry(info, [], hashes);
     }
 
     private static async Task<string> HashOf(IMediaStore media, string storageKey, CancellationToken ct)

@@ -1,0 +1,29 @@
+/* The dark-mode variant slot in the asset detail; primitives (buttons, badges, thumb)
+   come from editor.css and the shared AssetThumb component. */
+
+.asset-dark {
+    margin-block-start: 10px;
+    padding-block-start: 10px;
+    border-block-start: 1px solid var(--ed-border);
+}
+
+.asset-dark-hint {
+    margin: 0 0 8px;
+    font-size: 12px;
+    color: var(--ed-text-muted);
+}
+
+.asset-dark-add { cursor: pointer; }
+
+.asset-dark-status {
+    font-size: 12px;
+    color: var(--ed-text-muted);
+}
+
+.asset-dark-ready {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.asset-dark-remove { margin-inline-start: auto; }

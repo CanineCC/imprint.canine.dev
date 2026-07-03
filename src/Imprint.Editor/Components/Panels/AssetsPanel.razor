@@ -87,6 +87,11 @@
                             }
                         }
 
+                        @if (asset.Kind is AssetKind.Image or AssetKind.Vector)
+                        {
+                            <AssetDarkVariant Asset="asset" />
+                        }
+
                         @if (asset.Variants.Count > 0)
                         {
                             <h3 class="asset-subhead">Sizes</h3>

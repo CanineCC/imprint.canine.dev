@@ -46,6 +46,20 @@ internal static class RenderHarness
         null,
         LocalizedText.Of(En, "Library alt"));
 
+    /// <summary>The neutral image plus a full dark rendition, so views emit both.</summary>
+    public static AssetRenderInfo ImageAssetWithDark() => ImageAsset() with
+    {
+        DarkImageVariants =
+        [
+            new ImageSource("/assets/img-dark-480.webp", 480, 320),
+            new ImageSource("/assets/img-dark-960.webp", 960, 640),
+            new ImageSource("/assets/img-dark-1440.webp", 1440, 960),
+        ],
+        DarkIntrinsicWidth = 1440,
+        DarkIntrinsicHeight = 960,
+        DarkUrl = "/assets/img-dark-960.webp",
+    };
+
     public static AssetRenderInfo VideoAsset() => new(
         AssetKind.Video, AssetStatus.Ready, "/assets/clip.webm", [], null, null, null, LocalizedText.Empty);
 
@@ -58,6 +72,12 @@ internal static class RenderHarness
         null,
         "<svg viewBox=\"0 0 10 10\"><path d=\"M0 0h10v10z\"/></svg>",
         defaultAlt is null ? LocalizedText.Empty : LocalizedText.Of(En, defaultAlt));
+
+    /// <summary>The neutral SVG plus a distinct dark inline SVG, so the view emits both wrappers.</summary>
+    public static AssetRenderInfo SvgAssetWithDark(string? defaultAlt = null) => SvgAsset(defaultAlt) with
+    {
+        DarkInlineSvg = "<svg viewBox=\"0 0 10 10\"><circle cx=\"5\" cy=\"5\" r=\"4\"/></svg>",
+    };
 
     public static Task<string> RenderNode(RenderContext ctx, Node node) =>
         Render(WrapInContext(ctx, builder =>
