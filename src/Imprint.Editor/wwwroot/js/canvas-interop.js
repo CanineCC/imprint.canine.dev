@@ -212,7 +212,13 @@ function onPointerMove(event) {
   }
 
   if (!state.edit) {
-    trackGap(event.clientX, event.clientY);
+    // Don't recompute the gap while the pointer is over the pill itself. The pill is an
+    // overlay control with its own pointer events, so hit-testing from here would find
+    // the pill (not a canvas node), conclude "no boundary" and hide it — pulling the
+    // target out from under the very click that's reaching for it.
+    if (event.target !== state.ui.gapPill) {
+      trackGap(event.clientX, event.clientY);
+    }
   }
 }
 
