@@ -570,14 +570,25 @@ function onEditInput() {
   }, 800);
 }
 
-function onEditBlur() {
-  // Clicking the floating toolbar blurs the text; that must not end the session.
-  setTimeout(() => {
-    if (state?.edit && !state.edit.el.contains(document.activeElement)
-        && !document.activeElement?.closest('.ed-richbar')) {
-      finishEdit(true);
-    }
-  }, 0);
+function onEditBlur(event) {
+  if (!state?.edit) {
+    return;
+  }
+
+  // Commit synchronously from the blur event's relatedTarget (the element gaining
+  // focus). A deferred setTimeout + document.activeElement probe is unreliable — the
+  // macrotask can be starved by concurrent server round-trips, silently dropping the
+  // commit. relatedTarget is available now, on this event, with no race.
+  //
+  // Focus moving into the rich-text toolbar or the link popover is part of the same
+  // editing session, so it must not end it. Everything else (breadcrumb, another node,
+  // empty space, or focus leaving entirely) commits.
+  const goingTo = event.relatedTarget;
+  if (goingTo?.closest?.('.ed-richbar') || goingTo?.closest?.('.ed-linkpop')) {
+    return;
+  }
+
+  finishEdit(true);
 }
 
 function finishEdit(commit) {

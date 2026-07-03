@@ -89,33 +89,13 @@ public sealed class CanvasInteractionTests(EditorFixture fixture)
 
         // Blur commits (clicking the breadcrumb leaves the edit surface).
         await page.ClickAsync(".ed-crumb-page");
-        try
-        {
-            await page.WaitForSelectorAsync($"[data-node-id='{id}'] strong:has-text('bold')",
-                new PageWaitForSelectorOptions { Timeout = 10_000 });
-        }
-        catch (Exception e) when (e is System.TimeoutException or PlaywrightException)
-        {
-            var html = await page.Locator($"[data-node-id='{id}']").InnerHTMLAsync();
-            var editing = await page.Locator("[contenteditable].ed-editing").CountAsync();
-            var toasts = await page.Locator(".ed-toast").AllInnerTextsAsync();
-            Assert.Fail($"bold did not commit.\nnode html: {html}\nstill editing: {editing}\ntoasts: {string.Join(" | ", toasts)}");
-        }
-
+        await page.WaitForSelectorAsync($"[data-node-id='{id}'] strong:has-text('bold')");
         Assert.Equal(0, await page.Locator(".ed-toast-error").CountAsync());
 
-        // The stored value passed the server-side canonical validator; reload proves it.
+        // The stored value passed the server-side canonical validator; reload proves it
+        // (a non-canonical value would have been rejected and nothing would persist).
         await page.ReloadAsync();
-        try
-        {
-            await page.WaitForSelectorAsync($"[data-node-id='{id}'] strong:has-text('bold')",
-                new PageWaitForSelectorOptions { Timeout = 10_000 });
-        }
-        catch (Exception e) when (e is System.TimeoutException or PlaywrightException)
-        {
-            var html = await page.Locator($"[data-node-id='{id}']").InnerHTMLAsync();
-            Assert.Fail($"bold lost after reload.\ndata dir: {fixture.DataDirectory}\nnode html now: {html}");
-        }
+        await page.WaitForSelectorAsync($"[data-node-id='{id}'] strong:has-text('bold')");
     }
 
     [Fact]
