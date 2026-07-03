@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/Imprint.EventSourcing/Imprint.EventSourcing.csproj" />
+    <ProjectReference Include="../../src/Imprint.Authoring/Imprint.Authoring.csproj" />
   </ItemGroup>
 
 </Project>
