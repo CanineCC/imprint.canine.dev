@@ -77,10 +77,16 @@ public sealed class SitePublisher(
             string? SlugPath,
             IReadOnlyList<string> Paths,
             IReadOnlyList<string> AssetHashes,
+            IReadOnlyList<string> Dependencies,
             bool Stale);
 
         private readonly string _outputRoot = Path.GetFullPath(options.OutputPath);
         private readonly string? _baseUrl = options.BaseUrl?.TrimEnd('/');
+
+        // Serializes a block definition's spec to a stable content hash. Node
+        // polymorphism + value-object converters come from the authoring context.
+        private static readonly System.Text.Json.JsonSerializerOptions BlockJson = CreateBlockJson();
+        private readonly Dictionary<BlockDefinitionId, string> _blockHashes = [];
 
         private readonly Dictionary<PageId, string> _errors = [];
         private readonly HashSet<PageId> _failed = [];
@@ -317,6 +323,7 @@ public sealed class SitePublisher(
                 var isOwner = _slugPathOf.TryGetValue(page.Id, out var slugPath);
                 IReadOnlyList<string> paths = isOwner ? PathsOf(slugPath!) : [];
                 var assetHashes = _assets.HashesOf(pageAssetIds[page.Id]);
+                var dependencies = DependencyTokensOf(page);
                 var old = oldManifest.Pages.GetValueOrDefault(page.Id.Compact);
 
                 // A used widget's bundle "moved" when its current hash (or absence)
@@ -335,10 +342,11 @@ public sealed class SitePublisher(
                     || oldManifest.CssHash != cssHash
                     || !old.Paths.SequenceEqual(paths, StringComparer.Ordinal)
                     || !old.AssetHashes.SequenceEqual(assetHashes, StringComparer.Ordinal)
+                    || !old.Dependencies.SequenceEqual(dependencies, StringComparer.Ordinal)
                     || widgetMoved
                     || paths.Any(path => !File.Exists(FullPath(IndexFileOf(path))));
 
-                plans.Add(new PagePlan(page, isOwner ? slugPath : null, paths, assetHashes, stale));
+                plans.Add(new PagePlan(page, isOwner ? slugPath : null, paths, assetHashes, dependencies, stale));
             }
 
             return plans;
@@ -599,6 +607,84 @@ public sealed class SitePublisher(
             _ => null,
         };
 
+        private static System.Text.Json.JsonSerializerOptions CreateBlockJson()
+        {
+            var options = new System.Text.Json.JsonSerializerOptions();
+            options.Converters.Add(new EventSourcing.GuidIdJsonConverterFactory());
+            Authoring.AuthoringJson.Configure(options);
+            return options;
+        }
+
+        /// <summary>
+        /// The cross-aggregate dependency tokens of a page (docs/publishing.md staleness):
+        /// the resolved path of every page it links to, and a content hash of every block
+        /// definition it instances. A change in either invalidates the page even though
+        /// its own version and the chrome version did not move.
+        /// </summary>
+        private IReadOnlyList<string> DependencyTokensOf(PublishedPage page)
+        {
+            var tokens = new SortedSet<string>(StringComparer.Ordinal);
+            foreach (var node in NodesOf(page))
+            {
+                switch (node)
+                {
+                    case ButtonNode { LinkTo: PageLink link }:
+                        tokens.Add(PageLinkToken(link.PageId));
+                        break;
+
+                    case RichTextNode richText:
+                        foreach (var (_, html) in richText.Html.Values)
+                        {
+                            foreach (var linkedId in PageRefsIn(html))
+                            {
+                                tokens.Add(PageLinkToken(linkedId));
+                            }
+                        }
+
+                        break;
+
+                    case BlockInstanceNode instance when blockLibrary.Get(instance.DefinitionId) is { } definition:
+                        tokens.Add($"block:{instance.DefinitionId.Compact}={BlockContentHash(instance.DefinitionId, definition.Spec)}");
+                        break;
+                }
+            }
+
+            return [.. tokens];
+        }
+
+        // A linked page contributes the path it resolves to (or a marker when it is not
+        // a published owner) — so a slug change or an unpublish flips the token.
+        private string PageLinkToken(PageId linkedId) =>
+            $"page:{linkedId.Compact}={(_slugPathOf.TryGetValue(linkedId, out var path) ? path : "·unpublished")}";
+
+        private string BlockContentHash(BlockDefinitionId id, Node spec)
+        {
+            if (!_blockHashes.TryGetValue(id, out var hash))
+            {
+                hash = Hashing.Hash16(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(spec, BlockJson));
+                _blockHashes[id] = hash;
+            }
+
+            return hash;
+        }
+
+        // Canonical rich text carries page references as href="page:{guid}"; the guid may
+        // be dashed or compact ("N"). Extracted so a linked page's slug move re-renders
+        // the linking page, not just button links.
+        private static readonly System.Text.RegularExpressions.Regex PageRefPattern =
+            new("href=\"page:([0-9a-fA-F-]{32,36})\"", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        private static IEnumerable<PageId> PageRefsIn(string html)
+        {
+            foreach (System.Text.RegularExpressions.Match match in PageRefPattern.Matches(html))
+            {
+                if (Guid.TryParse(match.Groups[1].Value, out var guid))
+                {
+                    yield return PageId.From(guid);
+                }
+            }
+        }
+
         // ------------------------------------------------------------------- outputs
 
         private async Task LoadWidgetBundles(CancellationToken ct)
@@ -712,6 +798,7 @@ public sealed class SitePublisher(
                     RenderedAtSiteVersion = _siteVersion,
                     Paths = _failed.Contains(plan.Page.Id) ? [] : plan.Paths,
                     AssetHashes = plan.AssetHashes,
+                    Dependencies = plan.Dependencies,
                     Error = _errors.GetValueOrDefault(plan.Page.Id),
                 };
             }
@@ -782,10 +869,20 @@ public sealed class SitePublisher(
                     continue; // a withdrawn (failed) page never got written
                 }
 
+                // Trust existing siblings only when they are at least as new as the
+                // source. Mere existence is not enough: a crash between writing the
+                // source (a prior pass) and compressing it leaves stale siblings that
+                // WriteIfChanged never revisits, since the source isn't rewritten and
+                // _written doesn't carry it. The source is always written before its
+                // siblings, so in a healthy state sibling mtime >= source mtime.
+                var br = new FileInfo(full + ".br");
+                var gz = new FileInfo(full + ".gz");
+                var sourceTime = File.GetLastWriteTimeUtc(full);
                 var siblingsCurrent =
                     !_written.Contains(relative) &&
-                    File.Exists(full + ".br") &&
-                    File.Exists(full + ".gz");
+                    br.Exists && gz.Exists &&
+                    br.LastWriteTimeUtc >= sourceTime &&
+                    gz.LastWriteTimeUtc >= sourceTime;
                 if (siblingsCurrent)
                 {
                     continue;

@@ -244,6 +244,13 @@ internal sealed class PublishingTestHost : IAsyncDisposable
         return id;
     }
 
+    public async Task UpdateBlockSpec(BlockDefinitionId id, Node spec)
+    {
+        var block = await Store.Load<BlockDefinition>(id.Stream);
+        block.ChangeSpec(spec);
+        await Commit(block);
+    }
+
     // -------------------------------------------------------------------- widgets
 
     /// <summary>Rewrites the widgets directory: manifest plus one bundle file per entry.</summary>

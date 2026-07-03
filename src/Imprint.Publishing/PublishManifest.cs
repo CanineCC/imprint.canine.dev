@@ -50,6 +50,16 @@ public sealed record PublishManifest
         /// <summary>Sorted content hashes of every referenced publishable asset — the asset-staleness key.</summary>
         public IReadOnlyList<string> AssetHashes { get; init; } = [];
 
+        /// <summary>
+        /// Sorted tokens for cross-aggregate dependencies whose content the page's own
+        /// version does not cover: the resolved path of every page it links to
+        /// (<c>page:{id}={path|·unpublished}</c>) and the content hash of every block
+        /// definition it instances (<c>block:{id}={hash}</c>). When a linked page's slug
+        /// moves or a used block's content changes, this set differs and the page
+        /// re-renders — the same mechanism as AssetHashes, one term wider.
+        /// </summary>
+        public IReadOnlyList<string> Dependencies { get; init; } = [];
+
         /// <summary>A render failure surfaced to the editor; null when the page published cleanly.</summary>
         public string? Error { get; init; }
     }
