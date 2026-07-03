@@ -30,7 +30,8 @@ anywhere in the UI.
 ```
 
 - **Rail** (56 px icon rail) switches the **left panel** (280 px, collapsible):
-  Pages (tree/list + create), Layers (domain tree of current page, drag-reorderable),
+  Pages (tree/list + create), Layers (domain tree of current page, with
+  select-sync and per-row move/duplicate/delete affordances),
   Blocks (symbols library), Assets (library + upload), Theme (token editor),
   Translations (side-by-side editor).
 - The **canvas** renders the current page via `Imprint.Rendering` components in Editor
@@ -84,10 +85,10 @@ pointer events only.
    ```json
    { "dragNodeId": "…",
      "slots": [ { "slotId": 0, "parentId": "…", "index": 2,
-                  "anchorNodeId": "…", "edge": "before|after|into",
-                  "orientation": "horizontal|vertical" } ] }
+                  "anchorId": "…", "edge": "before|after|into",
+                  "orientation": "h|v" } ] }
    ```
-   `anchorNodeId` is the sibling whose rect the indicator snaps to (`edge`
+   `anchorId` is the sibling whose rect the indicator snaps to (`edge`
    before/after), or the empty container itself (`into`). Slots exclude: the dragged
    node's own subtree, its current position (dropping where it already is is a no-op,
    not an error), and anything violating placement rules.
@@ -101,8 +102,10 @@ pointer events only.
 4. **Drop**: JS calls `CompleteDrag(slotId)` → C# dispatches `MoveNode` → projection
    updates → Blazor re-renders → overlay re-measures. JS never mutates the DOM tree.
 
-The **Layers panel** implements the same protocol against row rects (shared JS module,
-different geometry provider).
+The **Layers panel** offers the same *moves* through row affordances rather than a
+second drag surface: selecting a row mirrors the canvas selection, and per-row
+up/down (Alt-arrow equivalents), duplicate and delete drive the same commands. Full
+row-rect drag in the panel is a natural extension left to contributors.
 
 ## 4. Inline text editing
 
@@ -201,12 +204,15 @@ Vanilla ES modules under `Imprint.Editor/wwwroot/js/`, no build step, JSDoc-type
 - `canvas-interop.js` — the single entry: wires pointer/keyboard listeners, owns the
   **overlay layer** (`position:absolute` sibling of the canvas, `pointer-events:none`
   except its own controls), draws hover/selection/toolbar/indicator/ghost, re-measures
-  on scroll + `ResizeObserver` + `MutationObserver` (rAF-batched), and exposes exactly:
-  `init(canvasEl, overlayEl, dotnetRef)`, `setSelection(nodeId|null)`,
-  `beginDragFromHandle()`, `applyDragPlan(plan)`, `enterInlineEdit(nodeId, mode)`,
-  `dispose()`.
-  Inbound to C#: `ReportClick`, `ReportDoubleClick`, `BeginDrag`, `CompleteDrag`,
-  `CancelDrag`, `CommitText`, `ReportKey` (only keys C# owns), `OpenGapPicker(slotId)`.
+  on scroll + `ResizeObserver` + `MutationObserver` (rAF-batched), and exports exactly:
+  `init(canvasEl, overlayEl, scrollerEl, dotnetRef)`, `setSelection(nodeId|null)`,
+  `enterInlineEdit(nodeId, mode)`, `dispose()`. (Dragging starts from the overlay
+  handle inside the module — there is no separate `beginDrag` export; the drag plan is
+  fetched from C# via `BeginDrag` and tracked entirely client-side.)
+  Inbound to C# (`[JSInvokable]` on `CanvasBridge`): `ReportClick`,
+  `ReportDoubleClick`, `ReportSelectionRect`, `BeginDrag`, `CompleteDrag`,
+  `CancelDrag`, `CommitText`, `EndInlineEdit`, `ReportKey` (only keys C# owns),
+  `ReportGapClick`.
 - `rich-toolbar.js` — selection-anchored mini toolbar + canonical normalizer
   (`normalize(rootEl): string` — pure, unit-testable in isolation).
 - `file-drop.js` — drag-file-onto-panel upload plumbing (streams via Blazor's
@@ -225,4 +231,8 @@ Vanilla ES modules under `Imprint.Editor/wwwroot/js/`, no build step, JSDoc-type
   are written for humans), and optimistic-feel latency: commands are local in-process,
   so round-trips are single-digit ms; nothing needs optimistic UI trickery.
 - The editor must be honestly usable on a tablet: pointer events + long-press lift
-  already cover touch; panels collapse; minimum hit targets 40 px.
+  already cover touch; panels collapse. Tap targets are generous — the rail and
+  primary actions at 40 px, toolbar buttons at 32 px. The insertion gap pill stays
+  small (a transient hover affordance surrounded by whitespace); it is deliberately
+  *not* padded out to a 40 px hit area, because an invisible expanded region over the
+  canvas would steal clicks from the content beneath it.

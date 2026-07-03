@@ -92,7 +92,7 @@ C# abstract record `Node` with sealed subtypes (exhaustive switching everywhere)
 | `ButtonNode` | **`Label`**, `LinkTo (PageLink(PageId) \| ExternalLink(Url))`, `Variant (Primary\|Secondary\|Ghost)` |
 | `ImageNode` | `AssetId?`, **`Alt`**, `Aspect (Natural\|Square\|Wide16x9\|Portrait3x4)`, `Rounded (bool)` |
 | `VideoNode` | `AssetId?`, `Mode (Ambient\|Player)` — Ambient = autoplay/muted/loop/playsinline, no controls; Player = controls, no autoplay |
-| `SvgNode` | `AssetId?`, `MaxWidthPx?` — always rendered inline (sanitized at ingest) so it inherits `currentColor` |
+| `SvgNode` | `AssetId?`, **`Alt`**, `MaxWidthPx?` — always rendered inline (sanitized at ingest) so it inherits `currentColor` |
 | `DividerNode` | — |
 | `SpacerNode` | `Size (Small\|Medium\|Large)` |
 | `WidgetNode` | `Tag (string)`, `Props: IReadOnlyDictionary<string,string>` — validated against the widget manifest in the slice, not the aggregate |
@@ -178,7 +178,7 @@ State: name, kind, content type, original storage key, processing status
 | `asset.processing-skipped` | `string Reason` → status `ReadyDegraded` (e.g. ffmpeg absent: original file is published as-is with a visible editor warning) |
 | `asset.alt-changed` | `Locale, string Alt` (default alt; `ImageNode.Alt` overrides per placement) |
 | `asset.renamed` | `string Name` |
-| `asset.deleted` | — (slice forbids deletion while referenced; the `AssetUsage` read model tracks references) |
+| `asset.deleted` | — (slice forbids deletion while referenced; the `ContentUsage` query service tracks references) |
 
 Processing runs on an in-process `Channel<AssetId>` background worker
 (`ProcessUploadedAsset` slice): it reads the original from the media store, produces
@@ -198,7 +198,7 @@ deleted flag.
 | `block.defined` | `BlockDefinitionId, string Name, NodeSpec Spec` |
 | `block.renamed` | `string Name` |
 | `block.spec-changed` | `NodeSpec Spec` (node ids in the spec are stable across changes when possible — the editor sends the edited spec; overrides on removed nodes are simply ignored at render) |
-| `block.deleted` | — (slice forbids while instances exist, via `BlockUsage` read model) |
+| `block.deleted` | — (slice forbids while instances exist, via the `ContentUsage` query service) |
 
 Rendering a `BlockInstanceNode` = render the definition's spec with the instance's
 field overrides overlaid (override lookup: definition node id + field + locale).
@@ -217,10 +217,10 @@ live UI updates).
 |---|---|---|
 | `SiteOverview` | site.* | settings UI, theme editor, nav editor, locale lists, chrome version |
 | `PageList` | page.created/title/slug/published/unpublished/deleted, site.navigation | dashboard, nav picker, slug-uniqueness check, publish badges (`Draft`, `Published`, `Modified` = published but currentVersion > publishedVersion) |
-| `PageDraft` | all page.* | the editor canvas: current tree + all locale values per page |
-| `PublishedContent` | page.published/unpublished/deleted (replays each page stream to its `PublishedVersion` via the store) | the publisher's page source |
+| `PageDrafts` | all page.* | the editor canvas: current tree + all locale values per page |
+| `PublishedContent` | all page.* | the publisher's page source: folds each page through its aggregate and **snapshots** the state at every `page.published` — because the global sequence is ordered, the folded state at that moment IS the published state, so no stream re-reading is needed |
 | `AssetLibrary` | asset.* | asset panel: status, variants, sizes |
-| `AssetUsage` | page.node-added/removed/duplicated/props-changed, block.* | delete protection; republish pages when an asset's variants change |
+| `ContentUsage` | *(computed over `PageDrafts`/`BlockLibrary`, not folded)* | asset/block reference tracking: delete protection; republish pages when a referenced asset, block or linked page changes |
 | `BlockLibrary` | block.*, page.* (instance counts) | blocks panel, delete protection |
 | `TranslationCoverage` | page.text/title/meta, site locales | translation panel: per page × locale, missing/total field counts and the field list |
 
@@ -253,9 +253,9 @@ through read models (each such check carries a comment naming the accepted race)
 
 ## 7. Testing contract
 
-- Aggregate tests use the Given/When/Then kit from `Imprint.EventSourcing.Testing`:
+- Aggregate tests use the Given/When/Then kit from `Imprint.TestKit`:
   `Given(events…).When(a => a.Behavior(…)).ThenRaised(expected…)` /
-  `.ThenFailsWith<DomainException>(messageContains)`. Every invariant in this document
+  `.ThenFails(messagePart)`. Every invariant in this document
   has at least one negative test.
 - Slice tests run against a real SQLite in-memory store + real dispatcher + real
   projections: dispatch command(s), assert on events **and** read-model state.

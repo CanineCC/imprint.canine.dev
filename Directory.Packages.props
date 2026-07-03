@@ -2,7 +2,7 @@
 
   <!--
     Runtime dependency allowlist (see docs/conventions.md): the event store rides on
-    Microsoft.Data.Sqlite; image processing on ImageSharp (Imprint.Media only).
+    Microsoft.Data.Sqlite; image processing on SkiaSharp (Imprint.Media only).
     Everything else is the .NET platform. Adding a package here is an architecture
     decision, not a convenience.
   -->

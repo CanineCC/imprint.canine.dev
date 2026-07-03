@@ -383,9 +383,9 @@ button { font: inherit; color: inherit; }
 }
 
 .ed-richbar > button {
-  min-width: 28px;
-  height: 26px;
-  padding: 0 6px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
   border: 0;
   border-radius: 4px;
   background: transparent;
@@ -514,7 +514,7 @@ button { font: inherit; color: inherit; }
   animation: ed-fade-in 120ms ease-out;
 }
 
-.ed-node-toolbar .ed-btn { min-height: 26px; padding: 0 7px; }
+.ed-node-toolbar .ed-btn { min-height: 32px; min-width: 32px; padding: 0 8px; }
 .ed-node-toolbar-label {
   font-size: 11px;
   font-weight: 700;
