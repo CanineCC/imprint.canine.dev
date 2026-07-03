@@ -47,6 +47,9 @@
     {
         Session.Changed += OnStateChanged;
         Drafts.Changed += OnStateChanged;
+        // Theme edits live on the site stream: without this the theme panel's
+        // changes only appear after the next page edit repaints the canvas.
+        Site.Changed += OnStateChanged;
         Bridge.EnterInlineEditInJs = async (nodeId, mode) =>
         {
             if (_module is not null)
@@ -98,6 +101,7 @@
     {
         Session.Changed -= OnStateChanged;
         Drafts.Changed -= OnStateChanged;
+        Site.Changed -= OnStateChanged;
         Bridge.EnterInlineEditInJs = null;
         if (_module is not null)
         {

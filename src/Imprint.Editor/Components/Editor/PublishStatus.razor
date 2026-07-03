@@ -5,13 +5,6 @@
 @inject PublisherStatus Publisher
 @inject PageList Pages
 
-@* The editor's component styles (Panels/*.razor.css and this one) bundle into
-   Imprint.Editor.styles.css; App.razor predates component styles and is frozen, so
-   the always-rendered status fragment links the bundle for the whole shell. *@
-<HeadContent>
-    <link rel="stylesheet" href="Imprint.Editor.styles.css" />
-</HeadContent>
-
 @* One quiet sentence about the last publisher pass — nothing until it has run once. *@
 @if (Publisher.Last is { } report)
 {
