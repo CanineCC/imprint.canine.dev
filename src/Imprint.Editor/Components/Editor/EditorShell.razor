@@ -1,10 +1,12 @@
 @using Imprint.Authoring.Projections
 @using Imprint.Editor.Services
+@using Microsoft.Extensions.Configuration
 @implements IDisposable
 @inject EditorSession Session
 @inject SiteOverview Site
 @inject CommandRunner Commands
 @inject ToastService Toasts
+@inject IConfiguration Config
 
 @* The frame: top bar, icon rail, contextual left panel, canvas column, inspector,
    status bar, toast host. Panels own their interiors; the shell owns arrangement. *@
@@ -65,6 +67,14 @@
         {
             <span class="ed-undo-hint">Ctrl+Z undoes @Commands.UndoLabel</span>
         }
+        <span style="flex:1"></span>
+        @if (AdminEnabled)
+        {
+            @* Admin review surface. Authorization is the reverse proxy's job (see
+               architecture.md non-goals): this route MUST sit behind your auth. *@
+            <a class="ed-admin-link" href="/admin/widgets"
+               title="Widget review — put this route behind your reverse-proxy auth">Widgets</a>
+        }
     </footer>
 
     <ToastHost />
@@ -80,6 +90,11 @@
         (EditorPanel.Theme, "◐", "Theme"),
         (EditorPanel.Translations, "文", "Translations"),
     ];
+
+    // Gate for the /admin/widgets link (and the page itself). Default on for the demo;
+    // set ImprintAdmin=false to hide it. This is a visibility gate, not access control —
+    // the route must still be protected by your reverse proxy.
+    private bool AdminEnabled => Config.GetValue("ImprintAdmin", true);
 
     protected override void OnInitialized()
     {

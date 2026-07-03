@@ -1,0 +1,295 @@
+@using System.Collections.Immutable
+@using Imprint.Authoring.Domain.Widgets
+@using Imprint.Editor.Services
+@using Imprint.Rendering
+@inject CommandRunner Commands
+@inject EditorWidgetCatalog Widgets
+
+@* The "Request a widget" modal, opened from the insert picker's Widgets group. An editor
+   describes a widget and pastes its ES-module source; submitting files it for admin
+   review. NOTHING here runs the code — the canvas only ever shows widget placeholders,
+   and the pasted bundle does not reach a visitor until an admin approves it. *@
+@if (_open)
+{
+    <div class="wr-backdrop" @onclick="Close"></div>
+    <div class="wr-modal" role="dialog" aria-modal="true" aria-label="Request a new widget" @onclick:stopPropagation="true">
+        @if (_submitted)
+        {
+            <div class="wr-done">
+                <h2 class="wr-title">Submitted for review</h2>
+                <p>Thanks — <code>@_lastTag</code> was sent to an administrator. It stays invisible to
+                   visitors until it is approved, and you will see it appear in the Widgets list once it is.</p>
+                <div class="wr-actions">
+                    <button type="button" class="ed-btn ed-btn-primary" @onclick="Close">Done</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="wr-head">
+                <h2 class="wr-title">Request a new widget</h2>
+                <button type="button" class="ed-btn ed-btn-ghost" aria-label="Close" @onclick="Close">✕</button>
+            </div>
+
+            <p class="wr-note">
+                A widget is JavaScript that runs on published pages. What you submit runs <strong>nowhere</strong>
+                until an administrator reviews and approves it.
+            </p>
+
+            <div class="wr-body">
+                <div class="ed-field">
+                    <label for="wr-tag">Tag (custom-element name)</label>
+                    <input id="wr-tag" class="ed-input" placeholder="x-my-widget"
+                           value="@_tag" @oninput="e => _tag = Str(e)" />
+                    <span class="wr-hint @(TagHintIsError ? "wr-hint-error" : null)">@TagHint</span>
+                </div>
+
+                <div class="ed-field">
+                    <label for="wr-name">Name</label>
+                    <input id="wr-name" class="ed-input" placeholder="My widget"
+                           value="@_name" @oninput="e => _name = Str(e)" />
+                </div>
+
+                <div class="ed-field">
+                    <label for="wr-desc">Description</label>
+                    <input id="wr-desc" class="ed-input" placeholder="What it does, in one line."
+                           value="@_description" @oninput="e => _description = Str(e)" />
+                </div>
+
+                <div class="wr-row">
+                    <div class="ed-field">
+                        <label for="wr-placeholder">Placeholder text</label>
+                        <input id="wr-placeholder" class="ed-input" placeholder="Shown before it loads"
+                               value="@_placeholder" @oninput="e => _placeholder = Str(e)" />
+                    </div>
+                    <div class="ed-field">
+                        <label for="wr-aspect">Aspect ratio (optional)</label>
+                        <input id="wr-aspect" class="ed-input" placeholder="16 / 9"
+                               value="@_aspectRatio" @oninput="e => _aspectRatio = Str(e)" />
+                    </div>
+                </div>
+
+                <label class="wr-check">
+                    <input type="checkbox" checked="@_eager" @onchange="e => _eager = e.Value is true" />
+                    <span>Load immediately (for widgets above the fold)</span>
+                </label>
+
+                <div class="wr-props">
+                    <div class="wr-props-head">
+                        <span>Settings (props)</span>
+                        <button type="button" class="ed-btn ed-btn-ghost wr-add" @onclick="AddProp">+ Add setting</button>
+                    </div>
+                    @if (_props.Count == 0)
+                    {
+                        <p class="wr-hint">No settings — the widget takes no attributes.</p>
+                    }
+                    @for (var i = 0; i < _props.Count; i++)
+                    {
+                        var row = _props[i];
+                        var index = i;
+                        <div class="wr-prop-row">
+                            <input class="ed-input" placeholder="name" aria-label="Setting name"
+                                   value="@row.Name" @oninput="e => row.Name = Str(e)" />
+                            <input class="ed-input" placeholder="Label" aria-label="Setting label"
+                                   value="@row.Label" @oninput="e => row.Label = Str(e)" />
+                            <select class="ed-select" aria-label="Setting type"
+                                    value="@row.Type" @onchange="e => row.Type = Str(e)">
+                                @foreach (var type in WidgetPropSpec.KnownTypes)
+                                {
+                                    <option value="@type">@type</option>
+                                }
+                            </select>
+                            <input class="ed-input" placeholder="default" aria-label="Setting default"
+                                   value="@row.Default" @oninput="e => row.Default = Str(e)" />
+                            <input class="ed-input" placeholder="options (comma-separated)" aria-label="Setting options"
+                                   value="@row.Options" @oninput="e => row.Options = Str(e)" />
+                            <button type="button" class="ed-btn ed-btn-ghost ed-btn-danger" aria-label="Remove setting"
+                                    @onclick="() => _props.RemoveAt(index)">✕</button>
+                        </div>
+                    }
+                </div>
+
+                <div class="ed-field">
+                    <label for="wr-bundle">Bundle source (paste the ES module)</label>
+                    <textarea id="wr-bundle" class="ed-input wr-bundle" rows="8" spellcheck="false"
+                              placeholder="export default class extends HTMLElement { … }"
+                              value="@_bundle" @oninput="e => _bundle = Str(e)"></textarea>
+                    <span class="wr-hint">@BundleHint</span>
+                </div>
+
+                @if (_error is { } error)
+                {
+                    <p class="wr-error" role="alert">@error</p>
+                }
+            </div>
+
+            <div class="wr-actions">
+                <button type="button" class="ed-btn ed-btn-ghost" @onclick="Close">Cancel</button>
+                <button type="button" class="ed-btn ed-btn-primary" disabled="@_busy" @onclick="Submit">
+                    Submit for review
+                </button>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    // A widget bundle is small by contract; the cap keeps the whole source inside one
+    // event (the audit trail) — mirrors the proposal's 512 KB limit.
+    private const int MaxBundleBytes = 512 * 1024;
+
+    private sealed class PropRow
+    {
+        public string Name = "";
+        public string Label = "";
+        public string Type = "text";
+        public string Default = "";
+        public string Options = "";
+    }
+
+    private bool _open;
+    private bool _busy;
+    private bool _submitted;
+    private string? _error;
+    private string _lastTag = "";
+
+    private string _tag = "";
+    private string _name = "";
+    private string _description = "";
+    private string _placeholder = "";
+    private string _aspectRatio = "";
+    private bool _eager;
+    private string _bundle = "";
+    private readonly List<PropRow> _props = [];
+
+    /// <summary>Opens a fresh request form (called by the insert picker footer).</summary>
+    public void Open()
+    {
+        _tag = _name = _description = _placeholder = _aspectRatio = _bundle = "";
+        _eager = false;
+        _props.Clear();
+        _error = null;
+        _submitted = false;
+        _busy = false;
+        _open = true;
+        StateHasChanged();
+    }
+
+    private void Close()
+    {
+        _open = false;
+        StateHasChanged();
+    }
+
+    private void AddProp() => _props.Add(new PropRow());
+
+    private bool TagHintIsError =>
+        _tag.Length > 0 && (!WidgetManifest.IsValidTag(_tag) || Widgets.IsBuiltInTag(_tag));
+
+    private string TagHint =>
+        _tag.Length == 0
+            ? "Lower-case, at least one hyphen (e.g. x-countdown)."
+            : !WidgetManifest.IsValidTag(_tag)
+                ? "Not a valid custom-element name: lower-case ASCII with at least one hyphen."
+                : Widgets.IsBuiltInTag(_tag)
+                    ? "That name is already a built-in widget and can't be reused."
+                    : "Looks good.";
+
+    private string BundleHint
+    {
+        get
+        {
+            var bytes = System.Text.Encoding.UTF8.GetByteCount(_bundle);
+            var kb = bytes / 1024.0;
+            return $"{kb:0.#} KB of {MaxBundleBytes / 1024} KB. This exact source is what an admin reviews.";
+        }
+    }
+
+    private async Task Submit()
+    {
+        _error = Validate();
+        if (_error is not null)
+        {
+            return;
+        }
+
+        var props = _props
+            .Where(row => row.Name.Trim().Length > 0)
+            .Select(row => new WidgetPropSpec(
+                row.Name.Trim(),
+                row.Label.Trim().Length > 0 ? row.Label.Trim() : row.Name.Trim(),
+                row.Type,
+                string.IsNullOrEmpty(row.Default) ? null : row.Default,
+                [.. row.Options.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)]))
+            .ToImmutableArray();
+
+        var command = new Authoring.Features.Widgets.SubmitWidget.SubmitWidget(
+            _tag.Trim(),
+            _name.Trim(),
+            _description.Trim(),
+            _placeholder.Trim(),
+            string.IsNullOrWhiteSpace(_aspectRatio) ? null : _aspectRatio.Trim(),
+            _eager,
+            props,
+            _bundle);
+
+        _busy = true;
+        // The prescribed write path: CommandRunner surfaces any domain error as a toast.
+        // A submission is not an undoable content edit, so it goes through the plain Run.
+        var ok = await Commands.Run(command);
+        _busy = false;
+        if (ok)
+        {
+            _lastTag = _tag.Trim();
+            _submitted = true;
+        }
+    }
+
+    private string? Validate()
+    {
+        var tag = _tag.Trim();
+        if (!WidgetManifest.IsValidTag(tag))
+        {
+            return "The tag must be a valid custom-element name: lower-case ASCII with at least one hyphen.";
+        }
+
+        if (Widgets.IsBuiltInTag(tag))
+        {
+            return $"'{tag}' is already a built-in widget; choose a different tag.";
+        }
+
+        if (_name.Trim().Length == 0)
+        {
+            return "Give the widget a name.";
+        }
+
+        foreach (var row in _props.Where(row => row.Name.Trim().Length > 0))
+        {
+            if (!WidgetManifest.IsValidPropName(row.Name.Trim()))
+            {
+                return $"'{row.Name.Trim()}' is not a valid setting name (lower-case ASCII, digits and hyphens).";
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(_aspectRatio) &&
+            !_aspectRatio.All(c => char.IsAsciiDigit(c) || c is ' ' or '/' or '.'))
+        {
+            return "The aspect ratio may only contain digits, spaces, '/' and '.' (e.g. 16 / 9).";
+        }
+
+        var bytes = System.Text.Encoding.UTF8.GetByteCount(_bundle);
+        if (bytes == 0)
+        {
+            return "Paste the widget's ES-module source.";
+        }
+
+        if (bytes > MaxBundleBytes)
+        {
+            return $"The bundle is {bytes / 1024} KB; the limit is {MaxBundleBytes / 1024} KB.";
+        }
+
+        return null;
+    }
+
+    private static string Str(ChangeEventArgs e) => e.Value?.ToString() ?? "";
+}

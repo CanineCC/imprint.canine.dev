@@ -27,6 +27,7 @@ public sealed class SitePublisher(
     PublishedContent publishedContent,
     AssetLibrary assetLibrary,
     BlockLibrary blockLibrary,
+    WidgetRegistry widgetRegistry,
     IMediaStore mediaStore,
     PublisherStatus status,
     ILoggerFactory loggerFactory)
@@ -44,7 +45,7 @@ public sealed class SitePublisher(
         {
             var pass = new Pass(
                 options, siteOverview, publishedContent, assetLibrary, blockLibrary,
-                mediaStore, loggerFactory, _logger);
+                widgetRegistry, mediaStore, loggerFactory, _logger);
             var report = await pass.Run(ct);
             status.Record(report);
             return report;
@@ -68,6 +69,7 @@ public sealed class SitePublisher(
         PublishedContent publishedContent,
         AssetLibrary assetLibrary,
         BlockLibrary blockLibrary,
+        WidgetRegistry widgetRegistry,
         IMediaStore mediaStore,
         ILoggerFactory loggerFactory,
         ILogger logger)
@@ -105,6 +107,7 @@ public sealed class SitePublisher(
         private Dictionary<PageId, string> _slugPathOf = [];
         private Dictionary<PageId, IReadOnlyList<string>> _pageWidgetTags = [];
         private Dictionary<string, WidgetDescriptor> _descriptors = [];
+        private HashSet<string> _builtInWidgetTags = new(StringComparer.Ordinal);
         private SortedDictionary<string, (string RelativePath, string Hash, byte[] Bytes)> _widgetFiles = new(StringComparer.Ordinal);
         private PublishedAssetCatalog _assets = null!;
         private string _cssFile = "";
@@ -144,6 +147,18 @@ public sealed class SitePublisher(
             _descriptors = WidgetManifest
                 .Load(Path.Combine(options.WidgetsDirectory, "manifest.json"))
                 .ToDictionary(descriptor => descriptor.Tag, StringComparer.Ordinal);
+            _builtInWidgetTags = [.. _descriptors.Keys];
+
+            // Approved submissions render exactly like built-ins — ResolveWidget emits the
+            // same custom element. A built-in tag wins a collision (it can never be
+            // shadowed), so only non-colliding approved tags are added.
+            foreach (var approved in widgetRegistry.Approved)
+            {
+                if (!_builtInWidgetTags.Contains(approved.Tag))
+                {
+                    _descriptors[approved.Tag] = ApprovedWidgetDescriptors.ToDescriptor(approved);
+                }
+            }
 
             var ordered = OrderPages();
             ClaimPaths(ordered, oldManifest);
@@ -702,14 +717,32 @@ public sealed class SitePublisher(
                     continue; // unknown widget: the static output simply omits it
                 }
 
-                var source = Path.Combine(options.WidgetsDirectory, descriptor.Bundle);
-                if (!File.Exists(source))
+                byte[] bytes;
+                if (_builtInWidgetTags.Contains(tag))
                 {
-                    logger.LogWarning("Widget '{Tag}' has no bundle at {Path}; pages render its fallback content only.", tag, source);
-                    continue;
+                    // Built-in: copy the bundle file from the widgets directory, as always.
+                    var source = Path.Combine(options.WidgetsDirectory, descriptor.Bundle);
+                    if (!File.Exists(source))
+                    {
+                        logger.LogWarning("Widget '{Tag}' has no bundle at {Path}; pages render its fallback content only.", tag, source);
+                        continue;
+                    }
+
+                    bytes = await File.ReadAllBytesAsync(source, ct);
+                }
+                else if (widgetRegistry.BundleOf(tag) is { } approvedSource)
+                {
+                    // Approved submission: the reviewed source lives in the immutable event
+                    // log, not on disk. Write those exact bytes as the bundle — from here on
+                    // (_widgetFiles, the manifest widgetBundles, island hydration) it is
+                    // indistinguishable from a copied built-in bundle.
+                    bytes = Encoding.UTF8.GetBytes(approvedSource);
+                }
+                else
+                {
+                    continue; // a descriptor with no source (approval withdrawn mid-pass): omit
                 }
 
-                var bytes = await File.ReadAllBytesAsync(source, ct);
                 var hash = Hashing.Hash16(bytes);
                 _widgetFiles[tag] = ($"widgets/{tag}.{hash}.js", hash, bytes);
             }

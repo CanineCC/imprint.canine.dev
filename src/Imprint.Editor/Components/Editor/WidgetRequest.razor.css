@@ -1,0 +1,125 @@
+.wr-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: rgb(0 0 0 / .38);
+}
+
+.wr-modal {
+    position: fixed;
+    z-index: 61;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(680px, calc(100vw - 32px));
+    max-height: calc(100vh - 48px);
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    background: var(--ed-surface);
+    border: 1px solid var(--ed-border);
+    border-radius: var(--ed-radius);
+    box-shadow: var(--ed-shadow-pop);
+}
+
+.wr-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.wr-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.wr-note {
+    margin: 8px 0 4px;
+    font-size: 13px;
+    color: var(--ed-text-muted);
+}
+
+.wr-body {
+    overflow-y: auto;
+    padding: 12px 2px;
+    display: grid;
+    gap: 4px;
+}
+
+.wr-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.wr-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0 12px;
+    font-size: 13px;
+}
+
+.wr-props {
+    margin-bottom: 12px;
+}
+
+.wr-props-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ed-text-muted);
+}
+
+.wr-add { min-height: 26px; padding: 0 8px; }
+
+.wr-prop-row {
+    display: grid;
+    grid-template-columns: 1.1fr 1.1fr 0.9fr 1fr 1.3fr auto;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.wr-bundle {
+    font-family: var(--ed-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    resize: vertical;
+    white-space: pre;
+    overflow: auto;
+}
+
+.wr-hint {
+    font-size: 12px;
+    color: var(--ed-text-muted);
+}
+
+.wr-hint-error { color: var(--ed-danger); }
+
+.wr-error {
+    margin: 8px 0 0;
+    padding: 8px 10px;
+    font-size: 13px;
+    color: var(--ed-danger);
+    background: color-mix(in srgb, var(--ed-danger) 12%, transparent);
+    border-radius: var(--ed-radius-sm);
+}
+
+.wr-done { padding: 8px 2px; display: grid; gap: 10px; }
+
+.wr-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+code {
+    font-family: var(--ed-mono);
+    font-size: .92em;
+}
