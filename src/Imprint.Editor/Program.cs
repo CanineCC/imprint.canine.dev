@@ -9,6 +9,11 @@ using Imprint.Publishing;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// The editor is habitually launched with `dotnet run` (any environment): load the
+// static-web-assets manifest explicitly so framework/RCL assets resolve outside
+// Development too. On published output (assets on disk) this is a silent no-op.
+builder.WebHost.UseStaticWebAssets();
+
 // All editor state lives under one data directory: the event store (truth), media
 // files (bytes) and the published output (a projection). Point ImprintData somewhere
 // else to host multiple installations side by side.
@@ -45,7 +50,10 @@ builder.Services.AddScoped<CanvasBridge>();
 
 var app = builder.Build();
 
-app.UseStaticFiles();
+// MapStaticAssets (not UseStaticFiles): it serves the framework script and the
+// Razor-class-library assets (_content/…) from the build manifest in every
+// environment — plain UseStaticFiles only composes those providers in Development.
+app.MapStaticAssets();
 app.UseAntiforgery();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 

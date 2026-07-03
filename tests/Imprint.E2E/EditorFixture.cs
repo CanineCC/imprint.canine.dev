@@ -18,6 +18,7 @@ public sealed class EditorFixture : IAsyncLifetime
     public IBrowser Browser { get; private set; } = null!;
     public string BaseUrl { get; private set; } = null!;
     public string DataDirectory => _dataDirectory!;
+    public string AppLogPath { get; private set; } = "";
     public string PublishDirectory => Path.Combine(_dataDirectory!, "publish");
 
     public async ValueTask InitializeAsync()
@@ -36,6 +37,14 @@ public sealed class EditorFixture : IAsyncLifetime
             RedirectStandardError = true,
             WorkingDirectory = FindRepoPath("."),
         }) ?? throw new InvalidOperationException("Failed to start the editor process.");
+
+        // The app's console is the first place to look when an E2E step goes quiet.
+        AppLogPath = Path.Combine(_dataDirectory, "editor-console.log");
+        var log = new StreamWriter(AppLogPath) { AutoFlush = true };
+        _app.OutputDataReceived += (_, e) => { if (e.Data is not null) { lock (log) { log.WriteLine(e.Data); } } };
+        _app.ErrorDataReceived += (_, e) => { if (e.Data is not null) { lock (log) { log.WriteLine("ERR " + e.Data); } } };
+        _app.BeginOutputReadLine();
+        _app.BeginErrorReadLine();
 
         await WaitForHttp(new Uri(BaseUrl + "/"), TimeSpan.FromSeconds(60));
 
@@ -71,10 +80,8 @@ public sealed class EditorFixture : IAsyncLifetime
         }
 
         _app?.Dispose();
-        if (_dataDirectory is not null && Directory.Exists(_dataDirectory))
-        {
-            Directory.Delete(_dataDirectory, recursive: true);
-        }
+        // Deliberately left on disk: the temp dir (incl. editor-console.log) is the
+        // post-mortem for a red run, and temp cleanup is the OS's job anyway.
     }
 
     private static int FreePort()
