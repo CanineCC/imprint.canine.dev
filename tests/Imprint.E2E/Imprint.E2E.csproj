@@ -15,4 +15,10 @@
     <PackageReference Include="Microsoft.Playwright" />
   </ItemGroup>
 
+  <!-- Build-order only: the fixture launches these with dotnet run -no-build. -->
+  <ItemGroup>
+    <ProjectReference Include="../../src/Imprint.Editor/Imprint.Editor.csproj" />
+    <ProjectReference Include="../../src/Imprint.Site/Imprint.Site.csproj" />
+  </ItemGroup>
+
 </Project>
