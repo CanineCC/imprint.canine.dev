@@ -132,7 +132,15 @@ function attachListeners() {
 }
 
 function invoke(method, ...args) {
-  return state?.dotnet.invokeMethodAsync(method, ...args);
+  if (!state) {
+    console.error('[imprint] invoke after dispose:', method);
+    return Promise.resolve(null);
+  }
+  return state.dotnet.invokeMethodAsync(method, ...args).catch(error => {
+    // A dead circuit swallows interop silently otherwise — name the failure.
+    console.error('[imprint] invoke failed:', method, String(error));
+    return null;
+  });
 }
 
 // ----------------------------------------------------------------- hit testing
@@ -273,7 +281,12 @@ function onKeyDown(event) {
   }
 
   // Only intercept when the canvas is the active surface — panels keep their keys.
-  if (!state.canvas.contains(document.activeElement) && document.activeElement !== document.body) {
+  // Clicking a (non-focusable) node focuses the scroller or falls back to body;
+  // FocusOnNavigate may have focused a heading inside the canvas — all canvas-y.
+  const active = document.activeElement;
+  const canvasHasFocus = active === document.body || active === state.scroller ||
+    state.canvas.contains(active) || state.overlay.contains(active);
+  if (!canvasHasFocus) {
     return;
   }
   const owned = OWNED_KEYS.has(event.key)
@@ -656,6 +669,9 @@ function sync() {
     const rect = selEl.getBoundingClientRect();
     place(state.ui.selection, rect, base, 0);
     state.ui.selection.classList.toggle('ed-is-editing', !!state.edit);
+    // The handle lives in the left gutter, but at the viewport edge the gutter is
+    // clipped — tuck it just inside the node instead so it stays grabbable.
+    state.ui.selection.classList.toggle('ed-handle-inside', rect.left < 40);
     state.ui.selection.hidden = false;
     invoke('ReportSelectionRect', rect.left - base.left, rect.top - base.top, rect.width, rect.height);
   } else {

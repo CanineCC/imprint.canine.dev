@@ -1,3 +1,24 @@
 @inherits LayoutComponentBase
 
 @Body
+
+@* Rendered only once the interactive circuit is live (prerendering never reaches
+   OnAfterRender): the deterministic "you may click now" signal for E2E drivers and
+   a truthful readiness beacon in general. *@
+@if (_interactive)
+{
+    <span data-interactive hidden></span>
+}
+
+@code {
+    private bool _interactive;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _interactive = true;
+            StateHasChanged();
+        }
+    }
+}
