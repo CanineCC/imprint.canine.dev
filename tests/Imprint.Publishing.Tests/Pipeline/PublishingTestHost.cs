@@ -252,7 +252,7 @@ internal sealed class PublishingTestHost : IAsyncDisposable
         var darkOriginal = $"originals/{id.Compact}/dark-source.png";
         Media.Seed(darkOriginal, Bytes($"{id.Compact}-dark-original"));
         var asset = await Store.Load<Asset>(id.Stream);
-        asset.UploadDarkVariant(darkOriginal, "image/png");
+        asset.UploadDarkVariant(AssetKind.Image, darkOriginal, "image/png");
         await Commit(asset);
 
         var variants = new List<ImageVariant>();
@@ -293,13 +293,13 @@ internal sealed class PublishingTestHost : IAsyncDisposable
         var darkOriginal = $"originals/{id.Compact}/dark-icon.svg";
         Media.Seed(darkOriginal, Encoding.UTF8.GetBytes(svg));
         var asset = await Store.Load<Asset>(id.Stream);
-        asset.UploadDarkVariant(darkOriginal, "image/svg+xml");
+        asset.UploadDarkVariant(AssetKind.Vector, darkOriginal, "image/svg+xml");
         await Commit(asset);
 
         var cleanKey = $"dark/{id.Compact}/clean.svg";
         Media.Seed(cleanKey, Encoding.UTF8.GetBytes(svg));
         asset = await Store.Load<Asset>(id.Stream);
-        asset.CompleteDarkSvgSanitize(cleanKey, 0);
+        asset.CompleteDarkSvg(cleanKey, 0);
         await Commit(asset);
     }
 
