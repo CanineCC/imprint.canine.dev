@@ -255,6 +255,34 @@ public sealed class SvgSanitizerTests
         Assert.Equal(5, removed);
     }
 
+    // -- case-insensitivity (audit finding: inlined into case-insensitive HTML) -----
+
+    [Theory]
+    [InlineData("<SCRIPT>alert(1)</SCRIPT>")]
+    [InlineData("<Script>alert(1)</Script>")]
+    [InlineData("<STYLE>*{x:1}</STYLE>")]
+    [InlineData("<SET attributeName=\"href\" to=\"javascript:alert(1)\"/>")]
+    public void Sanitize_uppercase_active_elements_are_removed(string element)
+    {
+        var (svg, _) = SvgSanitizer.Sanitize($"<svg {Ns}>{element}</svg>");
+
+        Assert.DoesNotContain("script", svg, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("javascript", svg, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("<style", svg, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("<set", svg, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Sanitize_uppercase_style_and_href_attributes_are_removed()
+    {
+        var (svg, _) = SvgSanitizer.Sanitize(
+            $"""<svg {Ns}><rect STYLE="fill:red" ONCLICK="x()"/><IMAGE HREF="https://evil/x"/></svg>""");
+
+        Assert.DoesNotContain("STYLE", svg, StringComparison.Ordinal);
+        Assert.DoesNotContain("ONCLICK", svg, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("evil", svg, StringComparison.Ordinal);
+    }
+
     // -- SMIL animation (audit finding: <set> can retarget href at runtime) ---------
 
     [Theory]

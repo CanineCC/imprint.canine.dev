@@ -138,6 +138,10 @@ public sealed class BlockDefinition : AggregateRoot
             {
                 throw new DomainException("A block cannot contain another block.");
             }
+
+            // A block's content renders onto every instancing page, so it is held to
+            // the same content invariants as page content (canonical rich text, etc.).
+            NodeContentRules.Validate(node);
         }
 
         ValidatePlacement(spec);

@@ -25,10 +25,13 @@ public static class SvgSanitizer
     // SMIL animation: an <animate>/<set> can retarget an href or other attribute at
     // runtime (e.g. <set attributeName="href" to="javascript:…">), so a purely static
     // attribute scan is not enough — the elements themselves must go.
-    private static readonly HashSet<string> RemovedElements = new(StringComparer.Ordinal)
+    //
+    // Case-INSENSITIVE by necessity: the sanitized SVG is inlined into an HTML document,
+    // and HTML tag matching is case-insensitive, so <SCRIPT> would run even though XML
+    // treats it as a distinct name. Local-name matching (ignoring namespace) is likewise
+    // deliberate — a <script> smuggled under another namespace executes just the same.
+    private static readonly HashSet<string> RemovedElements = new(StringComparer.OrdinalIgnoreCase)
     {
-        // Local-name matching is deliberate: a <script> smuggled in under the XHTML
-        // namespace executes just the same once inlined.
         "script", "foreignObject", "style",
         "animate", "animateColor", "animateMotion", "animateTransform", "set", "discard", "mpath",
     };
@@ -103,35 +106,32 @@ public static class SvgSanitizer
             return;
         }
 
-        switch (localName)
+        // Links make no sense in an inlined decorative graphic and are a phishing
+        // surface; keep the visuals, drop the wrapper. Case-insensitive because the
+        // output is inlined into case-insensitive HTML (<A> would still be a link).
+        if (localName.Equals("a", StringComparison.OrdinalIgnoreCase))
         {
+            var kept = element.Nodes().ToList();
+            element.RemoveNodes();
+            if (kept.Count == 0)
+            {
+                element.Remove();
+            }
+            else
+            {
+                element.ReplaceWith([.. kept]);
+            }
 
-            // Links make no sense in an inlined decorative graphic and are a
-            // phishing surface; keep the visuals, drop the wrapper.
-            case "a":
-                var kept = element.Nodes().ToList();
-                element.RemoveNodes();
-                if (kept.Count == 0)
-                {
-                    element.Remove();
-                }
-                else
-                {
-                    element.ReplaceWith([.. kept]);
-                }
+            removed++;
+            foreach (var promoted in kept.OfType<XElement>())
+            {
+                SanitizeNode(promoted, ref removed);
+            }
 
-                removed++;
-                foreach (var promoted in kept.OfType<XElement>())
-                {
-                    SanitizeNode(promoted, ref removed);
-                }
-
-                return;
-
-            default:
-                SanitizeElement(element, ref removed);
-                return;
+            return;
         }
+
+        SanitizeElement(element, ref removed);
     }
 
     private static void SanitizeElement(XElement element, ref int removed)
@@ -156,18 +156,21 @@ public static class SvgSanitizer
 
             // style can carry url(...) loads and (in legacy engines) expressions;
             // presentation attributes cover every styling need we preserve.
-            if (local == "style" && attribute.Name.Namespace == XNamespace.None)
+            // (Case-insensitive: the output is inlined into case-insensitive HTML.)
+            if (local.Equals("style", StringComparison.OrdinalIgnoreCase) &&
+                attribute.Name.Namespace == XNamespace.None)
             {
                 attribute.Remove();
                 removed++;
                 continue;
             }
 
-            if (IsHref(attribute) && !attribute.Value.StartsWith('#'))
+            if (IsHref(attribute) && !attribute.Value.TrimStart().StartsWith('#'))
             {
                 // javascript:, data:, http(s): — none may survive. An <image> or
                 // <use> existed only to follow that reference, so it goes wholesale.
-                if (element.Name.LocalName is "image" or "use")
+                if (element.Name.LocalName.Equals("image", StringComparison.OrdinalIgnoreCase) ||
+                    element.Name.LocalName.Equals("use", StringComparison.OrdinalIgnoreCase))
                 {
                     element.Remove();
                     removed++;
@@ -186,6 +189,6 @@ public static class SvgSanitizer
     }
 
     private static bool IsHref(XAttribute attribute) =>
-        attribute.Name.LocalName == "href" &&
+        attribute.Name.LocalName.Equals("href", StringComparison.OrdinalIgnoreCase) &&
         (attribute.Name.Namespace == XNamespace.None || attribute.Name.Namespace == Xlink);
 }

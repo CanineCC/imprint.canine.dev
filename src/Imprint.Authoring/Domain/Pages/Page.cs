@@ -183,6 +183,13 @@ public sealed class Page : AggregateRoot
             _ => replacement,
         };
 
+        // Same content + structural invariants as AddNode: a props change is another
+        // way content enters the tree, so it cannot smuggle non-canonical HTML, an
+        // out-of-range level/size, or (when a ColumnsNode grows) more nodes than the
+        // page cap allows.
+        EnsureSpecInternallyValid(resolved);
+        EnsureNodeBudget(resolved, replacedNodes: PageTree.Flatten(current).Count());
+
         if (resolved.Equals(current))
         {
             return; // Identical result — nothing happened.
@@ -417,6 +424,13 @@ public sealed class Page : AggregateRoot
     {
         foreach (var node in PageTree.Flatten(spec))
         {
+            // Content invariants must hold at EVERY entry point, not just EditText:
+            // the publisher renders stored RichText as raw markup, so a node spec that
+            // smuggled non-canonical HTML through AddNode/ChangeNodeProps would be a
+            // stored-XSS hole. The same rule everywhere is also the point of a
+            // reference project — the aggregate owns the invariant, uniformly.
+            EnsureNodeContentValid(node);
+
             if (node is ColumnsNode columns)
             {
                 EnsureValidRatios(columns.Ratios);
@@ -442,6 +456,8 @@ public sealed class Page : AggregateRoot
             }
         }
     }
+
+    private static void EnsureNodeContentValid(Node node) => NodeContentRules.Validate(node);
 
     private static void EnsureValidRatios(ImmutableArray<int> ratios)
     {
