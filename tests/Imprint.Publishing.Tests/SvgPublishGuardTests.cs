@@ -33,6 +33,9 @@ public sealed class SvgPublishGuardTests
     [InlineData("<rect onclick=\"steal()\"/>")]
     [InlineData("<rect style=\"background:url(http://evil)\"/>")]
     [InlineData("<image href=\"https://evil/x.png\"/>")]
+    [InlineData("<desc><iframe srcdoc=\"&lt;script&gt;x&lt;/script&gt;\"></iframe></desc>")]
+    [InlineData("<title><object data=\"https://evil\"></object></title>")]
+    [InlineData("<video src=\"x\"/>")]
     public void Active_or_fetching_content_is_rejected(string inner)
     {
         Assert.False(SvgPublishGuard.IsSafe($"<svg {Ns}>{inner}</svg>"));

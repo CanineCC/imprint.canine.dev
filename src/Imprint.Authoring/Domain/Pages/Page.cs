@@ -162,6 +162,11 @@ public sealed class Page : AggregateRoot
         // The caller supplies the copy's root id (so it can build a RemoveNode inverse
         // for undo); descendant ids are minted here. All ids are recorded in the event,
         // so replay yields the identical tree without generating anything.
+        if (copyId.IsRoot)
+        {
+            throw new DomainException("A duplicate cannot use the reserved root id.");
+        }
+
         var copy = CloneWithFreshIds(node) with { Id = copyId };
         if (Tree.Contains(copyId))
         {

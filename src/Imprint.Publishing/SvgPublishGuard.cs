@@ -1,5 +1,6 @@
 using System.Xml;
 using System.Xml.Linq;
+using Imprint.Authoring.Domain.Assets;
 
 namespace Imprint.Publishing;
 
@@ -11,18 +12,10 @@ namespace Imprint.Publishing;
 /// </summary>
 internal static class SvgPublishGuard
 {
-    // Must mirror what the ingest sanitizer (Imprint.Media SvgSanitizer) strips: this
-    // guard's whole point is that if that sanitizer regresses — or someone hand-edits
-    // the media directory — active content still cannot reach a visitor. A shorter
-    // list here would be a false sense of safety.
-    private static readonly HashSet<string> ForbiddenElements = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "script", "foreignObject", "style", "a",
-        "animate", "animateColor", "animateMotion", "animateTransform", "set", "discard", "mpath",
-    };
-
-    // Same depth ceiling as the ingest sanitizer, so a deeply nested SVG can't
-    // StackOverflow the publisher via XElement enumeration/serialization either.
+    // Same allowlist the ingest sanitizer keeps (shared via SvgSafety so the two can't
+    // drift). The sanitizer unwraps &lt;a&gt;, so a sanitized SVG contains none — and
+    // &lt;a&gt; is not in the allowlist, so this guard rejects it too, which is the
+    // correct behaviour for a re-check.
     private const int MaxDepth = 100;
 
     public static bool IsSafe(string svg)
@@ -39,7 +32,7 @@ internal static class SvgPublishGuard
 
             foreach (var element in document.Descendants())
             {
-                if (ForbiddenElements.Contains(element.Name.LocalName) || DepthOf(element) > MaxDepth)
+                if (!SvgSafety.IsAllowed(element.Name.LocalName) || DepthOf(element) > MaxDepth)
                 {
                     return false;
                 }

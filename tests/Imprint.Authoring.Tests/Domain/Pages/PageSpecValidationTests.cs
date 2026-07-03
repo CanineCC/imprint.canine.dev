@@ -81,4 +81,38 @@ public sealed class PageSpecValidationTests
 
         Spec().When(p => p.AddNode(StackId, 0, badGrid)).ThenFails("between 160 and 480");
     }
+
+    [Fact]
+    public void AddNode_block_instance_with_non_canonical_override_html_is_rejected()
+    {
+        // A whole BlockInstanceNode spec must not smuggle non-canonical override HTML
+        // past the content invariant — the publisher renders overrides as raw markup.
+        var instance = new BlockInstanceNode
+        {
+            Id = NodeId.New(),
+            DefinitionId = BlockDefinitionId.New(),
+            Overrides = OverrideSet.Empty.With(NodeId.New(), "html", En, "<script>alert(1)</script>"),
+        };
+
+        Spec().When(p => p.AddNode(StackId, 0, instance)).ThenFails("Expected");
+    }
+
+    [Fact]
+    public void AddNode_block_instance_with_canonical_override_html_is_accepted()
+    {
+        var instance = new BlockInstanceNode
+        {
+            Id = NodeId.New(),
+            DefinitionId = BlockDefinitionId.New(),
+            Overrides = OverrideSet.Empty.With(NodeId.New(), "html", En, "<p>Fine.</p>"),
+        };
+
+        Assert.NotEmpty(Spec().When(p => p.AddNode(StackId, 0, instance)).Raised);
+    }
+
+    [Fact]
+    public void DuplicateNode_with_the_reserved_root_id_is_rejected()
+    {
+        Spec().When(p => p.DuplicateNode(StackId, NodeId.Root)).ThenFails("root id");
+    }
 }

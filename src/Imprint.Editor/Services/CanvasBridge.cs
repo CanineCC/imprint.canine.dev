@@ -25,9 +25,12 @@ public sealed class CanvasBridge(EditorSession session, CommandRunner commands) 
     // Inline-edit session state. _editOriginalValue is the value before the session
     // started and is kept for the WHOLE session so every commit (first + debounced
     // autosaves + final blur) shares one undo entry: undo reverts to the original,
-    // redo replays the final value. _textCommitted flips on the first real commit.
+    // redo replays the final value. _undoSessionNode is the node whose undo entry the
+    // session already pushed — set only AFTER a successful first commit and keyed to
+    // the node, so a failed commit or a switch to another node can never make the next
+    // autosave amend the wrong entry.
     private string? _editOriginalValue;
-    private bool _textCommitted;
+    private NodeId? _undoSessionNode;
 
     /// <summary>The canvas component (or a panel) opens the insert picker at these coordinates.</summary>
     public event Action<NodeId, int, double, double>? GapPickerRequested;
@@ -179,7 +182,7 @@ public sealed class CanvasBridge(EditorSession session, CommandRunner commands) 
         }
 
         _editOriginalValue = CurrentTextOf(node);
-        _textCommitted = false;
+        _undoSessionNode = null;
         session.BeginInlineEdit(nodeId);
         await EnterInlineEditInJs(nodeId.Compact, mode);
     }
@@ -202,6 +205,7 @@ public sealed class CanvasBridge(EditorSession session, CommandRunner commands) 
         }
 
         _editOriginalValue = null;
+        _undoSessionNode = null;
         session.EndInlineEdit();
     }
 
@@ -223,17 +227,19 @@ public sealed class CanvasBridge(EditorSession session, CommandRunner commands) 
         var inverse = new Authoring.Features.Pages.EditText.EditText(
             page.Id, nodeId, field, session.EditLocale.Value, _editOriginalValue ?? string.Empty);
 
-        // One undo entry per edit session: the first commit pushes it (inverse = the
-        // pre-session value), and every later autosave/blur amends its forward command
-        // so redo replays the final text, not a stale mid-edit value.
-        if (!_textCommitted)
-        {
-            _textCommitted = true;
-            await commands.Run(command, inverse, "text edit");
-        }
-        else
+        // One undo entry per edit session: the first successful commit for THIS node
+        // pushes it (inverse = the pre-session value), and every later autosave/blur
+        // amends its forward command so redo replays the final text. Amending only when
+        // the pushed entry belongs to this node — and marking the session committed only
+        // after Run actually succeeds — means a validation failure or a node switch can
+        // never amend some other node's entry.
+        if (_undoSessionNode == nodeId)
         {
             await commands.Amend(command, inverse, "text edit");
+        }
+        else if (await commands.Run(command, inverse, "text edit"))
+        {
+            _undoSessionNode = nodeId;
         }
     }
 

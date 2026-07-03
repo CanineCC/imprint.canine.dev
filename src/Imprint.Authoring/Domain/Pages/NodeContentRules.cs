@@ -57,6 +57,29 @@ public static class NodeContentRules
                 }
 
                 break;
+
+            case BlockInstanceNode instance:
+                // Overrides carry content that the publisher splices into the block's
+                // rich text and renders as raw markup, so they are held to exactly the
+                // same rules as any other stored content. Without this, a whole
+                // BlockInstanceNode spec entering via AddNode/ChangeNodeProps/detach
+                // could smuggle non-canonical HTML that SetBlockOverride would reject.
+                foreach (var entry in instance.Overrides.Entries)
+                {
+                    if (entry.Field == "html")
+                    {
+                        if (!CanonicalHtml.TryValidate(entry.Value, out var error))
+                        {
+                            throw new DomainException(error!);
+                        }
+                    }
+                    else if (entry.Value.Length > MaxTextLength)
+                    {
+                        throw new DomainException($"Text is limited to {MaxTextLength} characters.");
+                    }
+                }
+
+                break;
         }
     }
 

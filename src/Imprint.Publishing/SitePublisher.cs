@@ -671,8 +671,13 @@ public sealed class SitePublisher(
         // Canonical rich text carries page references as href="page:{guid}"; the guid may
         // be dashed or compact ("N"). Extracted so a linked page's slug move re-renders
         // the linking page, not just button links.
+        // Case-insensitive on both attribute and scheme, and permissive on the guid
+        // shape, because CanonicalHtml.IsAllowedHref accepts page: in any case and any
+        // Guid.TryParse-able form. A stricter regex here would silently miss references
+        // and leave the linking page un-invalidated — the dead-link bug this guards.
         private static readonly System.Text.RegularExpressions.Regex PageRefPattern =
-            new("href=\"page:([0-9a-fA-F-]{32,36})\"", System.Text.RegularExpressions.RegexOptions.Compiled);
+            new("href=\"page:([0-9a-fA-F{}()-]{32,38})\"",
+                System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
         private static IEnumerable<PageId> PageRefsIn(string html)
         {

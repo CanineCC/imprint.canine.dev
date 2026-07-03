@@ -283,6 +283,43 @@ public sealed class SvgSanitizerTests
         Assert.DoesNotContain("evil", svg, StringComparison.Ordinal);
     }
 
+    // -- HTML integration points (audit finding: <title>/<desc>/<foreignObject>) ----
+
+    [Theory]
+    [InlineData("<desc><iframe srcdoc=\"&lt;script&gt;alert(1)&lt;/script&gt;\"></iframe></desc>")]
+    [InlineData("<title><iframe src=\"https://evil/phish\"></iframe></title>")]
+    [InlineData("<desc><img src=\"https://evil/track.gif\"/></desc>")]
+    [InlineData("<foreignObject><body onload=\"x()\"/></foreignObject>")]
+    [InlineData("<desc><object data=\"https://evil/x\"></object></desc>")]
+    [InlineData("<title><embed src=\"https://evil/x\"/></title>")]
+    public void Sanitize_html_integration_point_payloads_are_stripped(string inner)
+    {
+        // <title>/<desc>/<foreignObject> are HTML integration points: their content is
+        // HTML-parsed when the SVG is inlined, so an <iframe srcdoc> would run script.
+        var (svg, _) = SvgSanitizer.Sanitize($"<svg {Ns}><g><rect width=\"4\"/>{inner}</g></svg>");
+
+        foreach (var probe in new[] { "iframe", "srcdoc", "evil", "script", "object", "embed", "onload" })
+        {
+            Assert.DoesNotContain(probe, svg, StringComparison.OrdinalIgnoreCase);
+        }
+
+        Assert.Contains("<rect", svg, StringComparison.Ordinal); // the real graphic survives
+    }
+
+    [Fact]
+    public void Sanitize_keeps_only_allowlisted_elements()
+    {
+        // A grab-bag of unknown/HTML elements — none should survive; the path does.
+        var (svg, _) = SvgSanitizer.Sanitize(
+            $"<svg {Ns}><path d=\"M0 0h4\"/><unknownEl/><video src=\"x\"/><audio/><link rel=\"x\"/></svg>");
+
+        Assert.Contains("<path", svg, StringComparison.Ordinal);
+        foreach (var el in new[] { "unknownEl", "<video", "<audio", "<link" })
+        {
+            Assert.DoesNotContain(el, svg, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
     // -- SMIL animation (audit finding: <set> can retarget href at runtime) ---------
 
     [Theory]

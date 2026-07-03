@@ -1,12 +1,13 @@
 using System.Xml;
 using System.Xml.Linq;
+using Imprint.Authoring.Domain.Assets;
 
 namespace Imprint.Media;
 
 /// <summary>
-/// Strips active content from an SVG so it is safe to inline into published pages
-/// (inlining is what lets icons inherit <c>currentColor</c>). Everything not removed
-/// is preserved verbatim: shapes, defs, gradients, viewBox, presentation attributes.
+/// Strips everything but a known-safe subset from an SVG so it is safe to inline into
+/// published pages (inlining is what lets icons inherit <c>currentColor</c>). Shapes,
+/// defs, gradients, viewBox and presentation attributes are preserved verbatim.
 /// </summary>
 public static class SvgSanitizer
 {
@@ -21,20 +22,6 @@ public static class SvgSanitizer
     // asset stays Pending and the worker re-enqueues it on every boot.
     private const int MaxDepth = 100;
     private const int MaxElements = 40_000;
-
-    // SMIL animation: an <animate>/<set> can retarget an href or other attribute at
-    // runtime (e.g. <set attributeName="href" to="javascript:…">), so a purely static
-    // attribute scan is not enough — the elements themselves must go.
-    //
-    // Case-INSENSITIVE by necessity: the sanitized SVG is inlined into an HTML document,
-    // and HTML tag matching is case-insensitive, so <SCRIPT> would run even though XML
-    // treats it as a distinct name. Local-name matching (ignoring namespace) is likewise
-    // deliberate — a <script> smuggled under another namespace executes just the same.
-    private static readonly HashSet<string> RemovedElements = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "script", "foreignObject", "style",
-        "animate", "animateColor", "animateMotion", "animateTransform", "set", "discard", "mpath",
-    };
 
     public static (string Svg, int RemovedNodes) Sanitize(string svg)
     {
@@ -99,16 +86,11 @@ public static class SvgSanitizer
     private static void SanitizeNode(XElement element, ref int removed)
     {
         var localName = element.Name.LocalName;
-        if (RemovedElements.Contains(localName))
-        {
-            element.Remove();
-            removed++;
-            return;
-        }
 
         // Links make no sense in an inlined decorative graphic and are a phishing
-        // surface; keep the visuals, drop the wrapper. Case-insensitive because the
-        // output is inlined into case-insensitive HTML (<A> would still be a link).
+        // surface; keep the visuals, drop the wrapper. Handled before the allowlist so
+        // an <a>'s children are preserved rather than dropped with it. Case-insensitive
+        // because the output is inlined into case-insensitive HTML (<A> is still a link).
         if (localName.Equals("a", StringComparison.OrdinalIgnoreCase))
         {
             var kept = element.Nodes().ToList();
@@ -128,6 +110,17 @@ public static class SvgSanitizer
                 SanitizeNode(promoted, ref removed);
             }
 
+            return;
+        }
+
+        // Allowlist, not denylist: anything that is not a known-inert SVG element goes
+        // whole — including <script>/<style>/SMIL, and crucially the <title>/<desc>/
+        // <foreignObject> HTML integration points, where an <iframe srcdoc> would be
+        // HTML-parsed and run script once inlined.
+        if (!SvgSafety.IsAllowed(localName))
+        {
+            element.Remove();
+            removed++;
             return;
         }
 
