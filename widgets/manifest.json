@@ -1,0 +1,29 @@
+[
+  {
+    "tag": "x-countdown",
+    "name": "Countdown",
+    "description": "Counts down to a date and time. Great for launches and events.",
+    "bundle": "x-countdown.js",
+    "placeholder": "Counting down…",
+    "props": [
+      { "name": "until", "label": "Counts down to", "type": "text", "default": "2027-01-01T00:00" },
+      { "name": "label", "label": "Caption", "type": "text", "default": "" },
+      { "name": "done-text", "label": "Text when reached", "type": "text", "default": "It's time!" }
+    ]
+  },
+  {
+    "tag": "x-compare",
+    "name": "Before / after",
+    "description": "An image comparison slider with a draggable divider.",
+    "bundle": "x-compare.js",
+    "aspectRatio": "16 / 9",
+    "placeholder": "Before / after slider",
+    "props": [
+      { "name": "before", "label": "Before image URL", "type": "url" },
+      { "name": "after", "label": "After image URL", "type": "url" },
+      { "name": "start", "label": "Divider start position (%)", "type": "number", "default": "50" },
+      { "name": "before-label", "label": "Before label", "type": "text", "default": "Before" },
+      { "name": "after-label", "label": "After label", "type": "text", "default": "After" }
+    ]
+  }
+]

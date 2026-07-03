@@ -59,3 +59,6 @@ nunit-*.xml
 # Imprint runtime data (event store, media, published output)
 data/
 src/Imprint.Editor/data/
+
+# Claude Code session artifacts (agent worktrees etc.)
+.claude/
