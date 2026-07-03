@@ -72,7 +72,7 @@ public sealed class MoveRemoveDuplicateNodeTests
         var heading = new HeadingNode { Id = NodeId.New(), Text = LocalizedText.Of(new Locale("en"), "Hi") };
         await host.Ok(new AddNode(pageId, sectionId, 0, heading));
 
-        await host.Ok(new DuplicateNode(pageId, heading.Id));
+        await host.Ok(new DuplicateNode(pageId, heading.Id, NodeId.New()));
 
         var section = (SectionNode)host.Get<PageDrafts>().Get(pageId)!.Tree.Find(sectionId)!;
         Assert.Equal(2, section.Children.Count);
@@ -95,7 +95,7 @@ public sealed class MoveRemoveDuplicateNodeTests
         };
         await host.Ok(new AddNode(pageId, sectionId, 0, columns));
 
-        var error = await host.Fails(new DuplicateNode(pageId, columns.Children[0].Id));
+        var error = await host.Fails(new DuplicateNode(pageId, columns.Children[0].Id, NodeId.New()));
         Assert.Contains("Column cells cannot be duplicated", error);
     }
 }

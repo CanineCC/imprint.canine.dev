@@ -146,11 +146,16 @@
 
     private async Task InsertPreset(string key)
     {
-        Close();
-        if (Session.CurrentPageId is { } pageId)
+        // Build the section here (rather than via the AddPreset slice) so we know its
+        // id up front and can insert it through the undoable AddNode path — a preset
+        // insertion is as undoable as any other insert.
+        if (SectionPresets.Find(key) is not { } preset)
         {
-            await Commands.Run(new AddPreset(pageId, _index, key));
+            return;
         }
+
+        var locale = Site.Current?.DefaultLocale ?? Session.EditLocale;
+        await InsertNode(preset.Build(locale));
     }
 
     private async Task InsertNode(Node node)

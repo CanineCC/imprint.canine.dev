@@ -25,25 +25,36 @@ public sealed class CommandRunner(ICommandDispatcher dispatcher, ToastService to
 {
     private sealed record UndoEntry(string Label, ICommand Command, ICommand Inverse);
 
-    private readonly Stack<UndoEntry> _undo = new();
-    private readonly Stack<UndoEntry> _redo = new();
+    // Lists, not Stacks, so the top entry can be amended in place (see Amend).
+    private readonly List<UndoEntry> _undo = [];
+    private readonly List<UndoEntry> _redo = [];
 
     public event Action? Changed;
 
     public bool CanUndo => _undo.Count > 0;
     public bool CanRedo => _redo.Count > 0;
-    public string? UndoLabel => _undo.TryPeek(out var entry) ? entry.Label : null;
+    public string? UndoLabel => _undo.Count > 0 ? _undo[^1].Label : null;
 
-    /// <summary>Runs a command; failures become toasts. Returns success.</summary>
+    /// <summary>
+    /// Runs a mutating command that isn't (yet) undoable. It still clears the redo
+    /// stack: any new mutation makes the redo timeline meaningless, and leaving a stale
+    /// redo target would let a later Ctrl+Y replay an inverse against a page it was
+    /// never computed for.
+    /// </summary>
     public async Task<bool> Run(ICommand command)
     {
-        var result = await dispatcher.Dispatch(command);
-        if (!result.Succeeded)
+        if (!await Dispatch(command))
         {
-            toasts.Error(result.ErrorMessage);
+            return false;
         }
 
-        return result.Succeeded;
+        if (_redo.Count > 0)
+        {
+            _redo.Clear();
+        }
+
+        Changed?.Invoke();
+        return true;
     }
 
     /// <summary>
@@ -52,12 +63,37 @@ public sealed class CommandRunner(ICommandDispatcher dispatcher, ToastService to
     /// </summary>
     public async Task<bool> Run(ICommand command, ICommand inverse, string label)
     {
-        if (!await Run(command))
+        if (!await Dispatch(command))
         {
             return false;
         }
 
-        _undo.Push(new UndoEntry(label, command, inverse));
+        _undo.Add(new UndoEntry(label, command, inverse));
+        _redo.Clear();
+        Changed?.Invoke();
+        return true;
+    }
+
+    /// <summary>
+    /// Amends the forward command of the current top undo entry, for a follow-up edit
+    /// in the same session (the debounced autosaves after the first commit of an inline
+    /// edit). The inverse stays pinned to the pre-session value, so one Ctrl+Z reverts
+    /// the whole session and Ctrl+Y replays the FINAL value — not a stale mid-edit one.
+    /// Falls back to a plain undoable entry if there is no matching session on top.
+    /// </summary>
+    public async Task<bool> Amend(ICommand command, ICommand inverse, string label)
+    {
+        if (_undo.Count == 0 || _undo[^1].Label != label)
+        {
+            return await Run(command, inverse, label);
+        }
+
+        if (!await Dispatch(command))
+        {
+            return false;
+        }
+
+        _undo[^1] = _undo[^1] with { Command = command };
         _redo.Clear();
         Changed?.Invoke();
         return true;
@@ -65,14 +101,19 @@ public sealed class CommandRunner(ICommandDispatcher dispatcher, ToastService to
 
     public async Task Undo()
     {
-        if (!_undo.TryPop(out var entry))
+        if (_undo.Count == 0)
         {
             return;
         }
 
-        if (await Run(entry.Inverse))
+        // Peek, then pop only on success: if the inverse now fails (a concurrent edit
+        // from another tab removed the target), the step stays on the stack to retry
+        // rather than vanishing and desyncing the whole history.
+        var entry = _undo[^1];
+        if (await Dispatch(entry.Inverse))
         {
-            _redo.Push(entry);
+            _undo.RemoveAt(_undo.Count - 1);
+            _redo.Add(entry);
             toasts.Show($"Undid {entry.Label}");
         }
 
@@ -81,16 +122,30 @@ public sealed class CommandRunner(ICommandDispatcher dispatcher, ToastService to
 
     public async Task Redo()
     {
-        if (!_redo.TryPop(out var entry))
+        if (_redo.Count == 0)
         {
             return;
         }
 
-        if (await Run(entry.Command))
+        var entry = _redo[^1];
+        if (await Dispatch(entry.Command))
         {
-            _undo.Push(entry);
+            _redo.RemoveAt(_redo.Count - 1);
+            _undo.Add(entry);
         }
 
         Changed?.Invoke();
+    }
+
+    /// <summary>Dispatch + surface domain errors as toasts. Does not touch the undo/redo stacks.</summary>
+    private async Task<bool> Dispatch(ICommand command)
+    {
+        var result = await dispatcher.Dispatch(command);
+        if (!result.Succeeded)
+        {
+            toasts.Error(result.ErrorMessage);
+        }
+
+        return result.Succeeded;
     }
 }

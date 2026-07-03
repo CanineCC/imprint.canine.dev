@@ -8,7 +8,7 @@ public sealed class DuplicateNodeHandler(IAggregateStore store) : ICommandHandle
     public async Task<Result> Handle(DuplicateNode cmd, CancellationToken ct)
     {
         var page = await store.Load<Page>(cmd.PageId.Stream, ct);
-        page.DuplicateNode(cmd.NodeId);
+        page.DuplicateNode(cmd.NodeId, cmd.CopyId);
         await store.Save(page, ct);
         return Result.Ok();
     }

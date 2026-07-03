@@ -21,7 +21,13 @@ public sealed record DragSlotDto(int SlotId, string ParentId, int Index, string 
 public sealed class CanvasBridge(EditorSession session, CommandRunner commands) : IDisposable
 {
     private SlotPlanner.DragPlan? _activePlan;
+
+    // Inline-edit session state. _editOriginalValue is the value before the session
+    // started and is kept for the WHOLE session so every commit (first + debounced
+    // autosaves + final blur) shares one undo entry: undo reverts to the original,
+    // redo replays the final value. _textCommitted flips on the first real commit.
     private string? _editOriginalValue;
+    private bool _textCommitted;
 
     /// <summary>The canvas component (or a panel) opens the insert picker at these coordinates.</summary>
     public event Action<NodeId, int, double, double>? GapPickerRequested;
@@ -173,6 +179,7 @@ public sealed class CanvasBridge(EditorSession session, CommandRunner commands) 
         }
 
         _editOriginalValue = CurrentTextOf(node);
+        _textCommitted = false;
         session.BeginInlineEdit(nodeId);
         await EnterInlineEditInJs(nodeId.Compact, mode);
     }
@@ -213,21 +220,20 @@ public sealed class CanvasBridge(EditorSession session, CommandRunner commands) 
 
         var command = new Authoring.Features.Pages.EditText.EditText(
             page.Id, nodeId, field, session.EditLocale.Value, value);
+        var inverse = new Authoring.Features.Pages.EditText.EditText(
+            page.Id, nodeId, field, session.EditLocale.Value, _editOriginalValue ?? string.Empty);
 
-        // One undo entry per edit session, capturing the pre-edit value; the debounced
-        // autosaves that follow only move the redo target.
-        if (_editOriginalValue is { } original)
+        // One undo entry per edit session: the first commit pushes it (inverse = the
+        // pre-session value), and every later autosave/blur amends its forward command
+        // so redo replays the final text, not a stale mid-edit value.
+        if (!_textCommitted)
         {
-            _editOriginalValue = null;
-            await commands.Run(
-                command,
-                new Authoring.Features.Pages.EditText.EditText(
-                    page.Id, nodeId, field, session.EditLocale.Value, original),
-                "text edit");
+            _textCommitted = true;
+            await commands.Run(command, inverse, "text edit");
         }
         else
         {
-            await commands.Run(command);
+            await commands.Amend(command, inverse, "text edit");
         }
     }
 
@@ -251,9 +257,19 @@ public sealed class CanvasBridge(EditorSession session, CommandRunner commands) 
 
     private async Task DuplicateSelection()
     {
-        if (session.Selection is { } id && session.CurrentPage is { } page)
+        if (session.Selection is not { } id || session.CurrentPage is not { } page || !page.Tree.Contains(id))
         {
-            await commands.Run(new Authoring.Features.Pages.DuplicateNode.DuplicateNode(page.Id, id));
+            return;
+        }
+
+        // We mint the copy id here so the inverse can remove exactly that node.
+        var copyId = NodeId.New();
+        if (await commands.Run(
+                new Authoring.Features.Pages.DuplicateNode.DuplicateNode(page.Id, id, copyId),
+                new Authoring.Features.Pages.RemoveNode.RemoveNode(page.Id, copyId),
+                "duplicate"))
+        {
+            session.Select(copyId);
         }
     }
 

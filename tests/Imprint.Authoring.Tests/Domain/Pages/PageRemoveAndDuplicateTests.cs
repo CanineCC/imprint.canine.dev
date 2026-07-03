@@ -67,7 +67,7 @@ public sealed class PageRemoveAndDuplicateTests
     public void DuplicateNode_unknown_node_is_rejected()
     {
         Spec()
-            .When(p => p.DuplicateNode(NodeId.New()))
+            .When(p => p.DuplicateNode(NodeId.New(), NodeId.New()))
             .ThenFails("no longer exists");
     }
 
@@ -75,14 +75,14 @@ public sealed class PageRemoveAndDuplicateTests
     public void DuplicateNode_of_a_managed_column_cell_is_rejected()
     {
         Spec()
-            .When(p => p.DuplicateNode(_columns.Children[0].Id))
+            .When(p => p.DuplicateNode(_columns.Children[0].Id, NodeId.New()))
             .ThenFails("cannot be duplicated");
     }
 
     [Fact]
     public void DuplicateNode_carries_a_deep_copy_with_fresh_ids()
     {
-        var outcome = Spec().When(p => p.DuplicateNode(_columns.Id));
+        var outcome = Spec().When(p => p.DuplicateNode(_columns.Id, NodeId.New()));
 
         var raised = Assert.IsType<NodeDuplicated>(Assert.Single(outcome.Raised));
         Assert.Equal(_columns.Id, raised.SourceId);
@@ -106,7 +106,7 @@ public sealed class PageRemoveAndDuplicateTests
     [Fact]
     public void DuplicateNode_inserts_the_copy_immediately_after_the_source()
     {
-        var outcome = Spec().When(p => p.DuplicateNode(_heading.Id));
+        var outcome = Spec().When(p => p.DuplicateNode(_heading.Id, NodeId.New()));
 
         var raised = Assert.IsType<NodeDuplicated>(Assert.Single(outcome.Raised));
         var stack = Assert.IsType<StackNode>(outcome.Aggregate.Tree.Find(_stack.Id));
@@ -118,7 +118,7 @@ public sealed class PageRemoveAndDuplicateTests
     [Fact]
     public void DuplicateNode_replay_yields_the_identical_tree()
     {
-        var outcome = Spec().When(p => p.DuplicateNode(_columns.Id));
+        var outcome = Spec().When(p => p.DuplicateNode(_columns.Id, NodeId.New()));
 
         // Determinism: the event alone must rebuild the exact same tree — the fold
         // may not mint ids or re-derive anything.
@@ -135,7 +135,7 @@ public sealed class PageRemoveAndDuplicateTests
 
         AggregateSpec.For<Page>()
             .Given(_created, new NodeAdded(NodeId.Root, 0, big))
-            .When(p => p.DuplicateNode(big.Id)) // 251 + 251 = 502 > 500
+            .When(p => p.DuplicateNode(big.Id, NodeId.New())) // 251 + 251 = 502 > 500
             .ThenFails("500 elements");
     }
 
@@ -146,7 +146,7 @@ public sealed class PageRemoveAndDuplicateTests
 
         var outcome = AggregateSpec.For<Page>()
             .Given(_created, new NodeAdded(NodeId.Root, 0, big))
-            .When(p => p.DuplicateNode(big.Id)); // 250 + 250 = 500
+            .When(p => p.DuplicateNode(big.Id, NodeId.New())); // 250 + 250 = 500
 
         Assert.Single(outcome.Raised);
         Assert.Equal(500, outcome.Aggregate.Tree.Count());

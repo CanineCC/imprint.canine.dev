@@ -161,7 +161,7 @@ public sealed class PageLifecycleTests
             ("AddNode", p => p.AddNode(NodeId.Root, 0, Section())),
             ("MoveNode", p => p.MoveNode(NodeId.New(), NodeId.Root, 0)),
             ("RemoveNode", p => p.RemoveNode(NodeId.New())),
-            ("DuplicateNode", p => p.DuplicateNode(NodeId.New())),
+            ("DuplicateNode", p => p.DuplicateNode(NodeId.New(), NodeId.New())),
             ("ChangeNodeProps", p => p.ChangeNodeProps(Heading())),
             ("EditText", p => p.EditText(NodeId.New(), "text", En, "x")),
             ("SetBlockOverride", p => p.SetBlockOverride(NodeId.New(), NodeId.New(), "text", En, "x")),

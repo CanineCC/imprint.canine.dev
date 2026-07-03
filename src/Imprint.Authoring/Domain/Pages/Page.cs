@@ -147,7 +147,7 @@ public sealed class Page : AggregateRoot
         Raise(new NodeRemoved(nodeId));
     }
 
-    public void DuplicateNode(NodeId nodeId)
+    public void DuplicateNode(NodeId nodeId, NodeId copyId)
     {
         EnsureNotDeleted();
         var node = Tree.Find(nodeId)
@@ -159,9 +159,16 @@ public sealed class Page : AggregateRoot
 
         EnsureNodeBudget(node, replacedNodes: 0);
 
-        // Fresh ids are minted here, once, and recorded in the event: replay must
-        // yield the identical tree, so the fold never generates anything.
-        Raise(new NodeDuplicated(nodeId, CloneWithFreshIds(node)));
+        // The caller supplies the copy's root id (so it can build a RemoveNode inverse
+        // for undo); descendant ids are minted here. All ids are recorded in the event,
+        // so replay yields the identical tree without generating anything.
+        var copy = CloneWithFreshIds(node) with { Id = copyId };
+        if (Tree.Contains(copyId))
+        {
+            throw new DomainException("The duplicate's id is already used on this page.");
+        }
+
+        Raise(new NodeDuplicated(nodeId, copy));
     }
 
     public void ChangeNodeProps(Node replacement)
