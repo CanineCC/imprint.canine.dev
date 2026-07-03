@@ -1,0 +1,9 @@
+@namespace Imprint.Rendering
+@inherits NodeViewBase<RichTextNode>
+@* MarkupString is safe here by construction: the stored value passed the canonical
+   grammar validator at write time, and RichTextHtml only rewrites hrefs it parsed. *@
+<div class="ip-prose" @attributes="NodeAttributes">@((MarkupString)ResolvedHtml)</div>
+
+@code {
+  private string ResolvedHtml => RichTextHtml.ResolveLinks(Resolve(Node.Html), Ctx.ResolvePagePath);
+}

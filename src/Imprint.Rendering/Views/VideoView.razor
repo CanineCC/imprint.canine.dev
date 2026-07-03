@@ -1,0 +1,48 @@
+@namespace Imprint.Rendering
+@using Imprint.Authoring.Domain.Assets
+@inherits NodeViewBase<VideoNode>
+@{
+  var info = Node.AssetId is { } assetId ? Ctx.ResolveAsset(assetId) : null;
+}
+@if (info is { Kind: AssetKind.Video })
+{
+  <video class="ip-video" @attributes="VideoAttributes()">
+    <source src="@info.Url" type="video/webm" />
+  </video>
+}
+else if (IsEditor)
+{
+  <div class="ip-placeholder" @attributes="NodeAttributes">@Node.DisplayName</div>
+}
+@* Static + no publishable asset: nothing — same rationale as images. *@
+
+@code {
+  private IReadOnlyDictionary<string, object> VideoAttributes()
+  {
+    var attributes = new Dictionary<string, object>();
+    if (Node.Mode == VideoMode.Ambient)
+    {
+      // Ambient = decorative motion: must be muted to be allowed to autoplay, must
+      // never hijack a cast session, must not fullscreen on iOS.
+      attributes["autoplay"] = true;
+      attributes["muted"] = true;
+      attributes["loop"] = true;
+      attributes["playsinline"] = true;
+      attributes["disableremoteplayback"] = true;
+    }
+    else
+    {
+      // Player = user-initiated: metadata preload paints duration/poster without
+      // pulling the stream.
+      attributes["controls"] = true;
+      attributes["preload"] = "metadata";
+    }
+
+    foreach (var (name, value) in NodeAttributes)
+    {
+      attributes[name] = value;
+    }
+
+    return attributes;
+  }
+}

@@ -1,0 +1,86 @@
+@namespace Imprint.Rendering
+@using Imprint.Authoring.Domain.Assets
+@using Microsoft.AspNetCore.Components.Rendering
+@inherits NodeViewBase<ImageNode>
+@{
+  RenderImage(__builder);
+}
+
+@code {
+  [CascadingParameter] public PageRenderState? PageState { get; set; }
+
+  private void RenderImage(RenderTreeBuilder builder)
+  {
+    var info = Node.AssetId is { } assetId ? Ctx.ResolveAsset(assetId) : null;
+    if (info is not { Kind: AssetKind.Image } || info.ImageVariants.Count == 0)
+    {
+      // Static: an unpublishable image renders nothing — a broken <img> on a visitor's
+      // page is worse than absence. The editor shows what is missing instead.
+      if (IsEditor)
+      {
+        RenderPlaceholder(builder);
+      }
+
+      return;
+    }
+
+    var variants = info.ImageVariants.OrderBy(v => v.Width).ToList();
+    // Middle variant as src: the fallback for pre-srcset consumers (readers, scrapers)
+    // should be a reasonable size, not the largest download.
+    var src = variants[(variants.Count - 1) / 2];
+    var largest = variants[^1];
+    var eager = PageState?.TryClaimFirstImage() == true;
+
+    builder.OpenElement(0, "img");
+    builder.AddAttribute(1, "class", CssClass);
+    builder.AddAttribute(2, "src", src.Url);
+    builder.AddAttribute(3, "srcset", string.Join(", ", variants.Select(v => $"{v.Url} {v.Width}w")));
+    builder.AddAttribute(4, "sizes", CurrentHints.ToSizesAttribute());
+    // Intrinsic dimensions from the largest variant: the browser reserves the box
+    // before any bytes arrive — zero CLS by construction.
+    builder.AddAttribute(5, "width", largest.Width.ToString());
+    builder.AddAttribute(6, "height", largest.Height.ToString());
+    builder.AddAttribute(7, "alt", AltText(info));
+    if (eager)
+    {
+      builder.AddAttribute(8, "loading", "eager");
+      builder.AddAttribute(9, "fetchpriority", "high");
+    }
+    else
+    {
+      builder.AddAttribute(10, "loading", "lazy");
+    }
+
+    builder.AddAttribute(11, "decoding", "async");
+    builder.AddMultipleAttributes(12, NodeAttributes);
+    builder.CloseElement();
+  }
+
+  private void RenderPlaceholder(RenderTreeBuilder builder)
+  {
+    builder.OpenElement(0, "div");
+    // Aspect classes on the placeholder too, so the canvas approximates the final box.
+    builder.AddAttribute(1, "class", Classes("ip-placeholder", AspectClass, RoundedClass));
+    builder.AddMultipleAttributes(2, NodeAttributes);
+    builder.AddContent(3, Node.DisplayName);
+    builder.CloseElement();
+  }
+
+  private string AltText(AssetRenderInfo info)
+  {
+    var alt = Resolve(Node.Alt);
+    return alt.Length > 0 ? alt : Resolve(info.DefaultAlt);
+  }
+
+  private string CssClass => Classes("ip-img", AspectClass, RoundedClass);
+
+  private string? AspectClass => Node.Aspect switch
+  {
+    ImageAspect.Square => "ip-img-square",
+    ImageAspect.Wide16x9 => "ip-img-wide16x9",
+    ImageAspect.Portrait3x4 => "ip-img-portrait3x4",
+    _ => null,
+  };
+
+  private string? RoundedClass => Node.Rounded ? "ip-img-rounded" : null;
+}

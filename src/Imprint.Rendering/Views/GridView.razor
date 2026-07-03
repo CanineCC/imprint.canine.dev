@@ -1,0 +1,16 @@
+@namespace Imprint.Rendering
+@inherits NodeViewBase<GridNode>
+<div class="@CssClass" style="@Style" @attributes="NodeAttributes">
+  <CascadingValue Value="CurrentHints.InGrid(Node.MinItemPx)">
+    @foreach (var child in Node.Children)
+    {
+      <NodeView Node="child" @key="child.Id" />
+    }
+  </CascadingValue>
+</div>
+
+@code {
+  private string CssClass => Classes("ip-grid", GapClass(Node.Gap));
+
+  private string Style => $"--ip-min-item: {Node.MinItemPx}px";
+}

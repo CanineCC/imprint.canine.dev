@@ -13,4 +13,11 @@
     <ProjectReference Include="../Imprint.Authoring/Imprint.Authoring.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Also embedded (same bytes, second transport): the publisher composes
+         site.css = ThemeCss.Emit(theme) + ThemeCss.StructuralCss without touching
+         static-web-asset paths, while the wwwroot copy serves the editor canvas. -->
+    <EmbeddedResource Include="wwwroot/styles/imprint-base.css" LogicalName="Imprint.Rendering.styles.imprint-base.css" />
+  </ItemGroup>
+
 </Project>

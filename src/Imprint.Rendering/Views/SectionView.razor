@@ -1,0 +1,25 @@
+@namespace Imprint.Rendering
+@inherits NodeViewBase<SectionNode>
+<section class="@CssClass" @attributes="NodeAttributes">
+  <CascadingValue Value="CurrentHints.InSection(Node.Width)">
+    @foreach (var child in Node.Children)
+    {
+      <NodeView Node="child" @key="child.Id" />
+    }
+  </CascadingValue>
+</section>
+
+@code {
+  // Only non-default variants emit a class — keeps published markup minimal.
+  private string CssClass => Classes(
+    "ip-section",
+    Node.Width switch { SectionWidth.Wide => "ip-section-wide", SectionWidth.Full => "ip-section-full", _ => null },
+    Node.Background switch
+    {
+      SectionBackground.Surface => "ip-bg-surface",
+      SectionBackground.SurfaceAlt => "ip-bg-surface-alt",
+      SectionBackground.Primary => "ip-bg-primary",
+      _ => null,
+    },
+    Node.Padding switch { SectionPadding.None => "ip-pad-none", SectionPadding.Large => "ip-pad-large", _ => null });
+}

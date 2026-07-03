@@ -1,0 +1,10 @@
+@namespace Imprint.Rendering
+@inherits NodeViewBase<SpacerNode>
+@* aria-hidden: pure whitespace, nothing to announce. *@
+<div class="@CssClass" aria-hidden="true" @attributes="NodeAttributes"></div>
+
+@code {
+  private string CssClass => Classes(
+    "ip-spacer",
+    Node.Size switch { SpacerSize.Small => "ip-spacer-s", SpacerSize.Large => "ip-spacer-l", _ => "ip-spacer-m" });
+}

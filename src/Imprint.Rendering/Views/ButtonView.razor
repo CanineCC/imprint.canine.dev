@@ -1,0 +1,34 @@
+@namespace Imprint.Rendering
+@inherits NodeViewBase<ButtonNode>
+@{
+  var label = Resolve(Node.Label);
+  var href = ResolveHref();
+}
+@if (href is not null)
+{
+  <a class="@CssClass" href="@href" rel="@Rel" @attributes="NodeAttributes">@label</a>
+}
+else
+{
+  @* Unresolvable target (deleted page, disallowed scheme, no link yet): a styled but
+     inert span — a dead <a> would be worse for both visitors and assistive tech. *@
+  <span class="@CssClass" @attributes="NodeAttributes">@label</span>
+}
+
+@code {
+  private string CssClass => Classes(
+    "ip-btn",
+    Node.Variant switch { ButtonVariant.Secondary => "ip-btn-secondary", ButtonVariant.Ghost => "ip-btn-ghost", _ => "ip-btn-primary" });
+
+  private string? ResolveHref() => Node.LinkTo switch
+  {
+    PageLink page => Ctx.ResolvePagePath(page.PageId),
+    // Verbatim only when the scheme allowlist passes — same gate the richtext
+    // validator applies, so no href can reach markup through the button that could
+    // not reach it through prose.
+    ExternalLink external when CanonicalHtml.IsAllowedHref(external.Url) => external.Url,
+    _ => null,
+  };
+
+  private string? Rel => Node.LinkTo is ExternalLink ? "noopener" : null;
+}

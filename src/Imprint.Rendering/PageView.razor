@@ -1,0 +1,20 @@
+@namespace Imprint.Rendering
+@* The shared entry point for both planes: the publisher renders it into a <main>,
+   the editor into the canvas viewport. It owns the per-render-pass state (first-image
+   eagerness) so node views stay stateless. *@
+<div class="ip-page">
+  <CascadingValue Value="_state" IsFixed="true">
+    @foreach (var node in Roots)
+    {
+      <NodeView Node="node" />
+    }
+  </CascadingValue>
+</div>
+
+@code {
+  // Per component instance, not per render: an editor re-render must not migrate
+  // eagerness to whichever image happens to render first after a tree edit.
+  private readonly PageRenderState _state = new();
+
+  [Parameter, EditorRequired] public IReadOnlyList<Node> Roots { get; set; } = [];
+}
