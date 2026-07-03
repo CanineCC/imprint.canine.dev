@@ -147,10 +147,11 @@ attributes re-emitted from parse at render).
 | `page.node-moved` | `NodeId NodeId, NodeId NewParentId, int NewIndex` |
 | `page.node-removed` | `NodeId NodeId` |
 | `page.node-duplicated` | `NodeId SourceId, NodeSpec Copy` (fresh ids inside `Copy`; inserted immediately after source) |
-| `page.node-props-changed` | `NodeId NodeId, NodeProps Props` (typed per node type; polymorphic serialization via the event registry) |
+| `page.node-props-changed` | `Node Node` — the complete replacement node with children resolved by the behavior (columns growth mints fresh empty cells at decision time), so replay is a mechanical `PageTree.Replace` |
 | `page.text-changed` | `NodeId NodeId, string Field, Locale Locale, string Value` (Field ∈ {`text`,`html`,`label`,`alt`}; `html` values must already be canonical) |
 | `page.block-override-set` | `NodeId InstanceId, NodeId DefinitionNodeId, string Field, Locale Locale, string? Value` (null clears the override) |
-| `page.published` | `long Version` (the stream version this publish covers — set by the handler to the aggregate's current version) |
+| `page.block-instance-detached` | `NodeId InstanceId, Node Replacement` — the resolved definition subtree (overrides applied, fresh ids), swapped in place |
+| `page.published` | `long Version` — the stream position of the publish event itself. Replaying the stream to this version (inclusive) is the published state; any event after it means the draft has moved on (the `Modified` badge). |
 | `page.unpublished` | — |
 | `page.deleted` | — (publisher removes output; slice forbids deleting a page referenced by site navigation) |
 
@@ -170,7 +171,7 @@ State: name, kind, content type, original storage key, processing status
 | Stable name | Payload |
 |---|---|
 | `asset.uploaded` | `AssetId, string FileName, string ContentType, AssetKind Kind, long ByteSize, string StorageKey` |
-| `asset.image-variants-generated` | `IReadOnlyList<ImageVariant> Variants` where `ImageVariant { int Width, string StorageKey, long ByteSize }` (widths from {480, 960, 1440, 1920} not exceeding source; always includes the largest ≤ source) |
+| `asset.image-variants-generated` | `IReadOnlyList<ImageVariant> Variants` where `ImageVariant { int Width, int Height, string StorageKey, long ByteSize }` (widths from {480, 960, 1440, 1920} not exceeding source; always includes the largest ≤ source) |
 | `asset.svg-sanitized` | `string StorageKey, int RemovedNodeCount` |
 | `asset.video-transcoded` | `string StorageKey, long ByteSize` |
 | `asset.processing-failed` | `string Reason` → status `Failed` (still downloadable as original in the editor; not publishable) |

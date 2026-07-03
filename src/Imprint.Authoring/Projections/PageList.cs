@@ -30,8 +30,9 @@ public sealed record PageSummary(
     public PageStatus Status => PublishedVersion switch
     {
         null => PageStatus.Draft,
-        // The publish event itself bumps the version by one past the covered version.
-        var published when Version > published + 1 => PageStatus.Modified,
+        // PagePublished.Version is the stream position of the publish event itself,
+        // so "any event after it" means the draft moved on.
+        var published when Version > published => PageStatus.Modified,
         _ => PageStatus.Published,
     };
 
