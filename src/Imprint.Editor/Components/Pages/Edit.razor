@@ -1,0 +1,25 @@
+@page "/edit/{PageIdValue}"
+@using Imprint.Authoring.Domain
+@using Imprint.Editor.Services
+@inject EditorSession Session
+@inject NavigationManager Navigation
+
+<PageTitle>@(Session.CurrentPage?.Title.Resolve(Session.EditLocale, Session.EditLocale) is { Length: > 0 } title ? $"{title} · Imprint" : "Imprint")</PageTitle>
+
+<EditorShell />
+
+@code {
+    [Parameter] public string PageIdValue { get; set; } = "";
+
+    protected override void OnParametersSet()
+    {
+        if (Guid.TryParseExact(PageIdValue, "N", out var guid) || Guid.TryParse(PageIdValue, out guid))
+        {
+            Session.OpenPage(PageId.From(guid));
+        }
+        else
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+}

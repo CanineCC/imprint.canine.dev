@@ -1,0 +1,29 @@
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Services
+@inject EditorSession Session
+@inject SiteOverview Site
+
+@if (Site.Current is { Locales.Count: > 1 } site)
+{
+    <label class="ed-locale">
+        <span class="ed-visually-hidden">Editing language</span>
+        <select class="ed-select" value="@Session.EditLocale.Value" @onchange="OnChange">
+            @foreach (var locale in site.Locales)
+            {
+                <option value="@locale.Value">
+                    @locale.Value@(locale == site.DefaultLocale ? " (default)" : "")
+                </option>
+            }
+        </select>
+    </label>
+}
+
+@code {
+    private void OnChange(ChangeEventArgs args)
+    {
+        if (Locale.TryCreate(args.Value?.ToString(), out var locale))
+        {
+            Session.EditLocale = locale;
+        }
+    }
+}

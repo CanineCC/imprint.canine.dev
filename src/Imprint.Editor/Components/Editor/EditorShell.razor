@@ -1,0 +1,99 @@
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject EditorSession Session
+@inject SiteOverview Site
+@inject CommandRunner Commands
+@inject ToastService Toasts
+
+@* The frame: top bar, icon rail, contextual left panel, canvas column, inspector,
+   status bar, toast host. Panels own their interiors; the shell owns arrangement. *@
+
+<div class="ed-app">
+    <header class="ed-topbar">
+        <span class="ed-site-name">@(Site.Current?.Name ?? "Imprint")</span>
+        <TopBarPageSwitcher />
+        <span style="flex:1"></span>
+        <ViewportToggle />
+        <LocaleSwitcher />
+        <button type="button" class="ed-btn ed-btn-ghost" title="Preview site dark mode"
+                aria-label="Toggle canvas dark mode" @onclick="Session.ToggleCanvasDark">
+            @(Session.CanvasDark ? "☾" : "☀")
+        </button>
+        <PublishButton />
+    </header>
+
+    <nav class="ed-rail" aria-label="Editor panels">
+        @foreach (var (panel, icon, label) in Rail)
+        {
+            <button type="button"
+                    class="ed-btn ed-btn-ghost ed-rail-btn"
+                    aria-label="@label"
+                    title="@label"
+                    aria-pressed="@(Session.Panel == panel && !Session.PanelCollapsed)"
+                    @onclick="() => Session.ShowPanel(panel)">@icon</button>
+        }
+    </nav>
+
+    <aside class="ed-panel" hidden="@Session.PanelCollapsed" aria-label="@Session.Panel panel">
+        @switch (Session.Panel)
+        {
+            case EditorPanel.Pages: <PagesPanel /> break;
+            case EditorPanel.Layers: <LayersPanel /> break;
+            case EditorPanel.Blocks: <BlocksPanel /> break;
+            case EditorPanel.Assets: <AssetsPanel /> break;
+            case EditorPanel.Theme: <ThemePanel /> break;
+            case EditorPanel.Translations: <TranslationsPanel /> break;
+        }
+    </aside>
+
+    <section class="ed-canvas-area">
+        <BreadcrumbBar />
+        <Canvas />
+        <NodeToolbar />
+        <InsertPicker />
+    </section>
+
+    <aside class="ed-inspector" aria-label="Inspector">
+        <InspectorPanel />
+    </aside>
+
+    <footer class="ed-statusbar">
+        <span>All changes saved</span>
+        <PublishStatus />
+        @if (Commands.CanUndo)
+        {
+            <span class="ed-undo-hint">Ctrl+Z undoes @Commands.UndoLabel</span>
+        }
+    </footer>
+
+    <ToastHost />
+</div>
+
+@code {
+    private static readonly (EditorPanel Panel, string Icon, string Label)[] Rail =
+    [
+        (EditorPanel.Pages, "▤", "Pages"),
+        (EditorPanel.Layers, "≡", "Layers"),
+        (EditorPanel.Blocks, "▦", "Blocks"),
+        (EditorPanel.Assets, "🖼", "Assets"),
+        (EditorPanel.Theme, "◐", "Theme"),
+        (EditorPanel.Translations, "文", "Translations"),
+    ];
+
+    protected override void OnInitialized()
+    {
+        Session.Changed += Refresh;
+        Commands.Changed += Refresh;
+        Site.Changed += Refresh;
+    }
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Session.Changed -= Refresh;
+        Commands.Changed -= Refresh;
+        Site.Changed -= Refresh;
+    }
+}

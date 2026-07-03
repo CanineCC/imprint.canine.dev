@@ -1,0 +1,24 @@
+@using Imprint.Editor.Services
+@inject EditorSession Session
+
+@* The mobile guarantee, demonstrable: container queries drive all responsiveness, so
+   narrowing the canvas IS the phone rendering — same CSS, same breakpoints. *@
+<div class="ed-seg" role="group" aria-label="Preview width">
+    @foreach (var (viewport, icon, label) in Options)
+    {
+        <button type="button"
+                aria-pressed="@(Session.Viewport == viewport)"
+                aria-label="@label"
+                title="@label"
+                @onclick="() => Session.SetViewport(viewport)">@icon</button>
+    }
+</div>
+
+@code {
+    private static readonly (CanvasViewport Viewport, string Icon, string Label)[] Options =
+    [
+        (CanvasViewport.Desktop, "🖥", "Desktop width"),
+        (CanvasViewport.Tablet, "▯", "Tablet width (768px)"),
+        (CanvasViewport.Phone, "▮", "Phone width (390px)"),
+    ];
+}

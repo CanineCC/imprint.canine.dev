@@ -1,0 +1,55 @@
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject EditorSession Session
+@inject PageList Pages
+
+@* The disambiguation escape hatch (docs/editor-ux.md §2): the full ancestor path of
+   the selection, every crumb clickable, doubling as structure education. *@
+<div class="ed-breadcrumb" role="navigation" aria-label="Selection path">
+    @if (Session.CurrentPageId is { } pageId && Pages.Get(pageId) is { } summary)
+    {
+        <button type="button" class="ed-crumb ed-crumb-page" @onclick="() => Session.Select(null)">
+            @summary.Title.Resolve(Session.EditLocale, Session.EditLocale)
+        </button>
+        @foreach (var node in Session.SelectionPath())
+        {
+            <span class="ed-crumb-sep" aria-hidden="true">›</span>
+            <button type="button"
+                    class="ed-crumb @(node.Id == Session.Selection ? "ed-crumb-current" : null)"
+                    aria-current="@(node.Id == Session.Selection ? "true" : null)"
+                    @onclick="() => Session.Select(node.Id)">
+                @Label(node)
+            </button>
+        }
+    }
+</div>
+
+@code {
+    private string Label(Node node)
+    {
+        // Text nodes get a peek at their content — "Heading “Welcome to…”" beats
+        // three anonymous "Heading" crumbs.
+        var preview = node switch
+        {
+            HeadingNode heading => heading.Text.Resolve(Session.EditLocale, Session.EditLocale),
+            ButtonNode button => button.Label.Resolve(Session.EditLocale, Session.EditLocale),
+            _ => null,
+        };
+        if (string.IsNullOrEmpty(preview))
+        {
+            return node.DisplayName;
+        }
+
+        if (preview.Length > 18)
+        {
+            preview = preview[..17] + "…";
+        }
+
+        return $"{node.DisplayName} “{preview}”";
+    }
+
+    protected override void OnInitialized() => Session.Changed += Refresh;
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+    public void Dispose() => Session.Changed -= Refresh;
+}

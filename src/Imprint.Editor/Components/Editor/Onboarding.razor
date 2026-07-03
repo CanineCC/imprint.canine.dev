@@ -1,0 +1,46 @@
+@* STUB body — the editor-UI milestone replaces this with the real first-run flow
+   (name, locales, template picker with previews). Kept functional so the walking
+   skeleton can create a site end-to-end. *@
+@using Imprint.Authoring.Domain
+@using Imprint.Editor.Services
+@inject CommandRunner Commands
+
+<main class="ed-onboarding">
+    <h1>Welcome to Imprint</h1>
+    <p>Name your site and pick a starting point.</p>
+    <div class="ed-field">
+        <label for="ob-name">Site name</label>
+        <input id="ob-name" class="ed-input" @bind="_name" />
+    </div>
+    <div class="ed-field">
+        <label for="ob-locale">Default language</label>
+        <input id="ob-locale" class="ed-input" @bind="_locale" placeholder="en" />
+    </div>
+    <div class="ed-field">
+        <label for="ob-template">Template</label>
+        <select id="ob-template" class="ed-select" @bind="_template">
+            @foreach (var template in Authoring.Features.Sites.CreateSiteFromTemplate.SiteTemplates.All)
+            {
+                <option value="@template.Key">@template.Name — @template.Description</option>
+            }
+        </select>
+    </div>
+    <button type="button" class="ed-btn ed-btn-primary" disabled="@_busy" @onclick="Create">
+        Create site
+    </button>
+</main>
+
+@code {
+    private string _name = "My site";
+    private string _locale = "en";
+    private string _template = "launch";
+    private bool _busy;
+
+    private async Task Create()
+    {
+        _busy = true;
+        await Commands.Run(new Authoring.Features.Sites.CreateSiteFromTemplate.CreateSiteFromTemplate(
+            SiteId.New(), _name, _locale, _template, []));
+        _busy = false;
+    }
+}

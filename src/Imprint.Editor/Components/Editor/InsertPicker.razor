@@ -1,0 +1,206 @@
+@using Imprint.Authoring.Domain.Blocks
+@using Imprint.Authoring.Features.Pages.AddPreset
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject EditorSession Session
+@inject CanvasBridge Bridge
+@inject CommandRunner Commands
+@inject SiteOverview Site
+@inject BlockLibrary Blocks
+@inject EditorWidgetCatalog Widgets
+
+@* The insert popover, opened by gap pills and the "/" key (docs/editor-ux.md §5).
+   Root gaps offer sections and presets; container gaps offer content, blocks and
+   widgets. One searchable surface, keyboard-first. *@
+@if (_open)
+{
+    <div class="ed-picker-backdrop" @onclick="Close"></div>
+    <div class="ed-picker" style="left: @(Px(_x))px; top: @(Px(_y))px" role="dialog" aria-label="Insert content">
+        <input class="ed-input"
+               placeholder="Search…"
+               value="@_query"
+               @oninput="e => _query = e.Value?.ToString() ?? string.Empty"
+               @onkeydown="OnKey"
+               @onkeydown:stopPropagation
+               @ref="_search" />
+        <div class="ed-picker-list" role="listbox">
+            @{ var index = 0; }
+            @foreach (var group in FilteredGroups())
+            {
+                <div class="ed-picker-group">@group.Name</div>
+                @foreach (var item in group.Items)
+                {
+                    var at = index++;
+                    <button type="button"
+                            role="option"
+                            aria-selected="@(at == _highlighted)"
+                            class="ed-picker-item @(at == _highlighted ? "ed-picker-item-active" : null)"
+                            @onclick="() => Choose(item)">
+                        <span class="ed-picker-item-name">@item.Name</span>
+                        <span class="ed-picker-item-desc">@item.Description</span>
+                    </button>
+                }
+            }
+            @if (index == 0)
+            {
+                <div class="ed-picker-empty">Nothing matches “@_query”.</div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private sealed record Item(string Name, string Description, Func<Task> Insert);
+    private sealed record Group(string Name, IReadOnlyList<Item> Items);
+
+    private bool _open;
+    private double _x;
+    private double _y;
+    private string _query = "";
+    private int _highlighted;
+    private NodeId _parentId;
+    private int _index;
+    private ElementReference _search;
+    private bool _focusPending;
+
+    protected override void OnInitialized() => Bridge.GapPickerRequested += Open;
+
+    private void Open(NodeId parentId, int index, double x, double y) => _ = InvokeAsync(() =>
+    {
+        _parentId = parentId;
+        _index = index;
+        // (0,0) means "keyboard-opened": anchor near the canvas top instead.
+        _x = x == 0 ? 320 : Math.Min(x, 1200);
+        _y = y == 0 ? 160 : y;
+        _query = "";
+        _highlighted = 0;
+        _open = true;
+        _focusPending = true;
+        StateHasChanged();
+    });
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusPending && _open)
+        {
+            _focusPending = false;
+            await _search.FocusAsync();
+        }
+    }
+
+    private IEnumerable<Group> FilteredGroups()
+    {
+        var query = _query.Trim();
+        bool Matches(string name, string description) =>
+            query.Length == 0 ||
+            name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+            description.Contains(query, StringComparison.OrdinalIgnoreCase);
+
+        var locale = Site.Current?.DefaultLocale ?? Session.EditLocale;
+
+        if (_parentId.IsRoot)
+        {
+            // Root level: whole sections only — blank or from a preset.
+            yield return new Group("Sections",
+            [
+                .. SectionPresets.All
+                    .Where(p => Matches(p.Name, p.Description))
+                    .Select(p => new Item(p.Name, p.Description, () => InsertPreset(p.Key))),
+                .. NodeDefaults.All
+                    .Where(d => d.TypeName == "section" && Matches(d.Name, d.Description))
+                    .Select(d => new Item("Empty section", d.Description, () => InsertNode(d.Create(locale)))),
+            ]);
+            yield break;
+        }
+
+        yield return new Group("Content",
+        [
+            .. NodeDefaults.All
+                .Where(d => d.TypeName != "section" && Matches(d.Name, d.Description))
+                .Select(d => new Item(d.Name, d.Description, () => InsertNode(d.Create(locale)))),
+        ]);
+
+        var blocks = Blocks.All()
+            .Where(b => Matches(b.Name, "block"))
+            .Select(b => new Item(b.Name, "Reusable block", () => InsertNode(new BlockInstanceNode
+            {
+                Id = NodeId.New(),
+                DefinitionId = b.Id,
+            })))
+            .ToList();
+        if (blocks.Count > 0)
+        {
+            yield return new Group("Blocks", blocks);
+        }
+
+        var widgets = Widgets.Descriptors
+            .Where(w => Matches(w.Name, w.Description))
+            .Select(w => new Item(w.Name, w.Description, () => InsertNode(NodeDefaults.CreateWidget(w))))
+            .ToList();
+        if (widgets.Count > 0)
+        {
+            yield return new Group("Widgets", widgets);
+        }
+    }
+
+    private async Task InsertPreset(string key)
+    {
+        Close();
+        if (Session.CurrentPageId is { } pageId)
+        {
+            await Commands.Run(new AddPreset(pageId, _index, key));
+        }
+    }
+
+    private async Task InsertNode(Node node)
+    {
+        Close();
+        if (Session.CurrentPageId is { } pageId)
+        {
+            if (await Commands.Run(
+                    new Authoring.Features.Pages.AddNode.AddNode(pageId, _parentId, _index, node),
+                    new Authoring.Features.Pages.RemoveNode.RemoveNode(pageId, node.Id),
+                    $"{node.DisplayName.ToLowerInvariant()} insertion"))
+            {
+                Session.Select(node.Id);
+            }
+        }
+    }
+
+    private async Task Choose(Item item) => await item.Insert();
+
+    private async Task OnKey(KeyboardEventArgs args)
+    {
+        var items = FilteredGroups().SelectMany(g => g.Items).ToList();
+        switch (args.Key)
+        {
+            case "Escape":
+                Close();
+                break;
+            case "ArrowDown":
+                _highlighted = Math.Min(_highlighted + 1, Math.Max(0, items.Count - 1));
+                break;
+            case "ArrowUp":
+                _highlighted = Math.Max(_highlighted - 1, 0);
+                break;
+            case "Enter" when items.Count > 0:
+                await items[Math.Min(_highlighted, items.Count - 1)].Insert();
+                break;
+            default:
+                _highlighted = 0;
+                break;
+        }
+    }
+
+    private static string Px(double value) =>
+        Math.Max(0, value).ToString("0", System.Globalization.CultureInfo.InvariantCulture);
+
+    private void Close()
+    {
+        _open = false;
+        StateHasChanged();
+    }
+
+    public void Dispose() => Bridge.GapPickerRequested -= Open;
+}

@@ -1,8 +1,43 @@
 @page "/"
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject SiteOverview Site
+@inject PageList Pages
+@inject NavigationManager Navigation
 
 <PageTitle>Imprint</PageTitle>
 
-<main class="ed-placeholder">
-    <h1>Imprint editor shell</h1>
-    <p>The editor UI lands here — spine milestone placeholder.</p>
-</main>
+@if (Site.Current is null)
+{
+    <Onboarding />
+}
+
+@code {
+    // "/" routes to the editor of the most sensible page: home if declared, else the
+    // first page. No site yet → the onboarding flow renders instead.
+    protected override void OnInitialized()
+    {
+        Site.Changed += OnChanged;
+        RedirectIfReady();
+    }
+
+    private void OnChanged() => _ = InvokeAsync(RedirectIfReady);
+
+    private void RedirectIfReady()
+    {
+        if (Site.Current is null)
+        {
+            StateHasChanged();
+            return;
+        }
+
+        var target = Pages.Home ?? Pages.All().FirstOrDefault();
+        if (target is not null)
+        {
+            Navigation.NavigateTo($"/edit/{target.Id.Compact}");
+        }
+    }
+
+    public void Dispose() => Site.Changed -= OnChanged;
+}

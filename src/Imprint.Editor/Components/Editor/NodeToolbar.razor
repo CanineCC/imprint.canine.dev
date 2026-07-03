@@ -1,0 +1,121 @@
+@using Imprint.Authoring.Domain.Blocks
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject EditorSession Session
+@inject CanvasBridge Bridge
+@inject CommandRunner Commands
+
+@* The selection's action strip, positioned by the overlay's measured rect (the JS
+   reports it; Blazor renders the interactive part — geometry there, decisions here). *@
+@if (_rect is { } rect && Session.SelectedNode is { } node && Session.EditingNodeId is null)
+{
+    <div class="ed-node-toolbar" style="left: @(Px(rect.X))px; top: @(Px(rect.Y - 40))px" role="toolbar"
+         aria-label="@node.DisplayName actions">
+        <span class="ed-node-toolbar-label">@node.DisplayName</span>
+
+        @if (node is SectionNode)
+        {
+            <button type="button" class="ed-btn ed-btn-ghost" title="Move up" aria-label="Move section up"
+                    @onclick='() => Bridge.ReportKey("ArrowUp", false, true, false)'>↑</button>
+            <button type="button" class="ed-btn ed-btn-ghost" title="Move down" aria-label="Move section down"
+                    @onclick='() => Bridge.ReportKey("ArrowDown", false, true, false)'>↓</button>
+        }
+
+        <button type="button" class="ed-btn ed-btn-ghost" title="Duplicate (Ctrl+D)" aria-label="Duplicate"
+                @onclick='() => Bridge.ReportKey("d", true, false, false)'>⧉</button>
+
+        @if (node is BlockInstanceNode)
+        {
+            <button type="button" class="ed-btn ed-btn-ghost" title="Detach from block" aria-label="Detach from block"
+                    @onclick="Detach">⛓</button>
+        }
+        else if (node is not (SectionNode or WidgetNode))
+        {
+            <button type="button" class="ed-btn ed-btn-ghost" title="Make reusable block" aria-label="Make reusable block"
+                    @onclick="() => _naming = true">◈</button>
+        }
+
+        <button type="button" class="ed-btn ed-btn-ghost ed-btn-danger" title="Delete (Del)" aria-label="Delete"
+                @onclick='() => Bridge.ReportKey("Delete", false, false, false)'>🗑</button>
+    </div>
+
+    @if (_naming)
+    {
+        <div class="ed-node-toolbar ed-block-naming" style="left: @(Px(rect.X))px; top: @(Px(rect.Y - 80))px">
+            <input class="ed-input" placeholder="Block name" @bind="_blockName"
+                   @onkeydown="OnNameKey" @onkeydown:stopPropagation />
+            <button type="button" class="ed-btn ed-btn-primary" @onclick="MakeBlock">Create block</button>
+            <button type="button" class="ed-btn ed-btn-ghost" @onclick="() => _naming = false">Cancel</button>
+        </div>
+    }
+}
+
+@code {
+    private SelectionRect? _rect;
+    private bool _naming;
+    private string _blockName = "";
+
+    protected override void OnInitialized()
+    {
+        Bridge.SelectionRectChanged += OnRect;
+        Session.Changed += OnSessionChanged;
+    }
+
+    private void OnRect(SelectionRect? rect) => _ = InvokeAsync(() =>
+    {
+        _rect = rect;
+        StateHasChanged();
+    });
+
+    private void OnSessionChanged() => _ = InvokeAsync(() =>
+    {
+        if (Session.Selection is null)
+        {
+            _rect = null;
+            _naming = false;
+        }
+
+        StateHasChanged();
+    });
+
+    private static string Px(double value) => Math.Max(0, value).ToString("0", System.Globalization.CultureInfo.InvariantCulture);
+
+    private async Task MakeBlock()
+    {
+        if (Session.CurrentPageId is { } pageId && Session.Selection is { } nodeId &&
+            !string.IsNullOrWhiteSpace(_blockName))
+        {
+            _naming = false;
+            await Commands.Run(new Authoring.Features.Blocks.DefineBlockFromNode.DefineBlockFromNode(
+                pageId, nodeId, BlockDefinitionId.New(), _blockName.Trim()));
+            _blockName = "";
+        }
+    }
+
+    private async Task OnNameKey(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await MakeBlock();
+        }
+
+        if (args.Key == "Escape")
+        {
+            _naming = false;
+        }
+    }
+
+    private async Task Detach()
+    {
+        if (Session.CurrentPageId is { } pageId && Session.Selection is { } nodeId)
+        {
+            await Commands.Run(new Authoring.Features.Pages.DetachBlockInstance.DetachBlockInstance(pageId, nodeId));
+        }
+    }
+
+    public void Dispose()
+    {
+        Bridge.SelectionRectChanged -= OnRect;
+        Session.Changed -= OnSessionChanged;
+    }
+}

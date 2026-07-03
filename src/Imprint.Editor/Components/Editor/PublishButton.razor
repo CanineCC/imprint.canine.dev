@@ -1,0 +1,71 @@
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject EditorSession Session
+@inject PageList Pages
+@inject CommandRunner Commands
+@inject ToastService Toasts
+
+@* Publish is a domain decision; file generation follows eventually (the publisher is
+   a projection). The split button covers "this page" and "everything stale". *@
+@if (Session.CurrentPageId is { } pageId && Pages.Get(pageId) is { } current)
+{
+    var stale = Pages.All().Count(p => p.Status != PageStatus.Published);
+    <div class="ed-publish">
+        <button type="button"
+                class="ed-btn ed-btn-primary"
+                disabled="@(current.Status == PageStatus.Published || _busy)"
+                @onclick="PublishCurrent">
+            @(current.Status switch
+            {
+                PageStatus.Draft => "Publish",
+                PageStatus.Modified => "Publish changes",
+                _ => "Published",
+            })
+        </button>
+        @if (stale > 1)
+        {
+            <button type="button" class="ed-btn" disabled="@_busy" @onclick="PublishAll">
+                Publish all (@stale)
+            </button>
+        }
+        <span class="ed-badge @(current.Status == PageStatus.Published ? "ed-badge-ok" : "ed-badge-warn")">
+            @current.Status
+        </span>
+    </div>
+}
+
+@code {
+    private bool _busy;
+
+    private async Task PublishCurrent()
+    {
+        if (Session.CurrentPageId is not { } pageId)
+        {
+            return;
+        }
+
+        _busy = true;
+        if (await Commands.Run(new Authoring.Features.Pages.PublishPage.PublishPage(pageId)))
+        {
+            Toasts.Show("Published — the static site is updating.");
+        }
+
+        _busy = false;
+    }
+
+    private async Task PublishAll()
+    {
+        _busy = true;
+        if (await Commands.Run(new Authoring.Features.Pages.PublishAllStale.PublishAllStale()))
+        {
+            Toasts.Show("All pages published.");
+        }
+
+        _busy = false;
+    }
+
+    protected override void OnInitialized() => Pages.Changed += Refresh;
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+    public void Dispose() => Pages.Changed -= Refresh;
+}

@@ -1,0 +1,32 @@
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject EditorSession Session
+@inject PageList Pages
+@inject NavigationManager Navigation
+
+<label class="ed-page-switcher">
+    <span class="ed-visually-hidden">Page</span>
+    <select class="ed-select" value="@(Session.CurrentPageId?.Compact ?? "")" @onchange="OnChange">
+        @foreach (var entry in Pages.All())
+        {
+            <option value="@entry.Id.Compact">
+                @entry.Title.Resolve(Session.EditLocale, Session.EditLocale) (/@(entry.IsHome ? "" : entry.Slug.Value))
+            </option>
+        }
+    </select>
+</label>
+
+@code {
+    private void OnChange(ChangeEventArgs args)
+    {
+        if (args.Value is string compact && compact.Length > 0)
+        {
+            Navigation.NavigateTo($"/edit/{compact}");
+        }
+    }
+
+    protected override void OnInitialized() => Pages.Changed += Refresh;
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+    public void Dispose() => Pages.Changed -= Refresh;
+}
