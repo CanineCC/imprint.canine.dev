@@ -40,7 +40,13 @@ public sealed record RenderContext
     public Func<string, string?>? ResolveWidgetBundle { get; init; }
 }
 
-/// <summary>Render-ready facts about an asset (URLs are already correct for the current plane).</summary>
+/// <summary>
+/// Render-ready facts about an asset (URLs are already correct for the current plane).
+/// The <c>Dark*</c> fields are populated only when the asset has an optional dark-mode
+/// variant; when present, image/svg views emit both renditions and let CSS pick by
+/// colour scheme (docs/proposals/theme-media-and-widget-approval.md). They are empty/
+/// null for a neutral asset, so the single-rendition path is unchanged.
+/// </summary>
 public sealed record AssetRenderInfo(
     AssetKind Kind,
     AssetStatus Status,
@@ -49,6 +55,22 @@ public sealed record AssetRenderInfo(
     int? IntrinsicWidth,
     int? IntrinsicHeight,
     string? InlineSvg,
-    LocalizedText DefaultAlt);
+    LocalizedText DefaultAlt)
+{
+    /// <summary>Dark-mode image sources; empty when the asset is neutral.</summary>
+    public IReadOnlyList<ImageSource> DarkImageVariants { get; init; } = [];
+
+    public int? DarkIntrinsicWidth { get; init; }
+    public int? DarkIntrinsicHeight { get; init; }
+
+    /// <summary>Sanitized dark-mode inline SVG; null when neutral.</summary>
+    public string? DarkInlineSvg { get; init; }
+
+    /// <summary>The chosen dark <c>src</c> (middle image variant / video / file); null when neutral.</summary>
+    public string? DarkUrl { get; init; }
+
+    /// <summary>True when a usable dark-mode rendition exists for this asset.</summary>
+    public bool HasDark => DarkImageVariants.Count > 0 || DarkInlineSvg is not null || DarkUrl is not null;
+}
 
 public sealed record ImageSource(string Url, int Width, int Height);
