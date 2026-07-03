@@ -1,0 +1,88 @@
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject PageList Pages
+@inject EditorSession Session
+
+@* The two-tab link editor (docs/editor-ux.md §7): link to one of the site's pages,
+   or to an outside web address (https assumed when no scheme is typed). *@
+<div class="ed-field">
+    <label>Link</label>
+    <div class="ed-seg" role="group" aria-label="Link type">
+        <button type="button" aria-pressed="@(_tab == LinkTab.Page)"
+                @onclick="() => _tab = LinkTab.Page">Page</button>
+        <button type="button" aria-pressed="@(_tab == LinkTab.Web)"
+                @onclick="() => _tab = LinkTab.Web">Web address</button>
+    </div>
+</div>
+<div class="ed-field">
+    @if (_tab == LinkTab.Page)
+    {
+        <select class="ed-select" aria-label="Page to link to" value="@SelectedPage" @onchange="OnPagePicked">
+            <option value="">Choose a page…</option>
+            @foreach (var entry in Pages.All())
+            {
+                <option value="@entry.Id.Compact">
+                    @entry.Title.Resolve(Session.EditLocale, Session.EditLocale)
+                </option>
+            }
+        </select>
+    }
+    else
+    {
+        <DebouncedText Value="@CurrentUrl" Type="url" Placeholder="https://example.com"
+                       AriaLabel="Web address" OnCommit="OnUrlCommitted" />
+    }
+    @if (Value is not null)
+    {
+        <button type="button" class="ed-btn ed-btn-ghost" @onclick="Clear">Remove link</button>
+    }
+</div>
+
+@code {
+    private enum LinkTab { Page, Web }
+
+    private LinkTab _tab;
+
+    [Parameter, EditorRequired] public Link? Value { get; set; }
+    [Parameter] public EventCallback<Link?> ValueChanged { get; set; }
+
+    private string SelectedPage => Value is PageLink pageLink ? pageLink.PageId.Compact : "";
+
+    private string CurrentUrl => Value is ExternalLink external ? external.Url : "";
+
+    protected override void OnInitialized()
+    {
+        _tab = Value is ExternalLink ? LinkTab.Web : LinkTab.Page;
+        Pages.Changed += Refresh;
+    }
+
+    private Task OnPagePicked(ChangeEventArgs args) =>
+        args.Value is string raw && Guid.TryParseExact(raw, "N", out var guid)
+            ? ValueChanged.InvokeAsync(new PageLink(PageId.From(guid)))
+            : Task.CompletedTask;
+
+    private Task OnUrlCommitted(string raw)
+    {
+        var url = raw.Trim();
+        if (url.Length == 0)
+        {
+            // Clearing the address clears the link — same meaning, fewer clicks.
+            return Value is ExternalLink ? ValueChanged.InvokeAsync(null) : Task.CompletedTask;
+        }
+
+        if (!url.Contains("://", StringComparison.Ordinal) &&
+            !url.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase))
+        {
+            url = "https://" + url;
+        }
+
+        return ValueChanged.InvokeAsync(new ExternalLink(url));
+    }
+
+    private Task Clear() => ValueChanged.InvokeAsync(null);
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Pages.Changed -= Refresh;
+}

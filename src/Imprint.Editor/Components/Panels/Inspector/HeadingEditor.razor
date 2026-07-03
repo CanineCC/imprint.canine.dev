@@ -1,0 +1,15 @@
+@inherits NodeEditorBase<HeadingNode>
+
+<div class="ed-field">
+    <label>Level</label>
+    <Segmented TValue="int" Label="Heading level" Value="Node.Level"
+               Options="LevelOptions" ValueChanged="SetLevel" />
+    <p class="ed-insp-hint">H1 is the page's main title — best used once per page.</p>
+</div>
+<p class="ed-insp-hint">Double-click the heading on the page to change its words.</p>
+
+@code {
+    private static readonly (string, int)[] LevelOptions = [("H1", 1), ("H2", 2), ("H3", 3), ("H4", 4)];
+
+    private Task SetLevel(int level) => Apply(Node with { Level = level }, "heading level");
+}

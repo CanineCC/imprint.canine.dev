@@ -1,0 +1,23 @@
+@inherits NodeEditorBase<StackNode>
+
+<div class="ed-field">
+    <label>Gap</label>
+    <Segmented TValue="Gap" Label="Gap" Value="Node.Gap" Options="GapOptions" ValueChanged="SetGap" />
+</div>
+<div class="ed-field">
+    <label>Alignment</label>
+    <Segmented TValue="StackAlign" Label="Alignment" Value="Node.Align"
+               Options="AlignOptions" ValueChanged="SetAlign" />
+</div>
+
+@code {
+    private static readonly (string, Gap)[] GapOptions =
+        [("Tight", Gap.Tight), ("Normal", Gap.Normal), ("Loose", Gap.Loose)];
+
+    private static readonly (string, StackAlign)[] AlignOptions =
+        [("Left", StackAlign.Start), ("Center", StackAlign.Center), ("Right", StackAlign.End)];
+
+    private Task SetGap(Gap gap) => Apply(Node with { Gap = gap }, "stack gap");
+
+    private Task SetAlign(StackAlign align) => Apply(Node with { Align = align }, "stack alignment");
+}

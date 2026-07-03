@@ -1,0 +1,25 @@
+@inherits NodeEditorBase<ButtonNode>
+
+<div class="ed-field">
+    <label for="insp-button-label">Label@(LocaleSuffix)</label>
+    <DebouncedText Id="insp-button-label" Placeholder="Button"
+                   Value="@(Node.Label.Get(Session.EditLocale) ?? "")" OnCommit="CommitLabel" />
+</div>
+<div class="ed-field">
+    <label>Style</label>
+    <Segmented TValue="ButtonVariant" Label="Style" Value="Node.Variant"
+               Options="VariantOptions" ValueChanged="SetVariant" />
+</div>
+<LinkEditor Value="Node.LinkTo" ValueChanged="SetLink" />
+
+@code {
+    private static readonly (string, ButtonVariant)[] VariantOptions =
+        [("Primary", ButtonVariant.Primary), ("Secondary", ButtonVariant.Secondary), ("Ghost", ButtonVariant.Ghost)];
+
+    private Task CommitLabel(string value) =>
+        CommitText("label", Node.Label.Get(Session.EditLocale) ?? "", value, "button label");
+
+    private Task SetVariant(ButtonVariant variant) => Apply(Node with { Variant = variant }, "button style");
+
+    private Task SetLink(Link? link) => Apply(Node with { LinkTo = link }, "button link");
+}

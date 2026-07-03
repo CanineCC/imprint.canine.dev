@@ -1,0 +1,106 @@
+@implements IDisposable
+
+@* Free-text input that commits 500 ms after the last keystroke (and on blur/Enter).
+   Outside changes — undo, language switch — are adopted only while the user is not
+   mid-typing, so the caret never loses a fight with the read model. *@
+@if (Multiline)
+{
+    <textarea id="@Id" class="ed-input" rows="3"
+              placeholder="@Placeholder" aria-label="@AriaLabel"
+              value="@_text" @oninput="OnInput" @onblur="FlushAsync"></textarea>
+}
+else
+{
+    <input id="@Id" class="ed-input" type="@Type"
+           placeholder="@Placeholder" aria-label="@AriaLabel"
+           value="@_text" @oninput="OnInput" @onblur="FlushAsync" @onkeydown="OnKeyDown" />
+}
+
+@code {
+    private const int DebounceMs = 500;
+
+    private string _text = "";
+    private string _seen = "";
+    private CancellationTokenSource? _pending;
+
+    [Parameter, EditorRequired] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> OnCommit { get; set; }
+
+    /// <summary>Fires on every keystroke — for live previews only, never for dispatch.</summary>
+    [Parameter] public EventCallback<string> OnLiveChange { get; set; }
+
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public string? Id { get; set; }
+    [Parameter] public string? AriaLabel { get; set; }
+    [Parameter] public string Type { get; set; } = "text";
+    [Parameter] public bool Multiline { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (Value != _seen)
+        {
+            _seen = Value;
+            if (_pending is null)
+            {
+                _text = Value;
+            }
+        }
+    }
+
+    private async Task OnInput(ChangeEventArgs args)
+    {
+        _text = args.Value?.ToString() ?? string.Empty;
+        if (OnLiveChange.HasDelegate)
+        {
+            await OnLiveChange.InvokeAsync(_text);
+        }
+
+        _pending?.Cancel();
+        var debounce = new CancellationTokenSource();
+        _pending = debounce;
+        try
+        {
+            await Task.Delay(DebounceMs, debounce.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            return; // a newer keystroke owns the commit now
+        }
+
+        if (_pending == debounce)
+        {
+            _pending = null;
+            await CommitAsync();
+        }
+    }
+
+    private async Task FlushAsync()
+    {
+        _pending?.Cancel();
+        _pending = null;
+        await CommitAsync();
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await FlushAsync();
+        }
+    }
+
+    private async Task CommitAsync()
+    {
+        if (_text != Value)
+        {
+            await OnCommit.InvokeAsync(_text);
+        }
+    }
+
+    public void Dispose()
+    {
+        _pending?.Cancel();
+        _pending?.Dispose();
+        _pending = null;
+    }
+}

@@ -1,0 +1,40 @@
+@inherits NodeEditorBase<SectionNode>
+
+<div class="ed-field">
+    <label>Width</label>
+    <Segmented TValue="SectionWidth" Label="Width" Value="Node.Width"
+               Options="WidthOptions" ValueChanged="SetWidth" />
+</div>
+<div class="ed-field">
+    <label>Background</label>
+    <Segmented TValue="SectionBackground" Label="Background" Value="Node.Background"
+               Options="BackgroundOptions" ValueChanged="SetBackground" />
+</div>
+<div class="ed-field">
+    <label>Padding</label>
+    <Segmented TValue="SectionPadding" Label="Padding" Value="Node.Padding"
+               Options="PaddingOptions" ValueChanged="SetPadding" />
+</div>
+
+@code {
+    private static readonly (string, SectionWidth)[] WidthOptions =
+        [("Normal", SectionWidth.Normal), ("Wide", SectionWidth.Wide), ("Full", SectionWidth.Full)];
+
+    private static readonly (string, SectionBackground)[] BackgroundOptions =
+        [
+            ("None", SectionBackground.None),
+            ("Soft", SectionBackground.Surface),
+            ("Stronger", SectionBackground.SurfaceAlt),
+            ("Brand", SectionBackground.Primary),
+        ];
+
+    private static readonly (string, SectionPadding)[] PaddingOptions =
+        [("None", SectionPadding.None), ("Normal", SectionPadding.Normal), ("Large", SectionPadding.Large)];
+
+    private Task SetWidth(SectionWidth width) => Apply(Node with { Width = width }, "section width");
+
+    private Task SetBackground(SectionBackground background) =>
+        Apply(Node with { Background = background }, "section background");
+
+    private Task SetPadding(SectionPadding padding) => Apply(Node with { Padding = padding }, "section padding");
+}
