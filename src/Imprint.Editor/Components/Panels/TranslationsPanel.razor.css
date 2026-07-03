@@ -1,0 +1,168 @@
+.panel {
+  padding: 14px 14px 40px;
+}
+
+.title {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+
+.empty {
+  margin: 8px 0;
+  font-size: 13px;
+  color: var(--ed-text-muted);
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.empty p {
+  margin: 0;
+}
+
+.group {
+  margin: 18px 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--ed-text-muted);
+}
+
+.pair-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.source-locale {
+  padding: 5px 10px;
+  font-weight: 600;
+  background: var(--ed-surface-2);
+  border-radius: var(--ed-radius-sm);
+}
+
+.arrow {
+  color: var(--ed-text-muted);
+}
+
+.target-pick {
+  flex: 1;
+  min-width: 0;
+}
+
+.coverage {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.coverage-bar {
+  flex-basis: 100%;
+  height: 6px;
+  background: var(--ed-surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.coverage-fill {
+  height: 100%;
+  background: var(--ed-accent);
+  border-radius: 999px;
+  transition: width 160ms ease-out;
+}
+
+.coverage-fill.done {
+  background: var(--ed-ok);
+}
+
+.coverage-text {
+  flex: 1;
+  font-size: 12px;
+  color: var(--ed-text-muted);
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  margin: 0 -8px 6px;
+  border-radius: var(--ed-radius-sm);
+}
+
+.field.missing {
+  background: color-mix(in srgb, var(--ed-warn) 8%, transparent);
+  box-shadow: inset 2px 0 0 var(--ed-warn);
+}
+
+.field-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.field-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.field-context {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--ed-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: end;
+}
+
+.field-source {
+  font-size: 13px;
+  color: var(--ed-text-muted);
+  background: var(--ed-bg);
+  border-radius: var(--ed-radius-sm);
+  padding: 6px 8px;
+  max-height: 88px;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+
+.field-target {
+  resize: vertical;
+}
+
+.locale-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  background: transparent;
+  border-radius: var(--ed-radius-sm);
+  cursor: pointer;
+  text-align: start;
+}
+
+.locale-row:hover {
+  background: var(--ed-surface-2);
+}
+
+.locale-row.active {
+  background: color-mix(in srgb, var(--ed-accent) 12%, transparent);
+  font-weight: 600;
+}
+
+.locale-count {
+  color: var(--ed-text-muted);
+  font-size: 12px;
+}
+
+.locale-count.done {
+  color: var(--ed-ok);
+}

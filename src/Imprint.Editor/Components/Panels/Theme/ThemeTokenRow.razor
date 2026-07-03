@@ -1,0 +1,129 @@
+@using Imprint.Authoring.Domain.Sites
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject CommandRunner Commands
+
+@* One theme color: a light and a dark swatch. Picks debounce 300 ms into a single
+   undoable ChangeThemeToken whose inverse is the value before this editing burst.
+   Non-hex values (rgb(), oklch(), …) get a text input instead of the color well. *@
+<div class="row">
+    <span class="name">@Label</span>
+    <span class="values">
+        @{ var light = LightValue; }
+        @if (IsHex6(light))
+        {
+            <input type="color" class="swatch" value="@light" aria-label="@Label — light mode color"
+                   title="Light mode" @oninput="e => OnPick(e, dark: false)" />
+        }
+        else
+        {
+            <input type="text" class="ed-input raw" value="@light" aria-label="@Label — light mode value"
+                   title="Light mode" @onchange="e => OnType(e, dark: false)" />
+        }
+        @{ var dark = DarkValue; }
+        @if (IsHex6(dark))
+        {
+            <input type="color" class="swatch" value="@dark" aria-label="@Label — dark mode color"
+                   title="Dark mode" @oninput="e => OnPick(e, dark: true)" />
+        }
+        else
+        {
+            <input type="text" class="ed-input raw" value="@dark" aria-label="@Label — dark mode value"
+                   title="Dark mode" @onchange="e => OnType(e, dark: true)" />
+        }
+    </span>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Token { get; set; } = "";
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter, EditorRequired] public ThemeToken Current { get; set; } = new("#000000", "#ffffff");
+    [Parameter, EditorRequired] public SiteId SiteId { get; set; }
+
+    /// <summary>Live (not-yet-committed) values, so the panel's contrast hints follow the picker. Nulls mean "back to the committed theme".</summary>
+    [Parameter] public EventCallback<(string Token, string? Light, string? Dark)> LiveChanged { get; set; }
+
+    private string? _pendingLight;
+    private string? _pendingDark;
+    private string? _originalLight;
+    private string? _originalDark;
+    private CancellationTokenSource? _debounce;
+
+    private string LightValue => _pendingLight ?? Current.Light;
+    private string DarkValue => _pendingDark ?? Current.Dark;
+
+    private static bool IsHex6(string value) =>
+        value.Length == 7 && value[0] == '#' && value.Skip(1).All(Uri.IsHexDigit);
+
+    private async Task OnPick(ChangeEventArgs args, bool dark)
+    {
+        Stage(args.Value?.ToString() ?? "", dark);
+        await LiveChanged.InvokeAsync((Token, LightValue, DarkValue));
+        await DebounceThenDispatch();
+    }
+
+    private async Task OnType(ChangeEventArgs args, bool dark)
+    {
+        // Text values commit on blur/Enter — debouncing keystrokes would dispatch
+        // half-typed colors and toast validation errors mid-thought.
+        Stage(args.Value?.ToString() ?? "", dark);
+        _debounce?.Cancel();
+        await Dispatch();
+    }
+
+    private void Stage(string value, bool dark)
+    {
+        _originalLight ??= Current.Light;
+        _originalDark ??= Current.Dark;
+        if (dark)
+        {
+            _pendingDark = value;
+        }
+        else
+        {
+            _pendingLight = value;
+        }
+    }
+
+    private async Task DebounceThenDispatch()
+    {
+        _debounce?.Cancel();
+        var cts = _debounce = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(300, cts.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        if (cts == _debounce)
+        {
+            await InvokeAsync(Dispatch);
+        }
+    }
+
+    private async Task Dispatch()
+    {
+        var light = LightValue;
+        var dark = DarkValue;
+        var originalLight = _originalLight ?? Current.Light;
+        var originalDark = _originalDark ?? Current.Dark;
+        _pendingLight = _pendingDark = _originalLight = _originalDark = null;
+
+        if (light != originalLight || dark != originalDark)
+        {
+            await Commands.Run(
+                new Authoring.Features.Sites.ChangeThemeToken.ChangeThemeToken(SiteId, Token, light, dark),
+                new Authoring.Features.Sites.ChangeThemeToken.ChangeThemeToken(SiteId, Token, originalLight, originalDark),
+                $"{Label.ToLowerInvariant()} color change");
+        }
+
+        // Committed (or reverted on failure) — the panel reads the theme again.
+        await LiveChanged.InvokeAsync((Token, null, null));
+        StateHasChanged();
+    }
+
+    public void Dispose() => _debounce?.Cancel();
+}

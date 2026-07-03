@@ -1,2 +1,245 @@
-@* STUB — replaced by the editor-UI milestone (docs/editor-ux.md). *@
-<div class="ed-stub" data-stub="LayersPanel"></div>
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject EditorSession Session
+@inject CanvasBridge Bridge
+@inject PageDrafts Drafts
+
+@* The domain tree of the current page as rows: same nodes, same names, same selection
+   as the canvas. Row actions go through the bridge's key handling so move/delete/
+   duplicate share one code path (and one undo story) with the keyboard map. *@
+<div class="panel">
+    <h2 class="title">Layers</h2>
+    @if (Session.CurrentPage is not { } draft)
+    {
+        <p class="empty">Open a page to see what's on it.</p>
+    }
+    else if (draft.Tree.Roots.Count == 0)
+    {
+        <p class="empty">This page is empty. Add your first section on the canvas.</p>
+    }
+    else
+    {
+        <div class="tree" role="tree" aria-label="Page structure">
+            @foreach (var row in VisibleRows(draft))
+            {
+                var node = row.Node;
+                var selected = Session.Selection == node.Id;
+                var collapsed = _collapsed.Contains(node.Id);
+                var anchor = AnchorFor(node.Id);
+                <div class="row @(selected ? "selected" : null)" role="treeitem" @key="node.Id"
+                     aria-level="@(row.Depth + 1)" aria-selected="@selected"
+                     aria-expanded="@(row.HasChildren ? (collapsed ? "false" : "true") : null)"
+                     style="--indent: @row.Depth">
+                    @if (row.HasChildren)
+                    {
+                        <button type="button" class="twist"
+                                aria-label="@(collapsed ? "Expand" : "Collapse") @node.DisplayName"
+                                @onclick="() => Toggle(node.Id)">@(collapsed ? "▸" : "▾")</button>
+                    }
+                    else
+                    {
+                        <span class="twist-spacer"></span>
+                    }
+                    <button type="button" class="label" @ref="anchor.Element"
+                            @onclick="() => SelectRow(node.Id)" @onkeydown="OnRowKey">
+                        <span class="glyph" aria-hidden="true">@Glyph(node)</span>
+                        <span class="name">@node.DisplayName</span>
+                        @if (Preview(node) is { Length: > 0 } preview)
+                        {
+                            <span class="preview">“@preview”</span>
+                        }
+                    </button>
+                    @if (!row.IsManagedCell)
+                    {
+                        <span class="actions">
+                            <button type="button" class="ed-btn ed-btn-ghost act" title="Move up (Alt+↑)"
+                                    aria-label="Move @node.DisplayName up"
+                                    @onclick='() => RowAction(node.Id, "ArrowUp", ctrl: false, alt: true)'>↑</button>
+                            <button type="button" class="ed-btn ed-btn-ghost act" title="Move down (Alt+↓)"
+                                    aria-label="Move @node.DisplayName down"
+                                    @onclick='() => RowAction(node.Id, "ArrowDown", ctrl: false, alt: true)'>↓</button>
+                            <button type="button" class="ed-btn ed-btn-ghost act" title="Duplicate (Ctrl+D)"
+                                    aria-label="Duplicate @node.DisplayName"
+                                    @onclick='() => RowAction(node.Id, "d", ctrl: true, alt: false)'>⧉</button>
+                            <button type="button" class="ed-btn ed-btn-ghost ed-btn-danger act" title="Delete (Del)"
+                                    aria-label="Delete @node.DisplayName"
+                                    @onclick='() => RowAction(node.Id, "Delete", ctrl: false, alt: false)'>✕</button>
+                        </span>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    // Column cells are managed by their Columns parent (ratio and cell count always
+    // match), so they get no move/delete/duplicate affordances.
+    private readonly record struct Row(Node Node, int Depth, bool HasChildren, bool IsManagedCell);
+
+    // @ref needs an assignable target; one holder per node keeps the row buttons
+    // addressable so selection changes from the canvas can focus-scroll to them.
+    private sealed class RowAnchor
+    {
+        public ElementReference Element;
+    }
+
+    private readonly HashSet<NodeId> _collapsed = [];
+    private readonly Dictionary<NodeId, RowAnchor> _anchors = [];
+    private NodeId? _lastSelection;
+    private NodeId? _focusPending;
+    private bool _panelOrigin;
+
+    private RowAnchor AnchorFor(NodeId id) =>
+        _anchors.TryGetValue(id, out var anchor) ? anchor : _anchors[id] = new RowAnchor();
+
+    private IEnumerable<Row> VisibleRows(Page draft)
+    {
+        IEnumerable<Row> Walk(NodeList nodes, int depth, bool managedCells)
+        {
+            foreach (var node in nodes)
+            {
+                var children = node is IContainerNode container ? container.Children : NodeList.Empty;
+                yield return new Row(node, depth, children.Count > 0, managedCells);
+                if (children.Count > 0 && !_collapsed.Contains(node.Id))
+                {
+                    foreach (var row in Walk(children, depth + 1, node is ColumnsNode))
+                    {
+                        yield return row;
+                    }
+                }
+            }
+        }
+
+        return Walk(draft.Tree.Roots, 0, managedCells: false);
+    }
+
+    private void Toggle(NodeId id)
+    {
+        if (!_collapsed.Remove(id))
+        {
+            _collapsed.Add(id);
+        }
+    }
+
+    private void SelectRow(NodeId id)
+    {
+        if (Session.Selection != id)
+        {
+            _panelOrigin = true; // the user is already here — no focus jump needed
+            Session.Select(id);
+        }
+    }
+
+    private async Task RowAction(NodeId id, string key, bool ctrl, bool alt)
+    {
+        // The bridge acts on the session's selection, so select first — that is also
+        // exactly what a person watching the canvas expects the click to mean.
+        SelectRow(id);
+        await Bridge.ReportKey(key, ctrl, alt, false);
+    }
+
+    private async Task OnRowKey(KeyboardEventArgs args)
+    {
+        // The canvas owns these keys when it has focus; a focused row forwards the
+        // same set so keyboard editing keeps working while the tree has focus.
+        switch (args.Key)
+        {
+            case "ArrowUp" or "ArrowDown" or "ArrowLeft" or "ArrowRight" or "Delete" or "Backspace" or "Escape":
+                await Bridge.ReportKey(args.Key, args.CtrlKey || args.MetaKey, args.AltKey, args.ShiftKey);
+                break;
+        }
+    }
+
+    // --------------------------------------------------------------- labels
+
+    private static string Glyph(Node node) => node switch
+    {
+        SectionNode => "▬",
+        StackNode => "≡",
+        ColumnsNode => "◫",
+        GridNode => "▦",
+        HeadingNode => "H",
+        RichTextNode => "¶",
+        ButtonNode => "⏺",
+        ImageNode => "▣",
+        VideoNode => "▶",
+        SvgNode => "✦",
+        DividerNode => "─",
+        SpacerNode => "↕",
+        WidgetNode => "◇",
+        BlockInstanceNode => "◈",
+        _ => "·",
+    };
+
+    // Same labeling approach as BreadcrumbBar: text nodes get a peek at their content.
+    private string? Preview(Node node)
+    {
+        var text = node switch
+        {
+            HeadingNode heading => heading.Text.Resolve(Session.EditLocale, Session.EditLocale),
+            ButtonNode button => button.Label.Resolve(Session.EditLocale, Session.EditLocale),
+            RichTextNode richText => CanonicalHtml.ToPlainText(richText.Html.Resolve(Session.EditLocale, Session.EditLocale)),
+            _ => null,
+        };
+        if (string.IsNullOrEmpty(text))
+        {
+            return null;
+        }
+
+        return text.Length > 24 ? text[..23] + "…" : text;
+    }
+
+    // -------------------------------------------------------- selection sync
+
+    private void OnChanged() => _ = InvokeAsync(() =>
+    {
+        if (Session.Selection != _lastSelection)
+        {
+            _lastSelection = Session.Selection;
+            if (Session.Selection is { } id && !_panelOrigin && Session.EditingNodeId is null &&
+                Session.CurrentPage is { } draft && draft.Tree.Contains(id))
+            {
+                ExpandTo(draft, id);
+                _focusPending = id; // focused after render — focus scrolls the row into view
+            }
+
+            _panelOrigin = false;
+        }
+
+        StateHasChanged();
+    });
+
+    private void ExpandTo(Page draft, NodeId id)
+    {
+        for (var parent = draft.Tree.ParentOf(id); parent is not null; parent = draft.Tree.ParentOf(parent.Id))
+        {
+            _collapsed.Remove(parent.Id);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusPending is { } id)
+        {
+            _focusPending = null;
+            if (_anchors.TryGetValue(id, out var anchor))
+            {
+                await anchor.Element.FocusAsync();
+            }
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        Session.Changed += OnChanged;
+        Drafts.Changed += OnChanged;
+    }
+
+    public void Dispose()
+    {
+        Session.Changed -= OnChanged;
+        Drafts.Changed -= OnChanged;
+    }
+}

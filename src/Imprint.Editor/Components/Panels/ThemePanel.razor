@@ -1,2 +1,304 @@
-@* STUB — replaced by the editor-UI milestone (docs/editor-ux.md). *@
-<div class="ed-stub" data-stub="ThemePanel"></div>
+@using System.Globalization
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Components.Panels.Theme
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject SiteOverview Site
+@inject CommandRunner Commands
+
+@* The design system, editable: grouped color tokens (light + dark per role), live
+   readability checks, and the typography choices. Every change is a command; the
+   canvas re-renders itself off the projection — nothing here pokes it. *@
+<div class="panel">
+    <h2 class="title">Theme</h2>
+    @if (Site.Current is not { } site)
+    {
+        <p class="empty">Create a site first — its look and feel will live here.</p>
+    }
+    else
+    {
+        var theme = site.Theme;
+        var typography = theme.Typography;
+
+        <p class="hint">Every color has a light and a dark value. The page preview follows along as you pick.</p>
+        <div class="legend" aria-hidden="true"><span>Light</span><span>Dark</span></div>
+
+        @foreach (var group in TokenGroups)
+        {
+            <h3 class="group">@group.Name</h3>
+            @foreach (var entry in group.Tokens)
+            {
+                <ThemeTokenRow Token="@entry.Token"
+                               Label="@entry.Label"
+                               Current="@(theme.Tokens.Get(entry.Token) ?? new ThemeToken("#000000", "#ffffff"))"
+                               SiteId="site.Id"
+                               LiveChanged="OnLiveColor" />
+            }
+        }
+
+        <h3 class="group">Readability</h3>
+        <p class="hint">Text needs enough contrast against what it sits on (AA means a ratio of 4.5 or better).</p>
+        @foreach (var pair in ContrastPairs)
+        {
+            var (lightRatio, darkRatio) = PairContrast(theme, pair.Foreground, pair.Background);
+            <div class="pair">
+                <span class="pair-name">@pair.Label</span>
+                @* Non-hex values can't be measured here — the hint simply steps aside. *@
+                @if (lightRatio is { } lr)
+                {
+                    <span class="ed-badge @(lr >= 4.5 ? "ed-badge-ok" : "ed-badge-warn")"
+                          title="Light mode contrast is @Ratio(lr) to 1">☀ @(lr >= 4.5 ? "AA ✓" : $"{Ratio(lr)} ✗")</span>
+                }
+                @if (darkRatio is { } dr)
+                {
+                    <span class="ed-badge @(dr >= 4.5 ? "ed-badge-ok" : "ed-badge-warn")"
+                          title="Dark mode contrast is @Ratio(dr) to 1">☾ @(dr >= 4.5 ? "AA ✓" : $"{Ratio(dr)} ✗")</span>
+                }
+            </div>
+        }
+
+        <h3 class="group">Type</h3>
+        <div class="ed-field">
+            <label for="th-heading">Headings</label>
+            <select id="th-heading" class="ed-select" value="@typography.Heading" @onchange="e => ApplyStack(e, heading: true)">
+                @foreach (var stack in Enum.GetValues<FontStack>())
+                {
+                    <option value="@stack" style="font-family: @StackCss(stack)">@StackName(stack)</option>
+                }
+            </select>
+            <span class="specimen" style="font-family: @StackCss(typography.Heading)">Almost before we knew it, we had left the ground.</span>
+        </div>
+        <div class="ed-field">
+            <label for="th-body">Body text</label>
+            <select id="th-body" class="ed-select" value="@typography.Body" @onchange="e => ApplyStack(e, heading: false)">
+                @foreach (var stack in Enum.GetValues<FontStack>())
+                {
+                    <option value="@stack" style="font-family: @StackCss(stack)">@StackName(stack)</option>
+                }
+            </select>
+            <span class="specimen" style="font-family: @StackCss(typography.Body)">Almost before we knew it, we had left the ground.</span>
+        </div>
+        <div class="ed-field">
+            <label for="th-size">Base text size — @(_sizePreview ?? typography.BaseSizePx) px</label>
+            <input id="th-size" type="range" min="14" max="20" step="1"
+                   value="@typography.BaseSizePx"
+                   @oninput="e => _sizePreview = ParseInt(e)"
+                   @onchange="e => ApplyInt(e, px => CurrentTypography is { } t ? t with { BaseSizePx = px } : null)" />
+        </div>
+        <div class="ed-field">
+            <label for="th-scale">Heading scale</label>
+            <select id="th-scale" class="ed-select" value="@RatioKey(typography.ScaleRatio)" @onchange="ApplyRatio">
+                @foreach (var ratio in Ratios)
+                {
+                    <option value="@ratio.Key">@ratio.Name — @ratio.Key</option>
+                }
+            </select>
+        </div>
+        <div class="ed-field">
+            <label for="th-radius">Corner roundness — @(_radiusPreview ?? typography.RadiusPx) px</label>
+            <input id="th-radius" type="range" min="0" max="24" step="1"
+                   value="@typography.RadiusPx"
+                   @oninput="e => _radiusPreview = ParseInt(e)"
+                   @onchange="e => ApplyInt(e, px => CurrentTypography is { } t ? t with { RadiusPx = px } : null)" />
+        </div>
+        <div class="ed-field">
+            <label id="th-spacing-label">Spacing</label>
+            <div class="ed-seg" role="group" aria-labelledby="th-spacing-label">
+                @foreach (var scale in Enum.GetValues<SpacingScale>())
+                {
+                    <button type="button" aria-pressed="@(typography.Spacing == scale)"
+                            @onclick="() => ApplySpacing(scale)">@scale</button>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private sealed record TokenEntry(string Token, string Label);
+    private sealed record TokenGroup(string Name, TokenEntry[] Tokens);
+    private sealed record ContrastPair(string Label, string Foreground, string Background);
+
+    private static readonly TokenGroup[] TokenGroups =
+    [
+        new("Background",
+        [
+            new("background", "Background"),
+            new("surface", "Surface"),
+            new("surface-alt", "Alternate surface"),
+        ]),
+        new("Text",
+        [
+            new("text", "Text"),
+            new("text-muted", "Muted text"),
+        ]),
+        new("Brand",
+        [
+            new("primary", "Primary"),
+            new("on-primary", "Text on primary"),
+            new("accent", "Accent"),
+        ]),
+        new("Border",
+        [
+            new("border", "Border"),
+        ]),
+    ];
+
+    private static readonly ContrastPair[] ContrastPairs =
+    [
+        new("Text on background", "text", "background"),
+        new("Muted text on background", "text-muted", "background"),
+        new("Text on primary", "on-primary", "primary"),
+    ];
+
+    private static readonly (string Key, string Name)[] Ratios =
+    [
+        ("1.125", "Major second"),
+        ("1.2", "Minor third"),
+        ("1.25", "Major third"),
+        ("1.333", "Perfect fourth"),
+        ("1.414", "Augmented fourth"),
+        ("1.5", "Perfect fifth"),
+    ];
+
+    // Colors mid-pick (before their debounced command lands), so contrast follows live.
+    private readonly Dictionary<string, (string Light, string Dark)> _live = new(StringComparer.Ordinal);
+
+    private int? _sizePreview;
+    private int? _radiusPreview;
+
+    private Typography? CurrentTypography => Site.Current?.Theme.Typography;
+
+    // -------------------------------------------------------------- contrast
+
+    private void OnLiveColor((string Token, string? Light, string? Dark) change)
+    {
+        if (change.Light is null || change.Dark is null)
+        {
+            _live.Remove(change.Token);
+        }
+        else
+        {
+            _live[change.Token] = (change.Light, change.Dark);
+        }
+    }
+
+    private (double? Light, double? Dark) PairContrast(Authoring.Domain.Sites.Theme theme, string foreground, string background)
+    {
+        var fg = Effective(theme, foreground);
+        var bg = Effective(theme, background);
+        return (ContrastRatio(fg.Light, bg.Light), ContrastRatio(fg.Dark, bg.Dark));
+    }
+
+    private (string Light, string Dark) Effective(Authoring.Domain.Sites.Theme theme, string token) =>
+        _live.TryGetValue(token, out var live) ? live
+        : theme.Tokens.Get(token) is { } value ? (value.Light, value.Dark)
+        : ("", "");
+
+    private static double? ContrastRatio(string a, string b)
+    {
+        if (!TryLuminance(a, out var la) || !TryLuminance(b, out var lb))
+        {
+            return null;
+        }
+
+        var (brighter, darker) = la >= lb ? (la, lb) : (lb, la);
+        return (brighter + 0.05) / (darker + 0.05);
+    }
+
+    /// <summary>WCAG relative luminance for #rgb / #rrggbb values; anything else opts out.</summary>
+    private static bool TryLuminance(string color, out double luminance)
+    {
+        luminance = 0;
+        var value = color.Trim();
+        if (value.Length == 4 && value[0] == '#')
+        {
+            value = $"#{value[1]}{value[1]}{value[2]}{value[2]}{value[3]}{value[3]}";
+        }
+
+        if (value.Length != 7 || value[0] != '#' || !value.Skip(1).All(Uri.IsHexDigit))
+        {
+            return false;
+        }
+
+        double Channel(int at)
+        {
+            var c = int.Parse(value.AsSpan(at, 2), NumberStyles.HexNumber) / 255.0;
+            return c <= 0.03928 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
+        }
+
+        luminance = 0.2126 * Channel(1) + 0.7152 * Channel(3) + 0.0722 * Channel(5);
+        return true;
+    }
+
+    private static string Ratio(double value) => value.ToString("0.0", CultureInfo.InvariantCulture);
+
+    // ------------------------------------------------------------ typography
+
+    private async Task Apply(Typography updated)
+    {
+        _sizePreview = null;
+        _radiusPreview = null;
+        if (Site.Current is not { } site || updated == site.Theme.Typography)
+        {
+            return;
+        }
+
+        await Commands.Run(
+            new Authoring.Features.Sites.ChangeTypography.ChangeTypography(site.Id, updated),
+            new Authoring.Features.Sites.ChangeTypography.ChangeTypography(site.Id, site.Theme.Typography),
+            "typography change");
+    }
+
+    private Task ApplyStack(ChangeEventArgs args, bool heading) =>
+        Enum.TryParse<FontStack>(args.Value?.ToString(), out var stack) && CurrentTypography is { } t
+            ? Apply(heading ? t with { Heading = stack } : t with { Body = stack })
+            : Task.CompletedTask;
+
+    private Task ApplyInt(ChangeEventArgs args, Func<int, Typography?> update) =>
+        int.TryParse(args.Value?.ToString(), out var value) && update(value) is { } updated
+            ? Apply(updated)
+            : Task.CompletedTask;
+
+    private Task ApplyRatio(ChangeEventArgs args) =>
+        double.TryParse(args.Value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var ratio) &&
+        CurrentTypography is { } t
+            ? Apply(t with { ScaleRatio = ratio })
+            : Task.CompletedTask;
+
+    private Task ApplySpacing(SpacingScale scale) =>
+        CurrentTypography is { } t ? Apply(t with { Spacing = scale }) : Task.CompletedTask;
+
+    private static int? ParseInt(ChangeEventArgs args) =>
+        int.TryParse(args.Value?.ToString(), out var value) ? value : null;
+
+    private static string RatioKey(double ratio) => ratio.ToString("0.###", CultureInfo.InvariantCulture);
+
+    // Mirrors the rendering layer's curated stacks (ThemeCss.FontStackCss is private;
+    // ~8 duplicated lines beat widening a frozen API for a specimen preview).
+    private static string StackCss(FontStack stack) => stack switch
+    {
+        FontStack.Sans => "system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+        FontStack.Humanist => "Seravek, 'Gill Sans Nova', Ubuntu, Calibri, 'DejaVu Sans', source-sans-pro, sans-serif",
+        FontStack.Geometric => "'Avenir Next', Avenir, Montserrat, Corbel, 'Century Gothic', Futura, 'URW Gothic', system-ui, sans-serif",
+        FontStack.Serif => "Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif",
+        FontStack.Slab => "Rockwell, 'Rockwell Nova', 'Roboto Slab', 'DejaVu Serif', 'Sitka Small', serif",
+        FontStack.Mono => "ui-monospace, 'Cascadia Code', Menlo, Consolas, 'Source Code Pro', monospace",
+        _ => "system-ui, sans-serif",
+    };
+
+    private static string StackName(FontStack stack) => stack switch
+    {
+        FontStack.Sans => "Modern sans",
+        FontStack.Humanist => "Humanist",
+        FontStack.Geometric => "Geometric",
+        FontStack.Serif => "Serif",
+        FontStack.Slab => "Slab serif",
+        FontStack.Mono => "Monospace",
+        _ => stack.ToString(),
+    };
+
+    protected override void OnInitialized() => Site.Changed += Refresh;
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+    public void Dispose() => Site.Changed -= Refresh;
+}

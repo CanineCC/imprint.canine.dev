@@ -1,0 +1,109 @@
+.panel {
+  padding: 14px 8px 40px;
+}
+
+.title {
+  margin: 0 0 6px;
+  padding-inline: 6px;
+  font-size: 14px;
+}
+
+.empty {
+  margin: 8px 0;
+  padding-inline: 6px;
+  font-size: 13px;
+  color: var(--ed-text-muted);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-inline-start: calc(var(--indent) * 14px);
+  border-radius: var(--ed-radius-sm);
+}
+
+.row:hover:not(.selected) {
+  background: var(--ed-surface-2);
+}
+
+.row.selected {
+  background: color-mix(in srgb, var(--ed-accent) 14%, transparent);
+}
+
+.twist {
+  flex: none;
+  width: 18px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ed-text-muted);
+  font-size: 10px;
+  cursor: pointer;
+  border-radius: var(--ed-radius-sm);
+}
+
+.twist:hover {
+  color: var(--ed-text);
+}
+
+.twist-spacer {
+  flex: none;
+  width: 18px;
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: start;
+  border-radius: var(--ed-radius-sm);
+}
+
+.glyph {
+  flex: none;
+  width: 16px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--ed-text-muted);
+}
+
+.name {
+  white-space: nowrap;
+}
+
+.preview {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--ed-text-muted);
+}
+
+.actions {
+  display: none;
+  flex: none;
+  align-items: center;
+}
+
+.row:hover .actions,
+.row.selected .actions,
+.row:focus-within .actions {
+  display: inline-flex;
+}
+
+.act {
+  min-height: 24px;
+  min-width: 24px;
+  padding: 0 3px;
+  font-size: 12px;
+}

@@ -1,2 +1,263 @@
-@* STUB — replaced by the editor-UI milestone (docs/editor-ux.md). *@
-<div class="ed-stub" data-stub="TranslationsPanel"></div>
+@using System.Globalization
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject EditorSession Session
+@inject SiteOverview Site
+@inject PageDrafts Drafts
+@inject TranslationCoverage Coverage
+@inject CommandRunner Commands
+
+@* Side-by-side translation of the current page: the site's main language on the left,
+   a chosen target on the right. Coverage comes from the TranslationCoverage query;
+   edits go through the same commands the canvas uses. *@
+<div class="panel">
+    <h2 class="title">Translations</h2>
+    @if (Site.Current is not { } site)
+    {
+        <p class="empty">Create a site first.</p>
+    }
+    else if (Session.CurrentPageId is not { } pageId || Session.CurrentPage is not { } draft)
+    {
+        <p class="empty">Open a page to translate it.</p>
+    }
+    else
+    {
+        var others = site.Locales.Where(locale => locale != site.DefaultLocale).ToList();
+        @if (others.Count == 0)
+        {
+            <div class="empty">
+                <p>This site is only written in <strong>@site.DefaultLocale.Value</strong> so far.</p>
+                <p>Add a language and this panel fills up with everything left to translate.</p>
+                <button type="button" class="ed-btn" @onclick="() => Session.ShowPanel(EditorPanel.Pages)">
+                    Add a language
+                </button>
+            </div>
+        }
+        else
+        {
+            var target = TargetLocale(others);
+            var coverage = Coverage.For(pageId, target);
+            var fields = Coverage.FieldsOf(pageId);
+
+            <div class="pair-row">
+                <span class="source-locale" title="The site's main language">@site.DefaultLocale.Value</span>
+                <span class="arrow" aria-hidden="true">→</span>
+                <label class="target-pick">
+                    <span class="ed-visually-hidden">Translate into</span>
+                    <select class="ed-select" value="@target.Value" @onchange="OnTargetChange">
+                        @foreach (var locale in others)
+                        {
+                            <option value="@locale.Value">@locale.Value</option>
+                        }
+                    </select>
+                </label>
+            </div>
+
+            <div class="coverage">
+                <div class="coverage-bar" role="progressbar" aria-label="Translation progress"
+                     aria-valuemin="0" aria-valuemax="@coverage.TotalCount" aria-valuenow="@coverage.TranslatedCount">
+                    <div class="coverage-fill @(coverage.Complete ? "done" : null)" style="width: @Percent(coverage.Ratio)"></div>
+                </div>
+                <span class="coverage-text">@coverage.TranslatedCount of @coverage.TotalCount translated</span>
+                <button type="button" class="ed-btn next-btn" disabled="@coverage.Complete"
+                        @onclick="() => FocusFirstMissing(coverage)">
+                    Next untranslated
+                </button>
+            </div>
+
+            @if (fields.Count == 0)
+            {
+                <p class="empty">This page has no text yet — write something on the canvas first.</p>
+            }
+            @foreach (var field in fields)
+            {
+                var key = KeyOf(field);
+                var current = TargetValue(draft, field, target) ?? "";
+                var anchor = AnchorFor(key);
+                <div class="field @(current.Length == 0 ? "missing" : null)" @key="key">
+                    <div class="field-head">
+                        <span class="field-label">@field.Label</span>
+                        <span class="field-context">@ContextOf(draft, field)</span>
+                    </div>
+                    <div class="field-source" lang="@site.DefaultLocale.Value">
+                        @(field.IsHtml ? CanonicalHtml.ToPlainText(field.SourceText) : field.SourceText)
+                    </div>
+                    @if (field.IsHtml)
+                    {
+                        @* Rich text is translated as raw markup in v1: true side-by-side rich
+                           editing needs the canvas, and the server-side validator rejects
+                           anything non-canonical — a bad paste becomes an error toast, never
+                           bad data on the page. *@
+                        <textarea class="ed-input field-target" rows="3" value="@current" placeholder="Translate…"
+                                  aria-label="@field.Label in @target.Value" lang="@target.Value"
+                                  @ref="anchor.Element"
+                                  @onchange="e => Commit(field, e.Value?.ToString() ?? string.Empty)"></textarea>
+                    }
+                    else
+                    {
+                        <input class="ed-input field-target" value="@current" placeholder="Translate…"
+                               aria-label="@field.Label in @target.Value" lang="@target.Value"
+                               @ref="anchor.Element"
+                               @onchange="e => Commit(field, e.Value?.ToString() ?? string.Empty)" />
+                    }
+                </div>
+            }
+
+            <h3 class="group">All languages on this page</h3>
+            @foreach (var entry in Coverage.ForAllLocales(pageId))
+            {
+                <button type="button" class="locale-row @(entry.Locale == target ? "active" : null)"
+                        @onclick="() => _target = entry.Locale">
+                    <span>@entry.Locale.Value</span>
+                    <span class="locale-count @(entry.Complete ? "done" : null)">
+                        @entry.TranslatedCount/@entry.TotalCount@(entry.Complete ? " ✓" : "")
+                    </span>
+                </button>
+            }
+        }
+    }
+</div>
+
+@code {
+    // @ref needs an assignable field; a tiny holder per row keeps references in a
+    // dictionary so "next untranslated" can focus (and thereby scroll to) any row.
+    private sealed class RowAnchor
+    {
+        public ElementReference Element;
+    }
+
+    private readonly Dictionary<string, RowAnchor> _anchors = new(StringComparer.Ordinal);
+    private Locale? _target;
+
+    private RowAnchor AnchorFor(string key) =>
+        _anchors.TryGetValue(key, out var anchor) ? anchor : _anchors[key] = new RowAnchor();
+
+    private static string KeyOf(TranslatableField field) => $"{field.NodeId.Compact}|{field.Field}";
+
+    private Locale TargetLocale(List<Locale> others) =>
+        _target is { } chosen && others.Contains(chosen) ? chosen : others[0];
+
+    private void OnTargetChange(ChangeEventArgs args)
+    {
+        if (Locale.TryCreate(args.Value?.ToString(), out var locale))
+        {
+            _target = locale;
+        }
+    }
+
+    private static string Percent(double ratio) =>
+        (ratio * 100).ToString("0", CultureInfo.InvariantCulture) + "%";
+
+    private async Task FocusFirstMissing(LocaleCoverage coverage)
+    {
+        if (coverage.Missing.FirstOrDefault() is { } missing &&
+            _anchors.TryGetValue(KeyOf(missing), out var anchor))
+        {
+            // Focusing scrolls the row into view — no JS interop needed.
+            await anchor.Element.FocusAsync();
+        }
+    }
+
+    /// <summary>Where the field lives on the page — ancestor names, like the breadcrumb.</summary>
+    private static string ContextOf(Page draft, TranslatableField field)
+    {
+        if (field.IsPageField)
+        {
+            return "Page settings";
+        }
+
+        if (!draft.Tree.Contains(field.NodeId))
+        {
+            return "";
+        }
+
+        var parts = new List<string>();
+        for (var parent = draft.Tree.ParentOf(field.NodeId); parent is not null; parent = draft.Tree.ParentOf(parent.Id))
+        {
+            parts.Insert(0, parent.DisplayName);
+        }
+
+        return parts.Count == 0 ? "Top of the page" : string.Join(" › ", parts);
+    }
+
+    // The same field addressing TranslationCoverage uses, read side (kept in step
+    // with TranslationCoverage.HasValue — a dozen lines beat a frozen-API change).
+    private static string? TargetValue(Page draft, TranslatableField field, Locale locale) => field switch
+    {
+        { IsPageField: true, Field: "text" } => draft.Title.Get(locale),
+        { IsPageField: true, Field: "meta-title" } => draft.MetaTitle.Get(locale),
+        { IsPageField: true, Field: "meta-description" } => draft.MetaDescription.Get(locale),
+        _ => draft.Tree.Find(field.NodeId) switch
+        {
+            HeadingNode heading => heading.Text.Get(locale),
+            RichTextNode richText => richText.Html.Get(locale),
+            ButtonNode button => button.Label.Get(locale),
+            ImageNode image => image.Alt.Get(locale),
+            SvgNode svg => svg.Alt.Get(locale),
+            _ => null,
+        },
+    };
+
+    private async Task Commit(TranslatableField field, string value)
+    {
+        if (Session.CurrentPageId is not { } pageId || Session.CurrentPage is not { } draft ||
+            Site.Current is not { } site)
+        {
+            return;
+        }
+
+        var target = TargetLocale(site.Locales.Where(locale => locale != site.DefaultLocale).ToList());
+        var previous = TargetValue(draft, field, target) ?? "";
+        if (previous == value)
+        {
+            return;
+        }
+
+        if (!field.IsPageField)
+        {
+            await Commands.Run(
+                new Authoring.Features.Pages.EditText.EditText(pageId, field.NodeId, field.Field, target.Value, value),
+                new Authoring.Features.Pages.EditText.EditText(pageId, field.NodeId, field.Field, target.Value, previous),
+                "translation");
+            return;
+        }
+
+        switch (field.Field)
+        {
+            case "text":
+                await Commands.Run(
+                    new Authoring.Features.Pages.ChangePageTitle.ChangePageTitle(pageId, target.Value, value),
+                    new Authoring.Features.Pages.ChangePageTitle.ChangePageTitle(pageId, target.Value, previous),
+                    "title translation");
+                break;
+            case "meta-title" or "meta-description":
+                // ChangePageMeta always writes both meta values for the locale, so the
+                // untouched one rides along unchanged.
+                var metaTitle = field.Field == "meta-title" ? value : draft.MetaTitle.Get(target);
+                var metaDescription = field.Field == "meta-description" ? value : draft.MetaDescription.Get(target);
+                await Commands.Run(
+                    new Authoring.Features.Pages.ChangePageMeta.ChangePageMeta(pageId, target.Value, metaTitle, metaDescription),
+                    new Authoring.Features.Pages.ChangePageMeta.ChangePageMeta(
+                        pageId, target.Value, draft.MetaTitle.Get(target), draft.MetaDescription.Get(target)),
+                    "translation");
+                break;
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        Session.Changed += Refresh;
+        Site.Changed += Refresh;
+        Drafts.Changed += Refresh;
+    }
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Session.Changed -= Refresh;
+        Site.Changed -= Refresh;
+        Drafts.Changed -= Refresh;
+    }
+}

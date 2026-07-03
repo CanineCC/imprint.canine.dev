@@ -1,2 +1,70 @@
-@* STUB — replaced by the editor-UI milestone (docs/editor-ux.md). *@
-<span hidden data-stub="PublishStatus"></span>
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Services
+@using Imprint.Publishing
+@implements IDisposable
+@inject PublisherStatus Publisher
+@inject PageList Pages
+
+@* The editor's component styles (Panels/*.razor.css and this one) bundle into
+   Imprint.Editor.styles.css; App.razor predates component styles and is frozen, so
+   the always-rendered status fragment links the bundle for the whole shell. *@
+<HeadContent>
+    <link rel="stylesheet" href="Imprint.Editor.styles.css" />
+</HeadContent>
+
+@* One quiet sentence about the last publisher pass — nothing until it has run once. *@
+@if (Publisher.Last is { } report)
+{
+    <span class="status">
+        <span>Site updated @report.CompletedAtUtc.ToLocalTime().ToString("HH:mm")</span>
+        @if (report.PagesRendered > 0)
+        {
+            <span>· @Count(report.PagesRendered) refreshed</span>
+        }
+        @if (report.PagesRemoved > 0)
+        {
+            <span>· @Count(report.PagesRemoved) taken down</span>
+        }
+        @if (report.Errors.Count > 0)
+        {
+            <button type="button" class="ed-badge ed-badge-warn warn-btn" aria-expanded="@_open"
+                    aria-label="Show pages that hit a problem" @onclick="() => _open = !_open">
+                ⚠ @report.Errors.Count
+            </button>
+            @if (_open)
+            {
+                <div class="backdrop" @onclick="() => _open = false"></div>
+                <div class="pop" role="status" aria-label="Pages that hit a problem">
+                    <span class="pop-title">These pages hit a problem while updating the site:</span>
+                    @foreach (var error in report.Errors)
+                    {
+                        <span class="pop-line"><code>@SlugOf(error.PageId)</code>: @error.Message</span>
+                    }
+                </div>
+            }
+        }
+    </span>
+}
+
+@code {
+    private bool _open;
+
+    private static string Count(int pages) => pages == 1 ? "1 page" : $"{pages} pages";
+
+    private string SlugOf(PageId id) => Pages.Get(id)?.Slug.Value ?? "a removed page";
+
+    protected override void OnInitialized()
+    {
+        // Fired from the publisher's own thread — marshal like the read models.
+        Publisher.Changed += Refresh;
+        Pages.Changed += Refresh;
+    }
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Publisher.Changed -= Refresh;
+        Pages.Changed -= Refresh;
+    }
+}

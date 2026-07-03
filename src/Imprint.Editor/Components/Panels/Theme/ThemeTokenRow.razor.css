@@ -1,0 +1,37 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+}
+
+.values {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.swatch {
+  width: 36px;
+  height: 26px;
+  padding: 2px;
+  border: 1px solid var(--ed-border);
+  border-radius: var(--ed-radius-sm);
+  background: var(--ed-surface);
+  cursor: pointer;
+}
+
+.raw {
+  width: 118px;
+  min-height: 26px;
+  font-family: var(--ed-mono);
+  font-size: 11px;
+}
