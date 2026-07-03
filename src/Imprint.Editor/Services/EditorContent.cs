@@ -3,33 +3,60 @@ using Imprint.Authoring.Domain.Assets;
 using Imprint.Authoring.Domain.Pages;
 using Imprint.Authoring.Features.Pages;
 using Imprint.Authoring.Projections;
+using Imprint.Publishing;
 using Imprint.Rendering;
 
 namespace Imprint.Editor.Services;
 
 /// <summary>
-/// Widget manifest as loaded once at startup from the repo's widgets directory.
-/// Implements the authoring-side port so slices can validate WidgetNodes.
+/// The editor's widget catalog: the union of <b>built-in</b> widgets (loaded once from
+/// the repo's <c>widgets/</c> directory) and <b>approved</b> submissions (live from the
+/// <see cref="WidgetRegistry"/> read model). Implements the authoring-side port so the
+/// page slices validate WidgetNodes against both sources, and exposes the merged
+/// <see cref="Descriptors"/>/<see cref="Find"/> the insert picker and canvas render off.
+/// A built-in tag always wins a collision — a built-in can never be shadowed by a
+/// submission (that invariant is also enforced at submit time, see
+/// <see cref="IsBuiltInTag"/>). The built-in set is fixed at startup; the approved set
+/// is read live so a fresh approval appears without a restart.
 /// </summary>
 public sealed class EditorWidgetCatalog : IWidgetCatalog
 {
-    private readonly Dictionary<string, WidgetDescriptor> _byTag;
+    private readonly Dictionary<string, WidgetDescriptor> _builtInByTag;
+    private readonly WidgetRegistry _registry;
 
-    public EditorWidgetCatalog(string widgetsDirectory)
+    public EditorWidgetCatalog(string widgetsDirectory, WidgetRegistry registry)
     {
-        Descriptors = WidgetManifest.Load(Path.Combine(widgetsDirectory, "manifest.json"));
-        _byTag = Descriptors.ToDictionary(d => d.Tag, StringComparer.Ordinal);
+        _registry = registry;
+        BuiltIn = WidgetManifest.Load(Path.Combine(widgetsDirectory, "manifest.json"));
+        _builtInByTag = BuiltIn.ToDictionary(descriptor => descriptor.Tag, StringComparer.Ordinal);
     }
 
-    public IReadOnlyList<WidgetDescriptor> Descriptors { get; }
+    /// <summary>The filesystem widgets, exactly as the manifest declares them.</summary>
+    public IReadOnlyList<WidgetDescriptor> BuiltIn { get; }
 
-    public WidgetDescriptor? Find(string tag) => _byTag.GetValueOrDefault(tag);
+    /// <summary>Built-in ∪ approved, built-in winning any tag collision. Recomputed per call — the approved set is live.</summary>
+    public IReadOnlyList<WidgetDescriptor> Descriptors =>
+    [
+        .. BuiltIn,
+        .. _registry.Approved
+            .Where(submission => !_builtInByTag.ContainsKey(submission.Tag))
+            .Select(ApprovedWidgetDescriptors.ToDescriptor),
+    ];
 
-    public bool Exists(string tag) => _byTag.ContainsKey(tag);
+    public WidgetDescriptor? Find(string tag) =>
+        _builtInByTag.TryGetValue(tag, out var builtIn)
+            ? builtIn
+            : _registry.Approved.FirstOrDefault(submission => string.Equals(submission.Tag, tag, StringComparison.Ordinal)) is { } approved
+                ? ApprovedWidgetDescriptors.ToDescriptor(approved)
+                : null;
+
+    public bool Exists(string tag) => _builtInByTag.ContainsKey(tag) || _registry.IsApprovedTag(tag);
+
+    public bool IsBuiltInTag(string tag) => _builtInByTag.ContainsKey(tag);
 
     public IReadOnlySet<string> PropNames(string tag) =>
-        _byTag.TryGetValue(tag, out var descriptor)
-            ? descriptor.Props.Select(p => p.Name).ToHashSet(StringComparer.Ordinal)
+        Find(tag) is { } descriptor
+            ? descriptor.Props.Select(prop => prop.Name).ToHashSet(StringComparer.Ordinal)
             : new HashSet<string>();
 }
 

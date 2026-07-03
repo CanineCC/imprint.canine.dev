@@ -1,6 +1,7 @@
 using Imprint.Authoring;
 using Imprint.Authoring.Features.Assets;
 using Imprint.Authoring.Features.Pages;
+using Imprint.Authoring.Projections;
 using Imprint.Editor.Components;
 using Imprint.Editor.Services;
 using Imprint.EventSourcing;
@@ -37,9 +38,12 @@ builder.Services.AddImprintPublishing(new PublishingOptions
     BaseUrl = builder.Configuration["ImprintBaseUrl"],
 });
 
-var widgetCatalog = new EditorWidgetCatalog(widgetsDirectory);
-builder.Services.AddSingleton(widgetCatalog);
-builder.Services.AddSingleton<IWidgetCatalog>(widgetCatalog);
+// The merged catalog is built-in widgets ∪ approved submissions, so it needs the
+// WidgetRegistry read model (auto-registered by AddImprintAuthoring's projection scan).
+// A factory (not a pre-built instance) because the registry only exists post-Build.
+builder.Services.AddSingleton(provider =>
+    new EditorWidgetCatalog(widgetsDirectory, provider.GetRequiredService<WidgetRegistry>()));
+builder.Services.AddSingleton<IWidgetCatalog>(provider => provider.GetRequiredService<EditorWidgetCatalog>());
 builder.Services.AddSingleton<EditorRenderContextFactory>();
 
 // Per-circuit (per browser tab) editor state and its write path.

@@ -1,0 +1,223 @@
+@page "/admin/widgets"
+@using Imprint.Authoring.Domain.Widgets
+@using Imprint.Authoring.Projections
+@using Imprint.EventSourcing
+@using Microsoft.Extensions.Configuration
+@implements IDisposable
+@inject WidgetRegistry Registry
+@inject ICommandDispatcher Dispatcher
+@inject IConfiguration Config
+
+@* Widget review (proposal §"Admin — /admin/widgets"). The privileged act is APPROVAL:
+   approving publishes runnable JavaScript to every visitor, so the exact submitted source
+   is shown in full for review. Authorization of *who* is the admin is the reverse proxy's
+   job (architecture.md non-goals) — this route must sit behind your auth. *@
+
+<PageTitle>Widget review · Imprint</PageTitle>
+
+@if (!AdminEnabled)
+{
+    <main class="aw-page">
+        <h1 class="aw-title">Not available</h1>
+        <p class="aw-empty">The admin surface is disabled (<code>ImprintAdmin=false</code>).</p>
+        <a class="aw-back" href="/">← Back to the editor</a>
+    </main>
+}
+else
+{
+    <main class="aw-page">
+        <header class="aw-head">
+            <h1 class="aw-title">Widget review</h1>
+            <a class="aw-back" href="/">← Back to the editor</a>
+        </header>
+
+        <div class="aw-warning" role="note">
+            <strong>Approving publishes runnable JavaScript to every visitor.</strong>
+            Read the full source of a submission before approving it. Imprint does not
+            authenticate this page — it must sit behind your reverse-proxy authentication.
+        </div>
+
+        @if (_message is { } message)
+        {
+            <p class="aw-message" role="status">@message</p>
+        }
+
+        @{
+            var pending = Registry.Submissions.Where(s => s.Status == WidgetStatus.Pending).ToList();
+            var reviewed = Registry.Submissions.Where(s => s.Status != WidgetStatus.Pending).ToList();
+        }
+
+        <section class="aw-section">
+            <h2 class="aw-h2">Pending review <span class="aw-count">@pending.Count</span></h2>
+            @if (pending.Count == 0)
+            {
+                <p class="aw-empty">Nothing is waiting for review.</p>
+            }
+            @foreach (var submission in pending)
+            {
+                var id = submission.Id;
+                <article class="aw-card">
+                    <div class="aw-card-head">
+                        <code class="aw-tag">@submission.Tag</code>
+                        <span class="aw-name">@submission.Name</span>
+                        <span class="ed-badge ed-badge-warn">Pending</span>
+                    </div>
+                    <p class="aw-meta">
+                        Requested by <strong>@submission.RequestedBy</strong>
+                        · @Time(submission.SubmittedAt)
+                        · @Kb(submission.ByteSize)
+                    </p>
+                    @if (submission.Description is { Length: > 0 } description)
+                    {
+                        <p class="aw-desc">@description</p>
+                    }
+
+                    @RenderProps(submission)
+
+                    <details class="aw-bundle-wrap" open>
+                        <summary>Bundle source — review before approving</summary>
+                        <pre class="aw-bundle">@submission.BundleSource</pre>
+                    </details>
+
+                    <div class="aw-actions">
+                        <input class="ed-input aw-reason" placeholder="Reason (required to reject)"
+                               value="@ReasonOf(id)" @oninput="e => _reasons[id] = Str(e)" />
+                        <button type="button" class="ed-btn" @onclick="() => Reject(id)">Reject</button>
+                        <button type="button" class="ed-btn ed-btn-primary" @onclick="() => Approve(id)">
+                            Approve &amp; publish
+                        </button>
+                    </div>
+                </article>
+            }
+        </section>
+
+        <section class="aw-section">
+            <h2 class="aw-h2">Reviewed <span class="aw-count">@reviewed.Count</span></h2>
+            @if (reviewed.Count == 0)
+            {
+                <p class="aw-empty">No decisions yet.</p>
+            }
+            @foreach (var submission in reviewed)
+            {
+                <article class="aw-card aw-card-quiet">
+                    <div class="aw-card-head">
+                        <code class="aw-tag">@submission.Tag</code>
+                        <span class="aw-name">@submission.Name</span>
+                        <span class="ed-badge @BadgeClass(submission.Status)">@submission.Status</span>
+                    </div>
+                    <p class="aw-meta">
+                        @if (submission.DecidedBy is { } who)
+                        {
+                            <span>@Verb(submission.Status) by <strong>@who</strong></span>
+                        }
+                        @if (submission.DecidedAt is { } when)
+                        {
+                            <span> · @Time(when)</span>
+                        }
+                        <span> · requested by @submission.RequestedBy</span>
+                    </p>
+                    @if (submission is { Status: WidgetStatus.Rejected, RejectionReason: { Length: > 0 } reason })
+                    {
+                        <p class="aw-reason-note">Reason: @reason</p>
+                    }
+                </article>
+            }
+        </section>
+    </main>
+}
+
+@code {
+    private readonly Dictionary<WidgetSubmissionId, string> _reasons = [];
+    private string? _message;
+
+    private bool AdminEnabled => Config.GetValue("ImprintAdmin", true);
+
+    private string ReasonOf(WidgetSubmissionId id) => _reasons.GetValueOrDefault(id, "");
+
+    private RenderFragment RenderProps(WidgetSubmissionView submission) => builder =>
+    {
+        if (submission.Props.Count == 0)
+        {
+            return;
+        }
+
+        builder.OpenElement(0, "ul");
+        builder.AddAttribute(1, "class", "aw-props");
+        var seq = 2;
+        foreach (var prop in submission.Props)
+        {
+            builder.OpenElement(seq++, "li");
+            var detail = $"{prop.Name} · {prop.Label} · {prop.Type}";
+            if (prop.Default is { Length: > 0 })
+            {
+                detail += $" · default \"{prop.Default}\"";
+            }
+
+            if (prop.Options.Length > 0)
+            {
+                detail += $" · options: {string.Join(", ", prop.Options)}";
+            }
+
+            builder.AddContent(seq++, detail);
+            builder.CloseElement();
+        }
+
+        builder.CloseElement();
+    };
+
+    private async Task Approve(WidgetSubmissionId id)
+    {
+        var result = await Dispatcher.Dispatch(new Authoring.Features.Widgets.ApproveWidget.ApproveWidget(id));
+        _message = result.Succeeded
+            ? "Approved — the widget's bundle now publishes to visitors."
+            : result.ErrorMessage;
+    }
+
+    private async Task Reject(WidgetSubmissionId id)
+    {
+        var reason = ReasonOf(id).Trim();
+        if (reason.Length == 0)
+        {
+            _message = "Give a reason before rejecting — the requester sees it.";
+            return;
+        }
+
+        var result = await Dispatcher.Dispatch(new Authoring.Features.Widgets.RejectWidget.RejectWidget(id, reason));
+        if (result.Succeeded)
+        {
+            _reasons.Remove(id);
+            _message = "Rejected.";
+        }
+        else
+        {
+            _message = result.ErrorMessage;
+        }
+    }
+
+    private static string BadgeClass(WidgetStatus status) => status switch
+    {
+        WidgetStatus.Approved => "ed-badge-ok",
+        WidgetStatus.Rejected => "ed-badge-warn",
+        _ => "ed-badge-accent",
+    };
+
+    private static string Verb(WidgetStatus status) => status switch
+    {
+        WidgetStatus.Approved => "Approved",
+        WidgetStatus.Rejected => "Rejected",
+        WidgetStatus.Withdrawn => "Withdrawn",
+        _ => "Decided",
+    };
+
+    private static string Time(DateTimeOffset when) => when.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
+
+    private static string Kb(long bytes) => $"{bytes / 1024.0:0.#} KB";
+
+    private static string Str(ChangeEventArgs e) => e.Value?.ToString() ?? "";
+
+    protected override void OnInitialized() => Registry.Changed += Refresh;
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Registry.Changed -= Refresh;
+}

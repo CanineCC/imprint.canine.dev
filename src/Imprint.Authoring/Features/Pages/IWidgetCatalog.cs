@@ -13,4 +13,13 @@ public interface IWidgetCatalog
 
     /// <summary>Declared prop names for a tag; empty when the tag is unknown.</summary>
     IReadOnlySet<string> PropNames(string tag);
+
+    /// <summary>
+    /// True when the tag belongs to a built-in (filesystem) widget rather than an
+    /// approved submission. The widget-submission slice uses it to reject a submitted
+    /// tag that would shadow a built-in (a built-in can never be shadowed). The default
+    /// treats every known tag as built-in — correct for a manifest-only catalog and for
+    /// test fakes; the merged editor catalog overrides it to separate the two sources.
+    /// </summary>
+    bool IsBuiltInTag(string tag) => Exists(tag);
 }
