@@ -8,6 +8,14 @@ public static class EditorDriver
     /// <summary>Opens the editor, running onboarding first if this data dir is fresh.</summary>
     public static async Task<IPage> OpenEditor(this EditorFixture fixture)
     {
+        // One live circuit at a time: without this, every finished test leaves its
+        // context (and Blazor circuit) running, and interop from the newest circuit
+        // started getting lost mid-suite.
+        foreach (var stale in fixture.Browser.Contexts.ToList())
+        {
+            await stale.CloseAsync();
+        }
+
         var page = await fixture.NewPage();
         await page.GotoAsync("/");
         await page.WaitForInteractive();

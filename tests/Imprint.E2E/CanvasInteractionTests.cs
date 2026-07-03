@@ -69,12 +69,20 @@ public sealed class CanvasInteractionTests(EditorFixture fixture)
         await page.Keyboard.PressAsync("Control+a");
         await page.Keyboard.TypeAsync("Plain and bold words.");
 
-        // Real gestures only: double-click selects the word, a real click hits B —
-        // synthetic Range/dispatchEvent scaffolding proved flaky and unrepresentative.
-        await page.Locator("[contenteditable].ed-editing").DblClickAsync(new LocatorDblClickOptions
+        // Select the word 'bold' with the keyboard — pixel-targeting a word is
+        // font/layout-dependent and once bolded the wrong word in a full-suite run.
+        // Caret sits at the end after typing: ← ×7 puts it after 'bold' (' words.'),
+        // Shift+← ×4 selects it.
+        for (var i = 0; i < 7; i++)
         {
-            Position = await CenterOfWord(page, "bold"),
-        });
+            await page.Keyboard.PressAsync("ArrowLeft");
+        }
+
+        for (var i = 0; i < 4; i++)
+        {
+            await page.Keyboard.PressAsync("Shift+ArrowLeft");
+        }
+
         await page.WaitForSelectorAsync(".ed-richbar:not([hidden])");
         await page.Locator(".ed-richbar button", new PageLocatorOptions { HasTextString = "B" }).First
             .ClickAsync();
@@ -108,31 +116,6 @@ public sealed class CanvasInteractionTests(EditorFixture fixture)
             var html = await page.Locator($"[data-node-id='{id}']").InnerHTMLAsync();
             Assert.Fail($"bold lost after reload.\ndata dir: {fixture.DataDirectory}\nnode html now: {html}");
         }
-    }
-
-    /// <summary>Viewport-relative center of a word inside the live edit surface, as an element-relative position.</summary>
-    private static async Task<Microsoft.Playwright.Position> CenterOfWord(IPage page, string word)
-    {
-        var box = await page.EvaluateAsync<double[]>(
-            """
-            word => {
-                const el = document.querySelector('[contenteditable].ed-editing');
-                const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-                for (let node; (node = walker.nextNode()); ) {
-                    const at = node.data.indexOf(word);
-                    if (at >= 0) {
-                        const range = document.createRange();
-                        range.setStart(node, at);
-                        range.setEnd(node, at + word.length);
-                        const r = range.getBoundingClientRect();
-                        const host = el.getBoundingClientRect();
-                        return [r.left + r.width / 2 - host.left, r.top + r.height / 2 - host.top];
-                    }
-                }
-                throw new Error('word not found: ' + word);
-            }
-            """, word);
-        return new Microsoft.Playwright.Position { X = (float)box[0], Y = (float)box[1] };
     }
 
     [Fact]
