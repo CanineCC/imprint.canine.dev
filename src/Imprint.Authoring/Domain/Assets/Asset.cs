@@ -32,6 +32,23 @@ public sealed class Asset : AggregateRoot
     /// <summary>Why the asset is Failed or ReadyDegraded — surfaced in the editor's asset panel.</summary>
     public string? StatusReason { get; private set; }
 
+    // ---- optional dark-mode variant. Independent sub-lifecycle: the base asset stays
+    // usable and publishable whatever the dark variant's state (docs/proposals §Part 1).
+
+    /// <summary>The raw dark original; null when the asset is neutral.</summary>
+    public string? DarkOriginalStorageKey { get; private set; }
+
+    /// <summary>Dark WebP renditions (image assets); empty until dark processing completes.</summary>
+    public IReadOnlyList<ImageVariant> DarkVariants { get; private set; } = [];
+
+    /// <summary>Sanitized dark SVG (vector assets); null otherwise.</summary>
+    public string? DarkDerivedStorageKey { get; private set; }
+
+    public DarkVariantStatus DarkStatus { get; private set; } = DarkVariantStatus.None;
+
+    /// <summary>True once a usable dark rendition exists — the views then emit both renditions.</summary>
+    public bool HasDarkVariant => DarkStatus is DarkVariantStatus.Ready;
+
     public LocalizedText DefaultAlt { get; private set; } = LocalizedText.Empty;
     public bool IsDeleted { get; private set; }
 
@@ -128,6 +145,81 @@ public sealed class Asset : AggregateRoot
         Raise(new ProcessingSkipped(reason));
     }
 
+    // ------------------------------------------------------- dark-mode variant
+
+    /// <summary>
+    /// Attaches (or replaces) the raw dark original. Only image/vector assets that have
+    /// finished their own processing may take one; a re-upload re-enters
+    /// <see cref="DarkVariantStatus.Pending"/> and supersedes the previous dark variant.
+    /// </summary>
+    public void UploadDarkVariant(string storageKey, string contentType)
+    {
+        EnsureNotDeleted();
+        if (Kind is not (AssetKind.Image or AssetKind.Vector))
+        {
+            throw new DomainException($"A dark-mode variant is only allowed on image or vector assets, not {Kind}.");
+        }
+
+        if (Status is not (AssetStatus.Ready or AssetStatus.ReadyDegraded))
+        {
+            throw new DomainException(
+                $"'{Name}' must finish processing before it can take a dark-mode variant (it is {Status}).");
+        }
+
+        Raise(new DarkVariantUploaded(storageKey, contentType));
+    }
+
+    public void CompleteDarkImageVariants(IReadOnlyList<ImageVariant> variants)
+    {
+        EnsureNotDeleted();
+        EnsureKind(AssetKind.Image, "generate dark image variants");
+        EnsureDarkPending("generate dark image variants");
+        if (variants.Count == 0)
+        {
+            throw new DomainException("Dark image processing must produce at least one variant.");
+        }
+
+        Raise(new DarkImageVariantsGenerated(variants));
+    }
+
+    public void CompleteDarkSvgSanitize(string storageKey, int removedNodes)
+    {
+        EnsureNotDeleted();
+        EnsureKind(AssetKind.Vector, "sanitize the dark SVG");
+        EnsureDarkPending("sanitize the dark SVG");
+        if (removedNodes < 0)
+        {
+            throw new DomainException("The count of removed SVG nodes cannot be negative.");
+        }
+
+        Raise(new DarkSvgSanitized(storageKey, removedNodes));
+    }
+
+    public void FailDarkVariant(string reason)
+    {
+        EnsureNotDeleted();
+        EnsureDarkPending("mark the dark variant as failed");
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            throw new DomainException("A dark-variant failure needs a reason — the editor shows it to the user.");
+        }
+
+        Raise(new DarkVariantFailed(reason));
+    }
+
+    public void RemoveDarkVariant()
+    {
+        EnsureNotDeleted();
+        // No-op when already neutral: nothing to revert, and a phantom event would be
+        // noise in the history and a pointless republish trigger.
+        if (DarkStatus == DarkVariantStatus.None)
+        {
+            return;
+        }
+
+        Raise(new DarkVariantRemoved());
+    }
+
     public void SetAlt(Locale locale, string alt)
     {
         EnsureNotDeleted();
@@ -206,6 +298,29 @@ public sealed class Asset : AggregateRoot
                 Status = AssetStatus.ReadyDegraded;
                 StatusReason = e.Reason;
                 break;
+            case DarkVariantUploaded e:
+                DarkOriginalStorageKey = e.StorageKey;
+                DarkVariants = [];
+                DarkDerivedStorageKey = null;
+                DarkStatus = DarkVariantStatus.Pending;
+                break;
+            case DarkImageVariantsGenerated e:
+                DarkVariants = e.Variants;
+                DarkStatus = DarkVariantStatus.Ready;
+                break;
+            case DarkSvgSanitized e:
+                DarkDerivedStorageKey = e.StorageKey;
+                DarkStatus = DarkVariantStatus.Ready;
+                break;
+            case DarkVariantFailed:
+            case DarkVariantRemoved:
+                // Either way the dark rendition is dropped and the asset reverts to
+                // neutral — it renders as a single image again.
+                DarkOriginalStorageKey = null;
+                DarkVariants = [];
+                DarkDerivedStorageKey = null;
+                DarkStatus = DarkVariantStatus.None;
+                break;
             case AssetAltChanged e:
                 DefaultAlt = DefaultAlt.With(e.Locale, e.Alt);
                 break;
@@ -249,6 +364,15 @@ public sealed class Asset : AggregateRoot
         if (Status != AssetStatus.Pending)
         {
             throw new DomainException($"Cannot {action}: '{Name}' is not waiting for processing (it is {Status}).");
+        }
+    }
+
+    private void EnsureDarkPending(string action)
+    {
+        if (DarkStatus != DarkVariantStatus.Pending)
+        {
+            throw new DomainException(
+                $"Cannot {action}: '{Name}' has no dark variant awaiting processing (it is {DarkStatus}).");
         }
     }
 }

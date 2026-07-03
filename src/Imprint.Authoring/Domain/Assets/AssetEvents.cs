@@ -46,6 +46,42 @@ public sealed record ProcessingFailed(string Reason);
 [EventType("asset.processing-skipped")]
 public sealed record ProcessingSkipped(string Reason);
 
+// ---- optional dark-mode variant (docs/proposals/theme-media-and-widget-approval.md
+// §Part 1). A neutral asset gains one dark rendition, processed on the same pipeline
+// the base used; failure drops it and the asset stays usable and neutral.
+
+[EventType("asset.dark-variant-uploaded")]
+public sealed record DarkVariantUploaded(string StorageKey, string ContentType);
+
+[EventType("asset.dark-image-variants-generated")]
+public sealed record DarkImageVariantsGenerated(IReadOnlyList<ImageVariant> Variants)
+{
+    // A record holding a list compares by reference; events compare by value (specs and
+    // round-trip tests rely on it) — same precedent as ImageVariantsGenerated.
+    public bool Equals(DarkImageVariantsGenerated? other) =>
+        other is not null && Variants.SequenceEqual(other.Variants);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        foreach (var variant in Variants)
+        {
+            hash.Add(variant);
+        }
+
+        return hash.ToHashCode();
+    }
+}
+
+[EventType("asset.dark-svg-sanitized")]
+public sealed record DarkSvgSanitized(string StorageKey, int RemovedNodeCount);
+
+[EventType("asset.dark-variant-failed")]
+public sealed record DarkVariantFailed(string Reason);
+
+[EventType("asset.dark-variant-removed")]
+public sealed record DarkVariantRemoved;
+
 [EventType("asset.alt-changed")]
 public sealed record AssetAltChanged(Locale Locale, string Alt);
 

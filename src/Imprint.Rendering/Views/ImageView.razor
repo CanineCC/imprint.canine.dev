@@ -24,35 +24,71 @@
       return;
     }
 
-    var variants = info.ImageVariants.OrderBy(v => v.Width).ToList();
-    // Middle variant as src: the fallback for pre-srcset consumers (readers, scrapers)
-    // should be a reasonable size, not the largest download.
-    var src = variants[(variants.Count - 1) / 2];
-    var largest = variants[^1];
+    var light = info.ImageVariants.OrderBy(v => v.Width).ToList();
+    var dark = info.DarkImageVariants.OrderBy(v => v.Width).ToList();
+    // One claim per image node, whichever renditions it emits: the light copy is the
+    // one that paints in the default (light) scheme, so it carries the LCP priority.
     var eager = PageState?.TryClaimFirstImage() == true;
 
-    builder.OpenElement(0, "img");
-    builder.AddAttribute(1, "class", CssClass);
-    builder.AddAttribute(2, "src", src.Url);
-    builder.AddAttribute(3, "srcset", string.Join(", ", variants.Select(v => $"{v.Url} {v.Width}w")));
-    builder.AddAttribute(4, "sizes", CurrentHints.ToSizesAttribute());
+    if (info.HasDark && dark.Count > 0)
+    {
+      // Both renditions ship; CSS (imprint-base.css) shows exactly one by colour scheme
+      // with zero JavaScript. The dark copy is aria-hidden and drops the alt so assistive
+      // tech announces the image once, from the light copy.
+      RenderRendition(builder, seq: 0, info, light, "ip-img-light", isDark: false, eager);
+      RenderRendition(builder, seq: 20, info, dark, "ip-img-dark", isDark: true, eager: false);
+      return;
+    }
+
+    // Neutral asset: a single image, unchanged.
+    RenderRendition(builder, seq: 0, info, light, variantClass: null, isDark: false, eager);
+  }
+
+  private void RenderRendition(
+    RenderTreeBuilder builder, int seq, AssetRenderInfo info,
+    IReadOnlyList<ImageSource> sources, string? variantClass, bool isDark, bool eager)
+  {
+    // Middle variant as src: the fallback for pre-srcset consumers (readers, scrapers)
+    // should be a reasonable size, not the largest download.
+    var src = sources[(sources.Count - 1) / 2];
+    var largest = sources[^1];
+
+    builder.OpenElement(seq, "img");
+    builder.AddAttribute(seq + 1, "class", Classes("ip-img", variantClass, AspectClass, RoundedClass));
+    builder.AddAttribute(seq + 2, "src", src.Url);
+    builder.AddAttribute(seq + 3, "srcset", string.Join(", ", sources.Select(v => $"{v.Url} {v.Width}w")));
+    builder.AddAttribute(seq + 4, "sizes", CurrentHints.ToSizesAttribute());
     // Intrinsic dimensions from the largest variant: the browser reserves the box
     // before any bytes arrive — zero CLS by construction.
-    builder.AddAttribute(5, "width", largest.Width.ToString());
-    builder.AddAttribute(6, "height", largest.Height.ToString());
-    builder.AddAttribute(7, "alt", AltText(info));
-    if (eager)
+    builder.AddAttribute(seq + 5, "width", largest.Width.ToString());
+    builder.AddAttribute(seq + 6, "height", largest.Height.ToString());
+    if (isDark)
     {
-      builder.AddAttribute(8, "loading", "eager");
-      builder.AddAttribute(9, "fetchpriority", "high");
+      builder.AddAttribute(seq + 7, "aria-hidden", "true");
     }
     else
     {
-      builder.AddAttribute(10, "loading", "lazy");
+      builder.AddAttribute(seq + 7, "alt", AltText(info));
     }
 
-    builder.AddAttribute(11, "decoding", "async");
-    builder.AddMultipleAttributes(12, NodeAttributes);
+    if (eager)
+    {
+      builder.AddAttribute(seq + 8, "loading", "eager");
+      builder.AddAttribute(seq + 9, "fetchpriority", "high");
+    }
+    else
+    {
+      builder.AddAttribute(seq + 10, "loading", "lazy");
+    }
+
+    builder.AddAttribute(seq + 11, "decoding", "async");
+    // The editor-selection attributes ride the light (primary) rendition only, so the
+    // canvas has one hit-target per node and the DOM one data-node-id.
+    if (!isDark)
+    {
+      builder.AddMultipleAttributes(seq + 12, NodeAttributes);
+    }
+
     builder.CloseElement();
   }
 
@@ -71,8 +107,6 @@
     var alt = Resolve(Node.Alt);
     return alt.Length > 0 ? alt : Resolve(info.DefaultAlt);
   }
-
-  private string CssClass => Classes("ip-img", AspectClass, RoundedClass);
 
   private string? AspectClass => Node.Aspect switch
   {

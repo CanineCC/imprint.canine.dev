@@ -1,0 +1,100 @@
+@* The optional dark-mode rendition of an image/vector asset (docs/proposals/
+   theme-media-and-widget-approval.md §Part 1): upload a second file shown only in dark
+   mode, watch it process, preview it, and remove it. Image/vector assets only. *@
+@using Imprint.Authoring.Domain.Assets
+@using Imprint.Editor.Services
+@inject CommandRunner Commands
+@inject ToastService Toasts
+
+<div class="asset-dark">
+    <h3 class="asset-subhead">Dark-mode version (optional)</h3>
+    <p class="asset-dark-hint">
+        A second file shown only in dark mode — ideal for a logo that would disappear on a dark background.
+    </p>
+
+    @if (_uploading)
+    {
+        <div class="asset-dark-status" role="status">Uploading…</div>
+    }
+    else if (Asset.DarkStatus == DarkVariantStatus.None)
+    {
+        <label class="ed-btn ed-btn-ghost asset-dark-add">
+            Add dark version
+            <InputFile OnChange="OnFile" accept="@AcceptFor(Asset.Kind)" class="ed-visually-hidden"
+                       aria-label="Upload a dark-mode version" />
+        </label>
+    }
+    else if (Asset.DarkStatus == DarkVariantStatus.Pending)
+    {
+        <div class="asset-dark-status" role="status">Processing dark version…</div>
+    }
+    else
+    {
+        <div class="asset-dark-ready">
+            <AssetThumb Asset="Asset" Dark="true" />
+            <span class="ed-badge ed-badge-ok">@ReadyLabel(Asset.DarkStatus)</span>
+            <button type="button" class="ed-btn ed-btn-danger asset-dark-remove" @onclick="Remove">Remove</button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Asset Asset { get; set; } = null!;
+
+    private const long MaxUploadBytes = 500L * 1024 * 1024;
+    private bool _uploading;
+
+    private async Task OnFile(InputFileChangeEventArgs args)
+    {
+        var file = args.File;
+        if (file.Size == 0)
+        {
+            Toasts.Error($"'{file.Name}' is empty, so there is nothing to upload.");
+            return;
+        }
+
+        if (file.Size > MaxUploadBytes)
+        {
+            Toasts.Error($"'{file.Name}' is larger than the 500 MB upload limit.");
+            return;
+        }
+
+        _uploading = true;
+        StateHasChanged();
+        try
+        {
+            // Same in-process, read-once stream contract as the base upload (UploadAsset.cs).
+            await using var content = file.OpenReadStream(maxAllowedSize: MaxUploadBytes);
+            await Commands.Run(new Authoring.Features.Assets.UploadAssetDarkVariant.UploadAssetDarkVariant(
+                Asset.Id, file.Name, ContentTypeOf(file), file.Size, content));
+        }
+        catch (Exception)
+        {
+            Toasts.Error($"Reading '{file.Name}' from the browser failed — please try again.");
+        }
+        finally
+        {
+            _uploading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Remove()
+    {
+        if (await Commands.Run(new Authoring.Features.Assets.RemoveAssetDarkVariant.RemoveAssetDarkVariant(Asset.Id)))
+        {
+            Toasts.Show("Removed the dark-mode version.");
+        }
+    }
+
+    private static string ContentTypeOf(IBrowserFile file) =>
+        string.IsNullOrWhiteSpace(file.ContentType) || !file.ContentType.Contains('/')
+            ? "application/octet-stream"
+            : file.ContentType;
+
+    // Vectors take a dark SVG; images take a raster the processor will re-encode to WebP.
+    private static string AcceptFor(AssetKind kind) => kind == AssetKind.Vector ? "image/svg+xml" : "image/*";
+
+    private static string ReadyLabel(DarkVariantStatus status) =>
+        status == DarkVariantStatus.ReadyDegraded ? "Ready (limited)" : "Ready";
+}

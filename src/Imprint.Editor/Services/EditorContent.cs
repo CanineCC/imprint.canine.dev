@@ -89,9 +89,35 @@ public sealed class EditorRenderContextFactory(
         };
 
         var largest = asset.Variants.Count > 0 ? asset.Variants[^1] : null;
-        return new AssetRenderInfo(
+        var info = new AssetRenderInfo(
             asset.Kind, asset.Status, url, variants,
             largest?.Width, largest?.Height, inlineSvg, asset.DefaultAlt);
+
+        // Optional dark rendition, resolved through the same media URLs so the canvas
+        // previews it exactly as the published site will (pixel-identical preview).
+        if (asset.HasDarkVariant)
+        {
+            if (asset is { Kind: AssetKind.Image } && asset.DarkVariants.Count > 0)
+            {
+                var darkVariants = asset.DarkVariants
+                    .Select(v => new ImageSource($"/media/{v.StorageKey}", v.Width, v.Height))
+                    .ToList();
+                var darkLargest = asset.DarkVariants[^1];
+                info = info with
+                {
+                    DarkImageVariants = darkVariants,
+                    DarkIntrinsicWidth = darkLargest.Width,
+                    DarkIntrinsicHeight = darkLargest.Height,
+                    DarkUrl = darkVariants[Math.Min(1, darkVariants.Count - 1)].Url,
+                };
+            }
+            else if (asset is { Kind: AssetKind.Vector, DarkDerivedStorageKey: { } darkSvgKey })
+            {
+                info = info with { DarkInlineSvg = File.ReadAllText(media.PhysicalPathOf(darkSvgKey)) };
+            }
+        }
+
+        return info;
     }
 }
 

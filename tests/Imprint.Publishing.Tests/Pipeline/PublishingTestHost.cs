@@ -237,6 +237,72 @@ internal sealed class PublishingTestHost : IAsyncDisposable
         return id;
     }
 
+    /// <summary>
+    /// Attaches a ready dark-mode variant to an existing image asset. Its derived files
+    /// live under a distinct <c>dark/{id}/</c> namespace so they never collide with (or
+    /// get mutated alongside) the base variants under <c>derived/{id}/</c>.
+    /// </summary>
+    public async Task AddDarkImageVariant(AssetId id, params int[] widths)
+    {
+        if (widths.Length == 0)
+        {
+            widths = [480, 960, 1440];
+        }
+
+        var darkOriginal = $"originals/{id.Compact}/dark-source.png";
+        Media.Seed(darkOriginal, Bytes($"{id.Compact}-dark-original"));
+        var asset = await Store.Load<Asset>(id.Stream);
+        asset.UploadDarkVariant(darkOriginal, "image/png");
+        await Commit(asset);
+
+        var variants = new List<ImageVariant>();
+        foreach (var width in widths)
+        {
+            var key = $"dark/{id.Compact}/{width}.webp";
+            Media.Seed(key, Bytes($"{id.Compact}-dark-{width}"));
+            variants.Add(new ImageVariant(width, width * 2 / 3, key, 1000));
+        }
+
+        asset = await Store.Load<Asset>(id.Stream);
+        asset.CompleteDarkImageVariants(variants);
+        await Commit(asset);
+    }
+
+    /// <summary>Re-processes the dark variant: same keys, new content — the content-hash staleness trigger.</summary>
+    public void MutateDarkImageVariants(AssetId id, string salt)
+    {
+        foreach (var key in Media.Files.Keys
+                     .Where(k => k.StartsWith($"dark/{id.Compact}/", StringComparison.Ordinal)).ToList())
+        {
+            Media.Seed(key, Bytes(key + salt));
+        }
+    }
+
+    /// <summary>Reverts an asset to neutral by dropping its dark-mode variant.</summary>
+    public async Task RemoveDarkVariant(AssetId id)
+    {
+        var asset = await Store.Load<Asset>(id.Stream);
+        asset.RemoveDarkVariant();
+        await Commit(asset);
+    }
+
+    /// <summary>Attaches a ready dark-mode SVG variant to an existing vector asset (inlined, never a file).</summary>
+    public async Task AddDarkSvgVariant(
+        AssetId id, string svg = "<svg viewBox=\"0 0 10 10\"><circle cx=\"5\" cy=\"5\" r=\"4\"/></svg>")
+    {
+        var darkOriginal = $"originals/{id.Compact}/dark-icon.svg";
+        Media.Seed(darkOriginal, Encoding.UTF8.GetBytes(svg));
+        var asset = await Store.Load<Asset>(id.Stream);
+        asset.UploadDarkVariant(darkOriginal, "image/svg+xml");
+        await Commit(asset);
+
+        var cleanKey = $"dark/{id.Compact}/clean.svg";
+        Media.Seed(cleanKey, Encoding.UTF8.GetBytes(svg));
+        asset = await Store.Load<Asset>(id.Stream);
+        asset.CompleteDarkSvgSanitize(cleanKey, 0);
+        await Commit(asset);
+    }
+
     public async Task<BlockDefinitionId> DefineBlock(string name, Node spec)
     {
         var id = BlockDefinitionId.New();

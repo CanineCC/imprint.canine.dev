@@ -7,7 +7,18 @@
 {
   @* Inlined (sanitized at ingest) so strokes and fills inherit currentColor and
      follow the theme — an <img src=…svg> would be locked to its authored colors. *@
-  <div class="ip-svg" @attributes="SvgAttributes(info)">@((MarkupString)svg)</div>
+  @if (info.DarkInlineSvg is { } darkSvg)
+  {
+    @* Both renditions inline; CSS (imprint-base.css) reveals exactly one by colour
+       scheme, zero JS. The dark copy is aria-hidden and unnamed so assistive tech
+       announces the graphic once, from the light copy. *@
+    <div class="ip-svg ip-img-light" @attributes="SvgAttributes(info, isDark: false)">@((MarkupString)svg)</div>
+    <div class="ip-svg ip-img-dark" @attributes="SvgAttributes(info, isDark: true)">@((MarkupString)darkSvg)</div>
+  }
+  else
+  {
+    <div class="ip-svg" @attributes="SvgAttributes(info, isDark: false)">@((MarkupString)svg)</div>
+  }
 }
 else if (IsEditor)
 {
@@ -15,25 +26,35 @@ else if (IsEditor)
 }
 
 @code {
-  private IReadOnlyDictionary<string, object> SvgAttributes(AssetRenderInfo info)
+  private IReadOnlyDictionary<string, object> SvgAttributes(AssetRenderInfo info, bool isDark)
   {
     var attributes = new Dictionary<string, object>();
-    var alt = Resolve(Node.Alt);
-    if (alt.Length == 0)
-    {
-      alt = Resolve(info.DefaultAlt);
-    }
 
-    // Meaningful graphics get an accessible name; unnamed ones are decorative and
-    // must be hidden from assistive tech rather than announced as "image".
-    if (alt.Length > 0)
+    if (isDark)
     {
-      attributes["role"] = "img";
-      attributes["aria-label"] = alt;
+      // The light copy carries the accessible name and the node id; the dark mirror is
+      // hidden from assistive tech and is not an editor hit-target.
+      attributes["aria-hidden"] = "true";
     }
     else
     {
-      attributes["aria-hidden"] = "true";
+      var alt = Resolve(Node.Alt);
+      if (alt.Length == 0)
+      {
+        alt = Resolve(info.DefaultAlt);
+      }
+
+      // Meaningful graphics get an accessible name; unnamed ones are decorative and
+      // must be hidden from assistive tech rather than announced as "image".
+      if (alt.Length > 0)
+      {
+        attributes["role"] = "img";
+        attributes["aria-label"] = alt;
+      }
+      else
+      {
+        attributes["aria-hidden"] = "true";
+      }
     }
 
     if (Node.MaxWidthPx is { } maxWidth)
@@ -41,9 +62,12 @@ else if (IsEditor)
       attributes["style"] = $"max-width: {maxWidth}px";
     }
 
-    foreach (var (name, value) in NodeAttributes)
+    if (!isDark)
     {
-      attributes[name] = value;
+      foreach (var (name, value) in NodeAttributes)
+      {
+        attributes[name] = value;
+      }
     }
 
     return attributes;

@@ -113,6 +113,21 @@
 .ip-svg { display: block; }
 .ip-svg svg { display: block; width: 100%; height: auto; }
 
+/* ---- light/dark media variants: an asset with a dark rendition ships both, and CSS
+        alone reveals one — honouring the OS setting AND Imprint's explicit theme toggle,
+        with no JavaScript (docs/proposals/theme-media-and-widget-approval.md §Part 1).
+        The classes sit on <img> and on inline-SVG wrappers alike. ---- */
+.ip-img-dark { display: none; }
+@media (prefers-color-scheme: dark) {
+  .ip-img-light { display: none; }
+  .ip-img-dark  { display: revert; }
+}
+/* the explicit toggle wins over the OS setting, both directions */
+:root[data-theme="light"] .ip-img-light { display: revert; }
+:root[data-theme="light"] .ip-img-dark  { display: none; }
+:root[data-theme="dark"]  .ip-img-light { display: none; }
+:root[data-theme="dark"]  .ip-img-dark  { display: revert; }
+
 /* ---- divider & spacer ---- */
 .ip-divider { width: 100%; border: 0; border-top: 1px solid var(--ip-border); margin: 0; }
 .ip-spacer-s { height: var(--ip-space-3); }

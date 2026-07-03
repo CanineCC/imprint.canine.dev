@@ -1,11 +1,13 @@
 @* A small preview square: the smallest generated variant for images, a kind glyph for
-   everything else (docs/editor-ux.md §7 — Assets). Shared by the panel and the picker. *@
+   everything else (docs/editor-ux.md §7 — Assets). Shared by the panel and the picker.
+   Dark="true" previews the asset's dark-mode variant instead of the base rendition. *@
 @using Imprint.Authoring.Domain.Assets
 
 <span class="asset-thumb">
-    @if (Asset is { Kind: AssetKind.Image, Variants.Count: > 0 })
+    @{ var variants = Dark ? Asset.DarkVariants : Asset.Variants; }
+    @if (Asset.Kind == AssetKind.Image && variants.Count > 0)
     {
-        <img src="@($"/media/{Asset.Variants[0].StorageKey}")" alt="" loading="lazy" />
+        <img src="@($"/media/{variants[0].StorageKey}")" alt="" loading="lazy" />
     }
     else
     {
@@ -15,4 +17,7 @@
 
 @code {
     [Parameter, EditorRequired] public Asset Asset { get; set; } = null!;
+
+    /// <summary>Preview the dark-mode variant (its smallest rendition) rather than the base.</summary>
+    [Parameter] public bool Dark { get; set; }
 }
