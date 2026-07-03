@@ -1,2 +1,274 @@
-@* STUB — replaced by the editor-UI milestone (docs/editor-ux.md). *@
-<div class="ed-stub" data-stub="PagesPanel"></div>
+@* The Pages panel (docs/editor-ux.md §7): site name, the page list (navigation pages
+   first, reorderable with arrows), a create form with live slug suggestions, and the
+   site's languages. Every mutation is a command; guard messages arrive as toasts. *@
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Components.Panels.Pages
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject PageList Pages
+@inject SiteOverview Site
+@inject EditorSession Session
+@inject CommandRunner Commands
+@inject NavigationManager Navigation
+
+<link rel="stylesheet" href="Imprint.Editor.styles.css" />
+
+<div class="pages-panel">
+    @if (Site.Current is not { } site)
+    {
+        <p class="panel-empty">There is no site yet — head to the start page to create one.</p>
+    }
+    else
+    {
+        <div class="ed-field">
+            <label for="pp-site-name">Site name</label>
+            <input id="pp-site-name" class="ed-input"
+                   value="@(_siteNameEdit ?? site.Name)"
+                   @oninput="args => _siteNameEdit = args.Value?.ToString() ?? string.Empty"
+                   @onblur="CommitSiteName"
+                   @onkeydown="OnSiteNameKey" />
+        </div>
+
+        <div class="panel-heading">
+            <h2>Pages</h2>
+            <button type="button" class="ed-btn ed-btn-ghost" aria-expanded="@_creating"
+                    @onclick="ToggleCreate">＋ New page</button>
+        </div>
+
+        @if (_creating)
+        {
+            <div class="new-page-form">
+                <div class="ed-field">
+                    <label for="pp-new-title">Title</label>
+                    <input id="pp-new-title" class="ed-input" value="@_newTitle" @ref="_newTitleInput"
+                           @oninput="OnNewTitleInput" @onkeydown="OnNewPageKey" />
+                </div>
+                <div class="ed-field">
+                    <label for="pp-new-slug">Address</label>
+                    <input id="pp-new-slug" class="ed-input" value="@_newSlug"
+                           @oninput="OnNewSlugInput" @onkeydown="OnNewPageKey" />
+                    <span class="field-hint">The page will live at /@(_newSlug)/</span>
+                </div>
+                <div class="form-row">
+                    <button type="button" class="ed-btn ed-btn-primary" @onclick="CreateNewPage">Create page</button>
+                    <button type="button" class="ed-btn ed-btn-ghost" @onclick="CancelCreate">Cancel</button>
+                </div>
+            </div>
+        }
+
+        var summaries = Pages.All();
+        var navEntries = summaries.Where(summary => summary.IsInNavigation).ToList();
+        var otherEntries = summaries.Where(summary => !summary.IsInNavigation).ToList();
+
+        @if (summaries.Count == 0)
+        {
+            <p class="panel-empty">No pages yet. Create your first one above.</p>
+        }
+
+        @if (navEntries.Count > 0)
+        {
+            <h3 class="group-label">In navigation</h3>
+            <ul class="page-list" aria-label="Pages in navigation">
+                @for (var index = 0; index < navEntries.Count; index++)
+                {
+                    var entry = navEntries[index];
+                    var at = index;
+                    <PageRow @key="entry.Id" Entry="entry" ShowReorder="true"
+                             CanMoveUp="@(at > 0)" CanMoveDown="@(at < navEntries.Count - 1)"
+                             OnMove="delta => MoveNav(entry.Id, delta)"
+                             OnNavToggle="include => ToggleNav(entry.Id, include)" />
+                }
+            </ul>
+        }
+
+        @if (otherEntries.Count > 0)
+        {
+            <h3 class="group-label">Other pages</h3>
+            <ul class="page-list" aria-label="Pages not in navigation">
+                @foreach (var entry in otherEntries)
+                {
+                    <PageRow @key="entry.Id" Entry="entry"
+                             OnNavToggle="include => ToggleNav(entry.Id, include)" />
+                }
+            </ul>
+        }
+
+        <LocaleManager />
+    }
+</div>
+
+@code {
+    private string? _siteNameEdit;
+    private bool _creating;
+    private string _newTitle = "";
+    private string _newSlug = "";
+    private bool _slugTouched;
+    private ElementReference _newTitleInput;
+    private bool _focusPending;
+
+    protected override void OnInitialized()
+    {
+        Pages.Changed += Refresh;
+        Site.Changed += Refresh;
+        Session.Changed += Refresh;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusPending && _creating)
+        {
+            _focusPending = false;
+            await _newTitleInput.FocusAsync();
+        }
+    }
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    // ------------------------------------------------------------- site name
+
+    private async Task CommitSiteName()
+    {
+        if (Site.Current is not { } site || _siteNameEdit is not { } edited)
+        {
+            return;
+        }
+
+        _siteNameEdit = null;
+        var name = edited.Trim();
+        if (name == site.Name)
+        {
+            return;
+        }
+
+        await Commands.Run(
+            new Authoring.Features.Sites.RenameSite.RenameSite(site.Id, name),
+            new Authoring.Features.Sites.RenameSite.RenameSite(site.Id, site.Name),
+            "site rename");
+    }
+
+    private async Task OnSiteNameKey(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await CommitSiteName();
+        }
+        else if (args.Key == "Escape")
+        {
+            _siteNameEdit = null;
+        }
+    }
+
+    // -------------------------------------------------------------- new page
+
+    private void ToggleCreate()
+    {
+        _creating = !_creating;
+        _focusPending = _creating;
+    }
+
+    private void CancelCreate()
+    {
+        _creating = false;
+        _newTitle = "";
+        _newSlug = "";
+        _slugTouched = false;
+    }
+
+    private void OnNewTitleInput(ChangeEventArgs args)
+    {
+        _newTitle = args.Value?.ToString() ?? string.Empty;
+        if (!_slugTouched)
+        {
+            _newSlug = Slug.Suggest(_newTitle);
+        }
+    }
+
+    private void OnNewSlugInput(ChangeEventArgs args)
+    {
+        _newSlug = args.Value?.ToString() ?? string.Empty;
+        // An emptied slug hands control back to the live suggestion.
+        _slugTouched = _newSlug.Length > 0;
+    }
+
+    private async Task OnNewPageKey(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await CreateNewPage();
+        }
+        else if (args.Key == "Escape")
+        {
+            CancelCreate();
+        }
+    }
+
+    private async Task CreateNewPage()
+    {
+        if (Site.Current is not { } site)
+        {
+            return;
+        }
+
+        var id = PageId.New();
+        if (await Commands.Run(new Authoring.Features.Pages.CreatePage.CreatePage(
+                id, site.Id, _newTitle.Trim(), _newSlug.Trim(), site.DefaultLocale.Value)))
+        {
+            CancelCreate();
+            Navigation.NavigateTo($"/edit/{id.Compact}");
+        }
+    }
+
+    // ------------------------------------------------------------ navigation
+
+    private async Task MoveNav(PageId id, int delta)
+    {
+        if (Site.Current is not { } site)
+        {
+            return;
+        }
+
+        var current = site.Navigation.ToList();
+        var at = current.FindIndex(item => item.PageId == id);
+        var to = at + delta;
+        if (at < 0 || to < 0 || to >= current.Count)
+        {
+            return;
+        }
+
+        var reordered = current.ToList();
+        (reordered[at], reordered[to]) = (reordered[to], reordered[at]);
+        await Commands.Run(
+            new Authoring.Features.Sites.ChangeNavigation.ChangeNavigation(site.Id, reordered),
+            new Authoring.Features.Sites.ChangeNavigation.ChangeNavigation(site.Id, current),
+            "navigation reorder");
+    }
+
+    private async Task ToggleNav(PageId id, bool include)
+    {
+        if (Site.Current is not { } site)
+        {
+            return;
+        }
+
+        var current = site.Navigation.ToList();
+        if (include == current.Any(item => item.PageId == id))
+        {
+            return;
+        }
+
+        List<NavigationItem> changed = include
+            ? [.. current, new NavigationItem(id, null)]
+            : [.. current.Where(item => item.PageId != id)];
+        await Commands.Run(
+            new Authoring.Features.Sites.ChangeNavigation.ChangeNavigation(site.Id, changed),
+            new Authoring.Features.Sites.ChangeNavigation.ChangeNavigation(site.Id, current),
+            "navigation change");
+    }
+
+    public void Dispose()
+    {
+        Pages.Changed -= Refresh;
+        Site.Changed -= Refresh;
+        Session.Changed -= Refresh;
+    }
+}

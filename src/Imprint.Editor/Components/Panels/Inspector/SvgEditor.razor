@@ -1,0 +1,41 @@
+@using Imprint.Authoring.Domain.Assets
+@inherits NodeEditorBase<SvgNode>
+
+<AssetPicker Kind="AssetKind.Vector" Label="Graphic" Selected="Node.AssetId" SelectedChanged="SetAsset" />
+<div class="ed-field">
+    <label for="insp-svg-alt">Description@(LocaleSuffix)</label>
+    <DebouncedText Id="insp-svg-alt" Placeholder="What does the graphic show?"
+                   Value="@(Node.Alt.Get(Session.EditLocale) ?? "")" OnCommit="CommitAlt" />
+    <p class="ed-insp-hint">Read aloud by screen readers. Leave empty if the graphic is purely decorative.</p>
+</div>
+<div class="ed-field">
+    <label class="ed-insp-toggle">
+        <input type="checkbox" checked="@(Node.MaxWidthPx is not null)" @onchange="ToggleLimit" />
+        <span>Limit width</span>
+    </label>
+    @if (Node.MaxWidthPx is { } maxWidth)
+    {
+        <Stepper Label="Widest size" Min="40" Max="960" Step="20" Unit="px"
+                 Value="maxWidth" ValueChanged="SetMaxWidth" />
+    }
+    else
+    {
+        <p class="ed-insp-hint">The graphic grows to fill the space it gets.</p>
+    }
+</div>
+
+@code {
+    private const int DefaultMaxWidthPx = 240;
+
+    private Task SetAsset(AssetId? assetId) => Apply(Node with { AssetId = assetId }, "graphic choice");
+
+    private Task CommitAlt(string value) =>
+        CommitText("alt", Node.Alt.Get(Session.EditLocale) ?? "", value, "graphic description");
+
+    private Task ToggleLimit(ChangeEventArgs args) =>
+        Apply(
+            Node with { MaxWidthPx = args.Value is bool limited && limited ? DefaultMaxWidthPx : null },
+            "graphic width limit");
+
+    private Task SetMaxWidth(int maxWidthPx) => Apply(Node with { MaxWidthPx = maxWidthPx }, "graphic width limit");
+}

@@ -1,0 +1,65 @@
+@using System.Collections.Immutable
+@inherits NodeEditorBase<ColumnsNode>
+
+<div class="ed-field">
+    <label>Columns</label>
+    <Stepper Label="Number of columns" Min="2" Max="4" Step="1"
+             Value="Node.Ratios.Length" ValueChanged="SetCount" />
+    <p class="ed-insp-hint">
+        Going down removes the last column — it has to be empty first, so nothing is lost.
+    </p>
+</div>
+<div class="ed-field">
+    <label>Column widths</label>
+    @for (var i = 0; i < Node.Ratios.Length; i++)
+    {
+        var index = i;
+        <div class="ed-insp-row">
+            <span>Column @(index + 1)</span>
+            <Stepper Label="@($"Column {index + 1} width share")" Min="1" Max="3" Step="1"
+                     Value="@Node.Ratios[index]" ValueChanged="share => SetRatio(index, share)" />
+        </div>
+    }
+    <p class="ed-insp-hint">Shares of the row — a 2 is twice as wide as a 1.</p>
+</div>
+<div class="ed-field">
+    <label>Stack on small screens</label>
+    <Segmented TValue="CollapseBreakpoint" Label="Stack on small screens" Value="Node.CollapseBelow"
+               Options="CollapseOptions" ValueChanged="SetCollapse" />
+    <p class="ed-insp-hint">Collapses below @((int)Node.CollapseBelow) px into a single column.</p>
+</div>
+<div class="ed-field">
+    <label>Gap</label>
+    <Segmented TValue="Gap" Label="Gap" Value="Node.Gap" Options="GapOptions" ValueChanged="SetGap" />
+</div>
+
+@code {
+    private static readonly (string, CollapseBreakpoint)[] CollapseOptions =
+        [
+            ("480 px", CollapseBreakpoint.Px480),
+            ("640 px", CollapseBreakpoint.Px640),
+            ("768 px", CollapseBreakpoint.Px768),
+        ];
+
+    private static readonly (string, Gap)[] GapOptions =
+        [("Tight", Gap.Tight), ("Normal", Gap.Normal), ("Loose", Gap.Loose)];
+
+    private Task SetCount(int count)
+    {
+        // Cells are managed by the page itself: only the ratio count travels, and
+        // shrinking onto a non-empty column is refused there and speaks via toast.
+        var ratios = Node.Ratios;
+        ratios = count < ratios.Length
+            ? ratios.RemoveRange(count, ratios.Length - count)
+            : ratios.AddRange(Enumerable.Repeat(1, count - ratios.Length));
+        return Apply(Node with { Ratios = ratios }, "column count");
+    }
+
+    private Task SetRatio(int index, int share) =>
+        Apply(Node with { Ratios = Node.Ratios.SetItem(index, share) }, "column width");
+
+    private Task SetCollapse(CollapseBreakpoint breakpoint) =>
+        Apply(Node with { CollapseBelow = breakpoint }, "collapse point");
+
+    private Task SetGap(Gap gap) => Apply(Node with { Gap = gap }, "column gap");
+}

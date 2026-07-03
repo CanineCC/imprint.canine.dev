@@ -1,0 +1,91 @@
+@using Imprint.Authoring.Domain.Assets
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject AssetLibrary Library
+
+@* A thumbnail grid over the asset library, filtered to one kind. Selection is the
+   whole job — uploading and managing files lives in the Assets panel. Processing
+   state shows live so a just-uploaded file visibly becomes usable. *@
+<div class="ed-field">
+    <label>@Label</label>
+    @if (Matching.Count == 0)
+    {
+        <p class="ed-insp-hint">No @Plural yet — upload some in the Assets panel on the left.</p>
+    }
+    else
+    {
+        <div class="ed-asset-grid" role="listbox" aria-label="@Label">
+            @foreach (var asset in Matching)
+            {
+                var candidate = asset;
+                <button type="button" role="option"
+                        aria-selected="@(candidate.Id == Selected)"
+                        class="ed-asset-card @(candidate.Id == Selected ? "ed-asset-card-selected" : null)"
+                        title="@candidate.Name"
+                        @onclick="() => Pick(candidate.Id)">
+                    @if (candidate.Kind == AssetKind.Video)
+                    {
+                        <span class="ed-asset-thumb" aria-hidden="true">▶</span>
+                    }
+                    else
+                    {
+                        <img class="ed-asset-thumb" src="@ThumbUrl(candidate)" alt="" loading="lazy" />
+                    }
+                    <span class="ed-asset-name">@candidate.Name</span>
+                    @if (BadgeOf(candidate) is { } badge)
+                    {
+                        <span class="@badge.Css" title="@candidate.StatusReason">@badge.Text</span>
+                    }
+                </button>
+            }
+        </div>
+    }
+    @if (Selected is not null)
+    {
+        <button type="button" class="ed-btn ed-btn-ghost" @onclick="() => Pick(null)">Remove @Singular</button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AssetKind Kind { get; set; }
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter] public AssetId? Selected { get; set; }
+    [Parameter] public EventCallback<AssetId?> SelectedChanged { get; set; }
+
+    private IReadOnlyList<Asset> Matching => [.. Library.All().Where(asset => asset.Kind == Kind)];
+
+    private string Singular => Kind switch
+    {
+        AssetKind.Image => "image",
+        AssetKind.Vector => "graphic",
+        AssetKind.Video => "video",
+        _ => "file",
+    };
+
+    private string Plural => Singular + "s";
+
+    private Task Pick(AssetId? id) =>
+        id == Selected ? Task.CompletedTask : SelectedChanged.InvokeAsync(id);
+
+    private static string ThumbUrl(Asset asset) => asset switch
+    {
+        { Kind: AssetKind.Image, Variants.Count: > 0 } => $"/media/{asset.Variants[0].StorageKey}",
+        { Kind: AssetKind.Vector, DerivedStorageKey: { } key } => $"/media/{key}",
+        _ => $"/media/{asset.OriginalStorageKey}",
+    };
+
+    private static (string Text, string Css)? BadgeOf(Asset asset) => asset.Status switch
+    {
+        AssetStatus.Pending => ("Processing…", "ed-badge"),
+        AssetStatus.ReadyDegraded => ("Original file", "ed-badge ed-badge-warn"),
+        AssetStatus.Failed => ("Failed", "ed-badge ed-badge-danger"),
+        _ => null,
+    };
+
+    protected override void OnInitialized() => Library.Changed += Refresh;
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Library.Changed -= Refresh;
+}

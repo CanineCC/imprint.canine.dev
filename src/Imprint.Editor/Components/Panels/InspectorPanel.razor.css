@@ -1,0 +1,184 @@
+/* Inspector interior. Shared primitives (buttons, inputs, segments, badges, fields)
+   come from editor.css — everything here is layout specific to the inspector family,
+   reaching sub-components through ::deep. */
+
+.ed-insp {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.ed-insp ::deep .ed-insp-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 4px 10px;
+  background: var(--ed-surface);
+  border-bottom: 1px solid var(--ed-border);
+}
+
+.ed-insp ::deep .ed-insp-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ed-insp ::deep .ed-insp-body {
+  padding: 14px 14px 24px;
+}
+
+.ed-insp ::deep .ed-insp-empty {
+  padding: 16px 14px;
+  color: var(--ed-text-muted);
+}
+
+.ed-insp ::deep .ed-insp-hint {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ed-text-muted);
+}
+
+.ed-insp ::deep .ed-insp-error {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ed-danger);
+}
+
+.ed-insp ::deep .ed-insp-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ed-insp ::deep .ed-insp-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--ed-accent);
+}
+
+.ed-insp ::deep .ed-insp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+/* Stepper */
+
+.ed-insp ::deep .ed-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ed-insp ::deep .ed-stepper .ed-btn {
+  min-width: 32px;
+  padding: 0 8px;
+}
+
+.ed-insp ::deep .ed-stepper-value {
+  min-width: 56px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Asset picker */
+
+.ed-insp ::deep .ed-asset-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.ed-insp ::deep .ed-asset-card {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  background: var(--ed-bg);
+  border: 1px solid var(--ed-border);
+  border-radius: var(--ed-radius-sm);
+  cursor: pointer;
+  transition: background 120ms ease-out;
+}
+
+.ed-insp ::deep .ed-asset-card:hover {
+  background: var(--ed-surface-2);
+}
+
+.ed-insp ::deep .ed-asset-card-selected {
+  outline: 2px solid var(--ed-accent);
+  outline-offset: -1px;
+}
+
+.ed-insp ::deep .ed-asset-thumb {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  font-size: 18px;
+  color: var(--ed-text-muted);
+  background: var(--ed-surface-2);
+  border-radius: 4px;
+}
+
+.ed-insp ::deep .ed-asset-name {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ed-insp ::deep .ed-asset-card .ed-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.ed-insp ::deep .ed-badge-danger {
+  background: color-mix(in srgb, var(--ed-danger) 15%, transparent);
+  color: var(--ed-danger);
+}
+
+/* Action groups (unpublish/delete, block instance actions) */
+
+.ed-insp ::deep .ed-insp-actions {
+  display: grid;
+  gap: 6px;
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--ed-border);
+}
+
+.ed-insp ::deep .ed-insp-actions .ed-insp-hint {
+  margin: -2px 0 8px;
+}
+
+/* Widget color prop */
+
+.ed-insp ::deep .ed-insp-color {
+  inline-size: 56px;
+  block-size: 32px;
+  padding: 2px;
+  background: var(--ed-bg);
+  border: 1px solid var(--ed-border);
+  border-radius: var(--ed-radius-sm);
+}

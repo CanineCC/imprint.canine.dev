@@ -1,0 +1,18 @@
+@* A small preview square: the smallest generated variant for images, a kind glyph for
+   everything else (docs/editor-ux.md §7 — Assets). Shared by the panel and the picker. *@
+@using Imprint.Authoring.Domain.Assets
+
+<span class="asset-thumb">
+    @if (Asset is { Kind: AssetKind.Image, Variants.Count: > 0 })
+    {
+        <img src="@($"/media/{Asset.Variants[0].StorageKey}")" alt="" loading="lazy" />
+    }
+    else
+    {
+        <span class="asset-glyph" aria-hidden="true">@AssetUi.Glyph(Asset.Kind)</span>
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired] public Asset Asset { get; set; } = null!;
+}

@@ -1,0 +1,25 @@
+@typeparam TValue
+
+@* One segmented control per option axis: a button per choice, immediate dispatch,
+   no dropdowns for three-or-four-way decisions (docs/editor-ux.md §7). *@
+<div class="ed-seg" role="group" aria-label="@Label">
+    @foreach (var option in Options)
+    {
+        var choice = option;
+        <button type="button"
+                aria-pressed="@Same(choice.Value, Value)"
+                @onclick="() => Select(choice.Value)">@choice.Name</button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter, EditorRequired] public IReadOnlyList<(string Name, TValue Value)> Options { get; set; } = [];
+    [Parameter, EditorRequired] public TValue Value { get; set; } = default!;
+    [Parameter] public EventCallback<TValue> ValueChanged { get; set; }
+
+    private static bool Same(TValue a, TValue b) => EqualityComparer<TValue>.Default.Equals(a, b);
+
+    private Task Select(TValue value) =>
+        Same(value, Value) ? Task.CompletedTask : ValueChanged.InvokeAsync(value);
+}

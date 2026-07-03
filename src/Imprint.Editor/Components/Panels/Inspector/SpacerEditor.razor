@@ -1,0 +1,14 @@
+@inherits NodeEditorBase<SpacerNode>
+
+<div class="ed-field">
+    <label>Size</label>
+    <Segmented TValue="SpacerSize" Label="Size" Value="Node.Size"
+               Options="SizeOptions" ValueChanged="SetSize" />
+</div>
+
+@code {
+    private static readonly (string, SpacerSize)[] SizeOptions =
+        [("Small", SpacerSize.Small), ("Medium", SpacerSize.Medium), ("Large", SpacerSize.Large)];
+
+    private Task SetSize(SpacerSize size) => Apply(Node with { Size = size }, "spacer size");
+}

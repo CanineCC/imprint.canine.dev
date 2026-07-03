@@ -1,0 +1,81 @@
+@using Imprint.Editor.Services
+@using Imprint.Rendering
+@inherits NodeEditorBase<WidgetNode>
+@inject EditorWidgetCatalog Widgets
+
+@* The prop form is generated from the widget manifest: each declared prop becomes the
+   matching input, and values travel in the node's prop bag. No manifest, no form. *@
+@if (Widgets.Find(Node.Tag) is not { } descriptor)
+{
+    <p class="ed-insp-hint">
+        This widget (@Node.Tag) is not installed, so its settings cannot be edited here.
+        Published pages simply skip it.
+    </p>
+}
+else
+{
+    @if (descriptor.Description.Length > 0)
+    {
+        <p class="ed-insp-hint">@descriptor.Description</p>
+    }
+    @foreach (var prop in descriptor.Props)
+    {
+        var setting = prop;
+        var current = Node.Props.Get(setting.Name) ?? setting.Default ?? "";
+        var fieldId = $"insp-widget-{setting.Name}";
+        <div class="ed-field">
+            @switch (setting.Type)
+            {
+                case WidgetPropType.Toggle:
+                    <label class="ed-insp-toggle">
+                        <input id="@fieldId" type="checkbox" checked="@(current == "true")"
+                               @onchange='args => SetProp(setting.Name, args.Value is bool on && on ? "true" : "false")' />
+                        <span>@setting.Label</span>
+                    </label>
+                    break;
+                case WidgetPropType.Choice:
+                    <label for="@fieldId">@setting.Label</label>
+                    <select id="@fieldId" class="ed-select" value="@current"
+                            @onchange='args => SetProp(setting.Name, args.Value?.ToString() ?? "")'>
+                        @foreach (var option in setting.Options)
+                        {
+                            <option value="@option">@option</option>
+                        }
+                    </select>
+                    break;
+                case WidgetPropType.Color:
+                    <label for="@fieldId">@setting.Label</label>
+                    <input id="@fieldId" class="ed-insp-color" type="color" value="@AsColor(current)"
+                           aria-label="@setting.Label"
+                           @onchange='args => SetProp(setting.Name, args.Value?.ToString() ?? "")' />
+                    break;
+                case WidgetPropType.Number:
+                    <label for="@fieldId">@setting.Label</label>
+                    <DebouncedText Id="@fieldId" Type="number" Value="@current"
+                                   OnCommit="value => SetProp(setting.Name, value)" />
+                    break;
+                default:
+                    <label for="@fieldId">@setting.Label</label>
+                    <DebouncedText Id="@fieldId"
+                                   Type="@(setting.Type == WidgetPropType.Url ? "url" : "text")"
+                                   Value="@current"
+                                   OnCommit="value => SetProp(setting.Name, value)" />
+                    break;
+            }
+        </div>
+    }
+}
+
+@code {
+    private Task SetProp(string name, string value)
+    {
+        // Empty means "back to the widget's own default" — the prop leaves the bag
+        // entirely instead of lingering as an empty attribute.
+        var props = string.IsNullOrEmpty(value) ? Node.Props.Without(name) : Node.Props.With(name, value);
+        return Apply(Node with { Props = props }, "widget setting");
+    }
+
+    // <input type="color"> only understands #rrggbb; anything else falls back to black.
+    private static string AsColor(string value) =>
+        value.Length == 7 && value[0] == '#' && value.Skip(1).All(Uri.IsHexDigit) ? value : "#000000";
+}

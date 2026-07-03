@@ -1,0 +1,172 @@
+/* Assets panel layout; shared primitives (fields, buttons, badges) come from editor.css. */
+
+.assets-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    padding: 14px 12px;
+}
+
+/* file-drop.js toggles this while files hover over the panel. */
+.assets-panel.ed-drop-target {
+    outline: 2px dashed var(--ed-accent);
+    outline-offset: -6px;
+    background: color-mix(in srgb, var(--ed-accent) 5%, transparent);
+}
+
+.panel-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 0 2px;
+}
+
+.panel-heading h2 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--ed-text-muted);
+}
+
+.upload-btn { cursor: pointer; }
+
+.drop-hint {
+    margin: 0 0 10px;
+    font-size: 12px;
+    color: var(--ed-text-muted);
+}
+
+.upload-row {
+    padding: 8px;
+    margin-bottom: 4px;
+    font-size: 12.5px;
+    color: var(--ed-text-muted);
+    background: var(--ed-bg);
+    border: 1px dashed var(--ed-border);
+    border-radius: var(--ed-radius-sm);
+    animation: ed-fade-in 120ms ease-out;
+}
+
+.panel-empty {
+    padding: 24px 8px;
+    color: var(--ed-text-muted);
+    text-align: center;
+}
+
+.asset-list {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.asset-card {
+    border: 1px solid transparent;
+    border-radius: var(--ed-radius-sm);
+}
+
+.asset-card:hover { background: var(--ed-surface-2); }
+
+.asset-card-open {
+    background: var(--ed-bg);
+    border-color: var(--ed-border);
+}
+
+.asset-card-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px;
+    text-align: start;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    border-radius: var(--ed-radius-sm);
+}
+
+.asset-card-text {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+    flex: 1;
+}
+
+.asset-name {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.asset-kind {
+    font-size: 12px;
+    color: var(--ed-text-muted);
+}
+
+.ed-badge.badge-failed {
+    background: color-mix(in srgb, var(--ed-danger) 15%, transparent);
+    color: var(--ed-danger);
+}
+
+.asset-detail {
+    padding: 4px 8px 10px;
+    border-top: 1px solid var(--ed-border);
+    margin-top: 2px;
+    padding-top: 10px;
+}
+
+.asset-reason {
+    margin: 0 0 10px;
+    padding: 8px;
+    font-size: 12.5px;
+    color: var(--ed-warn);
+    background: color-mix(in srgb, var(--ed-warn) 8%, transparent);
+    border-radius: var(--ed-radius-sm);
+}
+
+.asset-subhead {
+    margin: 2px 0 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--ed-text-muted);
+}
+
+.asset-variants {
+    display: grid;
+    gap: 2px;
+    margin: 0 0 10px;
+    padding: 0;
+    list-style: none;
+    font-size: 12px;
+    font-family: var(--ed-mono);
+    color: var(--ed-text-muted);
+}
+
+.asset-variants li {
+    display: flex;
+    justify-content: space-between;
+}
+
+.asset-usage {
+    margin: 0 0 8px;
+    font-size: 12.5px;
+    color: var(--ed-text-muted);
+}
+
+.asset-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.asset-meta {
+    font-size: 12px;
+    color: var(--ed-text-muted);
+}
