@@ -1,0 +1,74 @@
+@namespace Imprint.Publishing
+@* The published document shell — the HTML contract (docs/publishing.md) in one
+   template: one stylesheet link, the two sanctioned inline scripts (theme toggle in
+   <head> before the stylesheet so an explicit choice applies at first paint; island
+   loader at the end of <body> so it can see the islands), landmarks, skip link, nav
+   with aria-current. The body carries .ip-page so the chrome inherits the site theme;
+   PageView emits its own .ip-page wrapper, which nests harmlessly. *@
+<html lang="@Chrome.Lang">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>@((MarkupString)HtmlText.Encode(Chrome.Title))</title>
+  @if (Chrome.MetaDescription is not null)
+  {
+    <meta name="description" content="@Chrome.MetaDescription" />
+  }
+  @if (Chrome.CanonicalHref is not null)
+  {
+    <link rel="canonical" href="@Chrome.CanonicalHref" />
+  }
+  @foreach (var alternate in Chrome.Alternates)
+  {
+    <link rel="alternate" hreflang="@alternate.Hreflang" href="@alternate.Href" />
+  }
+  <script>@((MarkupString)PublisherScripts.ThemeToggle)</script>
+  <link rel="stylesheet" href="@Chrome.StylesheetHref" />
+</head>
+<body class="ip-page">
+  <a href="#main">Skip to content</a>
+  <header>
+    <a href="@Chrome.HomeHref">@Chrome.SiteName</a>
+    <nav aria-label="Main">
+      <ul>
+        @foreach (var item in Chrome.Nav)
+        {
+          <li><a href="@item.Href" aria-current="@(item.IsCurrent ? "page" : null)">@item.Label</a></li>
+        }
+      </ul>
+    </nav>
+    <button type="button" data-theme-toggle aria-label="Switch color theme">◐</button>
+  </header>
+  <main id="main">
+    @if (Content is not null)
+    {
+      @Content
+    }
+    else
+    {
+      <CascadingValue Value="@Ctx">
+        <PageView Roots="@Roots" />
+      </CascadingValue>
+    }
+  </main>
+  <footer>
+    <p>@Chrome.SiteName</p>
+  </footer>
+  @if (Chrome.IncludeIslandLoader)
+  {
+    <script>@((MarkupString)PublisherScripts.IslandLoader)</script>
+  }
+</body>
+</html>
+
+@code {
+  [Parameter, EditorRequired] public StaticPageChrome Chrome { get; set; } = default!;
+
+  /// <summary>The static-mode render context cascaded to the node views. Required unless <see cref="Content"/> is set.</summary>
+  [Parameter] public RenderContext? Ctx { get; set; }
+
+  [Parameter] public IReadOnlyList<Node> Roots { get; set; } = [];
+
+  /// <summary>Replaces the PageView body — used by the 404 page, which has no node tree.</summary>
+  [Parameter] public RenderFragment? Content { get; set; }
+}
