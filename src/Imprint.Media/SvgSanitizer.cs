@@ -13,6 +13,26 @@ public static class SvgSanitizer
     private static readonly XNamespace Svg = "http://www.w3.org/2000/svg";
     private static readonly XNamespace Xlink = "http://www.w3.org/1999/xlink";
 
+    // Real SVG icons are a handful of levels deep; these caps are far above any
+    // legitimate graphic yet cut off the pathological inputs that would otherwise blow
+    // the stack. The depth cap in particular is load-bearing: the sanitize walk (and
+    // XElement.ToString) recurse per nesting level, and a StackOverflowException is
+    // uncatchable — it would take the whole process down in a restart loop, since the
+    // asset stays Pending and the worker re-enqueues it on every boot.
+    private const int MaxDepth = 100;
+    private const int MaxElements = 40_000;
+
+    // SMIL animation: an <animate>/<set> can retarget an href or other attribute at
+    // runtime (e.g. <set attributeName="href" to="javascript:…">), so a purely static
+    // attribute scan is not enough — the elements themselves must go.
+    private static readonly HashSet<string> RemovedElements = new(StringComparer.Ordinal)
+    {
+        // Local-name matching is deliberate: a <script> smuggled in under the XHTML
+        // namespace executes just the same once inlined.
+        "script", "foreignObject", "style",
+        "animate", "animateColor", "animateMotion", "animateTransform", "set", "discard", "mpath",
+    };
+
     public static (string Svg, int RemovedNodes) Sanitize(string svg)
     {
         // XXE is non-negotiable: no DTDs, no resolver — a doctype (even a benign one)
@@ -22,6 +42,11 @@ public static class SvgSanitizer
             DtdProcessing = DtdProcessing.Prohibit,
             XmlResolver = null,
         };
+
+        // Bound the input before building or walking a tree: this streaming scan is
+        // iterative (constant stack), so it cannot itself overflow, and it guarantees
+        // the recursive sanitize/serialize below stay within MaxDepth frames.
+        EnforceStructuralLimits(svg, settings);
 
         XDocument document;
         using (var reader = XmlReader.Create(new StringReader(svg), settings))
@@ -43,16 +68,43 @@ public static class SvgSanitizer
         return (root.ToString(SaveOptions.DisableFormatting), removed);
     }
 
+    private static void EnforceStructuralLimits(string svg, XmlReaderSettings settings)
+    {
+        using var reader = XmlReader.Create(new StringReader(svg), settings);
+        var elements = 0;
+        while (reader.Read())
+        {
+            if (reader.NodeType != XmlNodeType.Element)
+            {
+                continue;
+            }
+
+            if (reader.Depth > MaxDepth)
+            {
+                throw new InvalidOperationException(
+                    $"The SVG is nested more than {MaxDepth} levels deep, which no real graphic needs.");
+            }
+
+            if (++elements > MaxElements)
+            {
+                throw new InvalidOperationException(
+                    $"The SVG contains more than {MaxElements:N0} elements, which no real graphic needs.");
+            }
+        }
+    }
+
     private static void SanitizeNode(XElement element, ref int removed)
     {
-        switch (element.Name.LocalName)
+        var localName = element.Name.LocalName;
+        if (RemovedElements.Contains(localName))
         {
-            // Local-name matching is deliberate: a <script> smuggled in under the
-            // XHTML namespace executes just the same once inlined.
-            case "script" or "foreignObject" or "style":
-                element.Remove();
-                removed++;
-                return;
+            element.Remove();
+            removed++;
+            return;
+        }
+
+        switch (localName)
+        {
 
             // Links make no sense in an inlined decorative graphic and are a
             // phishing surface; keep the visuals, drop the wrapper.

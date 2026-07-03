@@ -18,7 +18,7 @@ var app = builder.Build();
 var publishRoot = ResolvePublishRoot(app.Configuration, app.Environment);
 app.Logger.LogInformation("Serving published site from {Root}", publishRoot);
 
-var contentTypes = new FileExtensionContentTypeProvider();
+var contentTypes = new PrecompressedContentTypeProvider();
 var fileProvider = new PhysicalFileProvider(publishRoot);
 var hashedName = new Regex(@"\.[0-9a-f]{16}\.[a-z0-9]+$", RegexOptions.Compiled);
 
@@ -56,13 +56,8 @@ app.Use(async (context, next) =>
             context.Response.Headers.ContentEncoding = encoding;
             context.Response.Headers.Vary = "Accept-Encoding";
 
-            // Content type comes from the *original* name; the middleware below would
-            // otherwise see ".br" and guess wrong.
-            if (contentTypes.TryGetContentType(path, out var contentType))
-            {
-                context.Response.ContentType = contentType;
-            }
-
+            // The content-type provider below maps ".html.br" by its inner extension,
+            // so the static middleware serves the sibling with the real type.
             path += extension;
             break;
         }
@@ -111,4 +106,23 @@ static string ResolvePublishRoot(IConfiguration configuration, IWebHostEnvironme
         ?? throw new InvalidOperationException(
             $"No published site found (looked at: {string.Join(", ", candidates)}). " +
             "Publish from the editor first, or pass --ImprintPublish=<path>.");
+}
+
+/// <summary>
+/// Maps precompressed siblings (<c>page.html.br</c>) by their inner extension. Without
+/// this the static middleware refuses ".br" as an unknown type and an
+/// Accept-Encoding: br request for an existing page turns into a 404.
+/// </summary>
+file sealed class PrecompressedContentTypeProvider : IContentTypeProvider
+{
+    private readonly FileExtensionContentTypeProvider _inner = new();
+
+    public bool TryGetContentType(string subpath, out string contentType)
+    {
+        var probe = subpath.EndsWith(".br", StringComparison.OrdinalIgnoreCase) ||
+                    subpath.EndsWith(".gz", StringComparison.OrdinalIgnoreCase)
+            ? subpath[..^3]
+            : subpath;
+        return _inner.TryGetContentType(probe, out contentType!);
+    }
 }

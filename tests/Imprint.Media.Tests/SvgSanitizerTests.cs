@@ -254,4 +254,59 @@ public sealed class SvgSanitizerTests
 
         Assert.Equal(5, removed);
     }
+
+    // -- SMIL animation (audit finding: <set> can retarget href at runtime) ---------
+
+    [Theory]
+    [InlineData("animate")]
+    [InlineData("animateColor")]
+    [InlineData("animateMotion")]
+    [InlineData("animateTransform")]
+    [InlineData("set")]
+    [InlineData("discard")]
+    public void Sanitize_smil_animation_elements_are_removed(string element)
+    {
+        var (svg, removed) = SvgSanitizer.Sanitize(
+            $"""<svg {Ns}><circle r="4"><{element} attributeName="href" to="javascript:alert(1)"/></circle></svg>""");
+
+        Assert.DoesNotContain(element, svg, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("javascript", svg, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, removed);
+    }
+
+    // -- depth bound (audit finding: unbounded recursion → StackOverflow crash loop) -
+
+    [Fact]
+    public void Sanitize_pathologically_deep_svg_is_rejected_not_crashed()
+    {
+        // Far beyond any real graphic; must fail fast with a clear message rather than
+        // recurse the stack to death (a StackOverflowException is uncatchable and would
+        // take the whole worker process down in a restart loop).
+        var deep = new System.Text.StringBuilder($"<svg {Ns}>");
+        const int levels = 5_000;
+        for (var i = 0; i < levels; i++)
+        {
+            deep.Append("<g>");
+        }
+
+        for (var i = 0; i < levels; i++)
+        {
+            deep.Append("</g>");
+        }
+
+        deep.Append("</svg>");
+
+        var error = Assert.Throws<InvalidOperationException>(() => SvgSanitizer.Sanitize(deep.ToString()));
+        Assert.Contains("deep", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Sanitize_a_normally_nested_icon_still_passes()
+    {
+        // A dozen levels is plenty for a real icon — the cap must not touch it.
+        var (svg, _) = SvgSanitizer.Sanitize(
+            $"""<svg {Ns}><g><g><g><g><g><path d="M0 0h4v4H0z"/></g></g></g></g></g></svg>""");
+
+        Assert.Contains("<path", svg, StringComparison.Ordinal);
+    }
 }

@@ -59,7 +59,7 @@ app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 
 // Canvas media: serves originals and derivatives to the editor UI. The store rejects
 // keys that resolve outside its root, so the wildcard is traversal-safe.
-app.MapGet("/media/{**storageKey}", (string storageKey, IMediaStore store) =>
+app.MapGet("/media/{**storageKey}", (string storageKey, HttpContext http, IMediaStore store) =>
 {
     try
     {
@@ -69,11 +69,29 @@ app.MapGet("/media/{**storageKey}", (string storageKey, IMediaStore store) =>
             return Results.NotFound();
         }
 
-        var contentType = Path.GetExtension(path).ToLowerInvariant() switch
+        var extension = Path.GetExtension(path).ToLowerInvariant();
+        http.Response.Headers["X-Content-Type-Options"] = "nosniff";
+
+        // SVG is the one media type that runs script when browsed as a document, and
+        // ORIGINALS are stored raw — only the derived copy is sanitized. So a raw
+        // original SVG is never served as a renderable image; it is an inert download.
+        // A sanitized derived SVG may render (thumbnails use <img>, which never runs
+        // SVG script anyway), but even then a locked-down CSP neuters script for the
+        // direct-navigation case in the unlikely event the sanitizer ever regressed.
+        if (extension == ".svg")
+        {
+            var isSanitized = storageKey.Replace('\\', '/').StartsWith("derived/", StringComparison.Ordinal);
+            http.Response.Headers.ContentSecurityPolicy = "default-src 'none'; style-src 'unsafe-inline'; sandbox";
+            return isSanitized
+                ? Results.File(path, "image/svg+xml", enableRangeProcessing: true)
+                : Results.File(path, "application/octet-stream",
+                    fileDownloadName: Path.GetFileName(path), enableRangeProcessing: true);
+        }
+
+        var contentType = extension switch
         {
             ".webp" => "image/webp",
             ".webm" => "video/webm",
-            ".svg" => "image/svg+xml",
             ".png" => "image/png",
             ".jpg" or ".jpeg" => "image/jpeg",
             ".gif" => "image/gif",

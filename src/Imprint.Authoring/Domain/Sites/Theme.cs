@@ -84,13 +84,63 @@ public static class ThemeTokens
     public static bool IsKnown(string name) => All.Contains(name);
 }
 
-/// <summary>Syntactic validation for token color values (hex or a modern functional form).</summary>
+/// <summary>
+/// Syntactic validation for token color values: hex, a bare keyword (named colors,
+/// <c>transparent</c>, <c>currentColor</c>), or a color function. Deliberately strict —
+/// these values are emitted verbatim into every visitor's <c>site.css</c>, so a value
+/// that is not really a color (e.g. one smuggling a <c>url()</c>) would break both the
+/// "validated color" claim and the zero-third-party-request guarantee.
+/// </summary>
 public static partial class CssColor
 {
-    [GeneratedRegex(@"^(#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(?:rgb|hsl|oklch|color-mix)\([^;{}<>]{1,100}\))$")]
+    // Hex or a color function. The function-body class excludes ':' and quotes, so an
+    // absolute url() cannot appear; `url(` is then banned outright to also stop
+    // relative ones. color-mix's nested color functions/hex are covered by allowing
+    // '(', ')' and '#' in the body.
+    [GeneratedRegex(
+        @"^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})" +
+        @"|(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color|color-mix)\([0-9a-zA-Z.,%\s/+()#-]{1,120}\))$")]
     private static partial Regex Syntax();
 
-    public static bool IsValid(string value) => Syntax().IsMatch(value.Trim());
+    // Bare keywords are validated against the real set — "validated color" should mean
+    // it, so 'reddish' is rejected even though 'red' is accepted. transparent and
+    // currentcolor are the two most useful non-hex tokens for a theme.
+    private static readonly HashSet<string> NamedColors = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "transparent", "currentcolor",
+        "aliceblue", "antiquewhite", "aqua", "aquamarine", "azure", "beige", "bisque", "black",
+        "blanchedalmond", "blue", "blueviolet", "brown", "burlywood", "cadetblue", "chartreuse",
+        "chocolate", "coral", "cornflowerblue", "cornsilk", "crimson", "cyan", "darkblue", "darkcyan",
+        "darkgoldenrod", "darkgray", "darkgreen", "darkgrey", "darkkhaki", "darkmagenta", "darkolivegreen",
+        "darkorange", "darkorchid", "darkred", "darksalmon", "darkseagreen", "darkslateblue",
+        "darkslategray", "darkslategrey", "darkturquoise", "darkviolet", "deeppink", "deepskyblue",
+        "dimgray", "dimgrey", "dodgerblue", "firebrick", "floralwhite", "forestgreen", "fuchsia",
+        "gainsboro", "ghostwhite", "gold", "goldenrod", "gray", "green", "greenyellow", "grey",
+        "honeydew", "hotpink", "indianred", "indigo", "ivory", "khaki", "lavender", "lavenderblush",
+        "lawngreen", "lemonchiffon", "lightblue", "lightcoral", "lightcyan", "lightgoldenrodyellow",
+        "lightgray", "lightgreen", "lightgrey", "lightpink", "lightsalmon", "lightseagreen",
+        "lightskyblue", "lightslategray", "lightslategrey", "lightsteelblue", "lightyellow", "lime",
+        "limegreen", "linen", "magenta", "maroon", "mediumaquamarine", "mediumblue", "mediumorchid",
+        "mediumpurple", "mediumseagreen", "mediumslateblue", "mediumspringgreen", "mediumturquoise",
+        "mediumvioletred", "midnightblue", "mintcream", "mistyrose", "moccasin", "navajowhite", "navy",
+        "oldlace", "olive", "olivedrab", "orange", "orangered", "orchid", "palegoldenrod", "palegreen",
+        "paleturquoise", "palevioletred", "papayawhip", "peachpuff", "peru", "pink", "plum", "powderblue",
+        "purple", "rebeccapurple", "red", "rosybrown", "royalblue", "saddlebrown", "salmon", "sandybrown",
+        "seagreen", "seashell", "sienna", "silver", "skyblue", "slateblue", "slategray", "slategrey",
+        "snow", "springgreen", "steelblue", "tan", "teal", "thistle", "tomato", "turquoise", "violet",
+        "wheat", "white", "whitesmoke", "yellow", "yellowgreen",
+    };
+
+    public static bool IsValid(string value)
+    {
+        var trimmed = value.Trim();
+        if (trimmed.Length > 128 || trimmed.Contains("url(", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return NamedColors.Contains(trimmed) || Syntax().IsMatch(trimmed);
+    }
 }
 
 /// <summary>Token name → token map with structural equality. JSON form: an object.</summary>

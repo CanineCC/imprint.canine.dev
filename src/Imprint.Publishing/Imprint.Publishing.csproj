@@ -15,6 +15,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Imprint.Publishing.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- The two inline scripts, embedded so the publisher needs no loose files at
          runtime: it inlines them into page markup verbatim (never rewritten). -->
     <EmbeddedResource Include="assets/theme-toggle.js" LogicalName="Imprint.Publishing.assets.theme-toggle.js" />
