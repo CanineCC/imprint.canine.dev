@@ -1,0 +1,51 @@
+@namespace Imprint.Rendering
+@inherits NodeViewBase<SvgNode>
+@{
+  var info = Node.AssetId is { } assetId ? Ctx.ResolveAsset(assetId) : null;
+}
+@if (info?.InlineSvg is { } svg)
+{
+  @* Inlined (sanitized at ingest) so strokes and fills inherit currentColor and
+     follow the theme — an <img src=…svg> would be locked to its authored colors. *@
+  <div class="ip-svg" @attributes="SvgAttributes(info)">@((MarkupString)svg)</div>
+}
+else if (IsEditor)
+{
+  <div class="ip-placeholder" @attributes="NodeAttributes">@Node.DisplayName</div>
+}
+
+@code {
+  private IReadOnlyDictionary<string, object> SvgAttributes(AssetRenderInfo info)
+  {
+    var attributes = new Dictionary<string, object>();
+    var alt = Resolve(Node.Alt);
+    if (alt.Length == 0)
+    {
+      alt = Resolve(info.DefaultAlt);
+    }
+
+    // Meaningful graphics get an accessible name; unnamed ones are decorative and
+    // must be hidden from assistive tech rather than announced as "image".
+    if (alt.Length > 0)
+    {
+      attributes["role"] = "img";
+      attributes["aria-label"] = alt;
+    }
+    else
+    {
+      attributes["aria-hidden"] = "true";
+    }
+
+    if (Node.MaxWidthPx is { } maxWidth)
+    {
+      attributes["style"] = $"max-width: {maxWidth}px";
+    }
+
+    foreach (var (name, value) in NodeAttributes)
+    {
+      attributes[name] = value;
+    }
+
+    return attributes;
+  }
+}

@@ -1,0 +1,25 @@
+@namespace Imprint.Rendering
+@inherits NodeViewBase<ColumnsNode>
+@* --ip-cols is data-driven (the ratios), hence the one sanctioned inline style; the
+   collapse class picks which container query flattens the grid to a single column. *@
+<div class="@CssClass" style="@Style" @attributes="NodeAttributes">
+  @for (var i = 0; i < Node.Children.Count; i++)
+  {
+    var child = Node.Children[i];
+    var ratio = i < Node.Ratios.Length ? Node.Ratios[i] : 1;
+    <CascadingValue Value="CurrentHints.InColumn(ratio, RatioSum)" @key="child.Id">
+      <NodeView Node="child" />
+    </CascadingValue>
+  }
+</div>
+
+@code {
+  private int RatioSum => Node.Ratios.Sum();
+
+  private string Style => $"--ip-cols: {string.Join(' ', Node.Ratios.Select(r => $"{r}fr"))}";
+
+  private string CssClass => Classes(
+    "ip-columns",
+    $"ip-collapse-{(int)Node.CollapseBelow}",
+    GapClass(Node.Gap));
+}

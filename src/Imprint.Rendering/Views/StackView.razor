@@ -1,0 +1,15 @@
+@namespace Imprint.Rendering
+@inherits NodeViewBase<StackNode>
+<div class="@CssClass" @attributes="NodeAttributes">
+  @foreach (var child in Node.Children)
+  {
+    <NodeView Node="child" @key="child.Id" />
+  }
+</div>
+
+@code {
+  private string CssClass => Classes(
+    "ip-stack",
+    GapClass(Node.Gap),
+    Node.Align switch { StackAlign.Center => "ip-align-center", StackAlign.End => "ip-align-end", _ => null });
+}

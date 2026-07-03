@@ -1,0 +1,140 @@
+/* imprint-base.css — the structural system shared by the published site and the
+   editor canvas (pixel-identical preview by construction). Ships on every page:
+   stay lean, no decoration that a theme token could not retint. */
+
+/* ---- page ---- */
+.ip-page {
+  margin: 0;
+  background: var(--ip-background);
+  color: var(--ip-text);
+  font-family: var(--ip-font-body);
+  font-size: var(--ip-text-base);
+  line-height: 1.6;
+}
+/* Containers space children via gap; default margins would double up. */
+.ip-page :is(h1, h2, h3, h4, p, ul, ol, figure) { margin: 0; }
+.ip-page :focus-visible { outline: 2px solid var(--ip-primary); outline-offset: 2px; }
+
+/* ---- type scale ---- */
+.ip-page :is(h1, h2, h3, h4) {
+  font-family: var(--ip-font-heading);
+  font-weight: 700;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.ip-page h1 { font-size: var(--ip-text-4xl); }
+.ip-page h2 { font-size: var(--ip-text-3xl); }
+.ip-page h3 { font-size: var(--ip-text-2xl); }
+.ip-page h4 { font-size: var(--ip-text-xl); }
+
+/* ---- section: full-bleed background, centered content track, and the container
+        that every container query inside it measures against ---- */
+.ip-section {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ip-space-4);
+  padding-block: var(--ip-space-6);
+  /* 72rem track: padding grows once the viewport exceeds it, centering the content
+     while the background stays full-bleed — no wrapper element needed. */
+  padding-inline: max(var(--ip-space-4), calc(50% - 36rem));
+}
+.ip-section-wide { padding-inline: max(var(--ip-space-4), calc(50% - 48rem)); }
+.ip-section-full { padding-inline: 0; }
+.ip-bg-surface { background: var(--ip-surface); }
+.ip-bg-surface-alt { background: var(--ip-surface-alt); }
+.ip-bg-primary { background: var(--ip-primary); color: var(--ip-on-primary); }
+.ip-pad-none { padding-block: 0; }
+.ip-pad-large { padding-block: var(--ip-space-8); }
+
+/* ---- stack ---- */
+.ip-stack { display: flex; flex-direction: column; gap: var(--ip-space-4); }
+.ip-align-center { align-items: center; }
+.ip-align-end { align-items: flex-end; }
+.ip-gap-tight { gap: var(--ip-space-2); }
+.ip-gap-loose { gap: var(--ip-space-6); }
+
+/* ---- columns: ratio template from the node, single column below the chosen
+        breakpoint — measured against the section, not the viewport, so the editor's
+        width-constrained canvas previews mobile truthfully ---- */
+.ip-columns { display: grid; grid-template-columns: var(--ip-cols, 1fr); gap: var(--ip-space-4); }
+@container (max-width: 480px) { .ip-collapse-480 { grid-template-columns: 1fr; } }
+@container (max-width: 640px) { .ip-collapse-640 { grid-template-columns: 1fr; } }
+@container (max-width: 768px) { .ip-collapse-768 { grid-template-columns: 1fr; } }
+
+/* ---- grid ---- */
+.ip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--ip-min-item, 16rem), 100%), 1fr));
+  gap: var(--ip-space-4);
+}
+
+/* ---- prose (richtext) ---- */
+.ip-prose > * + * { margin-block-start: var(--ip-space-3); }
+.ip-prose :is(ul, ol) { padding-inline-start: 1.5em; }
+.ip-prose li + li { margin-block-start: var(--ip-space-1); }
+.ip-prose a {
+  color: var(--ip-primary);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.ip-prose a:hover { text-decoration-thickness: 2px; }
+
+/* ---- button ---- */
+.ip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ip-space-2);
+  padding: var(--ip-space-2) var(--ip-space-4);
+  border: 1px solid transparent;
+  border-radius: var(--ip-radius);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 140ms ease-out, border-color 140ms ease-out, color 140ms ease-out;
+}
+.ip-btn:focus-visible { outline: 2px solid var(--ip-primary); outline-offset: 2px; }
+.ip-btn-primary { background: var(--ip-primary); color: var(--ip-on-primary); }
+.ip-btn-primary:hover { background: color-mix(in oklab, var(--ip-primary), var(--ip-text) 15%); }
+.ip-btn-secondary { border-color: var(--ip-border); color: var(--ip-text); background: transparent; }
+.ip-btn-secondary:hover { background: var(--ip-surface); border-color: var(--ip-text-muted); }
+.ip-btn-ghost { color: var(--ip-primary); background: transparent; }
+.ip-btn-ghost:hover { background: var(--ip-surface); }
+
+/* ---- media ---- */
+.ip-img { display: block; max-width: 100%; height: auto; }
+.ip-img-square { aspect-ratio: 1; object-fit: cover; }
+.ip-img-wide16x9 { aspect-ratio: 16 / 9; object-fit: cover; }
+.ip-img-portrait3x4 { aspect-ratio: 3 / 4; object-fit: cover; }
+.ip-img-rounded { border-radius: var(--ip-radius); }
+.ip-video { display: block; width: 100%; height: auto; }
+.ip-svg { display: block; }
+.ip-svg svg { display: block; width: 100%; height: auto; }
+
+/* ---- divider & spacer ---- */
+.ip-divider { width: 100%; border: 0; border-top: 1px solid var(--ip-border); margin: 0; }
+.ip-spacer-s { height: var(--ip-space-3); }
+.ip-spacer-m { height: var(--ip-space-6); }
+.ip-spacer-l { height: var(--ip-space-8); }
+
+/* ---- editor-plane placeholders (never emitted on published pages) ---- */
+.ip-placeholder,
+.ip-widget-placeholder {
+  display: grid;
+  place-items: center;
+  min-height: 4rem;
+  padding: var(--ip-space-4);
+  border: 2px dashed var(--ip-border);
+  border-radius: var(--ip-radius);
+  color: var(--ip-text-muted);
+  font-size: var(--ip-text-sm);
+}
+/* Fixed signal color on purpose: a warning must not restyle itself into invisibility
+   when the theme changes. */
+.ip-placeholder-warn { border-color: #d9480f; color: #d9480f; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ip-page *, .ip-page { transition: none !important; animation: none !important; }
+}

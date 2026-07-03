@@ -1,0 +1,54 @@
+@namespace Imprint.Rendering
+@* Exhaustive dispatch over the closed node union — adding a node type without a view
+   fails here at runtime and in the type-name test at build time. *@
+@switch (Node)
+{
+  case SectionNode section:
+    <SectionView Node="section" />
+    break;
+  case StackNode stack:
+    <StackView Node="stack" />
+    break;
+  case ColumnsNode columns:
+    <ColumnsView Node="columns" />
+    break;
+  case GridNode grid:
+    <GridView Node="grid" />
+    break;
+  case HeadingNode heading:
+    <HeadingView Node="heading" />
+    break;
+  case RichTextNode richText:
+    <RichTextView Node="richText" />
+    break;
+  case ButtonNode button:
+    <ButtonView Node="button" />
+    break;
+  case ImageNode image:
+    <ImageView Node="image" />
+    break;
+  case VideoNode video:
+    <VideoView Node="video" />
+    break;
+  case SvgNode svg:
+    <SvgView Node="svg" />
+    break;
+  case DividerNode divider:
+    <DividerView Node="divider" />
+    break;
+  case SpacerNode spacer:
+    <SpacerView Node="spacer" />
+    break;
+  case WidgetNode widget:
+    <WidgetView Node="widget" />
+    break;
+  case BlockInstanceNode blockInstance:
+    <BlockInstanceView Node="blockInstance" />
+    break;
+  default:
+    throw new InvalidOperationException($"No view for node type {Node.GetType().Name}.");
+}
+
+@code {
+  [Parameter, EditorRequired] public Node Node { get; set; } = default!;
+}

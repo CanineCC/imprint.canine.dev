@@ -1,0 +1,33 @@
+@namespace Imprint.Rendering
+@inherits NodeViewBase<BlockInstanceNode>
+@{
+  var definition = Ctx.ResolveBlock(Node.DefinitionId);
+}
+@if (definition is null)
+{
+  if (IsEditor)
+  {
+    <div class="ip-placeholder ip-placeholder-warn" @attributes="NodeAttributes">Missing block definition</div>
+  }
+  @* Static: nothing — a deleted definition must degrade to absence, never to an error
+     on a visitor's page. *@
+}
+else
+{
+  var resolved = OverrideApplier.Apply(definition, Node.Overrides);
+  if (IsEditor)
+  {
+    @* The wrapper owns the instance's data-node-id and inner ids are suppressed:
+       clicking anywhere inside must select the whole instance, because the inner ids
+       belong to the definition and are not valid selection targets on this page. *@
+    <div @attributes="NodeAttributes">
+      <CascadingValue Name="SuppressNodeIds" Value="true">
+        <NodeView Node="resolved" />
+      </CascadingValue>
+    </div>
+  }
+  else
+  {
+    <NodeView Node="resolved" />
+  }
+}

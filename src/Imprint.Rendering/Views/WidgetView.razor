@@ -1,0 +1,66 @@
+@namespace Imprint.Rendering
+@using Microsoft.AspNetCore.Components.Rendering
+@inherits NodeViewBase<WidgetNode>
+@{
+  var descriptor = Ctx.ResolveWidget(Node.Tag);
+}
+@if (IsEditor)
+{
+  @* Widgets never hydrate in the canvas: the editor is Blazor Server, islands are
+     visitor-plane ES modules. A placeholder keeps the canvas honest and selectable. *@
+  if (descriptor is not null)
+  {
+    <div class="ip-widget-placeholder" @attributes="NodeAttributes">@descriptor.Name</div>
+  }
+  else
+  {
+    <div class="ip-widget-placeholder ip-placeholder-warn" @attributes="NodeAttributes">Unknown widget @Node.Tag</div>
+  }
+}
+else if (descriptor is not null)
+{
+  RenderIsland(__builder, descriptor);
+}
+@* Static + unknown tag: nothing. There is no bundle to load, so a dead custom element
+   would ship broken markup to every visitor; the editor placeholder is where the
+   problem gets surfaced and fixed. *@
+
+@code {
+  private void RenderIsland(RenderTreeBuilder builder, WidgetDescriptor descriptor)
+  {
+    // Tag came from the manifest loader, which enforces lower-case-ASCII-with-hyphen —
+    // that validation is what makes emitting it as an element name safe.
+    builder.OpenElement(0, descriptor.Tag);
+
+    // Attribute allowlist: only props the manifest declares cross into markup, so a
+    // stale PropBag entry (or a malicious one) never becomes an attribute.
+    foreach (var prop in descriptor.Props)
+    {
+      if (Node.Props.Get(prop.Name) is { } value)
+      {
+        builder.AddAttribute(1, prop.Name, value);
+      }
+    }
+
+    if (Ctx.ResolveWidgetBundle?.Invoke(descriptor.Tag) is { } bundle)
+    {
+      builder.AddAttribute(2, "data-island", bundle);
+    }
+
+    if (descriptor.Eager)
+    {
+      builder.AddAttribute(3, "data-island-eager", true);
+    }
+
+    // aspect-ratio reserves the box before hydration (zero CLS). The manifest is
+    // repo-controlled but still data: the character allowlist keeps the inline style
+    // a ratio and nothing else.
+    if (descriptor.AspectRatio is { Length: > 0 } aspect && aspect.All(c => char.IsAsciiDigit(c) || c is ' ' or '/' or '.'))
+    {
+      builder.AddAttribute(4, "style", $"aspect-ratio: {aspect}");
+    }
+
+    builder.AddContent(5, descriptor.Placeholder);
+    builder.CloseElement();
+  }
+}
