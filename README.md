@@ -72,8 +72,31 @@ no Node, no bundler, no external services.
 
 Suggested first trace: follow one drag-and-drop through the system —
 `editor canvas (pointer events) → DragPlan slots → MoveNode command → Page.MoveNode
-(invariants) → page.node-moved event → PageDraft projection → canvas re-render`, then
+(invariants) → page.node-moved event → PageDrafts projection → canvas re-render`, then
 hit Publish and watch the same event log become files on disk.
+
+## Building and testing
+
+```bash
+dotnet build                 # whole solution, warnings-as-errors
+dotnet test                  # unit + integration + end-to-end
+```
+
+Tests mirror the source projects:
+
+- **Aggregate tests** use a framework-agnostic Given/When/Then kit
+  (`tests/Imprint.TestKit`): `Given(events…).When(a => a.Behavior(…)).ThenRaised(…)` /
+  `.ThenFails(messagePart)`. Every documented invariant has a negative test.
+- **Slice tests** run against a real in-memory SQLite event store, the real dispatcher
+  and real projections — the exact path production takes.
+- **Rendering / publishing tests** render with `HtmlRenderer` and assert the full
+  delivery contract (single stylesheet, no framework JS, `srcset`, `hreflang`, zero
+  external requests, the performance budget, byte-stable re-publishes).
+- **End-to-end** (`tests/Imprint.E2E`, Playwright) drives the real editor in Chromium:
+  onboarding → drag-and-drop → inline edit → undo → publish → inspect the static output.
+
+For the WebM transcoding tests, set `IMPRINT_TEST_FFMPEG` to an `ffmpeg` binary; they
+skip cleanly when it is absent.
 
 ## Non-goals (v1, deliberate)
 
