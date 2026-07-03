@@ -1,2 +1,471 @@
-/* Editor chrome styles land with the editor UI milestone. */
-.ed-placeholder { font-family: system-ui, sans-serif; padding: 4rem; }
+/* Imprint editor chrome — design tokens and the interaction overlay.
+   Everything here is --ed-* / .ed-*; site theme tokens (--ip-*) exist only inside the
+   canvas subtree and the two never mix (docs/conventions.md). */
+
+/* ------------------------------------------------------------------ tokens */
+
+:root {
+  color-scheme: light dark;
+
+  --ed-bg: light-dark(#f4f5f7, #16181d);
+  --ed-surface: light-dark(#ffffff, #1e2128);
+  --ed-surface-2: light-dark(#eceef2, #262a33);
+  --ed-border: light-dark(#dcdfe5, #333945);
+  --ed-text: light-dark(#1b1e24, #e6e9ef);
+  --ed-text-muted: light-dark(#697080, #98a0b0);
+  --ed-accent: light-dark(#3b82f6, #60a5fa);
+  --ed-accent-strong: light-dark(#2563eb, #3b82f6);
+  --ed-on-accent: #ffffff;
+  --ed-danger: light-dark(#dc2626, #f87171);
+  --ed-ok: light-dark(#16a34a, #4ade80);
+  --ed-warn: light-dark(#d97706, #fbbf24);
+
+  --ed-radius: 8px;
+  --ed-radius-sm: 5px;
+  --ed-shadow: 0 1px 2px rgb(0 0 0 / .06), 0 4px 16px rgb(0 0 0 / .10);
+  --ed-shadow-pop: 0 2px 6px rgb(0 0 0 / .12), 0 12px 32px rgb(0 0 0 / .18);
+  --ed-font: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --ed-mono: ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace;
+
+  --ed-topbar-h: 48px;
+  --ed-rail-w: 52px;
+  --ed-panel-w: 288px;
+  --ed-inspector-w: 304px;
+  --ed-statusbar-h: 28px;
+}
+
+:root[data-ed-theme='light'] { color-scheme: light; }
+:root[data-ed-theme='dark'] { color-scheme: dark; }
+
+/* ------------------------------------------------------------------- base */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  font-family: var(--ed-font);
+  font-size: 14px;
+  color: var(--ed-text);
+  background: var(--ed-bg);
+}
+
+button { font: inherit; color: inherit; }
+
+.ed-app {
+  display: grid;
+  grid-template:
+    'topbar    topbar  topbar  topbar' var(--ed-topbar-h)
+    'rail      panel   canvas  inspector' 1fr
+    'statusbar statusbar statusbar statusbar' var(--ed-statusbar-h)
+    / var(--ed-rail-w) auto 1fr auto;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Regions (components style their own interiors; the shell owns the frame). */
+.ed-topbar {
+  grid-area: topbar;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  background: var(--ed-surface);
+  border-bottom: 1px solid var(--ed-border);
+}
+
+.ed-rail {
+  grid-area: rail;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+  background: var(--ed-surface);
+  border-right: 1px solid var(--ed-border);
+}
+
+.ed-panel {
+  grid-area: panel;
+  width: var(--ed-panel-w);
+  overflow-y: auto;
+  background: var(--ed-surface);
+  border-right: 1px solid var(--ed-border);
+}
+
+.ed-panel[hidden] { display: none; }
+
+.ed-canvas-area {
+  grid-area: canvas;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ed-inspector {
+  grid-area: inspector;
+  width: var(--ed-inspector-w);
+  overflow-y: auto;
+  background: var(--ed-surface);
+  border-left: 1px solid var(--ed-border);
+}
+
+.ed-statusbar {
+  grid-area: statusbar;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 12px;
+  font-size: 12px;
+  color: var(--ed-text-muted);
+  background: var(--ed-surface);
+  border-top: 1px solid var(--ed-border);
+}
+
+/* The scrollable canvas viewport: the page preview floats in it, width-constrained
+   by the device toggle. Container queries inside behave exactly as published. */
+.ed-canvas-scroll {
+  flex: 1;
+  overflow: auto;
+  padding: 32px 24px 120px;
+}
+
+.ed-canvas-frame {
+  position: relative; /* the overlay anchors to this */
+  margin: 0 auto;
+  width: var(--ed-canvas-width, 100%);
+  max-width: 100%;
+  transition: width 160ms ease-out;
+}
+
+.ed-canvas {
+  background: var(--ip-background, #fff);
+  border-radius: var(--ed-radius);
+  box-shadow: var(--ed-shadow);
+  min-height: 320px;
+}
+
+.ed-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none; /* individual controls opt back in */
+  z-index: 10;
+}
+
+/* ------------------------------------------------------------ form controls */
+
+.ed-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--ed-border);
+  border-radius: var(--ed-radius-sm);
+  background: var(--ed-surface);
+  cursor: pointer;
+  transition: background 120ms ease-out, border-color 120ms ease-out;
+}
+
+.ed-btn:hover { background: var(--ed-surface-2); }
+
+.ed-btn-primary {
+  background: var(--ed-accent);
+  border-color: var(--ed-accent);
+  color: var(--ed-on-accent);
+  font-weight: 600;
+}
+
+.ed-btn-primary:hover { background: var(--ed-accent-strong); }
+
+.ed-btn-ghost { border-color: transparent; background: transparent; }
+.ed-btn-ghost:hover { background: var(--ed-surface-2); }
+
+.ed-btn-danger { color: var(--ed-danger); }
+
+.ed-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.ed-input, .ed-select, textarea.ed-input {
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 10px;
+  font: inherit;
+  color: var(--ed-text);
+  background: var(--ed-bg);
+  border: 1px solid var(--ed-border);
+  border-radius: var(--ed-radius-sm);
+}
+
+.ed-input:focus-visible, .ed-select:focus-visible {
+  outline: 2px solid var(--ed-accent);
+  outline-offset: -1px;
+}
+
+:is(button, a, input, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--ed-accent);
+  outline-offset: 2px;
+}
+
+.ed-field { display: grid; gap: 4px; margin-bottom: 12px; }
+.ed-field > label { font-size: 12px; font-weight: 600; color: var(--ed-text-muted); }
+
+/* Segmented control (enum props) */
+.ed-seg {
+  display: inline-flex;
+  border: 1px solid var(--ed-border);
+  border-radius: var(--ed-radius-sm);
+  overflow: hidden;
+}
+
+.ed-seg > button {
+  padding: 5px 10px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  border-inline-start: 1px solid var(--ed-border);
+}
+
+.ed-seg > button:first-child { border-inline-start: 0; }
+.ed-seg > button[aria-pressed='true'] {
+  background: var(--ed-accent);
+  color: var(--ed-on-accent);
+}
+
+/* ------------------------------------------------- overlay (canvas-interop) */
+
+.ed-ov { position: absolute; pointer-events: none; border-radius: 3px; }
+
+.ed-ov-hover {
+  outline: 1.5px solid color-mix(in srgb, var(--ed-accent) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.ed-ov-selection {
+  outline: 2px solid var(--ed-accent);
+  outline-offset: 1px;
+}
+
+.ed-ov-selection.ed-is-editing {
+  outline-style: dashed;
+}
+
+.ed-ov-chip {
+  position: absolute;
+  top: -22px;
+  left: -2px;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: var(--ed-on-accent);
+  background: var(--ed-accent);
+  border-radius: 4px 4px 4px 0;
+  white-space: nowrap;
+}
+
+.ed-ov-hover .ed-ov-chip {
+  background: color-mix(in srgb, var(--ed-accent) 75%, transparent);
+}
+
+.ed-ov-handle {
+  position: absolute;
+  top: 2px;
+  left: -26px;
+  width: 20px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--ed-border);
+  border-radius: var(--ed-radius-sm);
+  background: var(--ed-surface);
+  box-shadow: var(--ed-shadow);
+  color: var(--ed-text-muted);
+  fill: currentColor;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.ed-ov-handle:active { cursor: grabbing; }
+
+.ed-ov-indicator {
+  background: var(--ed-accent);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ed-accent) 35%, transparent);
+  animation: ed-fade-in 120ms ease-out;
+}
+
+.ed-ov-indicator.ed-h::before, .ed-ov-indicator.ed-v::before {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ed-accent);
+}
+
+.ed-ov-indicator.ed-h::before { left: -4px; top: -3px; }
+.ed-ov-indicator.ed-v::before { top: -4px; left: -3px; }
+
+.ed-ov-into {
+  border: 2px dashed var(--ed-accent);
+  border-radius: var(--ed-radius-sm);
+  background: color-mix(in srgb, var(--ed-accent) 7%, transparent);
+  animation: ed-fade-in 120ms ease-out;
+}
+
+.ed-ov-target {
+  outline: 1px solid color-mix(in srgb, var(--ed-accent) 30%, transparent);
+  background: color-mix(in srgb, var(--ed-accent) 4%, transparent);
+}
+
+.ed-ov-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ed-text);
+  background: var(--ed-surface);
+  border: 1px solid var(--ed-border);
+  border-radius: 6px;
+  box-shadow: var(--ed-shadow-pop);
+  rotate: 2deg;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.ed-ov-gap {
+  position: absolute;
+  translate: -50% -50%;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--ed-on-accent);
+  background: var(--ed-accent);
+  border: 0;
+  border-radius: 50%;
+  box-shadow: var(--ed-shadow);
+  cursor: pointer;
+  pointer-events: auto;
+  animation: ed-fade-in 120ms ease-out;
+}
+
+.ed-ov-gap:hover { background: var(--ed-accent-strong); scale: 1.1; }
+
+.ed-dragging, .ed-dragging * { cursor: grabbing !important; user-select: none; }
+
+[contenteditable].ed-editing { outline: none; cursor: text; }
+
+/* --------------------------------------------------- rich toolbar + link pop */
+
+.ed-richbar {
+  position: fixed;
+  z-index: 1001;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--ed-surface);
+  border: 1px solid var(--ed-border);
+  border-radius: var(--ed-radius-sm);
+  box-shadow: var(--ed-shadow-pop);
+}
+
+.ed-richbar > button {
+  min-width: 28px;
+  height: 26px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.ed-richbar > button:hover { background: var(--ed-surface-2); }
+
+.ed-linkpop {
+  position: fixed;
+  z-index: 1002;
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  background: var(--ed-surface);
+  border: 1px solid var(--ed-border);
+  border-radius: var(--ed-radius-sm);
+  box-shadow: var(--ed-shadow-pop);
+}
+
+.ed-linkpop input {
+  width: 260px;
+  padding: 4px 8px;
+  border: 1px solid var(--ed-border);
+  border-radius: 4px;
+  background: var(--ed-bg);
+  color: inherit;
+}
+
+.ed-linkpop button {
+  padding: 4px 10px;
+  border: 1px solid var(--ed-border);
+  border-radius: 4px;
+  background: var(--ed-surface-2);
+  cursor: pointer;
+}
+
+/* -------------------------------------------------------------- utilities */
+
+.ed-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+  background: var(--ed-surface-2);
+  color: var(--ed-text-muted);
+}
+
+.ed-badge-ok { background: color-mix(in srgb, var(--ed-ok) 15%, transparent); color: var(--ed-ok); }
+.ed-badge-warn { background: color-mix(in srgb, var(--ed-warn) 15%, transparent); color: var(--ed-warn); }
+.ed-badge-accent { background: color-mix(in srgb, var(--ed-accent) 15%, transparent); color: var(--ed-accent-strong); }
+
+.ed-toast-host {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  translate: -50%;
+  z-index: 1100;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+}
+
+.ed-toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--ed-surface);
+  border: 1px solid var(--ed-border);
+  border-radius: var(--ed-radius);
+  box-shadow: var(--ed-shadow-pop);
+  animation: ed-rise 160ms ease-out;
+}
+
+.ed-toast-error { border-color: color-mix(in srgb, var(--ed-danger) 50%, var(--ed-border)); }
+
+@keyframes ed-fade-in { from { opacity: 0; } }
+@keyframes ed-rise { from { opacity: 0; translate: 0 8px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
