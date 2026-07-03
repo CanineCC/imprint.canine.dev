@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Imprint.Authoring/Imprint.Authoring.csproj" />
+    <Project Path="src/Imprint.Editor/Imprint.Editor.csproj" />
+    <Project Path="src/Imprint.EventSourcing/Imprint.EventSourcing.csproj" />
+    <Project Path="src/Imprint.Media/Imprint.Media.csproj" />
+    <Project Path="src/Imprint.Publishing/Imprint.Publishing.csproj" />
+    <Project Path="src/Imprint.Rendering/Imprint.Rendering.csproj" />
+    <Project Path="src/Imprint.Site/Imprint.Site.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Imprint.Authoring.Tests/Imprint.Authoring.Tests.csproj" />
+    <Project Path="tests/Imprint.E2E/Imprint.E2E.csproj" />
+    <Project Path="tests/Imprint.EventSourcing.Tests/Imprint.EventSourcing.Tests.csproj" />
+    <Project Path="tests/Imprint.Media.Tests/Imprint.Media.Tests.csproj" />
+    <Project Path="tests/Imprint.Publishing.Tests/Imprint.Publishing.Tests.csproj" />
+    <Project Path="tests/Imprint.TestKit/Imprint.TestKit.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <Description>The Imprint editor: a Blazor Server app for structural, multilingual, drag-and-drop content editing.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Imprint.Authoring/Imprint.Authoring.csproj" />
+    <ProjectReference Include="../Imprint.Media/Imprint.Media.csproj" />
+    <ProjectReference Include="../Imprint.Publishing/Imprint.Publishing.csproj" />
+    <ProjectReference Include="../Imprint.Rendering/Imprint.Rendering.csproj" />
+  </ItemGroup>
+
+</Project>

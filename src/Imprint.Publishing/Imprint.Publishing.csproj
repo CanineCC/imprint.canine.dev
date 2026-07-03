@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>The file-system projection: renders published content to static HTML/CSS with content-hashed assets, islands, sitemap and precompression.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Imprint.Authoring/Imprint.Authoring.csproj" />
+    <ProjectReference Include="../Imprint.Rendering/Imprint.Rendering.csproj" />
+  </ItemGroup>
+
+</Project>

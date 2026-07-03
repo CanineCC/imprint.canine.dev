@@ -1,0 +1,33 @@
+<Project>
+
+  <!--
+    Runtime dependency allowlist (see docs/conventions.md): the event store rides on
+    Microsoft.Data.Sqlite; image processing on ImageSharp (Imprint.Media only).
+    Everything else is the .NET platform. Adding a package here is an architecture
+    decision, not a convenience.
+  -->
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.9" />
+    <!-- Transitive pin: Microsoft.Data.Sqlite 10.0.9 pulls SQLitePCLRaw 2.1.11, which
+         carries GHSA-2m69-gcr7-jv3q. Remove once Microsoft.Data.Sqlite references 3.x. -->
+    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
+    <!-- SkiaSharp (MIT) over ImageSharp: ImageSharp 4.x requires a commercial license
+         key at build time, which an Apache-2.0 reference project must not impose on
+         anyone who clones it. Skia encodes WebP natively. -->
+    <PackageVersion Include="SkiaSharp" Version="4.148.0" />
+    <PackageVersion Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.148.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />
+  </ItemGroup>
+
+  <!-- Test-only -->
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
+    <PackageVersion Include="xunit.v3.extensibility.core" Version="3.2.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="Microsoft.Playwright" Version="1.61.0" />
+  </ItemGroup>
+
+</Project>

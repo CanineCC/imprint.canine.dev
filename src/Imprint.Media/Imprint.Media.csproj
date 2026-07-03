@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Media infrastructure: disk-backed store, WebP variant generation (SkiaSharp), SVG sanitization, WebM transcoding (external ffmpeg).</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Imprint.Authoring/Imprint.Authoring.csproj" />
+  </ItemGroup>
+
+</Project>

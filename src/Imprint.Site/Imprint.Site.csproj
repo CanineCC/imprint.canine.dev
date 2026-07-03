@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <Description>A minimal, production-grade static host for the published output: ETags, immutable cache headers, precompressed responses. The whole delivery story in one readable file.</Description>
+  </PropertyGroup>
+
+</Project>
