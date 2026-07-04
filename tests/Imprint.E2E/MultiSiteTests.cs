@@ -1,4 +1,5 @@
 using Microsoft.Playwright;
+using static Microsoft.Playwright.Assertions;
 
 namespace Imprint.E2E;
 
@@ -79,5 +80,87 @@ public sealed class MultiSiteTests(EditorFixture fixture)
         var html = await File.ReadAllTextAsync(indexPath);
         Assert.Contains("<html", html, StringComparison.Ordinal);
         Assert.DoesNotContain("data-node-id", html, StringComparison.Ordinal); // static output, not editor markup
+    }
+
+    [Fact]
+    public async Task Promote_copies_the_site_from_one_environment_to_the_next()
+    {
+        var page = await fixture.NewPage();
+        var name = "Promote Site " + Guid.NewGuid().ToString("N")[..6];
+        await page.CreateSiteViaDashboard(name);
+
+        // Publish a page so there is content to deploy and then promote.
+        await page.ClickAsync(".ed-publish button.ed-btn-primary");
+        await page.WaitForSelectorAsync(".ed-badge-ok", new PageWaitForSelectorOptions { Timeout = 15_000 });
+
+        await page.ClickAsync("a.ed-gear");
+        await page.WaitForSelectorAsync("h2:has-text('Publish folders')");
+        await page.WaitForInteractive();
+
+        var testFolder = Path.Combine(fixture.DataDirectory, "prom-test-" + Guid.NewGuid().ToString("N")[..6]);
+        var prodFolder = Path.Combine(fixture.DataDirectory, "prom-prod-" + Guid.NewGuid().ToString("N")[..6]);
+        await AddEnvironment(page, index: 0, "Test", testFolder);
+        await AddEnvironment(page, index: 1, "Prod", prodFolder);
+        await page.ClickAsync("button:has-text('Save publish folders')");
+
+        // Deploy to Test, then promote Test → Prod.
+        await page.WaitForSelectorAsync("button:has-text('Publish to Test')");
+        await page.ClickAsync("button:has-text('Publish to Test')");
+        var testIndex = Path.Combine(testFolder, "index.html");
+        await WaitForFile(testIndex);
+
+        await page.ClickAsync("button:has-text('Promote')");
+        var prodIndex = Path.Combine(prodFolder, "index.html");
+        await WaitForFile(prodIndex);
+
+        // Prod is a byte-exact copy of Test — the promotion ships precisely what was verified.
+        Assert.Equal(await File.ReadAllBytesAsync(testIndex), await File.ReadAllBytesAsync(prodIndex));
+    }
+
+    [Fact]
+    public async Task Environment_rows_reorder_and_the_new_order_persists()
+    {
+        var page = await fixture.NewPage();
+        var name = "Reorder Site " + Guid.NewGuid().ToString("N")[..6];
+        await page.CreateSiteViaDashboard(name);
+
+        await page.ClickAsync("a.ed-gear");
+        await page.WaitForSelectorAsync("h2:has-text('Publish folders')");
+        await page.WaitForInteractive();
+
+        await AddEnvironment(page, index: 0, "Alpha", Path.Combine(fixture.DataDirectory, "reorder-a"));
+        await AddEnvironment(page, index: 1, "Beta", Path.Combine(fixture.DataDirectory, "reorder-b"));
+
+        // Move Beta (row 2) up: it becomes row 1, Alpha drops to row 2. Expect() auto-
+        // retries, so it waits out the Blazor Server re-render round-trip.
+        await page.Locator(".env-row").Nth(1).Locator("button[aria-label='Move up']").ClickAsync();
+        await Expect(page.Locator(".env-name").Nth(0)).ToHaveValueAsync("Beta");
+        await Expect(page.Locator(".env-name").Nth(1)).ToHaveValueAsync("Alpha");
+
+        // Save, reload, and confirm ConfigureEnvironments stored the reordered list.
+        await page.ClickAsync("button:has-text('Save publish folders')");
+        await page.WaitForSelectorAsync("button:has-text('Publish to Beta')");
+        await page.ReloadAsync();
+        await page.WaitForInteractive();
+        await Expect(page.Locator(".env-name").Nth(0)).ToHaveValueAsync("Beta");
+        await Expect(page.Locator(".env-name").Nth(1)).ToHaveValueAsync("Alpha");
+    }
+
+    private static async Task AddEnvironment(IPage page, int index, string name, string path)
+    {
+        await page.ClickAsync("button:has-text('Add environment')");
+        await page.Locator(".env-name").Nth(index).FillAsync(name);
+        await page.Locator(".env-path").Nth(index).FillAsync(path);
+    }
+
+    private static async Task WaitForFile(string path, int seconds = 20)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(seconds);
+        while (!File.Exists(path) && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(300);
+        }
+
+        Assert.True(File.Exists(path), $"expected file to be written: {path}");
     }
 }
