@@ -1,0 +1,68 @@
+name: Deploy to canine-wrx1
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Serialize deploys: a second push QUEUES behind the running deploy instead of racing the blue/green
+# cutover. Two overlapping cutovers could stop both colours at once (the all-down incident).
+# cancel-in-progress: false lets the in-flight deploy finish, then runs the next — a half-done cutover
+# is never abandoned.
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+# Zero-downtime deploy of the Imprint editor (app.imprint.canine.dev). The editor runs as a PUBLISHED
+# artifact in a blue/green pair (imprint-blue/imprint-green, ports 18102/19102) behind wrx1's host nginx
+# on :8102; dgx1 terminates TLS and proxies the LAN. A code push bounces ONLY the idle colour, then flips
+# the nginx upstream — Keycloak (auth.canine.dev) and the SQLite event store are never touched.
+#
+# Safety model (mirrors the estate's other apps): every step BEFORE the cutover leaves the live colour
+# serving, so a broken build/test is a safe no-op. The cutover itself is health-gated — if the new colour
+# never answers /healthz it is not flipped in, and the old colour keeps serving = automatic rollback.
+#
+# NB: edits to THIS file need a token with `workflow` scope; ship them via a normal push, not the
+# runner's checkout token.
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      # ---------- VERIFY (old colour still serving; any failure here = safe no-op) ----------
+      - name: Restore
+        run: dotnet restore Imprint.slnx
+
+      - name: Build (Release)
+        run: dotnet build Imprint.slnx --no-restore -c Release
+
+      # Fast correctness gate. The E2E suite (Imprint.E2E) is excluded: it drives a real browser via
+      # Playwright against a live editor, which the deploy host does not carry and the health-gated
+      # cutover already guards. Unit + integration tests run from the just-built binaries.
+      - name: Test (unit + integration; E2E excluded)
+        run: dotnet test Imprint.slnx --no-build -c Release --filter "FullyQualifiedName!~Imprint.E2E"
+
+      # ---------- PUBLISH (next to the live colours; nothing is swapped yet) ----------
+      - name: Publish editor artifact
+        run: |
+          rm -rf /home/jimmy/apps/imprint/app.new
+          dotnet publish src/Imprint.Editor -c Release -o /home/jimmy/apps/imprint/app.new
+          test -f /home/jimmy/apps/imprint/app.new/Imprint.Editor.dll
+
+      - name: Shut down build servers
+        run: dotnet build-server shutdown || true
+
+      # Delivery-plane widgets live OUTSIDE the app publish (ImprintWidgets=/home/jimmy/apps/imprint/widgets,
+      # shared by both colours and read when a colour builds its widget catalogue at startup). Refresh them
+      # from the repo BEFORE the cutover so the colour that comes up serves the shipped set. --delete keeps the
+      # deployed set an exact mirror of the repo (the source of truth).
+      - name: Refresh delivery widgets
+        run: rsync -a --delete widgets/ /home/jimmy/apps/imprint/widgets/
+
+      # ---------- ZERO-DOWNTIME CUTOVER (blue/green; only the editor swaps) ----------
+      # bg-cutover copies app.new into the idle colour, restarts it, health-checks /healthz on its own port,
+      # flips the nginx upstream (graceful reload, ms), then stops the old colour. New colour never healthy =
+      # no flip = the old colour keeps serving. Framework + config: /etc/bluegreen/imprint.conf.
+      - name: Blue-green cutover (zero-downtime)
+        run: sudo /usr/local/bin/bg-cutover.sh imprint /home/jimmy/apps/imprint/app.new
