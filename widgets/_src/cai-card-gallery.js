@@ -19,7 +19,14 @@ import {
   renderInline,
 } from "./tokens.js";
 import { scoreCardBodyHtml, parseCard, SCORECARD_CSS } from "./scorecard.js";
-import { cardFromGallery, reportUrl, galleryOrder, fetchJson } from "./live.js";
+import {
+  cardFromGallery,
+  reportUrl,
+  galleryOrder,
+  publicRanked,
+  reportOk,
+  fetchJson,
+} from "./live.js";
 
 const DEFAULT_COUNT = 6;
 
@@ -39,21 +46,38 @@ customElements.define(
       return raw != null && raw !== "" && Number.isFinite(n) && n > 0 ? Math.floor(n) : DEFAULT_COUNT;
     }
 
-    // Fetch the corpus, order it as the public gallery does, take `count`, map each to a
-    // card model with its real report link, cache, re-render. Empty/failed ⇒ sample stays.
+    // Fetch the corpus, curate it QUALITY-forward (strongest inspectable-public repos
+    // first — the "not a logo wall" showcase, never a private/internal repo, never a
+    // recency feed), drop the flagship hero so the grid doesn't dupe it, and keep only
+    // repos whose report ACTUALLY resolves (bundles copy in asynchronously — a card that
+    // links a 404 is worse than none), capped at `count`. Each links its ABSOLUTE report.
+    // Empty/failed ⇒ the labelled sample stays.
     async liveLoad() {
       const api = this.apiBase();
       if (!api) return;
       const cards = await fetchJson(api, "/api/oss", null);
       if (!Array.isArray(cards) || cards.length === 0) return;
-      const chosen = galleryOrder(cards).slice(0, this.#count());
-      const mapped = chosen
-        .map((c) => {
-          const m = cardFromGallery(c);
-          if (m) m.href = reportUrl(c);
-          return m;
-        })
-        .filter(Boolean);
+
+      // The hero is the best public repo with a LIVE report — exclude it so the grid
+      // never dupes the flagship. (Mirror the score-card's live-report hero selection.)
+      const ranked = publicRanked(cards);
+      let hero = null;
+      for (const c of ranked) {
+        if (await reportOk(reportUrl(c, api))) { hero = c; break; }
+      }
+      const exclude = hero ? { owner: hero.owner, name: hero.name } : undefined;
+
+      const want = this.#count();
+      const mapped = [];
+      for (const c of galleryOrder(cards, { exclude })) {
+        if (mapped.length >= want) break;
+        const href = reportUrl(c, api);
+        if (!href || !(await reportOk(href))) continue;
+        const m = cardFromGallery(c);
+        if (!m) continue;
+        m.href = href;
+        mapped.push(m);
+      }
       if (mapped.length === 0) return;
       this._live = mapped;
       this.render(this.shadowRoot);
