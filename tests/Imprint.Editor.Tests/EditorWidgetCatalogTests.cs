@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using Imprint.Authoring.Domain.Widgets;
 using Imprint.Authoring.Projections;
 using Imprint.Editor.Services;
+using Imprint.EventSourcing;
 using Imprint.Rendering;
 
 namespace Imprint.Editor.Tests;
@@ -42,32 +43,57 @@ public sealed class EditorWidgetCatalogTests : IDisposable
 
     private EditorWidgetCatalog Catalog(WidgetRegistry registry) => new(_widgetsDir, registry);
 
-    private static WidgetRegistry RegistryWith(params WidgetSubmissionView[] submissions)
+    // Seeds a fresh registry by folding the SAME events the production write path emits:
+    // the domain aggregate is driven through Submit/Approve, and its uncommitted events are
+    // replayed into the read model exactly as the projection engine would. No test shortcut.
+    private static WidgetRegistry RegistryWith(params WidgetSubmission[] submissions)
     {
         var registry = new WidgetRegistry();
-        registry.Seed(submissions);
+        long position = 0;
+        foreach (var submission in submissions)
+        {
+            long version = 0;
+            foreach (var @event in submission.UncommittedEvents)
+            {
+                registry.Apply(new StoredEvent(
+                    ++position, submission.StreamId, ++version, @event.GetType().Name, @event,
+                    new EventMetadata("alice", DateTimeOffset.UnixEpoch, Guid.Empty, Guid.Empty)));
+            }
+        }
+
         return registry;
     }
 
-    private static WidgetSubmissionView Submission(
+    private static WidgetSubmission Submission(
         string tag,
-        WidgetStatus status,
-        params WidgetPropSpec[] props) => new()
+        WidgetSubmissionStatus status,
+        params WidgetPropSpec[] props)
     {
-        Id = WidgetSubmissionId.New(),
-        Tag = tag,
-        Name = $"{tag} name",
-        RequestedBy = "alice",
-        Status = status,
-        Props = props,
-        BundleSource = $"/* {tag} */",
-    };
+        var submission = WidgetSubmission.Submit(
+            WidgetSubmissionId.New(), tag, $"{tag} name",
+            description: "", placeholder: "", aspectRatio: null, eager: false,
+            props, bundleSource: $"/* {tag} */", requestedBy: "alice");
+        switch (status)
+        {
+            case WidgetSubmissionStatus.Approved:
+                submission.Approve("admin");
+                break;
+            case WidgetSubmissionStatus.Rejected:
+                submission.Reject("admin", "not this time");
+                break;
+            case WidgetSubmissionStatus.Withdrawn:
+                submission.Withdraw();
+                break;
+        }
+
+        return submission;
+    }
 
     [Fact]
     public void Approved_tag_Exists_and_reports_its_prop_names()
     {
         var registry = RegistryWith(Submission(
-            "x-approved", WidgetStatus.Approved,
+            "x-approved", WidgetSubmissionStatus.Approved,
             new WidgetPropSpec("mode", "Mode", "choice", "a", ["a", "b"]),
             new WidgetPropSpec("count", "Count", "number", null, [])));
         var catalog = Catalog(registry);
@@ -80,7 +106,7 @@ public sealed class EditorWidgetCatalogTests : IDisposable
     [Fact]
     public void Pending_and_unknown_tags_do_not_exist()
     {
-        var registry = RegistryWith(Submission("x-pending", WidgetStatus.Pending));
+        var registry = RegistryWith(Submission("x-pending", WidgetSubmissionStatus.Pending));
         var catalog = Catalog(registry);
 
         Assert.False(catalog.Exists("x-pending"));   // only APPROVED widgets join the catalog
@@ -93,7 +119,7 @@ public sealed class EditorWidgetCatalogTests : IDisposable
     {
         // An approved submission tries to reuse the built-in tag "x-shared".
         var registry = RegistryWith(Submission(
-            "x-shared", WidgetStatus.Approved,
+            "x-shared", WidgetSubmissionStatus.Approved,
             new WidgetPropSpec("should-be-ignored", "Nope", "text", null, [])));
         var catalog = Catalog(registry);
 
@@ -109,9 +135,9 @@ public sealed class EditorWidgetCatalogTests : IDisposable
     public void Descriptors_are_the_union_of_built_in_and_approved()
     {
         var registry = RegistryWith(
-            Submission("x-approved", WidgetStatus.Approved),
-            Submission("x-shared", WidgetStatus.Approved),   // collides, dropped
-            Submission("x-pending", WidgetStatus.Pending));  // not approved, excluded
+            Submission("x-approved", WidgetSubmissionStatus.Approved),
+            Submission("x-shared", WidgetSubmissionStatus.Approved),   // collides, dropped
+            Submission("x-pending", WidgetSubmissionStatus.Pending));  // not approved, excluded
         var catalog = Catalog(registry);
 
         var tags = catalog.Descriptors.Select(descriptor => descriptor.Tag).Order().ToList();
@@ -122,7 +148,7 @@ public sealed class EditorWidgetCatalogTests : IDisposable
     public void Approved_prop_spec_maps_to_the_render_prop_type_enum()
     {
         var registry = RegistryWith(Submission(
-            "x-approved", WidgetStatus.Approved,
+            "x-approved", WidgetSubmissionStatus.Approved,
             new WidgetPropSpec("mode", "Mode", "choice", "a", ["a", "b"]),
             new WidgetPropSpec("count", "Count", "number", "3", []),
             new WidgetPropSpec("tint", "Tint", "color", null, []),

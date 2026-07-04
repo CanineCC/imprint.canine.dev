@@ -24,18 +24,11 @@ public sealed class ApprovedWidgetPublishTests
         await using var host = new PublishingTestHost();
 
         // No widget files on disk (the host's manifest is empty "[]"). The only source of
-        // truth for x-live is the approved submission in the registry.
-        var registry = host.Services.GetRequiredService<WidgetRegistry>();
-        registry.Seed(new WidgetSubmissionView
-        {
-            Id = WidgetSubmissionId.New(),
-            Tag = "x-live",
-            Name = "Live widget",
-            RequestedBy = "alice",
-            Status = WidgetStatus.Approved,
-            Props = [new WidgetPropSpec("text", "Text", "text", null, [])],
-            BundleSource = BundleSource,
-        });
+        // truth for x-live is the approved submission the registry folds from the log.
+        await host.SubmitWidget(
+            "x-live", BundleSource, "Live widget",
+            props: [new WidgetPropSpec("text", "Text", "text", null, [])],
+            approve: true);
 
         var siteId = await host.CreateSite();
         var homeId = await host.CreatePage(siteId, "home", "Home");
@@ -70,16 +63,8 @@ public sealed class ApprovedWidgetPublishTests
     {
         await using var host = new PublishingTestHost();
 
-        var registry = host.Services.GetRequiredService<WidgetRegistry>();
-        registry.Seed(new WidgetSubmissionView
-        {
-            Id = WidgetSubmissionId.New(),
-            Tag = "x-live",
-            Name = "Live widget",
-            RequestedBy = "alice",
-            Status = WidgetStatus.Pending, // NOT approved
-            BundleSource = BundleSource,
-        });
+        // Submitted but NOT approved: still pending, so its bundle must never publish.
+        await host.SubmitWidget("x-live", BundleSource, "Live widget");
 
         var siteId = await host.CreateSite();
         var homeId = await host.CreatePage(siteId, "home", "Home");

@@ -5,7 +5,7 @@ using Imprint.Rendering;
 namespace Imprint.Publishing;
 
 /// <summary>
-/// Maps an approved <see cref="WidgetSubmissionView"/> (authoring/domain shape, prop
+/// Maps an approved <see cref="WidgetSubmission"/> (authoring/domain shape, prop
 /// <c>Type</c> is a validated string) into the delivery-side <see cref="WidgetDescriptor"/>
 /// the render components understand. This is the one boundary where a submission's
 /// <see cref="WidgetPropSpec"/> becomes a <see cref="WidgetProp"/> and the string type
@@ -14,7 +14,7 @@ namespace Imprint.Publishing;
 /// </summary>
 public static class ApprovedWidgetDescriptors
 {
-    public static WidgetDescriptor ToDescriptor(WidgetSubmissionView submission) => new()
+    public static WidgetDescriptor ToDescriptor(WidgetSubmission submission) => new()
     {
         Tag = submission.Tag,
         Name = submission.Name,

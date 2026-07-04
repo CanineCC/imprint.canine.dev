@@ -6,6 +6,7 @@ using Imprint.Authoring.Domain.Assets;
 using Imprint.Authoring.Domain.Blocks;
 using Imprint.Authoring.Domain.Pages;
 using Imprint.Authoring.Domain.Sites;
+using Imprint.Authoring.Domain.Widgets;
 using Imprint.Authoring.Features.Assets;
 using Imprint.EventSourcing;
 using Imprint.TestKit;
@@ -318,6 +319,38 @@ internal sealed class PublishingTestHost : IAsyncDisposable
     }
 
     // -------------------------------------------------------------------- widgets
+
+    /// <summary>
+    /// Submits a widget through the real aggregate + projection path (not a shortcut), so the
+    /// <see cref="WidgetRegistry"/> folds it exactly as production does. Left pending unless
+    /// <paramref name="approve"/> is set. Returns the id for later approve/reject drivers.
+    /// </summary>
+    public async Task<WidgetSubmissionId> SubmitWidget(
+        string tag,
+        string bundleSource,
+        string name = "Widget",
+        IReadOnlyList<WidgetPropSpec>? props = null,
+        bool approve = false,
+        string requestedBy = "alice")
+    {
+        var id = WidgetSubmissionId.New();
+        await Commit(WidgetSubmission.Submit(
+            id, tag, name, description: "", placeholder: "", aspectRatio: null,
+            eager: false, props ?? [], bundleSource, requestedBy));
+        if (approve)
+        {
+            await ApproveWidget(id);
+        }
+
+        return id;
+    }
+
+    public async Task ApproveWidget(WidgetSubmissionId id, string approvedBy = "admin")
+    {
+        var submission = await Store.Load<WidgetSubmission>(id.Stream);
+        submission.Approve(approvedBy);
+        await Commit(submission);
+    }
 
     /// <summary>Rewrites the widgets directory: manifest plus one bundle file per entry.</summary>
     public void WriteWidgets(params (string Tag, string Js)[] widgets)

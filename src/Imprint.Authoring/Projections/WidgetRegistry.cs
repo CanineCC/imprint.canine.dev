@@ -20,6 +20,11 @@ public sealed class WidgetRegistry : ReadModel
     // Preserves submission order (the dictionary doesn't) so the admin list is stable.
     private readonly List<WidgetSubmissionId> _order = [];
 
+    // Wall-clock times are envelope metadata, not domain state — the aggregate stays
+    // timestamp-free, and the admin review page reads submit/decision times from here.
+    private readonly Dictionary<WidgetSubmissionId, DateTimeOffset> _submittedAt = [];
+    private readonly Dictionary<WidgetSubmissionId, DateTimeOffset> _decidedAt = [];
+
     public WidgetSubmission? Get(WidgetSubmissionId id) => _submissions.GetValueOrDefault(id);
 
     /// <summary>Every submission, in submission order, whatever its status — for the admin review page.</summary>
@@ -40,6 +45,14 @@ public sealed class WidgetRegistry : ReadModel
     /// <summary>The approved bundle source for a tag, or null when no approved widget owns it.</summary>
     public string? BundleOf(string tag) =>
         Approved.FirstOrDefault(s => string.Equals(s.Tag, tag, StringComparison.Ordinal))?.BundleSource;
+
+    /// <summary>When the submission was first submitted (envelope time), or null if unknown.</summary>
+    public DateTimeOffset? SubmittedAt(WidgetSubmissionId id) =>
+        _submittedAt.TryGetValue(id, out var at) ? at : null;
+
+    /// <summary>When it was last approved/rejected/withdrawn (envelope time), or null while pending.</summary>
+    public DateTimeOffset? DecidedAt(WidgetSubmissionId id) =>
+        _decidedAt.TryGetValue(id, out var at) ? at : null;
 
     public override void Apply(StoredEvent @event)
     {
@@ -71,6 +84,23 @@ public sealed class WidgetRegistry : ReadModel
                 $"Widget event {@event.StableId} for unknown submission {id} — corrupt sequence?");
         }
 
+        // Read-side timestamps from the envelope. Submit sets the submitted time and clears
+        // any prior decision; revising re-opens review (clears the decision); a terminal
+        // decision stamps the decided time.
+        switch (@event.Event)
+        {
+            case WidgetSubmitted:
+                _submittedAt[id] = @event.Metadata.TimestampUtc;
+                _decidedAt.Remove(id);
+                break;
+            case WidgetRevised:
+                _decidedAt.Remove(id);
+                break;
+            case WidgetApproved or WidgetRejected or WidgetWithdrawn:
+                _decidedAt[id] = @event.Metadata.TimestampUtc;
+                break;
+        }
+
         NotifyChanged();
     }
 
@@ -78,5 +108,7 @@ public sealed class WidgetRegistry : ReadModel
     {
         _submissions.Clear();
         _order.Clear();
+        _submittedAt.Clear();
+        _decidedAt.Clear();
     }
 }

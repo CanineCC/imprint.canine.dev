@@ -7,6 +7,7 @@
 @inject WidgetRegistry Registry
 @inject ICommandDispatcher Dispatcher
 @inject IConfiguration Config
+@inject EventMetadataProvider Metadata
 
 @* Widget review (proposal §"Admin — /admin/widgets"). The privileged act is APPROVAL:
    approving publishes runnable JavaScript to every visitor, so the exact submitted source
@@ -43,8 +44,8 @@ else
         }
 
         @{
-            var pending = Registry.Submissions.Where(s => s.Status == WidgetStatus.Pending).ToList();
-            var reviewed = Registry.Submissions.Where(s => s.Status != WidgetStatus.Pending).ToList();
+            var pending = Registry.Submissions.Where(s => s.Status == WidgetSubmissionStatus.Pending).ToList();
+            var reviewed = Registry.Submissions.Where(s => s.Status != WidgetSubmissionStatus.Pending).ToList();
         }
 
         <section class="aw-section">
@@ -64,7 +65,7 @@ else
                     </div>
                     <p class="aw-meta">
                         Requested by <strong>@submission.RequestedBy</strong>
-                        · @Time(submission.SubmittedAt)
+                        · @Time(Registry.SubmittedAt(submission.Id))
                         · @Kb(submission.ByteSize)
                     </p>
                     @if (submission.Description is { Length: > 0 } description)
@@ -106,17 +107,17 @@ else
                         <span class="ed-badge @BadgeClass(submission.Status)">@submission.Status</span>
                     </div>
                     <p class="aw-meta">
-                        @if (submission.DecidedBy is { } who)
+                        @if (DecidedBy(submission) is { } who)
                         {
                             <span>@Verb(submission.Status) by <strong>@who</strong></span>
                         }
-                        @if (submission.DecidedAt is { } when)
+                        @if (Registry.DecidedAt(submission.Id) is { } when)
                         {
                             <span> · @Time(when)</span>
                         }
                         <span> · requested by @submission.RequestedBy</span>
                     </p>
-                    @if (submission is { Status: WidgetStatus.Rejected, RejectionReason: { Length: > 0 } reason })
+                    @if (submission is { Status: WidgetSubmissionStatus.Rejected, RejectionReason: { Length: > 0 } reason })
                     {
                         <p class="aw-reason-note">Reason: @reason</p>
                     }
@@ -134,7 +135,11 @@ else
 
     private string ReasonOf(WidgetSubmissionId id) => _reasons.GetValueOrDefault(id, "");
 
-    private RenderFragment RenderProps(WidgetSubmissionView submission) => builder =>
+    // The actor recorded on the decision (approve/reject); withdrawal records none.
+    private static string? DecidedBy(WidgetSubmission submission) =>
+        submission.ApprovedBy ?? submission.RejectedBy;
+
+    private RenderFragment RenderProps(WidgetSubmission submission) => builder =>
     {
         if (submission.Props.Count == 0)
         {
@@ -167,7 +172,8 @@ else
 
     private async Task Approve(WidgetSubmissionId id)
     {
-        var result = await Dispatcher.Dispatch(new Authoring.Features.Widgets.ApproveWidget.ApproveWidget(id));
+        var result = await Dispatcher.Dispatch(
+            new Authoring.Features.Widgets.ApproveWidget.ApproveWidget(id, Metadata.ActorSource()));
         _message = result.Succeeded
             ? "Approved — the widget's bundle now publishes to visitors."
             : result.ErrorMessage;
@@ -182,7 +188,8 @@ else
             return;
         }
 
-        var result = await Dispatcher.Dispatch(new Authoring.Features.Widgets.RejectWidget.RejectWidget(id, reason));
+        var result = await Dispatcher.Dispatch(
+            new Authoring.Features.Widgets.RejectWidget.RejectWidget(id, Metadata.ActorSource(), reason));
         if (result.Succeeded)
         {
             _reasons.Remove(id);
@@ -194,22 +201,23 @@ else
         }
     }
 
-    private static string BadgeClass(WidgetStatus status) => status switch
+    private static string BadgeClass(WidgetSubmissionStatus status) => status switch
     {
-        WidgetStatus.Approved => "ed-badge-ok",
-        WidgetStatus.Rejected => "ed-badge-warn",
+        WidgetSubmissionStatus.Approved => "ed-badge-ok",
+        WidgetSubmissionStatus.Rejected => "ed-badge-warn",
         _ => "ed-badge-accent",
     };
 
-    private static string Verb(WidgetStatus status) => status switch
+    private static string Verb(WidgetSubmissionStatus status) => status switch
     {
-        WidgetStatus.Approved => "Approved",
-        WidgetStatus.Rejected => "Rejected",
-        WidgetStatus.Withdrawn => "Withdrawn",
+        WidgetSubmissionStatus.Approved => "Approved",
+        WidgetSubmissionStatus.Rejected => "Rejected",
+        WidgetSubmissionStatus.Withdrawn => "Withdrawn",
         _ => "Decided",
     };
 
-    private static string Time(DateTimeOffset when) => when.ToLocalTime().ToString("yyyy-MM-dd HH:mm");
+    private static string Time(DateTimeOffset? when) =>
+        when is { } value ? value.ToLocalTime().ToString("yyyy-MM-dd HH:mm") : "—";
 
     private static string Kb(long bytes) => $"{bytes / 1024.0:0.#} KB";
 
