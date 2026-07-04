@@ -69,8 +69,12 @@ customElements.define(
       // server's LoC order (richest first) — the first item shows initially.
       this.#items = raw
         .map((it) => {
-          const parts = splitRepo(it && it.repo);
-          return parts ? { repo: it.repo, owner: parts.owner, name: parts.name } : null;
+          // Prefer the endpoint's explicit owner/name; fall back to splitting the label. A
+          // display-name label (e.g. "Continuum") has no slash, so without the explicit
+          // fields the (often richest) repo would be dropped from the wheel.
+          const owner = it && it.owner, name = it && it.name;
+          const parts = owner && name ? { owner, name } : splitRepo(it && it.repo);
+          return parts ? { repo: it && it.repo, owner: parts.owner, name: parts.name } : null;
         })
         .filter(Boolean);
       this._pending = false;
@@ -132,7 +136,11 @@ customElements.define(
 
       html += `<figure class="mk-c4">`;
       html += `<div class="mk-c4-bar">`;
-      html += `<span class="mk-c4-repo"><strong>${escapeHtml(it.name)}</strong><span>by ${escapeHtml(it.owner)}</span></span>`;
+      // Heading = the app's display label: an "owner/name" label shows "name · by owner"; a
+      // DisplayName label (no slash, e.g. "Continuum") shows alone.
+      html += (it.repo && it.repo.indexOf("/") >= 0)
+        ? `<span class="mk-c4-repo"><strong>${escapeHtml(it.name)}</strong><span>by ${escapeHtml(it.owner)}</span></span>`
+        : `<span class="mk-c4-repo"><strong>${escapeHtml(it.repo || it.name)}</strong></span>`;
       // Nav is hidden when there is only one eligible repo (no empty wheel to cycle).
       if (!single) {
         html += `<span class="mk-c4-nav">`;
