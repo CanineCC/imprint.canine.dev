@@ -19,6 +19,10 @@
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.9" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />
+    <!-- Optional in-app Keycloak/OIDC protection for the editor (auth is the reverse proxy's
+         job by default; this lets the editor itself terminate login where an estate already
+         runs Keycloak). -->
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.9" />
   </ItemGroup>
 
   <!-- Test-only -->

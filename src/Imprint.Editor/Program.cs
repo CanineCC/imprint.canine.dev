@@ -2,6 +2,7 @@ using Imprint.Authoring;
 using Imprint.Authoring.Features.Assets;
 using Imprint.Authoring.Features.Pages;
 using Imprint.Authoring.Projections;
+using Imprint.Editor.Auth;
 using Imprint.Editor.Components;
 using Imprint.Editor.Services;
 using Imprint.EventSourcing;
@@ -52,18 +53,48 @@ builder.Services.AddScoped<ToastService>();
 builder.Services.AddScoped<CommandRunner>();
 builder.Services.AddScoped<CanvasBridge>();
 
+// Optional in-app Keycloak/OIDC protection. Off until Keycloak:Authority is configured;
+// refuses to run unauthenticated in Production (see ImprintAuthExtensions).
+var authOptions = builder.AddImprintEditorAuth();
+
 var app = builder.Build();
+
+// Stamp every appended event with the signed-in editor's email so sites are owned by, and
+// history is attributed to, the real user. Falls back to the OS user when auth is off. Set
+// before any command can run. See EditorActor for how a circuit's identity reaches this
+// process-wide delegate.
+app.Services.GetRequiredService<EventMetadataProvider>().ActorSource =
+    () => EditorActor.Current ?? Environment.UserName;
+
+// TLS terminates on the reverse proxy; when auth is enabled the app must see the forwarded
+// scheme/host to build correct redirect URIs, and enforce login before anything else runs.
+if (authOptions.Enabled)
+{
+    app.UseForwardedHeaders();
+    app.UseAuthentication();
+    app.UseAuthorization();
+}
 
 // MapStaticAssets (not UseStaticFiles): it serves the framework script and the
 // Razor-class-library assets (_content/…) from the build manifest in every
 // environment — plain UseStaticFiles only composes those providers in Development.
 app.MapStaticAssets();
 app.UseAntiforgery();
-app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+
+// /healthz (always) and, when auth is enabled, the login/logout endpoints.
+app.MapImprintAuthEndpoints(authOptions);
+
+// The editor requires a signed-in user whenever Keycloak is configured; the challenge
+// redirects an anonymous visitor to Keycloak. Anonymous otherwise (dev / trusted-LAN).
+var editor = app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+if (authOptions.Enabled)
+{
+    editor.RequireAuthorization();
+}
 
 // Canvas media: serves originals and derivatives to the editor UI. The store rejects
 // keys that resolve outside its root, so the wildcard is traversal-safe.
-app.MapGet("/media/{**storageKey}", (string storageKey, HttpContext http, IMediaStore store) =>
+var media = app.MapGet("/media/{**storageKey}", (string storageKey, HttpContext http, IMediaStore store) =>
 {
     try
     {
@@ -108,6 +139,10 @@ app.MapGet("/media/{**storageKey}", (string storageKey, HttpContext http, IMedia
         return Results.NotFound();
     }
 });
+if (authOptions.Enabled)
+{
+    media.RequireAuthorization();
+}
 
 await app.Services.InitializeImprintEventSourcing();
 

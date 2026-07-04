@@ -8,6 +8,7 @@
 @inject ICommandDispatcher Dispatcher
 @inject IConfiguration Config
 @inject EventMetadataProvider Metadata
+@inject Imprint.Editor.Auth.EditorActor Actor
 
 @* Widget review (proposal §"Admin — /admin/widgets"). The privileged act is APPROVAL:
    approving publishes runnable JavaScript to every visitor, so the exact submitted source
@@ -172,6 +173,8 @@ else
 
     private async Task Approve(WidgetSubmissionId id)
     {
+        // Attribute the approval (and its events) to the signed-in reviewer, not the OS user.
+        using var actorScope = await Actor.BeginScopeAsync();
         var result = await Dispatcher.Dispatch(
             new Authoring.Features.Widgets.ApproveWidget.ApproveWidget(id, Metadata.ActorSource()));
         _message = result.Succeeded
@@ -188,6 +191,7 @@ else
             return;
         }
 
+        using var actorScope = await Actor.BeginScopeAsync();
         var result = await Dispatcher.Dispatch(
             new Authoring.Features.Widgets.RejectWidget.RejectWidget(id, Metadata.ActorSource(), reason));
         if (result.Succeeded)

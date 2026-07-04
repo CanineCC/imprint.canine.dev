@@ -1,3 +1,4 @@
+using Imprint.Editor.Auth;
 using Imprint.EventSourcing;
 
 namespace Imprint.Editor.Services;
@@ -21,7 +22,7 @@ public sealed class ToastService
 /// Nothing is ever rolled back; undoing appends the inverse decision, exactly like a
 /// human would. History stays honest.
 /// </summary>
-public sealed class CommandRunner(ICommandDispatcher dispatcher, ToastService toasts)
+public sealed class CommandRunner(ICommandDispatcher dispatcher, ToastService toasts, EditorActor? actor = null)
 {
     private sealed record UndoEntry(string Label, ICommand Command, ICommand Inverse);
 
@@ -140,12 +141,23 @@ public sealed class CommandRunner(ICommandDispatcher dispatcher, ToastService to
     /// <summary>Dispatch + surface domain errors as toasts. Does not touch the undo/redo stacks.</summary>
     private async Task<bool> Dispatch(ICommand command)
     {
-        var result = await dispatcher.Dispatch(command);
-        if (!result.Succeeded)
+        // Stamp the events this command appends with the signed-in editor. The ambient actor
+        // set here flows into the dispatcher's command scope; disabled/absent auth is a no-op
+        // (the OS user remains the actor). See EditorActor.
+        var actorScope = actor is not null ? await actor.BeginScopeAsync() : null;
+        try
         {
-            toasts.Error(result.ErrorMessage);
-        }
+            var result = await dispatcher.Dispatch(command);
+            if (!result.Succeeded)
+            {
+                toasts.Error(result.ErrorMessage);
+            }
 
-        return result.Succeeded;
+            return result.Succeeded;
+        }
+        finally
+        {
+            actorScope?.Dispose();
+        }
     }
 }

@@ -37,6 +37,10 @@ public sealed class EditorFixture : IAsyncLifetime
             RedirectStandardError = true,
             WorkingDirectory = FindRepoPath("."),
         };
+        // Run the editor as Development: there is no launchSettings.json, so `dotnet run`
+        // would otherwise default to Production — where the editor refuses to start without
+        // Keycloak configured. The E2E suite exercises the app with auth off.
+        startInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
         // Circuit-level detail: a dead circuit is invisible at Information level, and
         // "the click did nothing" bugs live exactly there.
         startInfo.Environment["Logging__LogLevel__Microsoft.AspNetCore.Components"] = "Debug";

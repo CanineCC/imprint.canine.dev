@@ -11,4 +11,9 @@
     <ProjectReference Include="../Imprint.Rendering/Imprint.Rendering.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Optional in-app Keycloak/OIDC protection (Auth is off until Keycloak:Authority is set). -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
+  </ItemGroup>
+
 </Project>
