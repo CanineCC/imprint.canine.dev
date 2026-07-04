@@ -1,10 +1,17 @@
-// <cai-composition-bar segments='[{"label":"Brilliant","pct":32,"band":"exemplary"},…]'
+// <cai-composition-bar api-base="…" owner="…" name="…"
+//                      segments='[{"label":"Brilliant","pct":32,"band":"exemplary"},…]'
 //                      kicker="…" heading="…" lede="…" caption="…"
 //                      brand="watchdog|assay|cai">
 //
-// Port of the Composition renderer (packages/ui/src/blocks.tsx): the brilliant /
-// fine / slop split as a pure-SVG proportion bar, band colours from the CAI
-// vocabulary. Segment widths are proportional to pct over the segment total.
+// Port of the Composition renderer (packages/ui/src/blocks.tsx): the brilliant / fine /
+// slop split as a pure-SVG proportion bar, band colours from the CAI vocabulary. Segment
+// widths are proportional to pct over the segment total.
+//
+// LIVE by default: when `api-base` is set it fetches {api}/api/oss and builds the three
+// segments from a REAL published repo's measured composition — brilliant% and slop% off
+// the card (fine = 100 − brilliant − slop). The repo is named by `owner`+`name`, else the
+// curated hero. Without `api-base`, or if the fetch fails (or the repo has no measured
+// split), it renders the seeded `segments` sample.
 
 import {
   CaiIsland,
@@ -15,6 +22,7 @@ import {
   renderInline,
   escapeHtml,
 } from "./tokens.js";
+import { pickCard, fetchJson } from "./live.js";
 
 const BAND_FILL = {
   exemplary: "var(--band-exemplary)",
@@ -39,11 +47,41 @@ const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + `
 .mk-compbar-cap { font-size: var(--fs-xs); color: var(--muted); margin-top: 0.4rem; text-align: center; }
 `;
 
+// The brilliant / fine / slop split → the three CAI-banded segments the bar renders.
+// Round to one decimal (the app's fileQuality rounding) and clamp fine at 0.
+function segmentsFromCard(c) {
+  if (!c) return null;
+  const brilliant = c.brilliantPct == null ? null : Number(c.brilliantPct);
+  const slop = c.slopPct == null ? null : Number(c.slopPct);
+  if (brilliant == null || slop == null) return null;
+  const fine = Math.max(0, 100 - brilliant - slop);
+  const r1 = (n) => Math.round(n * 10) / 10;
+  return [
+    { label: "Brilliant", pct: r1(brilliant), band: "exemplary" },
+    { label: "Fine", pct: r1(fine), band: "fair" },
+    { label: "Slop", pct: r1(slop), band: "critical" },
+  ].filter((s) => s.pct > 0);
+}
+
 customElements.define(
   "cai-composition-bar",
   class extends CaiIsland {
+    // Build the segments from a real repo's measured composition. Cache + re-render.
+    async liveLoad() {
+      const api = this.apiBase();
+      if (!api) return;
+      const owner = this.getAttribute("owner") || "";
+      const name = this.getAttribute("name") || "";
+      const cards = await fetchJson(api, "/api/oss", null);
+      if (!Array.isArray(cards) || cards.length === 0) return;
+      const built = segmentsFromCard(pickCard(cards, { owner, name }));
+      if (!built || built.length === 0) return;
+      this._live = built;
+      this.render(this.shadowRoot);
+    }
+
     render(root) {
-      const segs = (this.json("segments", []) || []).filter(
+      const segs = (this._live || this.json("segments", []) || []).filter(
         (s) => s && Number(s.pct) > 0
       );
       const total =

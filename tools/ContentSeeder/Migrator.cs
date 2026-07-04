@@ -21,7 +21,7 @@ namespace ContentSeeder;
 /// home page for home.json), AddNode for each mapped Section in order, ChangeNavigation
 /// for the header, then PublishPage. Deterministic and idempotent given a fresh store.
 /// </summary>
-public sealed class Migrator(ICommandDispatcher dispatcher)
+public sealed class Migrator(ICommandDispatcher dispatcher, string? apiBase = null)
 {
     public sealed record SiteResult(
         string Key,
@@ -36,7 +36,7 @@ public sealed class Migrator(ICommandDispatcher dispatcher)
     public async Task<SiteResult> MigrateSite(SiteDef site)
     {
         var surfaces = CmsReader.Read(site.CmsDir);
-        var mapper = new BlockMapper(site.Origin);
+        var mapper = new BlockMapper(site.Origin, apiBase);
         var relToPageId = new Dictionary<string, PageId>(StringComparer.Ordinal);
         var slugs = new List<string>();
         var authoredPages = 0;

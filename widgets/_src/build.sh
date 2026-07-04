@@ -13,6 +13,8 @@ TAGS=(
   cai-band-scale
   cai-composition-bar
   cai-evidence-flow
+  cai-c4-heat
+  cai-findings
   contact-form
 )
 

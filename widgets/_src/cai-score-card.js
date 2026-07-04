@@ -1,23 +1,24 @@
-// <cai-score-card card='{…scoreCard…}' name="…" owner="…" caption="…"
-//                  seal-text="…" href="…" brand="watchdog|assay|cai">
+// <cai-score-card api-base="…" owner="…" name="…" card='{…scoreCard…}'
+//                 caption="…" seal-text="…" href="…" brand="watchdog|assay|cai">
 //
-// Port of packages/ui/src/CaiScoreCard.tsx: name + band chip, band-inked score,
-// the fixed worst→best five-band ladder with the "you are here" diamond, the
-// value-coloured trend sparkline, the first→best arc, the lens bars and the
-// detail rows. FAITHFUL DEFAULT — renders the SAMPLE/labelled data the CMS ships
-// (never a live registry read). The card comes from the `card` JSON attribute;
-// individual scalar attributes override fields for editors who prefer dials.
+// The Codebase Assurance Index score card: name + band chip, band-inked score, the
+// fixed worst→best five-band ladder with the "you are here" diamond, the value-coloured
+// trend sparkline, the first→best arc, the lens bars and the detail rows. Port of
+// packages/ui/src/CaiScoreCard.tsx.
+//
+// LIVE by default (the watchdog.canine.dev survey-card pattern): when `api-base` is set
+// it fetches {api}/api/oss and renders a REAL published card — the exact repo named by
+// `owner`+`name`, else the curated hero (the highest-quality published repo: peak score,
+// LoC tie-break). Without `api-base`, or if the fetch fails, it renders the labelled
+// SAMPLE from the `card` attribute (never a fake-live read). Scalar attributes override.
 
 import { CaiIsland, TOKENS_CSS, BASE_CSS, escapeHtml } from "./tokens.js";
-import {
-  scoreCardBodyHtml,
-  parseCard,
-  SCORECARD_CSS,
-} from "./scorecard.js";
+import { scoreCardBodyHtml, parseCard, SCORECARD_CSS } from "./scorecard.js";
+import { cardFromGallery, reportUrl, pickCard, fetchJson } from "./live.js";
 
 // The built-in sample — the same illustrative artifact the CMS hero ships
 // (blocks.tsx SAMPLE_CARD): acme/checkout-service, an Adequate verdict, a
-// reproducible fingerprint. Clearly a sample.
+// reproducible fingerprint. Clearly a sample; shown only as the no-live fallback.
 const SAMPLE_CARD = {
   name: "checkout-service",
   owner: "acme",
@@ -47,26 +48,52 @@ const CSS = TOKENS_CSS + BASE_CSS + SCORECARD_CSS + `
 customElements.define(
   "cai-score-card",
   class extends CaiIsland {
+    // Fetch a real published card from the corpus, map it to the card model, cache it,
+    // and re-render. Selected by owner/name if both set, else the curated hero. On any
+    // failure this leaves _live unset and the sample stays (render() already drew it).
+    async liveLoad() {
+      const api = this.apiBase();
+      if (!api) return;
+      const owner = this.getAttribute("owner") || "";
+      const name = this.getAttribute("name") || "";
+      const cards = await fetchJson(api, "/api/oss", null);
+      if (!Array.isArray(cards) || cards.length === 0) return;
+      const chosen = pickCard(cards, { owner, name });
+      const mapped = cardFromGallery(chosen);
+      if (!mapped) return;
+      mapped.href = reportUrl(chosen);
+      this._live = mapped;
+      this.render(this.shadowRoot);
+    }
+
     render(root) {
-      // Full card object from JSON, or the sample; then apply scalar overrides.
-      const parsed = parseCard(this.json("card", null));
-      const data = parsed ? { ...parsed } : { ...SAMPLE_CARD };
+      // Prefer the LIVE card once it has arrived; else the seeded sample. Then apply
+      // scalar overrides (an editor dial always wins over the data source's field).
+      let data;
+      if (this._live) {
+        data = { ...this._live };
+      } else {
+        const parsed = parseCard(this.json("card", null));
+        data = parsed ? { ...parsed } : { ...SAMPLE_CARD };
+      }
 
       const name = this.getAttribute("name");
       const owner = this.getAttribute("owner");
       const score = this.getAttribute("score");
       const seal = this.getAttribute("seal-text");
       const href = this.getAttribute("href");
-      if (name != null && name !== "") data.name = name;
-      if (owner != null && owner !== "") data.owner = owner;
+      // owner/name are ALSO the live selectors, so only let them override the label
+      // text when we are NOT rendering a live card (a live card already IS that repo).
+      if (!this._live) {
+        if (name != null && name !== "") data.name = name;
+        if (owner != null && owner !== "") data.owner = owner;
+      }
       if (score != null && score !== "" && Number.isFinite(Number(score)))
         data.score = Number(score);
       if (seal != null && seal !== "") data.sealText = seal;
       if (href != null && href !== "") data.href = href;
 
-      const caption =
-        this.getAttribute("caption") ??
-        (parsed ? undefined : undefined);
+      const caption = this.getAttribute("caption");
 
       const tag = data.href ? "a" : "div";
       const hrefAttr = data.href ? ` href="${escapeHtml(data.href)}"` : "";

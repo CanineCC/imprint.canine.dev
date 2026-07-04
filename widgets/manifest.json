@@ -43,13 +43,14 @@
   {
     "tag": "cai-score-card",
     "name": "CAI score card",
-    "description": "The Codebase Assurance Index score card: band chip, band-inked score, the worst→best band ladder with a “you are here” marker, trend sparkline, lens bars and detail rows. Renders the labelled sample data (not a live registry read).",
+    "description": "The Codebase Assurance Index score card: band chip, band-inked score, the worst→best band ladder with a “you are here” marker, trend sparkline, lens bars and detail rows. Fetches a REAL published card from the kennel corpus when an API base is set (the repo named by owner/name, else the curated hero — highest-quality published repo); falls back to the labelled sample.",
     "bundle": "cai-score-card.js",
     "placeholder": "CAI score card",
     "props": [
-      { "name": "card", "label": "Card data (JSON — name, owner, score, series, arcFirst, arcBest, lenses, rows)", "type": "text", "default": "" },
-      { "name": "name", "label": "Repo / artifact name (overrides card)", "type": "text", "default": "" },
-      { "name": "owner", "label": "Owner — rendered as “by …” (overrides card)", "type": "text", "default": "" },
+      { "name": "api-base", "label": "Live API base URL (empty = show the sample)", "type": "url", "default": "" },
+      { "name": "owner", "label": "Owner — pick a real published repo (with name)", "type": "text", "default": "" },
+      { "name": "name", "label": "Repo name — pick a real published repo (with owner)", "type": "text", "default": "" },
+      { "name": "card", "label": "Sample-card fallback (JSON — name, owner, score, series, arcFirst, arcBest, lenses, rows)", "type": "text", "default": "" },
       { "name": "score", "label": "CAI score 0–100 (overrides card)", "type": "number", "default": "" },
       { "name": "seal-text", "label": "Seal badge text (e.g. ✓ Signed by Watchdog)", "type": "text", "default": "" },
       { "name": "caption", "label": "Caption under the card", "type": "text", "default": "" },
@@ -60,11 +61,13 @@
   {
     "tag": "cai-card-gallery",
     "name": "CAI score-card gallery",
-    "description": "A responsive grid of CAI score cards — the public-record gallery of real published surveys (quiet-peer cards, not the accent hero artifact). Cards come from a JSON array of card objects.",
+    "description": "A responsive grid of CAI score cards — the public-record gallery of real published surveys (quiet-peer cards, not the accent hero artifact). Fetches the live corpus when an API base is set (newest-published first, then best score, capped at count); falls back to the labelled sample cards.",
     "bundle": "cai-card-gallery.js",
     "placeholder": "CAI score-card gallery",
     "props": [
-      { "name": "cards", "label": "Cards (JSON array of card objects)", "type": "text", "default": "[]" },
+      { "name": "api-base", "label": "Live API base URL (empty = show the sample)", "type": "url", "default": "" },
+      { "name": "count", "label": "How many cards to show (live)", "type": "number", "default": "6" },
+      { "name": "cards", "label": "Sample-cards fallback (JSON array of card objects)", "type": "text", "default": "[]" },
       { "name": "kicker", "label": "Kicker (small uppercase intro)", "type": "text", "default": "" },
       { "name": "heading", "label": "Heading", "type": "text", "default": "" },
       { "name": "lede", "label": "Lede / intro paragraph", "type": "text", "default": "" },
@@ -75,11 +78,14 @@
   {
     "tag": "cai-band-scale",
     "name": "CAI band scale",
-    "description": "The canonical CAI presentation scale: five bands worst→best, cutlines 25/50/70/90, the display words, and an optional Score pin at a sample score.",
+    "description": "The canonical CAI presentation scale: five bands worst→best, cutlines 25/50/70/90, the display words, and an optional Score pin. Pins at a REAL published repo's live headline score when an API base is set (the repo named by owner/name, else the curated hero); falls back to the seeded score.",
     "bundle": "cai-band-scale.js",
     "placeholder": "CAI band scale",
     "props": [
-      { "name": "score", "label": "Pin a sample score on the scale (optional, 0–100)", "type": "number", "default": "" },
+      { "name": "api-base", "label": "Live API base URL (empty = use the seeded score)", "type": "url", "default": "" },
+      { "name": "owner", "label": "Owner — pin at a real published repo (with name)", "type": "text", "default": "" },
+      { "name": "name", "label": "Repo name — pin at a real published repo (with owner)", "type": "text", "default": "" },
+      { "name": "score", "label": "Seeded pin score fallback (optional, 0–100)", "type": "number", "default": "" },
       { "name": "kicker", "label": "Kicker (small uppercase intro)", "type": "text", "default": "" },
       { "name": "heading", "label": "Heading", "type": "text", "default": "" },
       { "name": "lede", "label": "Lede / intro paragraph", "type": "text", "default": "" },
@@ -90,11 +96,14 @@
   {
     "tag": "cai-composition-bar",
     "name": "CAI composition bar",
-    "description": "A pure-SVG proportion bar for the brilliant / fine / slop code-composition split, coloured with the CAI band vocabulary. Segments come from a JSON array of { label, pct, band }.",
+    "description": "A pure-SVG proportion bar for the brilliant / fine / slop code-composition split, coloured with the CAI band vocabulary. Builds the segments from a REAL published repo's measured brilliant%/slop% when an API base is set (the repo named by owner/name, else the curated hero); falls back to the seeded segments.",
     "bundle": "cai-composition-bar.js",
     "placeholder": "Composition bar",
     "props": [
-      { "name": "segments", "label": "Segments (JSON array of {label, pct, band})", "type": "text", "default": "[]" },
+      { "name": "api-base", "label": "Live API base URL (empty = show the sample)", "type": "url", "default": "" },
+      { "name": "owner", "label": "Owner — use a real published repo (with name)", "type": "text", "default": "" },
+      { "name": "name", "label": "Repo name — use a real published repo (with owner)", "type": "text", "default": "" },
+      { "name": "segments", "label": "Sample segments fallback (JSON array of {label, pct, band})", "type": "text", "default": "[]" },
       { "name": "kicker", "label": "Kicker (small uppercase intro)", "type": "text", "default": "" },
       { "name": "heading", "label": "Heading", "type": "text", "default": "" },
       { "name": "lede", "label": "Lede / intro paragraph", "type": "text", "default": "" },
@@ -115,6 +124,41 @@
       { "name": "heading", "label": "Heading", "type": "text", "default": "" },
       { "name": "lede", "label": "Lede / intro paragraph", "type": "text", "default": "" },
       { "name": "footnote", "label": "Footnote under the diagram", "type": "text", "default": "" },
+      { "name": "brand", "label": "Brand accent", "type": "choice", "default": "watchdog", "options": ["watchdog", "assay", "cai"] }
+    ]
+  },
+  {
+    "tag": "cai-c4-heat",
+    "name": "CAI C4 architecture heat-map",
+    "description": "The C4 architecture heat-map — bounded contexts and how they talk, coloured by health — the same map watchdog.canine.dev renders in the app's C4 wheel. Live only: fetches the public C4 corpus when an API base is set (the repo named by owner/name, else the densest curated map) and renders its real C4 heat SVG; shows nothing without a live source.",
+    "bundle": "cai-c4-heat.js",
+    "placeholder": "C4 architecture heat-map",
+    "props": [
+      { "name": "api-base", "label": "Live API base URL (required — this widget is live-only)", "type": "url", "default": "" },
+      { "name": "owner", "label": "Owner — pick a real published repo (with name)", "type": "text", "default": "" },
+      { "name": "name", "label": "Repo name — pick a real published repo (with owner)", "type": "text", "default": "" },
+      { "name": "kicker", "label": "Kicker (small uppercase intro)", "type": "text", "default": "" },
+      { "name": "heading", "label": "Heading", "type": "text", "default": "" },
+      { "name": "lede", "label": "Lede / intro paragraph", "type": "text", "default": "" },
+      { "name": "caption", "label": "Caption under the map", "type": "text", "default": "" },
+      { "name": "brand", "label": "Brand accent", "type": "choice", "default": "watchdog", "options": ["watchdog", "assay", "cai"] }
+    ]
+  },
+  {
+    "tag": "cai-findings",
+    "name": "CAI findings a scanner can't produce",
+    "description": "The deterministic architecture / domain-model / event findings located to file:line, from real published reports — with the honest “showing N of M” and a link to the full report. Fetches the public findings feed when an API base is set (the repo named by owner/name, else the top count); falls back to a small labelled sample.",
+    "bundle": "cai-findings.js",
+    "placeholder": "Findings a scanner can't produce",
+    "props": [
+      { "name": "api-base", "label": "Live API base URL (empty = show the sample)", "type": "url", "default": "" },
+      { "name": "owner", "label": "Owner — pick a real published repo (with name)", "type": "text", "default": "" },
+      { "name": "name", "label": "Repo name — pick a real published repo (with owner)", "type": "text", "default": "" },
+      { "name": "count", "label": "How many repos to show (live)", "type": "number", "default": "1" },
+      { "name": "kicker", "label": "Kicker (small uppercase intro)", "type": "text", "default": "" },
+      { "name": "heading", "label": "Heading", "type": "text", "default": "" },
+      { "name": "lede", "label": "Lede / intro paragraph", "type": "text", "default": "" },
+      { "name": "footnote", "label": "Footnote under the findings", "type": "text", "default": "" },
       { "name": "brand", "label": "Brand accent", "type": "choice", "default": "watchdog", "options": ["watchdog", "assay", "cai"] }
     ]
   },

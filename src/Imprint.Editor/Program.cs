@@ -47,6 +47,17 @@ builder.Services.AddSingleton(provider =>
 builder.Services.AddSingleton<IWidgetCatalog>(provider => provider.GetRequiredService<EditorWidgetCatalog>());
 builder.Services.AddSingleton<EditorRenderContextFactory>();
 
+// The public preview plane: renders each site to its own preview folder on demand and
+// serves the full published-style page (chrome + marketing CSS + hydrated live islands)
+// at /preview/{site}, re-homing the origin-relative assets under that prefix.
+var previewRoot = Path.Combine(dataDirectory, "preview");
+builder.Services.AddSingleton(provider => new SitePreview(
+    provider.GetRequiredService<SitePublisher>(),
+    provider.GetRequiredService<Imprint.Authoring.Projections.SiteOverview>(),
+    provider.GetRequiredService<Imprint.EventSourcing.ProjectionEngine>(),
+    previewRoot,
+    provider.GetRequiredService<ILoggerFactory>().CreateLogger<SitePreview>()));
+
 // Per-circuit (per browser tab) editor state and its write path.
 builder.Services.AddScoped<EditorSession>();
 builder.Services.AddScoped<ToastService>();
@@ -143,6 +154,50 @@ if (authOptions.Enabled)
 {
     media.RequireAuthorization();
 }
+
+// Public preview: the founder reviews the real published page (chrome + marketing CSS +
+// hydrated live islands) at /preview/{site} and /preview/{site}/{slug}. Anonymous by
+// design — this is public marketing content, not the editor. /preview (no site) lists the
+// sites available to preview. The site is addressed by its slug (watchdog/cai/assay) or id.
+app.MapGet("/preview", (SitePreview preview) =>
+{
+    var sites = preview.Sites();
+    if (sites.Count == 0)
+    {
+        return Results.Content("<!doctype html><meta charset=utf-8><title>Preview</title><p>No sites to preview yet.</p>", "text/html");
+    }
+
+    var links = string.Join("", sites.Select(s =>
+        $"<li><a href=\"/preview/{Uri.EscapeDataString(s.Slug)}/\">{System.Net.WebUtility.HtmlEncode(s.Name)}</a> " +
+        $"<code>/preview/{System.Net.WebUtility.HtmlEncode(s.Slug)}</code></li>"));
+    var body =
+        "<!doctype html><meta charset=utf-8><title>Site previews</title>" +
+        "<style>body{font:16px/1.6 system-ui,sans-serif;max-width:40rem;margin:3rem auto;padding:0 1rem}code{background:#eee;padding:1px 5px;border-radius:4px}</style>" +
+        "<h1>Site previews</h1><p>The full published-style pages, hydrated with live widgets.</p><ul>" + links + "</ul>";
+    return Results.Content(body, "text/html; charset=utf-8");
+}).AllowAnonymous();
+
+// /preview/{site} (no trailing path) serves the site's home page; the wildcard variant
+// serves everything under it (nested pages + assets). The preview is regenerated on
+// demand and rewritten per request — never cached, so an edit shows on the next hit.
+static async Task<IResult> ServePreview(string site, string path, SitePreview preview, HttpContext http)
+{
+    var file = await preview.Serve(site, path);
+    if (file is null)
+    {
+        return Results.NotFound();
+    }
+
+    http.Response.Headers.CacheControl = "no-store";
+    http.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    return Results.Bytes(file.Bytes, file.ContentType);
+}
+
+app.MapGet("/preview/{site}", (string site, SitePreview preview, HttpContext http) =>
+    ServePreview(site, "", preview, http)).AllowAnonymous();
+
+app.MapGet("/preview/{site}/{**path}", (string site, string? path, SitePreview preview, HttpContext http) =>
+    ServePreview(site, path ?? "", preview, http)).AllowAnonymous();
 
 await app.Services.InitializeImprintEventSourcing();
 
