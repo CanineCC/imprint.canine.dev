@@ -41,6 +41,23 @@ public static class EditorDriver
     }
 
     /// <summary>
+    /// Creates a fresh site through the "New site" flow and lands in its editor with the
+    /// canvas rendered — the multi-site equivalent of OpenEditor for a brand-new site.
+    /// </summary>
+    public static async Task CreateSiteViaDashboard(this IPage page, string name)
+    {
+        await page.GotoAsync("/sites/new");
+        await page.WaitForInteractive();
+        await page.FillAsync("#ob-name", name);
+        await page.FillAsync("#ob-locale", "en");
+        await page.SelectOptionAsync("#ob-template", "launch");
+        await page.ClickAsync("button:has-text('Create site')");
+        await page.WaitForURLAsync("**/edit/**", new PageWaitForURLOptions { Timeout = 30_000 });
+        await page.WaitForInteractive();
+        await page.WaitForSelectorAsync(".ed-canvas [data-node-id]");
+    }
+
+    /// <summary>
     /// Blazor prerenders identical-looking dead HTML; clicks before the circuit
     /// attaches vanish. The marker is rendered only from OnAfterRender (interactive).
     /// </summary>
