@@ -60,5 +60,8 @@ nunit-*.xml
 data/
 src/Imprint.Editor/data/
 
+# ContentSeeder local verify store (fresh SQLite + published output + media)
+_seedtest/
+
 # Claude Code session artifacts (agent worktrees etc.)
 .claude/
