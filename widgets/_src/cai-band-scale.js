@@ -5,11 +5,10 @@
 // full-width CAI band scale — five bands worst→best, the parked cutlines
 // 25/50/70/90, the display words, and an optional Score-pin marker.
 //
-// LIVE by default: when `api-base` is set it fetches {api}/api/public/showcase and pins the
-// scale at the SERVER-CURATED representative score (showcase.bandScale.score) — a real
-// public repo the server chose to best illustrate the band ladder. Without `api-base`, or
-// if the fetch fails, it uses the seeded `score` attribute (or renders the bare scale, no
-// pin). No client-side pick.
+// LIVE by default: when `api-base` is set it fetches {api}/api/oss (the published gallery
+// cards) and pins the scale at the HERO card's bestScore — the highest-scoring published
+// repo, the same card the hero score card shows. Without `api-base`, or if the fetch fails,
+// it uses the seeded `score` attribute (or renders the bare scale, no pin).
 
 import {
   CaiIsland,
@@ -21,7 +20,7 @@ import {
 } from "./tokens.js";
 import { ladderHtml, SCORECARD_CSS } from "./scorecard.js";
 import { CAI_BANDS } from "./cai.js";
-import { fetchShowcase } from "./live.js";
+import { fetchGallery, pickHero } from "./live.js";
 
 const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + `
 .mk-bandscale { max-width: 46rem; margin: 0 auto; }
@@ -41,13 +40,12 @@ const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + `
 customElements.define(
   "cai-band-scale",
   class extends CaiIsland {
-    // Pin the scale at the SERVER-CURATED representative score. Cache + re-render.
+    // Pin the scale at the HERO published card's bestScore. Cache + re-render.
     async liveLoad() {
       const api = this.apiBase();
       if (!api) return;
-      const showcase = await fetchShowcase(api);
-      const bs = showcase && showcase.bandScale;
-      const score = bs && bs.score;
+      const hero = pickHero(await fetchGallery(api));
+      const score = hero && (hero.bestScore != null ? hero.bestScore : hero.headlineScore);
       if (score == null || !Number.isFinite(Number(score))) return;
       this._liveScore = Number(score);
       this.render(this.shadowRoot);

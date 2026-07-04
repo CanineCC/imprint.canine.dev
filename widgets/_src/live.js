@@ -1,28 +1,27 @@
 // Shared LIVE-fetch plumbing for the CAI marketing islands.
 //
-// ONE server-curated source of truth: GET {api-base}/api/public/showcase returns the
-// SERVER's best candidate for EACH widget (the agreed showcase contract). The widget just
-// renders its slice — no client-side candidate-picking, no /api/oss sort, no hardcoded
-// repo pins. The server does all the curation (HasPublicSource-gated, deterministic,
-// reusing the kennel's own curation primitives) so the widgets can stay dumb renderers.
+// Each widget fetches its OWN real, already-published-gated kennel endpoint — the same
+// endpoints watchdog.canine.dev serves its own marketing surface from (the API is gated to
+// GalleryOptIn repos server-side, so the widget renders whatever it returns; NO client-side
+// sourceUrl/visibility filtering):
 //
-// Shape returned by /api/public/showcase (Track K owns the endpoint):
-//   {
-//     hero:        GalleryCard,                       // the flagship card
-//     gallery:     GalleryCard[],                     // the curated set, hero excluded
-//     c4:          { owner, name, runId },            // the richest architecture map
-//     findings:    { owner, name, reportUrl, shown, total, findings:[{lens,dim,title,file,line}] },
-//     composition: { owner, name, brilliantPct, slopPct, finePct },
-//     bandScale:   { owner, name, score, band }
-//   }
+//   • /api/oss            → GalleryCard[]  — the published gallery cards. The hero picks the
+//                           highest bestScore (tie-break productionLoc), mirroring the app's
+//                           GalleryHeroViewComponent. The home 3-card gallery picks second-
+//                           best-by-score + most-improved-by-delta + a random card.
+//   • /api/public/c4      → { items:[{repo:"owner/name", runId}] } — the C4-eligible
+//                           published repos, LoC-ordered (richest first). Drives the C4
+//                           carousel, which then loads /api/public/oss/{owner}/{name}/c4.svg.
+//   • /api/public/findings→ { items:[{repo,owner,name,reportUrl,sourceUrl,shown,total,more,
+//                           findings:[…]}] } — the DDD-moat weighted list. Drives the
+//                           findings carousel.
 //
 // When `api-base` is unset, or the fetch fails, each widget falls back to the labelled
 // SAMPLE it was seeded with (never a fake-live read). That is the ONLY time a sample shows.
 //
-// The GalleryCard JSON shape (hero + gallery items) is the authoritative kennel contract —
-// Kennel.Watchdog.PublicGallery.GalleryCard. cardFromGallery() maps it onto the
-// scorecard.js `card` model the renderers already understand, so a live card and a seeded
-// sample card render through the identical code path.
+// The GalleryCard JSON shape is the authoritative kennel contract (the /api/oss response).
+// cardFromGallery() maps it onto the scorecard.js `card` model the renderers already
+// understand, so a live card and a seeded sample card render through the identical path.
 
 // The five public (scanner-overlap) lenses, in report order — the wd-card.js LENSES
 // table, byte-for-byte. `value` may be null (not measured that run) → an em-dash row.
@@ -56,7 +55,7 @@ function measuredRow(c) {
 }
 
 /**
- * Map ONE GalleryCard (the showcase hero, or a gallery item — same lens + arc fields)
+ * Map ONE GalleryCard (the hero, or a gallery item — same lens + arc fields)
  * onto the scorecard.js `card` model. The published FACE of a repo is its PEAK run:
  * score = bestScore (headlineScore fallback), the arc is firstScore→bestScore, the series
  * is the climb history. Lens bars come from the five public lenses; the detail rows carry
@@ -93,12 +92,12 @@ export function cardFromGallery(c) {
 }
 
 /**
- * The ABSOLUTE public report URL for a showcase GalleryCard — mirrors the app's
+ * The ABSOLUTE public report URL for a GalleryCard — mirrors the app's
  * `/api/oss/{owner}/{name}/report?run={bestRunId}`, resolved against the kennel origin
  * (`apiBase`). The marketing islands render on a STATIC cross-origin host, so an
- * origin-less relative href would 404 there — it must carry the api-base. The server only
- * ever curates public-with-report repos into the showcase, so every hero/gallery card
- * carries a bestRunId; returns "" defensively if one is somehow missing (no dead links).
+ * origin-less relative href would 404 there — it must carry the api-base. The gallery only
+ * ever contains published-with-report repos, so every card carries a bestRunId; returns ""
+ * defensively if one is somehow missing (no dead links).
  */
 export function reportUrl(c, apiBase) {
   if (!c) return "";
@@ -118,44 +117,110 @@ export function reportUrl(c, apiBase) {
   );
 }
 
-// ── the one shared showcase fetch ────────────────────────────────────────────
+// ── shared, cached JSON GETs against the real published endpoints ────────────
 //
-// Every island on a page reads the SAME /api/public/showcase document. We fetch it once
-// per (api-base, cohort) and hand every island the cached promise, so N islands = 1 GET.
+// Every island on a page that reads the same endpoint shares ONE GET: we fetch each
+// (api-base, path) once and hand every island the cached promise, so N islands = 1 request
+// per endpoint. Resolves to a fallback ([] / null) on any failure OR when `apiBase` is
+// empty — an empty base means the widget was seeded without a live URL and must show its
+// labelled sample, never attempt a same-origin fetch that would 404 on the static host.
 
-const _showcaseCache = new Map();
+const _jsonCache = new Map();
 
-/** The cache key for a given api-base + optional cohort. */
-function showcaseKey(base, cohort) {
-  return base + " " + (cohort || "");
+function fetchJsonCached(apiBase, path, onEmpty) {
+  const base = (apiBase || "").trim().replace(/\/$/, "");
+  if (!base) return Promise.resolve(onEmpty);
+  const key = base + " " + path;
+  let pending = _jsonCache.get(key);
+  if (pending) return pending;
+  pending = (async () => {
+    try {
+      const r = await fetch(base + path);
+      if (!r.ok) return onEmpty;
+      return await r.json();
+    } catch {
+      return onEmpty;
+    }
+  })();
+  _jsonCache.set(key, pending);
+  return pending;
 }
 
 /**
- * Fetch the server-curated showcase document from `{apiBase}/api/public/showcase`
- * (optionally scoped to a `cohort`), DEDUPED + CACHED across every island on the page.
- * Resolves to `null` on any failure (no network, non-2xx, bad JSON) OR when `apiBase` is
- * empty — an empty base means the widget was seeded without a live URL and must show its
- * labelled sample, never attempt a same-origin fetch that would 404 on the static host.
- * A failed fetch is cached as a rejected-to-null promise so islands don't each retry.
+ * Fetch the published gallery cards from `{apiBase}/api/oss` — the `GalleryCard[]`. Already
+ * published-gated server-side (Visible().Where(GalleryPolicy.IsPublic)); the widget renders
+ * whatever it returns, with NO client-side sourceUrl/visibility filtering. Resolves to `[]`
+ * on any failure or empty base.
  */
-export function fetchShowcase(apiBase, cohort) {
-  const base = (apiBase || "").trim().replace(/\/$/, "");
-  if (!base) return Promise.resolve(null);
-  const key = showcaseKey(base, cohort);
-  let pending = _showcaseCache.get(key);
-  if (pending) return pending;
-  const q = cohort ? "?cohort=" + encodeURIComponent(cohort) : "";
-  pending = (async () => {
-    try {
-      const r = await fetch(base + "/api/public/showcase" + q);
-      if (!r.ok) return null;
-      return await r.json();
-    } catch {
-      return null;
+export async function fetchGallery(apiBase) {
+  const cards = await fetchJsonCached(apiBase, "/api/oss", []);
+  return Array.isArray(cards) ? cards : [];
+}
+
+/**
+ * Fetch the LoC-ordered C4 wheel list from `{apiBase}/api/public/c4` — `{ items:[{repo,
+ * runId}] }`, richest first. `repo` is "owner/name". Resolves to `[]` on any failure.
+ */
+export async function fetchC4(apiBase) {
+  const d = await fetchJsonCached(apiBase, "/api/public/c4", { items: [] });
+  return (d && Array.isArray(d.items)) ? d.items : [];
+}
+
+/**
+ * Fetch the DDD-moat weighted findings list from `{apiBase}/api/public/findings` —
+ * `{ items:[{repo,owner,name,reportUrl,sourceUrl,shown,total,more,findings:[…]}] }`, ordered
+ * by weighted score. Resolves to `[]` on any failure.
+ */
+export async function fetchFindings(apiBase) {
+  const d = await fetchJsonCached(apiBase, "/api/public/findings", { items: [] });
+  return (d && Array.isArray(d.items)) ? d.items : [];
+}
+
+/**
+ * The HERO card — the app's GalleryHeroViewComponent default (pickBy=bestScore):
+ * OrderByDescending(BestScore).ThenByDescending(ProductionLoc).First(). No filter beyond the
+ * published cards the endpoint already returned. Returns null on an empty corpus.
+ */
+export function pickHero(cards) {
+  if (!Array.isArray(cards) || cards.length === 0) return null;
+  const best = (c) => (c.bestScore != null ? Number(c.bestScore) : Number(c.headlineScore) || 0);
+  let hero = null;
+  for (const c of cards) {
+    if (
+      hero === null ||
+      best(c) > best(hero) ||
+      (best(c) === best(hero) && (Number(c.productionLoc) || 0) > (Number(hero.productionLoc) || 0))
+    ) {
+      hero = c;
     }
-  })();
-  _showcaseCache.set(key, pending);
-  return pending;
+  }
+  return hero;
+}
+
+/**
+ * The HOME 3-card gallery — the FOUNDER OVERRIDE port: THREE distinct published cards
+ * excluding the hero — [1] the SECOND-BEST by bestScore, [2] the MOST-IMPROVED by delta
+ * (biggest climb), [3] a RANDOM published card — all distinct, none equal to the hero or
+ * each other. Fewer than 3 published-besides-hero ⇒ returns as many distinct as exist.
+ */
+export function pickHomeGallery(cards, hero) {
+  const rest = (Array.isArray(cards) ? cards : []).filter((c) => c && c !== hero);
+  if (rest.length === 0) return [];
+  const best = (c) => (c.bestScore != null ? Number(c.bestScore) : Number(c.headlineScore) || 0);
+  const delta = (c) => (c.delta != null ? Number(c.delta) : 0);
+  const chosen = [];
+  const take = (c) => {
+    if (c && !chosen.includes(c)) chosen.push(c);
+  };
+
+  // [1] second-best by score (best among the non-hero cards — the hero is already excluded).
+  take([...rest].sort((a, b) => best(b) - best(a))[0]);
+  // [2] most-improved by delta, distinct from [1].
+  take([...rest].sort((a, b) => delta(b) - delta(a)).find((c) => !chosen.includes(c)));
+  // [3] a random card, distinct from the first two.
+  const pool = rest.filter((c) => !chosen.includes(c));
+  if (pool.length > 0) take(pool[Math.floor(Math.random() * pool.length)]);
+  return chosen;
 }
 
 /** Fetch text (an SVG) from `{apiBase}${path}`, resolving to null on any failure. */

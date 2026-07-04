@@ -1,17 +1,17 @@
 // <cai-findings api-base="…" kicker="…" heading="…"
 //               lede="…" footnote="…" brand="watchdog|assay|cai">
 //
-// The findings a scanner can't produce — the deterministic architecture / domain-model /
-// event findings located to file:line, from real PUBLISHED reports (the insight gallery's
-// "Findings a scanner can't produce" widget). The repo shows its curated hero findings
-// with the honest "showing N of M" and a link to the full report.
+// The findings a scanner can't produce — a CAROUSEL of the deterministic architecture /
+// domain-model / event findings located to file:line, from real PUBLISHED reports (the
+// app's public findings wheel). Each slide is one repo: its curated top findings (lens chip
+// + title + file:line), the honest "showing X of Y", and a link to the full report.
 //
-// LIVE by default: when `api-base` is set it fetches {api}/api/public/showcase and renders
-// the SERVER-CURATED findings repo (showcase.findings) — the public repo whose curated
-// findings the server chose as most illustrative, located to file:line, with the honest
-// "showing N of M" and an absolute link to the full report (the server does the picking).
-// Without `api-base`, or on failure, it renders a small labelled SAMPLE so the section is
-// never empty in a static preview. No client-side pick.
+// Port of wwwroot/wd-findings-wheel.js: fetch {api}/api/public/findings → the DDD-moat
+// weighted list ({ items:[{repo,owner,name,reportUrl,sourceUrl,shown,total,more,findings[]}]
+// }, strongest repo first). Render a swipeable wheel (prev/next cycling with wrap-around);
+// the reportUrl is resolved ABSOLUTE against the api-base. Strongest repo shows initially.
+// Nav is hidden when fewer than two items. Empty list ⇒ nothing shown in live mode; without
+// api-base it renders a small labelled SAMPLE so a static preview is never empty.
 
 import {
   CaiIsland,
@@ -22,7 +22,7 @@ import {
   renderInline,
   escapeHtml,
 } from "./tokens.js";
-import { fetchShowcase } from "./live.js";
+import { fetchFindings } from "./live.js";
 
 // The labelled fallback — clearly illustrative (acme/checkout-service, the sample repo the
 // score card also uses), shown only when no live source resolves. Never a fake-live read.
@@ -44,7 +44,12 @@ const SAMPLE = [
 ];
 
 const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + `
-.mk-findings { max-width: 62rem; margin: 0 auto; display: grid; gap: 1.1rem; }
+.mk-findings { max-width: 62rem; margin: 0 auto; }
+.mk-find-bar { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.6rem; }
+.mk-find-nav { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+.mk-find-navcount { color: var(--muted); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mk-find-btn { appearance: none; cursor: pointer; border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink); border-radius: var(--r-full); width: 30px; height: 30px; font-size: var(--fs-md); line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+.mk-find-btn:hover { border-color: var(--accent-ink); color: var(--accent-ink); }
 .mk-find-repo { border: 1px solid var(--hairline); border-radius: var(--r-lg); background: var(--surface); padding: 1rem 1.15rem; }
 .mk-find-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
 .mk-find-repo-name strong { color: var(--heading); font-size: var(--fs-md); }
@@ -61,82 +66,117 @@ const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + `
 .mk-grid-foot { font-size: var(--fs-xs); color: var(--muted); margin: 1.1rem auto 0; max-width: 60ch; text-align: center; }
 `;
 
+// Resolve a possibly-origin-less /api/oss/... reportUrl to an ABSOLUTE link against the
+// api-base (same-origin in the app, but cross-origin on the static host ⇒ it must carry the
+// base or it 404s). Already-absolute links pass through.
+function absoluteReport(url, api) {
+  if (!url) return "";
+  if (/^https?:\/\//i.test(url)) return url;
+  return (api || "").replace(/\/$/, "") + url;
+}
+
 customElements.define(
   "cai-findings",
   class extends CaiIsland {
+    #items = [];
+    #idx = 0;
+
     async liveLoad() {
       const api = this.apiBase();
       if (!api) return;
-      // The SERVER-CURATED findings repo — a single { owner, name, reportUrl, shown,
-      // total, findings[] } object. No client picking; the server chose the most
-      // illustrative one and curated its findings.
-      const showcase = await fetchShowcase(api);
-      const it = showcase && showcase.findings;
-      if (!it || !Array.isArray(it.findings) || it.findings.length === 0) return;
-
-      // The slice's reportUrl may be an origin-less /api/oss/... path (same-origin in the
-      // app); on this cross-origin static host it must carry the api-base or it 404s.
-      // Resolve to an ABSOLUTE link so the "+N more in the full report" href opens.
-      const base = api.replace(/\/$/, "");
-      const resolved = {
-        ...it,
-        reportUrl: it.reportUrl
-          ? (/^https?:\/\//i.test(it.reportUrl) ? it.reportUrl : base + it.reportUrl)
-          : "",
-      };
-      this._live = [resolved];
+      const raw = await fetchFindings(api);
+      // Resolve each repo's report link to an absolute URL; keep the server's weighted order
+      // (strongest repo first — the first slide).
+      const items = raw
+        .filter((it) => it && Array.isArray(it.findings) && it.findings.length > 0)
+        .map((it) => ({ ...it, reportUrl: absoluteReport(it.reportUrl, api) }));
+      if (items.length === 0) return; // nothing published with such findings → stay hidden
+      this.#items = items;
+      this.#idx = 0;
+      this._live = true;
       this.render(this.shadowRoot);
     }
 
+    // prev/next cycling with wrap-around, exactly like wd-findings-wheel.js go(d).
+    #go(delta) {
+      if (this.#items.length < 2) return;
+      this.#idx = (this.#idx + delta + this.#items.length) % this.#items.length;
+      this.render(this.shadowRoot);
+    }
+
+    #repoHtml(it) {
+      const findings = (it.findings || []).filter((f) => f && f.title);
+      if (findings.length === 0) return "";
+      const shown = it.shown != null ? it.shown : findings.length;
+      const total = it.total != null ? it.total : findings.length;
+      const owner = it.owner || "";
+      const name = it.name || it.repo || "";
+
+      let html = `<div class="mk-find-repo">`;
+      html += `<div class="mk-find-head">`;
+      html += `<span class="mk-find-repo-name"><strong>${escapeHtml(name)}</strong>`;
+      if (owner) html += `<span> by ${escapeHtml(owner)}</span>`;
+      html += `</span>`;
+      html += `<span class="mk-find-count">showing ${escapeHtml(String(shown))} of ${escapeHtml(String(total))}</span>`;
+      html += `</div>`;
+
+      html += `<ul class="mk-find-list">`;
+      for (const f of findings) {
+        const lens = f.lensLabel || f.lens || "Architecture";
+        html += `<li class="mk-find-item">`;
+        html += `<span class="mk-find-lens">${escapeHtml(lens)}</span>`;
+        html += `<div class="mk-find-body">`;
+        html += `<p class="mk-find-title">${escapeHtml(f.title || "")}</p>`;
+        if (f.file) {
+          html += `<p class="mk-find-loc">${escapeHtml(f.file)}${f.line != null ? ":" + escapeHtml(String(f.line)) : ""}</p>`;
+        }
+        html += `</div></li>`;
+      }
+      html += `</ul>`;
+
+      const more = it.more != null ? it.more : Math.max(0, total - shown);
+      if (more > 0 && it.reportUrl) {
+        html += `<p class="mk-find-more"><a href="${escapeHtml(it.reportUrl)}" target="_blank" rel="noopener">+ ${escapeHtml(String(more))} more in the full report →</a></p>`;
+      } else if (more > 0) {
+        html += `<p class="mk-find-more">+ ${escapeHtml(String(more))} more in the full report</p>`;
+      } else if (it.reportUrl) {
+        html += `<p class="mk-find-more"><a href="${escapeHtml(it.reportUrl)}" target="_blank" rel="noopener">Read the full report →</a></p>`;
+      }
+      html += `</div>`;
+      return html;
+    }
+
     render(root) {
-      const repos = this._live || SAMPLE;
+      const items = this._live ? this.#items : SAMPLE;
+      const idx = this._live ? this.#idx : 0;
+      const single = items.length < 2;
+      const it = items[idx];
 
       let html = `<style>${CSS}</style>`;
       html += sectionHeadHtml(this);
       html += `<div class="mk-findings">`;
-      for (const it of repos) {
-        const findings = (it.findings || []).filter((f) => f && f.title);
-        if (findings.length === 0) continue;
-        const shown = it.shown != null ? it.shown : findings.length;
-        const total = it.total != null ? it.total : findings.length;
-        const owner = it.owner || "";
-        const name = it.name || it.repo || "";
-
-        html += `<div class="mk-find-repo">`;
-        html += `<div class="mk-find-head">`;
-        html += `<span class="mk-find-repo-name"><strong>${escapeHtml(name)}</strong>`;
-        if (owner) html += `<span> by ${escapeHtml(owner)}</span>`;
+      // The prev/next wheel bar — shown only in live mode with two or more repos.
+      if (this._live && !single) {
+        html += `<div class="mk-find-bar">`;
+        html += `<span class="mk-find-navcount">${idx + 1} / ${items.length} published repos</span>`;
+        html += `<span class="mk-find-nav">`;
+        html += `<button type="button" class="mk-find-btn" data-find-prev aria-label="Previous repo">‹</button>`;
+        html += `<button type="button" class="mk-find-btn" data-find-next aria-label="Next repo">›</button>`;
         html += `</span>`;
-        html += `<span class="mk-find-count">showing ${shown} of ${total}</span>`;
-        html += `</div>`;
-
-        html += `<ul class="mk-find-list">`;
-        for (const f of findings) {
-          const lens = f.lensLabel || f.lens || "Architecture";
-          html += `<li class="mk-find-item">`;
-          html += `<span class="mk-find-lens">${escapeHtml(lens)}</span>`;
-          html += `<div class="mk-find-body">`;
-          html += `<p class="mk-find-title">${escapeHtml(f.title || "")}</p>`;
-          if (f.file) {
-            html += `<p class="mk-find-loc">${escapeHtml(f.file)}${f.line ? ":" + escapeHtml(String(f.line)) : ""}</p>`;
-          }
-          html += `</div></li>`;
-        }
-        html += `</ul>`;
-
-        const more = it.more != null ? it.more : Math.max(0, total - shown);
-        if (more > 0 && it.reportUrl) {
-          html += `<p class="mk-find-more"><a href="${escapeHtml(it.reportUrl)}" target="_blank" rel="noopener">+ ${more} more in the full report →</a></p>`;
-        } else if (more > 0) {
-          html += `<p class="mk-find-more">+ ${more} more in the full report</p>`;
-        }
         html += `</div>`;
       }
+      html += this.#repoHtml(it);
       html += `</div>`;
 
       const footnote = this.getAttribute("footnote");
       if (footnote) html += `<p class="mk-grid-foot">${renderInline(footnote)}</p>`;
       root.innerHTML = html;
+
+      // Re-wire the nav each render (the old listeners die with the innerHTML swap).
+      const prev = root.querySelector("[data-find-prev]");
+      const next = root.querySelector("[data-find-next]");
+      if (prev) prev.addEventListener("click", () => { this.#go(-1); });
+      if (next) next.addEventListener("click", () => { this.#go(1); });
     }
   }
 );

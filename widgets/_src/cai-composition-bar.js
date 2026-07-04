@@ -7,11 +7,11 @@
 // slop split as a pure-SVG proportion bar, band colours from the CAI vocabulary. Segment
 // widths are proportional to pct over the segment total.
 //
-// LIVE by default: when `api-base` is set it fetches {api}/api/public/showcase and builds
-// the three segments from the SERVER-CURATED composition (showcase.composition) — the real
-// public repo whose brilliant/slop split the server chose as the most telling. Without
-// `api-base`, or if the fetch fails (or the slice carries no split), it renders the seeded
-// `segments` sample. No client-side pick.
+// LIVE by default: when `api-base` is set it fetches {api}/api/oss (the published gallery
+// cards) and builds the three segments from the HERO card's measured brilliant%/slop% — the
+// highest-scoring published repo, the same card the hero score card shows. Without
+// `api-base`, or if the fetch fails (or the card carries no split), it renders the seeded
+// `segments` sample.
 
 import {
   CaiIsland,
@@ -22,7 +22,7 @@ import {
   renderInline,
   escapeHtml,
 } from "./tokens.js";
-import { fetchShowcase } from "./live.js";
+import { fetchGallery, pickHero } from "./live.js";
 
 const BAND_FILL = {
   exemplary: "var(--band-exemplary)",
@@ -70,12 +70,13 @@ function segmentsFromComposition(c) {
 customElements.define(
   "cai-composition-bar",
   class extends CaiIsland {
-    // Build the segments from the SERVER-CURATED composition slice. Cache + re-render.
+    // Build the segments from the HERO published card's brilliant%/slop% split. The
+    // GalleryCard carries no finePct, so segmentsFromComposition derives fine as the
+    // remainder. Cache + re-render.
     async liveLoad() {
       const api = this.apiBase();
       if (!api) return;
-      const showcase = await fetchShowcase(api);
-      const built = segmentsFromComposition(showcase && showcase.composition);
+      const built = segmentsFromComposition(pickHero(await fetchGallery(api)));
       if (!built || built.length === 0) return;
       this._live = built;
       this.render(this.shadowRoot);
