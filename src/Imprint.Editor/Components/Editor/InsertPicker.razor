@@ -110,7 +110,7 @@
             name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
             description.Contains(query, StringComparison.OrdinalIgnoreCase);
 
-        var locale = Site.Current?.DefaultLocale ?? Session.EditLocale;
+        var locale = Session.ActiveSite?.DefaultLocale ?? Session.EditLocale;
 
         if (_parentId.IsRoot)
         {
@@ -182,7 +182,7 @@
             return;
         }
 
-        var locale = Site.Current?.DefaultLocale ?? Session.EditLocale;
+        var locale = Session.ActiveSite?.DefaultLocale ?? Session.EditLocale;
         await InsertNode(preset.Build(locale));
     }
 

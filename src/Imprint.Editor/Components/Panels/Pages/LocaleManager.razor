@@ -4,9 +4,10 @@
 @using Imprint.Editor.Services
 @implements IDisposable
 @inject SiteOverview Site
+@inject EditorSession Session
 @inject CommandRunner Commands
 
-@if (Site.Current is { } site)
+@if (Session.ActiveSite is { } site)
 {
     <section class="locale-manager">
         <h3 class="group-label">Languages</h3>
@@ -55,7 +56,7 @@
 
     private async Task Add()
     {
-        if (Site.Current is not { } site)
+        if (Session.ActiveSite is not { } site)
         {
             return;
         }
@@ -92,7 +93,7 @@
 
     private async Task MakeDefault(string value)
     {
-        if (Site.Current is not { } site)
+        if (Session.ActiveSite is not { } site)
         {
             return;
         }
@@ -105,7 +106,7 @@
 
     private async Task Remove(string value)
     {
-        if (Site.Current is not { } site)
+        if (Session.ActiveSite is not { } site)
         {
             return;
         }

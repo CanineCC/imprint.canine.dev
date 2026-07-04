@@ -1,5 +1,6 @@
 using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Pages;
+using Imprint.Authoring.Domain.Sites;
 using Imprint.Authoring.Projections;
 
 namespace Imprint.Editor.Services;
@@ -31,7 +32,7 @@ public sealed class EditorSession(PageDrafts drafts, SiteOverview site) : IDispo
     /// <summary>The locale the canvas renders and inline edits write to. Defaults to the site default.</summary>
     public Locale EditLocale
     {
-        get => _editLocale ?? site.Current?.DefaultLocale ?? new Locale("en");
+        get => _editLocale ?? ActiveSite?.DefaultLocale ?? new Locale("en");
         set
         {
             _editLocale = value;
@@ -41,6 +42,18 @@ public sealed class EditorSession(PageDrafts drafts, SiteOverview site) : IDispo
 
     public Page? CurrentPage =>
         CurrentPageId is { } id ? drafts.Get(id) : null;
+
+    /// <summary>
+    /// The site currently being edited: the open page's owning site, falling back to the
+    /// first site when nothing is open yet (fresh load, between pages). Everything that
+    /// belongs to the edited site — its locales, theme, navigation, default locale — must
+    /// read THIS, not <see cref="SiteOverview.Current"/>, so opening a page from any
+    /// site's dashboard card edits <em>that</em> site, not always the first one.
+    /// </summary>
+    public Site? ActiveSite =>
+        (CurrentPage?.SiteId is { } siteId ? site.Get(siteId) : null) ?? site.Current;
+
+    public SiteId? ActiveSiteId => ActiveSite?.Id;
 
     public Node? SelectedNode =>
         Selection is { } nodeId ? CurrentPage?.Tree.Find(nodeId) : null;

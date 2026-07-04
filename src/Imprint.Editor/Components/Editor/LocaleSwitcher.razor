@@ -3,7 +3,7 @@
 @inject EditorSession Session
 @inject SiteOverview Site
 
-@if (Site.Current is { Locales.Count: > 1 } site)
+@if (Session.ActiveSite is { Locales.Count: > 1 } site)
 {
     <label class="ed-locale">
         <span class="ed-visually-hidden">Editing language</span>

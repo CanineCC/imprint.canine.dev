@@ -15,7 +15,7 @@
 
 <div class="ed-canvas-scroll" @ref="_scroller" tabindex="0">
     <div class="ed-canvas-frame" style="--ed-canvas-width: @Session.ViewportWidth">
-        @if (Site.Current is { } site && Session.CurrentPage is { } page)
+        @if (Session.ActiveSite is { } site && Session.CurrentPage is { } page)
         {
             <style>@((MarkupString)ThemeCss.EmitScoped(site.Theme, ".ed-canvas"))</style>
             <div class="ed-canvas"
@@ -41,7 +41,7 @@
     private NodeId? _lastSentSelection;
     private bool _interopReady;
 
-    private RenderContext Context => ContextFactory.For(Session.EditLocale);
+    private RenderContext Context => ContextFactory.For(Session.EditLocale, Session.ActiveSite?.DefaultLocale);
 
     protected override void OnInitialized()
     {

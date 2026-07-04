@@ -69,9 +69,12 @@ public sealed class EditorRenderContextFactory(
     EditorWidgetCatalog widgets,
     Authoring.Features.Assets.IMediaStore media)
 {
-    public RenderContext For(Locale locale)
+    public RenderContext For(Locale locale, Locale? siteDefaultLocale = null)
     {
-        var defaultLocale = site.Current?.DefaultLocale ?? locale;
+        // The edited site's default locale governs text fallback and path resolution; the
+        // caller passes it (from the active site). Falls back to the first site only when
+        // it isn't supplied — the same behavior single-site editing always had.
+        var defaultLocale = siteDefaultLocale ?? site.Current?.DefaultLocale ?? locale;
         return new RenderContext
         {
             Mode = RenderMode.Editor,

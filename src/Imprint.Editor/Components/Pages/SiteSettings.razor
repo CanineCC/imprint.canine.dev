@@ -1,0 +1,345 @@
+@page "/sites/{SiteIdValue}/settings"
+@using Imprint.Authoring.Domain
+@using Imprint.Authoring.Domain.Sites
+@using Imprint.Authoring.Projections
+@using Imprint.Authoring.Features.Sites.RenameSite
+@using Imprint.Authoring.Features.Sites.ConfigureEnvironments
+@using Imprint.Editor.Services
+@using Imprint.Publishing
+@implements IDisposable
+@inject SiteOverview Sites
+@inject PageList Pages
+@inject PublishedContent Published
+@inject CommandRunner Commands
+@inject SiteDeployService Deploy
+@inject ToastService Toasts
+@inject NavigationManager Navigation
+
+<PageTitle>@(_site?.Name ?? "Site") · Settings</PageTitle>
+
+<div class="settings">
+    <header class="settings-head">
+        <a class="dash-back" href="/">← All sites</a>
+    </header>
+
+    @if (_site is not { } site)
+    {
+        <section class="settings-card">
+            <p class="panel-empty">This site could not be found. <a href="/">Back to your sites.</a></p>
+        </section>
+    }
+    else
+    {
+        <div class="settings-title">
+            <h1>@site.Name</h1>
+            <a class="ed-btn" href="@OpenHref(site.Id)">Open editor →</a>
+        </div>
+
+        @* ---- Name ---- *@
+        <section class="settings-card" aria-labelledby="set-name">
+            <h2 id="set-name">Name</h2>
+            <div class="settings-row">
+                <input class="ed-input" aria-label="Site name" disabled="@(!_interactive)" @bind="_name" @bind:event="oninput" />
+                <button type="button" class="ed-btn ed-btn-primary"
+                        disabled="@(!_interactive || _name.Trim().Length == 0 || _name.Trim() == site.Name)"
+                        @onclick="SaveName">Save name</button>
+            </div>
+        </section>
+
+        @* ---- Publish folders (deploy environments) ---- *@
+        <section class="settings-card" aria-labelledby="set-envs">
+            <h2 id="set-envs">Publish folders</h2>
+            <p class="settings-hint">
+                Each environment is a folder Imprint writes the finished static site into.
+                The <strong>first</strong> is where your published pages go automatically; the rest you
+                <em>promote</em> to, in order — so you can verify on Test before it reaches Production.
+            </p>
+
+            @if (_envs.Count == 0)
+            {
+                <p class="panel-empty">No publish folders yet. Add one below.</p>
+            }
+            else
+            {
+                <ol class="env-list">
+                    @for (var i = 0; i < _envs.Count; i++)
+                    {
+                        var idx = i;
+                        <li class="env-row">
+                            <span class="env-order" aria-hidden="true">@(idx + 1)</span>
+                            <input class="ed-input env-name" placeholder="Test" aria-label="Environment name"
+                                   disabled="@(!_interactive)" @bind="_envs[idx].Name" @bind:event="oninput" />
+                            <input class="ed-input env-path" placeholder="/var/www/my-site/test" aria-label="Publish folder"
+                                   disabled="@(!_interactive)" @bind="_envs[idx].Path" @bind:event="oninput" />
+                            <button type="button" class="ed-btn ed-btn-ghost" title="Move up" aria-label="Move up"
+                                    disabled="@(!_interactive || idx == 0)" @onclick="() => MoveEnv(idx, -1)">↑</button>
+                            <button type="button" class="ed-btn ed-btn-ghost" title="Move down" aria-label="Move down"
+                                    disabled="@(!_interactive || idx == _envs.Count - 1)" @onclick="() => MoveEnv(idx, 1)">↓</button>
+                            <button type="button" class="ed-btn ed-btn-ghost ed-btn-danger" title="Remove" aria-label="Remove environment"
+                                    disabled="@(!_interactive)" @onclick="() => RemoveEnv(idx)">✕</button>
+                        </li>
+                    }
+                </ol>
+            }
+
+            <div class="settings-row">
+                <button type="button" class="ed-btn"
+                        disabled="@(!_interactive || _envs.Count >= Site.MaxEnvironments)" @onclick="AddEnv">＋ Add environment</button>
+                <button type="button" class="ed-btn ed-btn-primary"
+                        disabled="@(!_interactive || !EnvsDirty)" @onclick="SaveEnvs">Save publish folders</button>
+                @if (EnvsDirty)
+                {
+                    <span class="settings-dirty">Unsaved changes</span>
+                }
+            </div>
+        </section>
+
+        @* ---- Publish & promote ---- *@
+        <section class="settings-card" aria-labelledby="set-deploy">
+            <h2 id="set-deploy">Publish &amp; promote</h2>
+
+            @if (site.Environments.Count == 0)
+            {
+                <p class="settings-hint">Add and save a publish folder above to deploy this site.</p>
+            }
+            else
+            {
+                @if (PublishedCount == 0)
+                {
+                    <p class="settings-hint settings-warn">
+                        Nothing is published yet. Open the editor and publish your pages first — deploying now
+                        would write an empty site.
+                    </p>
+                }
+
+                <ol class="deploy-list">
+                    @{ var statuses = Deploy.StatusOf(site.Id); }
+                    @for (var i = 0; i < statuses.Count; i++)
+                    {
+                        var status = statuses[i];
+                        var idx = i;
+                        <li class="deploy-row">
+                            <div class="deploy-head">
+                                <span class="deploy-name">@status.Name</span>
+                                <span class="deploy-state @StateClass(status)">@StateText(status)</span>
+                            </div>
+                            <div class="deploy-path" title="@status.ResolvedPath">@status.ConfiguredPath</div>
+                            <div class="deploy-actions">
+                                <button type="button" class="ed-btn ed-btn-primary"
+                                        disabled="@_busy" @onclick="() => PublishTo(status.Name)">
+                                    Publish to @status.Name
+                                </button>
+                                @if (idx > 0)
+                                {
+                                    var previous = statuses[idx - 1].Name;
+                                    <button type="button" class="ed-btn" disabled="@_busy"
+                                            @onclick="() => Promote(previous, status.Name)">
+                                        Promote @previous → @status.Name
+                                    </button>
+                                }
+                            </div>
+                        </li>
+                    }
+                </ol>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    [Parameter] public string SiteIdValue { get; set; } = "";
+
+    private sealed class EnvRow
+    {
+        public string Name { get; set; } = "";
+        public string Path { get; set; } = "";
+    }
+
+    private Site? _site;
+    private SiteId? _loadedId;
+    private string _name = "";
+    private readonly List<EnvRow> _envs = [];
+    private bool _interactive;
+    private bool _busy;
+
+    protected override void OnInitialized() => Sites.Changed += OnSitesChanged;
+
+    protected override void OnParametersSet() => Load();
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _interactive = true;
+            StateHasChanged();
+        }
+    }
+
+    private void OnSitesChanged() => _ = InvokeAsync(() =>
+    {
+        // A rename/environments change elsewhere refreshes our snapshot, but never
+        // clobbers in-progress edits: Load only re-seeds when the site identity changes.
+        _site = _loadedId is { } id ? Sites.Get(id) : null;
+        StateHasChanged();
+    });
+
+    private void Load()
+    {
+        if (!TryParse(SiteIdValue, out var id))
+        {
+            _site = null;
+            return;
+        }
+
+        _site = Sites.Get(id);
+        if (_loadedId == id)
+        {
+            return; // already seeded; keep the user's unsaved edits
+        }
+
+        _loadedId = id;
+        _name = _site?.Name ?? "";
+        SeedEnvs();
+    }
+
+    private void SeedEnvs()
+    {
+        _envs.Clear();
+        if (_site is { } site)
+        {
+            _envs.AddRange(site.Environments.Select(e => new EnvRow { Name = e.Name, Path = e.Path }));
+        }
+    }
+
+    private int PublishedCount => _site is { } site ? Published.AllForSite(site.Id).Count : 0;
+
+    private bool EnvsDirty =>
+        _site is { } site &&
+        !_envs.Select(e => (e.Name.Trim(), e.Path.Trim()))
+            .SequenceEqual(site.Environments.Select(e => (e.Name, e.Path)));
+
+    private string OpenHref(SiteId id)
+    {
+        var target = Pages.HomeOf(id) ?? Pages.All(id).FirstOrDefault();
+        return target is not null ? $"/edit/{target.Id.Compact}" : $"/sites/{id.Compact}/settings";
+    }
+
+    private void AddEnv()
+    {
+        _envs.Add(new EnvRow());
+    }
+
+    private void RemoveEnv(int index)
+    {
+        _envs.RemoveAt(index);
+    }
+
+    private void MoveEnv(int index, int delta)
+    {
+        var target = index + delta;
+        if (target < 0 || target >= _envs.Count)
+        {
+            return;
+        }
+
+        (_envs[index], _envs[target]) = (_envs[target], _envs[index]);
+    }
+
+    private async Task SaveName()
+    {
+        if (_site is not { } site)
+        {
+            return;
+        }
+
+        await Commands.Run(new RenameSite(site.Id, _name.Trim()));
+    }
+
+    private async Task SaveEnvs()
+    {
+        if (_site is not { } site)
+        {
+            return;
+        }
+
+        var environments = _envs
+            .Select(e => new DeployEnvironment(e.Name.Trim(), e.Path.Trim()))
+            .ToList();
+
+        if (await Commands.Run(new ConfigureEnvironments(site.Id, environments)))
+        {
+            // Re-seed from the saved state so the dirty flag clears and normalization shows.
+            _site = Sites.Get(site.Id);
+            SeedEnvs();
+            Toasts.Show("Publish folders saved.");
+        }
+    }
+
+    private async Task PublishTo(string environment)
+    {
+        if (_site is not { } site)
+        {
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            var report = await Deploy.PublishToEnvironment(site.Id, environment);
+            Toasts.Show($"Published to {environment}: {report.PagesRendered} rendered, {report.FilesWritten} files written.");
+        }
+        catch (Exception e)
+        {
+            Toasts.Error($"Could not publish to {environment}: {e.Message}");
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task Promote(string from, string to)
+    {
+        if (_site is not { } site)
+        {
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            await Deploy.Promote(site.Id, from, to);
+            Toasts.Show($"Promoted {from} → {to}.");
+        }
+        catch (Exception e)
+        {
+            Toasts.Error($"Could not promote {from} → {to}: {e.Message}");
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private static string StateClass(EnvironmentDeployStatus status) =>
+        status.Error is not null ? "is-error" : status.Deployed ? "is-live" : "is-idle";
+
+    private static string StateText(EnvironmentDeployStatus status) =>
+        status.Error is { } error ? $"⚠ {error}"
+        : status.Deployed ? $"Published · {status.PageCount} {(status.PageCount == 1 ? "page" : "pages")} · site v{status.SiteVersion}"
+        : "Not published";
+
+    private static bool TryParse(string value, out SiteId id)
+    {
+        if (Guid.TryParseExact(value, "N", out var guid) || Guid.TryParse(value, out guid))
+        {
+            id = SiteId.From(guid);
+            return true;
+        }
+
+        id = default;
+        return false;
+    }
+
+    public void Dispose() => Sites.Changed -= OnSitesChanged;
+}

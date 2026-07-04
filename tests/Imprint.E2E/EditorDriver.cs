@@ -21,10 +21,17 @@ public static class EditorDriver
         await page.WaitForInteractive();
         if (await page.Locator("#ob-name").CountAsync() > 0)
         {
+            // Empty dashboard: the onboarding form is shown for the first site.
             await page.FillAsync("#ob-name", "Skeleton Works");
             await page.FillAsync("#ob-locale", "en");
             await page.SelectOptionAsync("#ob-template", "launch");
             await page.ClickAsync("button:has-text('Create site')");
+        }
+        else
+        {
+            // Dashboard with existing sites (shared fixture, later tests): open the first
+            // site's card — the "New site" card is excluded by class.
+            await page.ClickAsync(".dash-open:not(.dash-open-new)");
         }
 
         await page.WaitForURLAsync("**/edit/**", new PageWaitForURLOptions { Timeout = 30_000 });

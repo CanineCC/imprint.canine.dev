@@ -4,6 +4,7 @@
 @using Imprint.Editor.Services
 @implements IDisposable
 @inject SiteOverview Site
+@inject EditorSession Session
 @inject CommandRunner Commands
 
 @* The design system, editable: grouped color tokens (light + dark per role), live
@@ -11,7 +12,7 @@
    canvas re-renders itself off the projection — nothing here pokes it. *@
 <div class="panel">
     <h2 class="title">Theme</h2>
-    @if (Site.Current is not { } site)
+    @if (Session.ActiveSite is not { } site)
     {
         <p class="empty">Create a site first — its look and feel will live here.</p>
     }
@@ -167,7 +168,7 @@
     private int? _sizePreview;
     private int? _radiusPreview;
 
-    private Typography? CurrentTypography => Site.Current?.Theme.Typography;
+    private Typography? CurrentTypography => Session.ActiveSite?.Theme.Typography;
 
     // -------------------------------------------------------------- contrast
 
@@ -239,7 +240,7 @@
     {
         _sizePreview = null;
         _radiusPreview = null;
-        if (Site.Current is not { } site || updated == site.Theme.Typography)
+        if (Session.ActiveSite is not { } site || updated == site.Theme.Typography)
         {
             return;
         }

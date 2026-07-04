@@ -10,6 +10,7 @@
 @inject BlockLibrary Blocks
 @inject PageDrafts Drafts
 @inject SiteOverview Site
+@inject EditorSession Session
 @inject ContentUsage Usage
 @inject CommandRunner Commands
 @inject ToastService Toasts
@@ -71,7 +72,7 @@
                                    @onkeydown="args => OnRenameKey(args, asset)" />
                         </div>
 
-                        @if (asset.Kind is AssetKind.Image or AssetKind.Vector && Site.Current is { } site)
+                        @if (asset.Kind is AssetKind.Image or AssetKind.Vector && Session.ActiveSite is { } site)
                         {
                             @foreach (var locale in site.Locales)
                             {

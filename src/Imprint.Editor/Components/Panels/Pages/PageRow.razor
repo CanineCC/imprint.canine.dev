@@ -44,7 +44,7 @@
     {
         get
         {
-            var fallback = Site.Current?.DefaultLocale ?? Session.EditLocale;
+            var fallback = Session.ActiveSite?.DefaultLocale ?? Session.EditLocale;
             var title = Entry.Title.Resolve(Session.EditLocale, fallback);
             return title.Length > 0 ? title : "(untitled)";
         }

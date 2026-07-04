@@ -1,0 +1,23 @@
+@page "/sites/new"
+@using Imprint.Authoring.Domain
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Services
+@inject PageList Pages
+@inject NavigationManager Navigation
+
+<PageTitle>New site · Imprint</PageTitle>
+
+<div class="dash-new-wrap">
+    <a class="dash-back" href="/">← All sites</a>
+    <Onboarding OnCreated="OpenNewSite" />
+</div>
+
+@code {
+    private void OpenNewSite(SiteId id)
+    {
+        // Dispatch has already caught projections up, so the new site's home page is
+        // readable now — go straight into editing it.
+        var target = Pages.HomeOf(id) ?? Pages.All(id).FirstOrDefault();
+        Navigation.NavigateTo(target is not null ? $"/edit/{target.Id.Compact}" : "/");
+    }
+}

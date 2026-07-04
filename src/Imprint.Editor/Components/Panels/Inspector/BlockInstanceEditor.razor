@@ -76,7 +76,7 @@ else
     }
 
     private string Resolve(LocalizedText text) =>
-        text.Resolve(Session.EditLocale, Site.Current?.DefaultLocale ?? Session.EditLocale);
+        text.Resolve(Session.EditLocale, Session.ActiveSite?.DefaultLocale ?? Session.EditLocale);
 
     private string? CurrentOverride(OverridableField field) =>
         Node.Overrides.Get(field.NodeId, field.Field, Session.EditLocale);

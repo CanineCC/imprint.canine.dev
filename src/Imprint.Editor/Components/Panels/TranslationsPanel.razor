@@ -13,7 +13,7 @@
    edits go through the same commands the canvas uses. *@
 <div class="panel">
     <h2 class="title">Translations</h2>
-    @if (Site.Current is not { } site)
+    @if (Session.ActiveSite is not { } site)
     {
         <p class="empty">Create a site first.</p>
     }
@@ -202,7 +202,7 @@
     private async Task Commit(TranslatableField field, string value)
     {
         if (Session.CurrentPageId is not { } pageId || Session.CurrentPage is not { } draft ||
-            Site.Current is not { } site)
+            Session.ActiveSite is not { } site)
         {
             return;
         }

@@ -1,43 +1,90 @@
 @page "/"
+@using Imprint.Authoring.Domain
 @using Imprint.Authoring.Projections
 @using Imprint.Editor.Services
+@using Imprint.Publishing
 @implements IDisposable
-@inject SiteOverview Site
+@inject SiteOverview Sites
 @inject PageList Pages
+@inject SiteDeployService Deploy
 @inject NavigationManager Navigation
 
-<PageTitle>Imprint</PageTitle>
+<PageTitle>Your sites · Imprint</PageTitle>
 
-@if (Site.Current is null)
+@if (Sites.All.Count == 0)
 {
-    <Onboarding />
+    @* First run: no site yet — create one, then drop straight into its editor. *@
+    <Onboarding OnCreated="OpenSite" />
+}
+else
+{
+    <main class="dash">
+        <header class="dash-head">
+            <h1>Your sites</h1>
+            <p class="dash-sub">Open a site to edit it, or start a new one. Editing is saved as you go; publishing is a separate, deliberate step.</p>
+        </header>
+
+        <ul class="dash-grid" aria-label="Sites">
+            @foreach (var site in Sites.All)
+            {
+                <li class="dash-card">
+                    <button type="button" class="dash-open" @onclick="() => OpenSite(site.Id)">
+                        <span class="dash-name">@site.Name</span>
+                        <span class="dash-meta">@PageCount(site.Id) @Plural(PageCount(site.Id), "page") · @site.DefaultLocale.Value</span>
+                        <span class="dash-envs">
+                            @if (Deploy.StatusOf(site.Id) is { Count: > 0 } envs)
+                            {
+                                @foreach (var env in envs)
+                                {
+                                    <span class="dash-env @(env.Deployed ? "is-live" : "is-idle")"
+                                          title="@EnvTitle(env)">@env.Name</span>
+                                }
+                            }
+                            else
+                            {
+                                <span class="dash-env is-none" title="No publish folders yet — set them in the site's settings.">Not published</span>
+                            }
+                        </span>
+                    </button>
+                    <a class="dash-gear" href="@SettingsHref(site.Id)"
+                       title="Site settings" aria-label="@($"Settings for {site.Name}")">⚙</a>
+                </li>
+            }
+
+            <li class="dash-card dash-card-new">
+                <a class="dash-open dash-open-new" href="/sites/new">
+                    <span class="dash-plus" aria-hidden="true">＋</span>
+                    <span class="dash-name">New site</span>
+                    <span class="dash-meta">Start from a template</span>
+                </a>
+            </li>
+        </ul>
+    </main>
 }
 
 @code {
-    // "/" routes to the editor of the most sensible page: home if declared, else the
-    // first page. No site yet → the onboarding flow renders instead.
-    protected override void OnInitialized()
+    protected override void OnInitialized() => Sites.Changed += OnChanged;
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private int PageCount(SiteId id) => Pages.All(id).Count;
+
+    private static string Plural(int n, string word) => n == 1 ? word : word + "s";
+
+    private static string SettingsHref(SiteId id) => $"/sites/{id.Compact}/settings";
+
+    private static string EnvTitle(EnvironmentDeployStatus env) =>
+        env.Deployed
+            ? $"{env.Name}: published, {env.PageCount} {Plural(env.PageCount, "page")}"
+            : $"{env.Name}: not published yet";
+
+    private void OpenSite(SiteId id)
     {
-        Site.Changed += OnChanged;
-        RedirectIfReady();
+        // Land on the site's home page (nav-first), else its first page; a site with no
+        // pages at all goes to its settings so it is never a dead end.
+        var target = Pages.HomeOf(id) ?? Pages.All(id).FirstOrDefault();
+        Navigation.NavigateTo(target is not null ? $"/edit/{target.Id.Compact}" : SettingsHref(id));
     }
 
-    private void OnChanged() => _ = InvokeAsync(RedirectIfReady);
-
-    private void RedirectIfReady()
-    {
-        if (Site.Current is null)
-        {
-            StateHasChanged();
-            return;
-        }
-
-        var target = Pages.Home ?? Pages.All().FirstOrDefault();
-        if (target is not null)
-        {
-            Navigation.NavigateTo($"/edit/{target.Id.Compact}");
-        }
-    }
-
-    public void Dispose() => Site.Changed -= OnChanged;
+    public void Dispose() => Sites.Changed -= OnChanged;
 }

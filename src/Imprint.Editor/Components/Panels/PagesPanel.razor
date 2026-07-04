@@ -13,7 +13,7 @@
 
 
 <div class="pages-panel">
-    @if (Site.Current is not { } site)
+    @if (Session.ActiveSite is not { } site)
     {
         <p class="panel-empty">There is no site yet — head to the start page to create one.</p>
     }
@@ -55,7 +55,7 @@
             </div>
         }
 
-        var summaries = Pages.All();
+        var summaries = Pages.All(site.Id);
         var navEntries = summaries.Where(summary => summary.IsInNavigation).ToList();
         var otherEntries = summaries.Where(summary => !summary.IsInNavigation).ToList();
 
@@ -127,7 +127,7 @@
 
     private async Task CommitSiteName()
     {
-        if (Site.Current is not { } site || _siteNameEdit is not { } edited)
+        if (Session.ActiveSite is not { } site || _siteNameEdit is not { } edited)
         {
             return;
         }
@@ -203,7 +203,7 @@
 
     private async Task CreateNewPage()
     {
-        if (Site.Current is not { } site)
+        if (Session.ActiveSite is not { } site)
         {
             return;
         }
@@ -221,7 +221,7 @@
 
     private async Task MoveNav(PageId id, int delta)
     {
-        if (Site.Current is not { } site)
+        if (Session.ActiveSite is not { } site)
         {
             return;
         }
@@ -244,7 +244,7 @@
 
     private async Task ToggleNav(PageId id, bool include)
     {
-        if (Site.Current is not { } site)
+        if (Session.ActiveSite is not { } site)
         {
             return;
         }

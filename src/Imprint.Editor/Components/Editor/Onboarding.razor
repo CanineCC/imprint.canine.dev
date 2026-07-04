@@ -1,6 +1,8 @@
-@* The first-run flow: name + languages, then a starting template. Both steps live in
-   one form so the page works top-to-bottom without ceremony; the redirect after
-   creation belongs to Home.razor (it watches SiteOverview), not to this component. *@
+@* The create-a-site flow: name + languages, then a starting template. Both steps live
+   in one form so the page works top-to-bottom without ceremony. It is used both for the
+   first site (empty dashboard) and for every later "New site" — the caller decides where
+   to go afterwards via OnCreated (the dispatcher has already caught projections up, so
+   the new site's pages are readable the moment it fires). *@
 @using Imprint.Authoring.Domain
 @using Imprint.Editor.Services
 @inject CommandRunner Commands
@@ -102,6 +104,9 @@
 </main>
 
 @code {
+    /// <summary>Raised with the new site's id after a successful create; the caller navigates.</summary>
+    [Parameter] public EventCallback<SiteId> OnCreated { get; set; }
+
     private string _name = "My site";
     private string _locale = "en";
     private string _extraInput = "";
@@ -168,8 +173,13 @@
         var extras = _extras
             .Where(value => !Locale.TryCreate(_locale, out var main) || value != main.Value)
             .ToList();
-        await Commands.Run(new Authoring.Features.Sites.CreateSiteFromTemplate.CreateSiteFromTemplate(
-            SiteId.New(), _name, _locale.Trim(), _template, extras));
+        var siteId = SiteId.New();
+        var created = await Commands.Run(new Authoring.Features.Sites.CreateSiteFromTemplate.CreateSiteFromTemplate(
+            siteId, _name, _locale.Trim(), _template, extras));
         _busy = false;
+        if (created && OnCreated.HasDelegate)
+        {
+            await OnCreated.InvokeAsync(siteId);
+        }
     }
 }

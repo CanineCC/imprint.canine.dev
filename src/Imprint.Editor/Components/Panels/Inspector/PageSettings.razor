@@ -95,7 +95,7 @@
     private string? _slugError;
 
     private string LocaleSuffix =>
-        Site.Current is { Locales.Count: > 1 } ? $" ({Session.EditLocale.Value})" : string.Empty;
+        Session.ActiveSite is { Locales.Count: > 1 } ? $" ({Session.EditLocale.Value})" : string.Empty;
 
     private Task CommitTitle(string value)
     {
@@ -151,7 +151,7 @@
     private async Task SuggestSlug()
     {
         if (Session.CurrentPageId is not { } pageId || Drafts.Get(pageId) is not { } draft ||
-            Site.Current is not { } site)
+            Session.ActiveSite is not { } site)
         {
             return;
         }
@@ -187,7 +187,7 @@
 
     private async Task ToggleNavigation(ChangeEventArgs args)
     {
-        if (Session.CurrentPageId is not { } pageId || Site.Current is not { } site)
+        if (Session.CurrentPageId is not { } pageId || Session.ActiveSite is not { } site)
         {
             return;
         }

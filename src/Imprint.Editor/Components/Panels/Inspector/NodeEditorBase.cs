@@ -18,13 +18,12 @@ public abstract class NodeEditorBase<TNode> : ComponentBase where TNode : Node
 {
     [Inject] protected EditorSession Session { get; set; } = null!;
     [Inject] protected CommandRunner Commands { get; set; } = null!;
-    [Inject] protected SiteOverview Site { get; set; } = null!;
 
     [Parameter, EditorRequired] public TNode Node { get; set; } = null!;
 
     /// <summary>" (en)" behind per-language field labels — only when the site has several languages.</summary>
     protected string LocaleSuffix =>
-        Site.Current is { Locales.Count: > 1 } ? $" ({Session.EditLocale.Value})" : string.Empty;
+        Session.ActiveSite is { Locales.Count: > 1 } ? $" ({Session.EditLocale.Value})" : string.Empty;
 
     /// <summary>Dispatches the full replacement node; undo puts back the node as it is now.</summary>
     protected Task Apply(TNode replacement, string label) =>
