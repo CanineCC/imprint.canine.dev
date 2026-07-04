@@ -76,6 +76,10 @@ public enum SectionAppearance
     Gallery,
     LiveCard,
     Contact,
+    // Long-form legal / prose document (canine's .mk-doc): a measure-width, centered
+    // reading column. Not a CMS block template — it's the marketing look for a whole
+    // markdown page — but part of the same appearance vocabulary so any page reproduces.
+    Doc,
 }
 [JsonConverter(typeof(JsonStringEnumConverter))] public enum Gap { Tight, Normal, Loose }
 [JsonConverter(typeof(JsonStringEnumConverter))] public enum StackAlign { Start, Center, End }

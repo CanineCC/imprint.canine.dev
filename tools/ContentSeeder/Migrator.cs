@@ -6,6 +6,8 @@ using Imprint.Authoring.Features.Pages.AddNode;
 using Imprint.Authoring.Features.Pages.CreatePage;
 using Imprint.Authoring.Features.Pages.PublishPage;
 using Imprint.Authoring.Features.Sites.ChangeNavigation;
+using Imprint.Authoring.Features.Sites.ChangeThemeToken;
+using Imprint.Authoring.Features.Sites.ChangeTypography;
 using Imprint.Authoring.Features.Sites.SetCopyLine;
 using Imprint.Authoring.Features.Sites.SetFooter;
 using Imprint.Authoring.Features.Sites.SetHeaderActions;
@@ -201,6 +203,16 @@ public sealed class Migrator(ICommandDispatcher dispatcher)
             $"SetHeaderActions {site.Key}");
         await Ok(new SetCopyLine(site.SiteId, new CopyLine(Nodes.Text(site.CopyLine))), $"SetCopyLine {site.Key}");
 
+        // ── design theme: the shared canine neutral family + this brand's accent ramp,
+        //    then the marketing typography (Schibsted Grotesk / system / JetBrains Mono).
+        //    Each token flows through the aggregate's own colour + range validation. ──
+        foreach (var (token, light, dark) in Themes.TokensFor(site.Accent))
+        {
+            await Ok(new ChangeThemeToken(site.SiteId, token, light, dark), $"ChangeThemeToken {site.Key}/{token}");
+        }
+
+        await Ok(new ChangeTypography(site.SiteId, Themes.Marketing), $"ChangeTypography {site.Key}");
+
         // ── 3. publish every page ──
         var published = 0;
         foreach (var (_, pageId) in relToPageId)
@@ -252,7 +264,9 @@ public sealed class Migrator(ICommandDispatcher dispatcher)
 
         var bodyFlags = new List<Markdown.Flag>();
         stack.AddRange(Markdown.ToNodes(doc.MarkdownBody, origin, "(doc body)", bodyFlags));
-        return [Nodes.Section(Nodes.Stack([.. stack]))];
+        // The whole markdown page is one Doc-appearance section (canine's .mk-doc reading
+        // column) — a measure-width, centered prose track.
+        return [Nodes.Section(SectionBackground.None, SectionAppearance.Doc, Nodes.Stack([.. stack]))];
     }
 
     /// <summary>

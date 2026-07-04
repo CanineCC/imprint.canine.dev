@@ -44,7 +44,8 @@ public sealed record SiteDef(
     HeaderAct HeaderCta,
     HeaderAct? HeaderQuiet,
     IReadOnlyList<FooterCol> FooterGroups,
-    string CopyLine);
+    string CopyLine,
+    Themes.AccentRamp Accent);
 
 public static class Sites
 {
@@ -63,15 +64,15 @@ public static class Sites
         new SiteDef("watchdog", "Watchdog", "https://watchdog.canine.dev",
             Path.Combine(cmsRoot, "sites", "watchdog", "content"),
             WatchdogSite, WatchdogHome,
-            WatchdogNav, WatchdogCta, WatchdogQuiet, WatchdogFooter, WatchdogCopy),
+            WatchdogNav, WatchdogCta, WatchdogQuiet, WatchdogFooter, WatchdogCopy, Themes.Watchdog),
         new SiteDef("assay", "Assay", "https://assay.canine.dev",
             Path.Combine(cmsRoot, "sites", "assay", "content"),
             AssaySite, AssayHome,
-            AssayNav, AssayCta, AssayQuiet, AssayFooter, AssayCopy),
+            AssayNav, AssayCta, AssayQuiet, AssayFooter, AssayCopy, Themes.Assay),
         new SiteDef("cai", "CAI", "https://cai.canine.dev",
             Path.Combine(cmsRoot, "sites", "cai", "content"),
             CaiSite, CaiHome,
-            CaiNav, CaiCta, CaiQuiet, CaiFooter, CaiCopy),
+            CaiNav, CaiCta, CaiQuiet, CaiFooter, CaiCopy, Themes.Cai),
     ];
 
     // ── Chrome, lifted verbatim from sites/*/lib/site.ts. The header nav preserves the

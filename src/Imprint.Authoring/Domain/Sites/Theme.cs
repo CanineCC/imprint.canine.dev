@@ -29,6 +29,12 @@ public sealed record Theme(TokenSet Tokens, Typography Typography)
             ["on-primary"] = new("#ffffff", "#0f1115"),
             ["accent"] = new("#0ca678", "#38d9a9"),
             ["border"] = new("#dee2e6", "#2c3340"),
+            // Accent ramp — the baseline leaves the family flat (all = primary); a site
+            // that wants the fuller ramp overrides these three. Kept in-range so the
+            // WCAG contrast tests still reason about a real palette.
+            ["primary-ink"] = new("#2f4bb3", "#91a7fd"),
+            ["primary-wash"] = new("#eaeefc", "#232a44"),
+            ["primary-strong"] = new("#26409c", "#a9bcff"),
         }),
         new Typography(
             Heading: FontStack.Sans,
@@ -65,9 +71,12 @@ public sealed record Typography(
 /// <summary>
 /// Curated system font stacks — zero requests, zero layout shift, zero third parties.
 /// The CSS for each lives in the rendering layer; the domain only knows the choice.
+/// <see cref="Grotesk"/> is the one self-hosted family (Schibsted Grotesk, shipped as a
+/// published <c>/fonts/*.woff2</c> asset by the marketing layer): still zero third-party
+/// requests, still EU-resident, and it falls back to the system sans if the file is absent.
 /// </summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum FontStack { Sans, Humanist, Geometric, Serif, Slab, Mono }
+public enum FontStack { Sans, Humanist, Geometric, Serif, Slab, Mono, Grotesk }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum SpacingScale { Compact, Comfortable, Spacious }
@@ -79,6 +88,12 @@ public static class ThemeTokens
     [
         "background", "surface", "surface-alt", "text", "text-muted",
         "primary", "on-primary", "accent", "border",
+        // The primary ACCENT RAMP: a brand's primary is not one colour but a family —
+        // a hover-ink, a tinted wash (for chips/pills/step badges), and a saturated
+        // "strong" (for seals, filled CTAs and featured borders). The base theme leaves
+        // these equal to `primary` unless a site sets them; the marketing layer needs all
+        // four to reproduce the canine accent system without hard-coding a hue.
+        "primary-ink", "primary-wash", "primary-strong",
     ];
 
     public static bool IsKnown(string name) => All.Contains(name);

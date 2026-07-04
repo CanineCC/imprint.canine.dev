@@ -15,9 +15,18 @@
 
   <ItemGroup>
     <!-- Also embedded (same bytes, second transport): the publisher composes
-         site.css = ThemeCss.Emit(theme) + ThemeCss.StructuralCss without touching
-         static-web-asset paths, while the wwwroot copy serves the editor canvas. -->
+         site.css = ThemeCss.Emit(theme) + ThemeCss.StructuralCss + ThemeCss.MarketingCss
+         without touching static-web-asset paths, while the wwwroot copies serve the
+         editor canvas. imprint-marketing.css re-keys the canine marketing design system
+         onto imprint's own theme tokens + the ip-ap-* / ip-site-header chrome hooks. -->
     <EmbeddedResource Include="wwwroot/styles/imprint-base.css" LogicalName="Imprint.Rendering.styles.imprint-base.css" />
+    <EmbeddedResource Include="wwwroot/styles/imprint-marketing.css" LogicalName="Imprint.Rendering.styles.imprint-marketing.css" />
+    <!-- Self-hosted variable fonts referenced by imprint-marketing.css (@font-face).
+         Embedded so the publisher writes them into every site's /fonts/ folder with no
+         external CDN request — EU-resident, zero third parties. The wwwroot copies also
+         serve the editor canvas. -->
+    <EmbeddedResource Include="wwwroot/fonts/schibsted-var.woff2" LogicalName="Imprint.Rendering.fonts.schibsted-var.woff2" />
+    <EmbeddedResource Include="wwwroot/fonts/jetbrains-var.woff2" LogicalName="Imprint.Rendering.fonts.jetbrains-var.woff2" />
   </ItemGroup>
 
 </Project>

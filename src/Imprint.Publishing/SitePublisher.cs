@@ -152,8 +152,11 @@ public sealed class SitePublisher(
             var oldManifest =
                 PublishManifest.Load(Path.Combine(_outputRoot, PublishManifest.FileName)) ?? new PublishManifest();
 
-            // ---- stylesheet: tokens + structural styles, one hashed file.
-            var cssText = ThemeCss.Emit(theme) + "\n" + ThemeCss.StructuralCss;
+            // ---- stylesheet: tokens + structural styles + the marketing chrome/appearance
+            //      layer, one hashed file. Order matters: tokens define the vars the two
+            //      style layers consume; the marketing layer comes last so it can build on
+            //      (and, where intended, override) the structural defaults.
+            var cssText = ThemeCss.Emit(theme) + "\n" + ThemeCss.StructuralCss + "\n" + ThemeCss.MarketingCss;
             var cssBytes = Encoding.UTF8.GetBytes(cssText);
             var cssHash = Hashing.Hash16(cssBytes);
             _cssFile = $"css/site.{cssHash}.css";
@@ -205,6 +208,7 @@ public sealed class SitePublisher(
             await WriteIfChanged(_cssFile, cssBytes, ct);
             await WriteIfChanged("sitemap.xml", Encoding.UTF8.GetBytes(BuildSitemap(plans)), ct);
             await WriteIfChanged("robots.txt", Encoding.UTF8.GetBytes(BuildRobots()), ct);
+            await CopyFonts(ct);
             await CopyAssets(ct);
             await CopyWidgetBundles(ct);
 
@@ -921,6 +925,19 @@ public sealed class SitePublisher(
             }
         }
 
+        /// <summary>
+        /// The self-hosted marketing fonts, written at their fixed <c>/fonts/*.woff2</c>
+        /// paths (the marketing stylesheet references them literally). WriteIfChanged keeps
+        /// the zero-rewrite guarantee — an unchanged file is left untouched.
+        /// </summary>
+        private async Task CopyFonts(CancellationToken ct)
+        {
+            foreach (var font in FontAssets.All)
+            {
+                await WriteIfChanged(font.RelativePath, font.Bytes, ct);
+            }
+        }
+
         private async Task CopyAssets(CancellationToken ct)
         {
             foreach (var file in _assets.Files.DistinctBy(file => file.RelativePath))
@@ -1054,6 +1071,12 @@ public sealed class SitePublisher(
             foreach (var file in _assets.Files)
             {
                 desired.Add(file.RelativePath);
+            }
+
+            // The self-hosted fonts are already-compressed woff2 (no .br/.gz siblings).
+            foreach (var font in FontAssets.All)
+            {
+                desired.Add(font.RelativePath);
             }
 
             return desired;
