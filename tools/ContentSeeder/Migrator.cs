@@ -101,7 +101,7 @@ public sealed class Migrator(ICommandDispatcher dispatcher)
         {
             if (navSeen.Add(id))
             {
-                navItems.Add(new NavigationItem(id, label is null ? null : Nodes.Text(label)));
+                navItems.Add(NavigationItem.Page(id, label is null ? null : Nodes.Text(label)));
             }
         }
 
@@ -125,7 +125,7 @@ public sealed class Migrator(ICommandDispatcher dispatcher)
         // the first entries up to the cap and flag the overflow (never silently drop copy).
         if (navItems.Count > Site.MaxNavigationItems)
         {
-            var dropped = navItems.Skip(Site.MaxNavigationItems).Select(n => n.LabelOverride?.Resolve(Nodes.En, Nodes.En)).ToList();
+            var dropped = navItems.Skip(Site.MaxNavigationItems).Select(n => n.Label?.Resolve(Nodes.En, Nodes.En)).ToList();
             navItems = navItems.Take(Site.MaxNavigationItems).ToList();
             _flags.Add($"[{site.Key}] header navigation has {navItems.Count + dropped.Count} entries; Imprint caps navigation at {Site.MaxNavigationItems} — kept the first {Site.MaxNavigationItems}, overflow: {string.Join(", ", dropped)}.");
         }

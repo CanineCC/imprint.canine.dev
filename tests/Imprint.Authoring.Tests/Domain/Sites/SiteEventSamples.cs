@@ -1,4 +1,5 @@
 using Imprint.Authoring.Domain;
+using Imprint.Authoring.Domain.Pages;
 using Imprint.Authoring.Domain.Sites;
 using Imprint.Authoring.Domain.Sites.Events;
 
@@ -27,12 +28,44 @@ public sealed class SiteEventSamples : IEventSampleProvider
                 RadiusPx: 12,
                 Spacing: SpacingScale.Spacious));
 
-            // One item with a multi-locale label override and one relying on the page
-            // title fallback, so the round trip exercises both shapes of the payload.
+            // A page link with a multi-locale label override, a page link relying on the
+            // title fallback, an external direct link, and a group with a page child +
+            // an external child carrying a description — so the round trip exercises every
+            // shape of the hierarchical payload (both Link kinds, groups, descriptions).
             yield return new SiteNavigationChanged([
-                new NavigationItem(PageId.New(), LocalizedText.Of(en, "Home").With(daDk, "Hjem")),
-                new NavigationItem(PageId.New(), null),
+                NavigationItem.Page(PageId.New(), LocalizedText.Of(en, "Home").With(daDk, "Hjem")),
+                NavigationItem.Page(PageId.New()),
+                NavigationItem.External(LocalizedText.Of(en, "Sign in"), "https://app.example.com/"),
+                NavigationItem.Group(LocalizedText.Of(en, "Why us"),
+                [
+                    new NavigationChild(LocalizedText.Of(en, "Methodology"), new PageLink(PageId.New())),
+                    new NavigationChild(
+                        LocalizedText.Of(en, "The standard"),
+                        new ExternalLink("https://cai.example.com/spec"),
+                        LocalizedText.Of(en, "One reproducible index")),
+                ]),
             ]);
+
+            // Footer columns mixing same-site page links and cross-site external links,
+            // plus the header actions and the copy line — every new chrome event.
+            yield return new SiteFooterChanged([
+                new FooterLinkGroup(LocalizedText.Of(en, "Product"),
+                [
+                    new FooterLink(LocalizedText.Of(en, "Methodology"), new PageLink(PageId.New())),
+                    new FooterLink(null, new PageLink(PageId.New())),
+                ]),
+                new FooterLinkGroup(LocalizedText.Of(en, "The standard"),
+                [
+                    new FooterLink(LocalizedText.Of(en, "cai.example.com"), new ExternalLink("https://cai.example.com")),
+                ]),
+            ]);
+
+            yield return new SiteHeaderActionsChanged(
+                new HeaderAction(LocalizedText.Of(en, "Survey a repo"), new ExternalLink("https://app.example.com/")),
+                new HeaderAction(LocalizedText.Of(en, "Sign in"), new ExternalLink("https://app.example.com/in")));
+
+            yield return new SiteCopyLineChanged(
+                new CopyLine(LocalizedText.Of(en, "© 2025–2026 · The independent surveyor.")));
 
             // A promotion pipeline: several ordered deploy targets, exercising the list
             // payload's sequence value-equality on round trip.

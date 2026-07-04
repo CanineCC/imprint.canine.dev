@@ -1,3 +1,4 @@
+using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Sites;
 using Imprint.Authoring.Projections;
 using Imprint.EventSourcing;
@@ -11,10 +12,17 @@ public sealed class ChangeNavigationHandler(IAggregateStore store, PageList page
         // Cross-aggregate check via the PageList read model — the Site aggregate
         // cannot see page streams. Accepted race: a page deleted this very instant
         // still enters the navigation as a dangling item, which the renderer skips —
-        // the published output never carries a broken link.
-        foreach (var item in cmd.Items)
+        // the published output never carries a broken link. Both top-level direct page
+        // links and same-site page links inside a group's children are checked; external
+        // links carry no PageId and are passed through verbatim.
+        var pageLinks = cmd.Items
+            .SelectMany(item => item.IsGroup
+                ? item.Children.Select(child => child.PageId)
+                : [item.PageId])
+            .OfType<PageId>();
+        foreach (var pageId in pageLinks)
         {
-            if (pages.Get(item.PageId) is null)
+            if (pages.Get(pageId) is null)
             {
                 return Result.Fail("One of the navigation entries points at a page that no longer exists.");
             }

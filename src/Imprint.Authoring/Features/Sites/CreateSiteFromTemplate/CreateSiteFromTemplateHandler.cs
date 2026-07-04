@@ -60,7 +60,7 @@ public sealed class CreateSiteFromTemplateHandler(IAggregateStore store)
             if (templatePage.InNavigation)
             {
                 // Template order is navigation order; labels fall back to page titles.
-                navigation.Add(new NavigationItem(page.Id, null));
+                navigation.Add(NavigationItem.Page(page.Id));
             }
         }
 

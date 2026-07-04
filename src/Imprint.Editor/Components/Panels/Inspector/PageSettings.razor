@@ -201,7 +201,7 @@
 
         // Append at the end / drop this page; everything else keeps its order.
         IReadOnlyList<NavigationItem> updated = include
-            ? [.. current, new NavigationItem(pageId, null)]
+            ? [.. current, NavigationItem.Page(pageId)]
             : [.. current.Where(item => item.PageId != pageId)];
         await Commands.Run(
             new ChangeNavigation(site.Id, updated),

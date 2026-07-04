@@ -90,4 +90,41 @@ public sealed class NodeSerializationTests
         Assert.Contains("\"$type\":\"divider\"", json, StringComparison.Ordinal);
         Assert.DoesNotContain(nameof(DividerNode), json, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Section_appearance_round_trips_as_its_stable_string_name()
+    {
+        var section = new SectionNode { Id = NodeId.New(), Appearance = SectionAppearance.FeatureGrid };
+
+        var json = JsonSerializer.Serialize<Node>(section, Options);
+        Assert.Contains("\"Appearance\":\"FeatureGrid\"", json, StringComparison.Ordinal);
+
+        var back = (SectionNode)JsonSerializer.Deserialize<Node>(json, Options)!;
+        Assert.Equal(SectionAppearance.FeatureGrid, back.Appearance);
+        Assert.Equal<Node>(section, back);
+    }
+
+    [Fact]
+    public void Section_without_an_appearance_reads_back_as_plain()
+    {
+        // Back-compat: a stream written before the field existed carries no "Appearance".
+        var legacyJson = JsonSerializer.Serialize<Node>(new SectionNode { Id = NodeId.New() }, Options)
+            .Replace(",\"Appearance\":\"Plain\"", "", StringComparison.Ordinal);
+        Assert.DoesNotContain("\"Appearance\"", legacyJson, StringComparison.Ordinal);
+
+        var back = (SectionNode)JsonSerializer.Deserialize<Node>(legacyJson, Options)!;
+        Assert.Equal(SectionAppearance.Plain, back.Appearance);
+    }
+
+    [Fact]
+    public void Section_appearance_class_kebab_cases_the_enum_name()
+    {
+        Assert.Null(SectionAppearanceClass.For(SectionAppearance.Plain));
+        Assert.Equal("ip-ap-hero", SectionAppearanceClass.For(SectionAppearance.Hero));
+        Assert.Equal("ip-ap-feature-grid", SectionAppearanceClass.For(SectionAppearance.FeatureGrid));
+        Assert.Equal("ip-ap-stat-band", SectionAppearanceClass.For(SectionAppearance.StatBand));
+        Assert.Equal("ip-ap-table-list", SectionAppearanceClass.For(SectionAppearance.TableList));
+        Assert.Equal("ip-ap-live-card", SectionAppearanceClass.For(SectionAppearance.LiveCard));
+        Assert.Equal("band-scale", SectionAppearanceClass.Suffix(SectionAppearance.BandScale));
+    }
 }

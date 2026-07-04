@@ -38,7 +38,7 @@ internal static class PagesHost
     public static async Task SetNavigation(AuthoringTestHost host, SiteId siteId, params PageId[] pages)
     {
         var site = await host.Get<IAggregateStore>().Load<Site>(siteId.Stream);
-        site.SetNavigation([.. pages.Select(page => new NavigationItem(page, null))]);
+        site.SetNavigation([.. pages.Select(page => NavigationItem.Page(page))]);
         await SaveAndCatchUp(host, site);
     }
 

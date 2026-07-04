@@ -115,6 +115,10 @@ public sealed class SitePublisher(
         private Locale _defaultLocale;
         private IReadOnlyList<Locale> _locales = [];
         private IReadOnlyList<NavigationItem> _navigation = [];
+        private IReadOnlyList<FooterLinkGroup> _footerGroups = [];
+        private HeaderAction? _headerCta;
+        private HeaderAction? _headerQuiet;
+        private CopyLine? _copyLine;
         private IReadOnlyList<PublishedPage> _pages = [];
         private Dictionary<PageId, PublishedPage> _pageById = [];
         private Dictionary<PageId, string> _slugPathOf = [];
@@ -137,6 +141,10 @@ public sealed class SitePublisher(
             _defaultLocale = site.DefaultLocale;
             _locales = [.. site.Locales];
             _navigation = [.. site.Navigation];
+            _footerGroups = [.. site.FooterGroups];
+            _headerCta = site.HeaderCta;
+            _headerQuiet = site.HeaderQuiet;
+            _copyLine = site.CopyLine;
             // Only THIS site's published pages — a target folder holds exactly one site.
             _pages = [.. publishedContent.AllForSite(site.Id)];
             _pageById = _pages.ToDictionary(page => page.Id);
@@ -241,14 +249,18 @@ public sealed class SitePublisher(
             ];
         }
 
-        /// <summary>The nav-first *published* page renders at the site root; without one there is no root page.</summary>
+        /// <summary>
+        /// The nav-first *published* page renders at the site root; without one there is no
+        /// root page. Only a top-level DIRECT page link is a home candidate — group
+        /// headings and external links carry no page identity.
+        /// </summary>
         private PageId? HomePageId()
         {
             foreach (var item in _navigation)
             {
-                if (_pageById.ContainsKey(item.PageId))
+                if (item.PageId is { } pageId && _pageById.ContainsKey(pageId))
                 {
-                    return item.PageId;
+                    return pageId;
                 }
             }
 
@@ -298,23 +310,67 @@ public sealed class SitePublisher(
         }
 
         /// <summary>
-        /// The navigation is shared chrome rendered into every page, but its hrefs and
-        /// labels come from *other pages'* published state (slug, title), which the
-        /// site version does not cover. The manifest already records each page's
-        /// publishedVersion and paths, so "did anything a nav link shows change?" is
-        /// answerable from the checkpoint alone — when it did, every page is stale.
+        /// Every same-site page a chrome link (nav — top-level or a group child — the
+        /// footer columns, and the header actions) points at. Its label and href come from
+        /// *that page's* published state (slug, title), which the site version does not
+        /// cover, so each is a staleness input. External links carry no page identity.
         /// </summary>
-        private bool NavigationStale(PublishManifest oldManifest)
+        private IEnumerable<PageId> ChromePageLinks()
         {
             foreach (var item in _navigation)
             {
-                var old = oldManifest.Pages.GetValueOrDefault(item.PageId.Compact);
-                if (_pageById.GetValueOrDefault(item.PageId) is not { } current ||
-                    !_slugPathOf.TryGetValue(item.PageId, out var slugPath))
+                if (item.PageId is { } topLevel)
+                {
+                    yield return topLevel;
+                }
+
+                foreach (var child in item.Children)
+                {
+                    if (child.PageId is { } childPage)
+                    {
+                        yield return childPage;
+                    }
+                }
+            }
+
+            foreach (var group in _footerGroups)
+            {
+                foreach (var link in group.Links)
+                {
+                    if (link.PageId is { } footerPage)
+                    {
+                        yield return footerPage;
+                    }
+                }
+            }
+
+            foreach (var action in new[] { _headerCta, _headerQuiet })
+            {
+                if (action?.PageId is { } actionPage)
+                {
+                    yield return actionPage;
+                }
+            }
+        }
+
+        /// <summary>
+        /// The chrome (nav, footer, header) is shared markup rendered into every page, but
+        /// its hrefs and labels come from *other pages'* published state (slug, title),
+        /// which the site version does not cover. The manifest records each page's
+        /// publishedVersion and paths, so "did anything a chrome link shows change?" is
+        /// answerable from the checkpoint alone — when it did, every page is stale.
+        /// </summary>
+        private bool ChromeStale(PublishManifest oldManifest)
+        {
+            foreach (var pageId in ChromePageLinks().Distinct())
+            {
+                var old = oldManifest.Pages.GetValueOrDefault(pageId.Compact);
+                if (_pageById.GetValueOrDefault(pageId) is not { } current ||
+                    !_slugPathOf.TryGetValue(pageId, out var slugPath))
                 {
                     if (old is { Paths.Count: > 0 })
                     {
-                        return true; // the link just vanished from every page's nav
+                        return true; // the link just vanished from every page's chrome
                     }
 
                     continue;
@@ -338,7 +394,7 @@ public sealed class SitePublisher(
             string cssHash)
         {
             var plans = new List<PagePlan>(ordered.Count);
-            var navigationStale = NavigationStale(oldManifest);
+            var chromeStale = ChromeStale(oldManifest);
             foreach (var page in ordered)
             {
                 var isOwner = _slugPathOf.TryGetValue(page.Id, out var slugPath);
@@ -359,7 +415,7 @@ public sealed class SitePublisher(
                     || _errors.ContainsKey(page.Id)
                     || old.PublishedVersion < page.PublishedVersion
                     || old.RenderedAtSiteVersion < _siteVersion
-                    || navigationStale
+                    || chromeStale
                     || oldManifest.CssHash != cssHash
                     || !old.Paths.SequenceEqual(paths, StringComparer.Ordinal)
                     || !old.AssetHashes.SequenceEqual(assetHashes, StringComparer.Ordinal)
@@ -444,7 +500,11 @@ public sealed class SitePublisher(
                 StylesheetHref = $"/{_cssFile}",
                 SiteName = _siteName,
                 HomeHref = HomeHref(locale),
-                Nav = NavLinksFor(page.Id, locale),
+                Nav = NavItemsFor(page.Id, locale),
+                HeaderCta = HeaderLinkFor(_headerCta, locale),
+                HeaderQuiet = HeaderLinkFor(_headerQuiet, locale),
+                FooterGroups = FooterColumnsFor(locale),
+                CopyLine = CopyLineFor(locale),
                 // Exact by construction: WidgetView emits data-island precisely when
                 // the tag has a descriptor AND ResolveWidgetBundle returns a URL —
                 // the same condition, so no second render pass is needed.
@@ -466,7 +526,11 @@ public sealed class SitePublisher(
                 StylesheetHref = $"/{_cssFile}",
                 SiteName = _siteName,
                 HomeHref = "/",
-                Nav = NavLinksFor(currentPage: null, _defaultLocale),
+                Nav = NavItemsFor(currentPage: null, _defaultLocale),
+                HeaderCta = HeaderLinkFor(_headerCta, _defaultLocale),
+                HeaderQuiet = HeaderLinkFor(_headerQuiet, _defaultLocale),
+                FooterGroups = FooterColumnsFor(_defaultLocale),
+                CopyLine = CopyLineFor(_defaultLocale),
                 IncludeIslandLoader = false,
             };
 
@@ -543,30 +607,122 @@ public sealed class SitePublisher(
             new StaticPageChrome.Alternate("x-default", Absolute(DirectoryPath(slugPath, _defaultLocale))),
         ];
 
-        private IReadOnlyList<StaticPageChrome.NavLink> NavLinksFor(PageId? currentPage, Locale locale)
+        private IReadOnlyList<StaticPageChrome.NavItem> NavItemsFor(PageId? currentPage, Locale locale)
         {
-            var links = new List<StaticPageChrome.NavLink>();
+            var items = new List<StaticPageChrome.NavItem>();
             foreach (var item in _navigation)
             {
-                // Unpublished, deleted or collision-losing targets are skipped:
-                // absence beats a dead link, and the editor shows why. (Render-failed
-                // pages are NOT skipped — failures surface mid-loop and skipping them
-                // would make sibling pages' markup depend on render order.)
-                if (!_slugPathOf.TryGetValue(item.PageId, out var slugPath))
+                if (item.IsGroup)
+                {
+                    var children = new List<StaticPageChrome.NavChild>();
+                    foreach (var child in item.Children)
+                    {
+                        if (ResolveNavLink(child.Link, child.Label, locale) is not { } resolved)
+                        {
+                            continue; // an unpublished/collision-losing page child: absence beats a dead link
+                        }
+
+                        var (href, label, page) = resolved;
+                        var description = child.Description?.Resolve(locale, _defaultLocale);
+                        children.Add(new StaticPageChrome.NavChild(
+                            label, href, string.IsNullOrEmpty(description) ? null : description, page == currentPage));
+                    }
+
+                    // A group whose every child dropped out is not rendered — an empty
+                    // dropdown is worse than no menu.
+                    if (children.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    var groupLabel = item.Label?.Resolve(locale, _defaultLocale) ?? string.Empty;
+                    items.Add(new StaticPageChrome.NavItem(groupLabel, Href: null, IsCurrent: false, children));
+                    continue;
+                }
+
+                // Direct link. Unpublished, deleted or collision-losing page targets are
+                // skipped: absence beats a dead link, and the editor shows why. (Render-
+                // failed pages are NOT skipped — failures surface mid-loop and skipping
+                // them would make sibling pages' markup depend on render order.)
+                if (ResolveNavLink(item.Link, item.Label, locale) is not { } direct)
                 {
                     continue;
                 }
 
-                var label = item.LabelOverride?.Resolve(locale, _defaultLocale);
-                if (string.IsNullOrEmpty(label))
-                {
-                    label = _pageById[item.PageId].Title.Resolve(locale, _defaultLocale);
-                }
-
-                links.Add(new StaticPageChrome.NavLink(label, DirectoryPath(slugPath, locale), item.PageId == currentPage));
+                var (directHref, directLabel, directPage) = direct;
+                items.Add(new StaticPageChrome.NavItem(
+                    directLabel, directHref, directPage == currentPage, Children: []));
             }
 
-            return links;
+            return items;
+        }
+
+        /// <summary>
+        /// Resolve a navigation/footer <see cref="Link"/> to a concrete href + label for a
+        /// locale. A same-site page link yields its published directory path and its title
+        /// (label override wins); an unpublished/collision-losing page link yields null so
+        /// the caller drops it. An external link passes through verbatim with its label.
+        /// </summary>
+        private (string Href, string Label, PageId? Page)? ResolveNavLink(Link? link, LocalizedText? labelOverride, Locale locale)
+        {
+            switch (link)
+            {
+                case PageLink page:
+                    if (!_slugPathOf.TryGetValue(page.PageId, out var slugPath))
+                    {
+                        return null;
+                    }
+
+                    var label = labelOverride?.Resolve(locale, _defaultLocale);
+                    if (string.IsNullOrEmpty(label))
+                    {
+                        label = _pageById[page.PageId].Title.Resolve(locale, _defaultLocale);
+                    }
+
+                    return (DirectoryPath(slugPath, locale), label, page.PageId);
+
+                case ExternalLink external:
+                    // The aggregate guarantees an external link carries a label.
+                    return (external.Url, labelOverride?.Resolve(locale, _defaultLocale) ?? external.Url, null);
+
+                default:
+                    return null;
+            }
+        }
+
+        private StaticPageChrome.HeaderLink? HeaderLinkFor(HeaderAction? action, Locale locale) =>
+            action is null || ResolveNavLink(action.Link, action.Label, locale) is not { } resolved
+                ? null
+                : new StaticPageChrome.HeaderLink(resolved.Label, resolved.Href);
+
+        private IReadOnlyList<StaticPageChrome.FooterColumn> FooterColumnsFor(Locale locale)
+        {
+            var columns = new List<StaticPageChrome.FooterColumn>();
+            foreach (var group in _footerGroups)
+            {
+                var links = new List<StaticPageChrome.FooterEntry>();
+                foreach (var link in group.Links)
+                {
+                    if (ResolveNavLink(link.Link, link.Label, locale) is { } resolved)
+                    {
+                        links.Add(new StaticPageChrome.FooterEntry(resolved.Label, resolved.Href));
+                    }
+                }
+
+                // A column whose every link dropped out is omitted (all its targets gone).
+                if (links.Count > 0)
+                {
+                    columns.Add(new StaticPageChrome.FooterColumn(group.Heading.Resolve(locale, _defaultLocale), links));
+                }
+            }
+
+            return columns;
+        }
+
+        private string? CopyLineFor(Locale locale)
+        {
+            var copy = _copyLine?.Text.Resolve(locale, _defaultLocale);
+            return string.IsNullOrEmpty(copy) ? null : copy;
         }
 
         private string HomeHref(Locale locale) =>

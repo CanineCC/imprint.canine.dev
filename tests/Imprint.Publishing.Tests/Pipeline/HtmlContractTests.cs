@@ -46,24 +46,33 @@ public sealed class HtmlContractTests
             html.IndexOf("<link rel=\"stylesheet\"", StringComparison.Ordinal),
             "theme toggle must precede the stylesheet");
 
-        // Landmarks, skip link, nav with aria-current on the active item.
+        // Landmarks, skip link, marketing chrome shell, nav with aria-current on the
+        // active item. The header/footer carry the ip-* chrome classes the marketing
+        // theme styles against; the skip link, landmarks and aria-current stay intact.
         Assert.Contains("<a href=\"#main\">Skip to content</a>", html);
-        Assert.Contains("<header>", html);
+        Assert.Contains("<header class=\"ip-site-header\">", html);
         Assert.Contains("<main id=\"main\">", html);
-        Assert.Contains("<footer>", html);
-        Assert.Contains("<nav aria-label=\"Main\">", html);
+        Assert.Contains("<footer class=\"ip-site-footer\">", html);
+        Assert.Contains("<nav class=\"ip-nav\" aria-label=\"Main\">", html);
         Assert.Contains("<a href=\"/\" aria-current=\"page\">Home</a>", html);
         Assert.Contains("<a href=\"/about/\">About</a>", html);
         Assert.DoesNotContain("aria-current=\"page\">About", html);
 
+        // The brand mark links home; the footer carries the static Canine byline.
+        Assert.Contains("<a class=\"ip-brand\" href=\"/\">", html);
+        Assert.Contains("by <a href=\"https://canine.dev\">Canine Development</a>", html);
+
         // Block instance content renders from its definition.
         Assert.Contains("Reusable promo block", html);
 
-        // No editor residue, no external URLs of any kind.
+        // No editor residue. The only external URL is the fixed Canine byline in the
+        // footer chrome; the page CONTENT and nav still carry no external links (this
+        // site sets none), so there is no other https:// and no http:// at all.
         Assert.DoesNotContain("data-node-id", html);
         Assert.DoesNotContain("data-node-type", html);
         Assert.DoesNotContain("http://", html);
-        Assert.DoesNotContain("https://", html);
+        Assert.Single(Regex.Matches(html, "https://"));
+        Assert.Contains("https://canine.dev", html);
     }
 
     [Fact]

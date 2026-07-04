@@ -256,7 +256,7 @@
         }
 
         List<NavigationItem> changed = include
-            ? [.. current, new NavigationItem(id, null)]
+            ? [.. current, NavigationItem.Page(id)]
             : [.. current.Where(item => item.PageId != id)];
         await Commands.Run(
             new Authoring.Features.Sites.ChangeNavigation.ChangeNavigation(site.Id, changed),
