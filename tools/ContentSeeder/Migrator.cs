@@ -6,6 +6,9 @@ using Imprint.Authoring.Features.Pages.AddNode;
 using Imprint.Authoring.Features.Pages.CreatePage;
 using Imprint.Authoring.Features.Pages.PublishPage;
 using Imprint.Authoring.Features.Sites.ChangeNavigation;
+using Imprint.Authoring.Features.Sites.SetCopyLine;
+using Imprint.Authoring.Features.Sites.SetFooter;
+using Imprint.Authoring.Features.Sites.SetHeaderActions;
 using Imprint.EventSourcing;
 
 namespace ContentSeeder;
@@ -94,52 +97,109 @@ public sealed class Migrator(ICommandDispatcher dispatcher)
 
         _flags.AddRange(mapper.Flags.Select(f => $"[{site.Key}/{f.Rel}] {f.Note}"));
 
-        // ── 2. navigation: home first (so it renders at "/"), then header links ──
-        var navItems = new List<NavigationItem>();
-        var navSeen = new HashSet<PageId>();
-        void AddNav(PageId id, string? label)
+        // A CMS href → an Imprint Link. A same-site relative path that names a migrated
+        // page becomes a PageLink (so it tracks that page's slug/title); every other href
+        // (cross-site absolute, or a same-site path with no migrated page) becomes an
+        // ExternalLink to the real deployed destination. Nothing invented.
+        Link? ToLink(string href)
         {
-            if (navSeen.Add(id))
+            var rel = href.TrimStart('/');
+            if (!href.Contains("://") && relToPageId.TryGetValue(rel, out var target))
             {
-                navItems.Add(NavigationItem.Page(id, label is null ? null : Nodes.Text(label)));
+                return new PageLink(target);
             }
+
+            var resolved = Inline.ResolveHref(href, site.Origin);
+            return resolved is null ? null : new ExternalLink(resolved);
         }
 
-        AddNav(site.HomePageId, "Home");
+        NavigationChild? ToChild(NavLink link)
+        {
+            var target = ToLink(link.Href);
+            if (target is null)
+            {
+                _flags.Add($"[{site.Key}] nav child '{link.Label}' → '{link.Href}' resolved to no destination (dropped).");
+                return null;
+            }
+
+            // Keep the CMS label + optional description verbatim (the dropdown card copy
+            // is authored, not the page title).
+            var desc = string.IsNullOrWhiteSpace(link.Desc) ? null : Nodes.Text(link.Desc!);
+            return new NavigationChild(Nodes.Text(link.Label), target, desc);
+        }
+
+        // ── 2. header navigation: home page first (so it renders at "/"), then the
+        //       CMS header entries — direct links and dropdown groups, preserved. ──
+        var navItems = new List<NavigationItem> { NavigationItem.Page(site.HomePageId, Nodes.Text("Home")) };
         foreach (var entry in site.HeaderNav)
         {
-            // Header nav entries are same-site relative hrefs → map to the page whose rel
-            // matches the href path. Off-site or unmatched entries are recorded, not invented.
-            var rel = entry.Href.TrimStart('/');
-            if (relToPageId.TryGetValue(rel, out var target))
+            if (entry.IsGroup)
             {
-                AddNav(target, entry.Label);
-            }
-            else
-            {
-                _flags.Add($"[{site.Key}] header nav entry '{entry.Label}' → '{entry.Href}' has no matching page (skipped in Imprint navigation).");
-            }
-        }
+                var children = entry.Children!.Select(ToChild).OfType<NavigationChild>().ToList();
+                if (children.Count > 0)
+                {
+                    navItems.Add(NavigationItem.Group(Nodes.Text(entry.Label), children));
+                }
 
-        // Imprint navigation holds at most 20 items; the header lists more, so keep home +
-        // the first entries up to the cap and flag the overflow (never silently drop copy).
-        if (navItems.Count > Site.MaxNavigationItems)
-        {
-            var dropped = navItems.Skip(Site.MaxNavigationItems).Select(n => n.Label?.Resolve(Nodes.En, Nodes.En)).ToList();
-            navItems = navItems.Take(Site.MaxNavigationItems).ToList();
-            _flags.Add($"[{site.Key}] header navigation has {navItems.Count + dropped.Count} entries; Imprint caps navigation at {Site.MaxNavigationItems} — kept the first {Site.MaxNavigationItems}, overflow: {string.Join(", ", dropped)}.");
+                continue;
+            }
+
+            var link = ToLink(entry.Href!);
+            if (link is null)
+            {
+                _flags.Add($"[{site.Key}] header entry '{entry.Label}' → '{entry.Href}' resolved to no destination (dropped).");
+                continue;
+            }
+
+            // A direct same-site page link may collide with the home page already added;
+            // a page appears at most once as a top-level link, so skip the duplicate.
+            if (link is PageLink page && navItems.Any(i => i.PageId == page.PageId))
+            {
+                continue;
+            }
+
+            // The CMS header carries its own label verbatim (it need not equal the page
+            // title), so keep it for both link kinds.
+            navItems.Add(new NavigationItem { Label = Nodes.Text(entry.Label), Link = link });
         }
 
         await Ok(new ChangeNavigation(site.SiteId, navItems), $"ChangeNavigation {site.Key}");
 
-        // Imprint's static chrome (StaticPageChrome) models only: site name → home, a
-        // flat header nav (set above), and a 404. It has NO footer-group model, no
-        // cross-site external footer links, no theme toggle, no per-site copyLine, and
-        // no dropdown-menu grouping. Those parts of sites/*/lib/site.ts are therefore
-        // not authorable through the command surface and are not migrated (never invented).
-        _flags.Add($"[{site.Key}] site.ts chrome NOT representable in Imprint's static chrome/command model: " +
-                   "footer groups + cross-site footer links, header dropdown grouping/desc lines, header CTA buttons, " +
-                   "the theme toggle, and the copyLine. Header nav was flattened to a same-site page list.");
+        // ── footer columns, header actions, copy line — all first-class in Imprint now. ──
+        FooterLink? ToFooterLink(NavLink link)
+        {
+            var target = ToLink(link.Href);
+            if (target is null)
+            {
+                _flags.Add($"[{site.Key}] footer link '{link.Label}' → '{link.Href}' resolved to no destination (dropped).");
+                return null;
+            }
+
+            // Footer labels are authored copy, kept verbatim for both link kinds.
+            return new FooterLink(Nodes.Text(link.Label), target);
+        }
+
+        var footerGroups = site.FooterGroups
+            .Select(col => new FooterLinkGroup(
+                Nodes.Text(col.Heading),
+                col.Links.Select(ToFooterLink).OfType<FooterLink>().ToList()))
+            .Where(col => col.Links.Count > 0)
+            .ToList();
+        await Ok(new SetFooter(site.SiteId, footerGroups), $"SetFooter {site.Key}");
+
+        HeaderAction? ToAction(HeaderAct? act)
+        {
+            if (act is null || ToLink(act.Href) is not { } target)
+            {
+                return null;
+            }
+
+            return new HeaderAction(Nodes.Text(act.Label), target);
+        }
+
+        await Ok(new SetHeaderActions(site.SiteId, ToAction(site.HeaderCta), ToAction(site.HeaderQuiet)),
+            $"SetHeaderActions {site.Key}");
+        await Ok(new SetCopyLine(site.SiteId, new CopyLine(Nodes.Text(site.CopyLine))), $"SetCopyLine {site.Key}");
 
         // ── 3. publish every page ──
         var published = 0;

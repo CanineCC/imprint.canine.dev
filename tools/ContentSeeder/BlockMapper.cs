@@ -23,7 +23,7 @@ public sealed class BlockMapper(string origin)
     public SectionNode? Map(JsonNode block, string rel)
     {
         var template = block.Template();
-        return template switch
+        var section = template switch
         {
             "hero" => Hero(block),
             "boundary" => Boundary(block),
@@ -45,7 +45,36 @@ public sealed class BlockMapper(string origin)
             "contactForm" => ContactForm(block),
             _ => FlagUnknown(template, rel),
         };
+
+        // Stamp the marketing appearance (the ip-ap-* hook) from the block template — the
+        // shared contract between this seeder, the SectionNode model and the theme. An
+        // unmapped template keeps Plain. Done once here so each builder stays focused on copy.
+        return section is null ? null : section with { Appearance = AppearanceOf(template) };
     }
+
+    // The one-per-template appearance contract (kept in lockstep with SectionAppearance).
+    private static SectionAppearance AppearanceOf(string template) => template switch
+    {
+        "hero" => SectionAppearance.Hero,
+        "boundary" => SectionAppearance.Boundary,
+        "features" => SectionAppearance.FeatureGrid,
+        "statband" => SectionAppearance.StatBand,
+        "personas" => SectionAppearance.Personas,
+        "steps" => SectionAppearance.Steps,
+        "panels" => SectionAppearance.Panels,
+        "pricingTiers" => SectionAppearance.Pricing,
+        "composition" => SectionAppearance.Composition,
+        "table" => SectionAppearance.TableList,
+        "docmock" => SectionAppearance.Docmock,
+        "note" => SectionAppearance.Note,
+        "cta" => SectionAppearance.Cta,
+        "cardGallery" => SectionAppearance.Gallery,
+        "liveCard" => SectionAppearance.LiveCard,
+        "bandScale" => SectionAppearance.BandScale,
+        "flow" => SectionAppearance.Flow,
+        "contactForm" => SectionAppearance.Contact,
+        _ => SectionAppearance.Plain,
+    };
 
     private SectionNode? FlagUnknown(string template, string rel)
     {

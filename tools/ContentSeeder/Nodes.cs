@@ -19,21 +19,20 @@ public static class Nodes
 
     public static LocalizedText Text(string value) => LocalizedText.Of(En, value);
 
-    public static SectionNode Section(params Node[] children) => new()
-    {
-        Id = NodeId.New(),
-        Width = SectionWidth.Normal,
-        Background = SectionBackground.None,
-        Padding = SectionPadding.Normal,
-        Children = NodeList.Of(children),
-    };
+    public static SectionNode Section(params Node[] children) =>
+        Section(SectionBackground.None, SectionAppearance.Plain, children);
 
-    public static SectionNode Section(SectionBackground background, params Node[] children) => new()
+    public static SectionNode Section(SectionBackground background, params Node[] children) =>
+        Section(background, SectionAppearance.Plain, children);
+
+    /// <summary>A root section carrying its marketing block appearance (the ip-ap-* hook).</summary>
+    public static SectionNode Section(SectionBackground background, SectionAppearance appearance, params Node[] children) => new()
     {
         Id = NodeId.New(),
         Width = SectionWidth.Normal,
         Background = background,
         Padding = SectionPadding.Normal,
+        Appearance = appearance,
         Children = NodeList.Of(children),
     };
 
