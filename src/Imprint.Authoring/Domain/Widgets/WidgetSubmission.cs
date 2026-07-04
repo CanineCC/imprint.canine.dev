@@ -207,7 +207,7 @@ public sealed partial class WidgetSubmission : AggregateRoot
             if (!IsValidPropName(prop.Name))
             {
                 throw new DomainException(
-                    $"'{prop.Name}' is not a valid property name: lower-case letters, digits and hyphens.");
+                    $"'{prop.Name}' is not a valid property name: lower-case letters, digits and hyphens, and never an event handler (on…) or 'style'.");
             }
 
             if (!WidgetPropSpec.KnownTypes.Contains(prop.Type))
@@ -245,9 +245,11 @@ public sealed partial class WidgetSubmission : AggregateRoot
     }
 
     // Duplicates WidgetManifest.IsValidTag / IsValidPropName from Imprint.Rendering: the
-    // aggregate must not reference the delivery layer, so this ~4-line custom-element-name
-    // rule is copied here. Keep the two in sync — both also make the tag/prop safe to emit
-    // into HTML unescaped.
+    // aggregate must not reference the delivery layer, so this custom-element-name rule is
+    // copied here. Keep the two in sync — both also make the tag/prop safe to emit into
+    // HTML unescaped. A prop name becomes an HTML attribute NAME verbatim, so an on*/style
+    // name is rejected: it would turn an author-controlled value into a live event handler
+    // or inline CSS on every visitor's page (the same denial SvgPublishGuard makes).
     private static bool IsValidTag(string tag) =>
         tag.Length is > 2 and <= 64 &&
         tag.Contains('-', StringComparison.Ordinal) &&
@@ -257,7 +259,37 @@ public sealed partial class WidgetSubmission : AggregateRoot
     private static bool IsValidPropName(string name) =>
         name.Length is > 0 and <= 64 &&
         char.IsAsciiLetterLower(name[0]) &&
-        name.All(c => char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c) || c == '-');
+        name.All(c => char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c) || c == '-') &&
+        !IsReservedAttributeName(name);
+
+    // A prop name is reserved when the widget renderer emits an attribute of that name with
+    // security-sensitive meaning and an author prop must not shadow it: `style` and the
+    // whole `data-island*` namespace (data-island is imported as a module URL by the island
+    // loader), plus every HTML event handler ("on" + an all-letter event name). Matching the
+    // handler shape blocks every real handler without rejecting names that merely begin with
+    // "on" (e.g. "only-item"). Mirrors WidgetManifest.IsReservedAttributeName.
+    private static bool IsReservedAttributeName(string name)
+    {
+        if (name == "style" || name.StartsWith("data-island", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        if (name.Length <= 2 || name[0] != 'o' || name[1] != 'n')
+        {
+            return false;
+        }
+
+        for (var i = 2; i < name.Length; i++)
+        {
+            if (!char.IsAsciiLetterLower(name[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     private static string Describe(WidgetSubmissionStatus status) => status switch
     {

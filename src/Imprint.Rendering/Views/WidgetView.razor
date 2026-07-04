@@ -36,6 +36,17 @@ else if (descriptor is not null)
     // stale PropBag entry (or a malicious one) never becomes an attribute.
     foreach (var prop in descriptor.Props)
     {
+      // Last gate before markup: a prop name that isn't a plain data attribute — an on*
+      // event handler or `style` — must NEVER be emitted with an author-controlled value,
+      // or it becomes a live event handler / inline style on every visitor's page (stored
+      // XSS / CSS injection). Submission validation and the manifest loader already reject
+      // these; this re-checks at the one point every widget attribute passes through, so a
+      // hand-edited event stream or manifest cannot slip one past. Mirrors SvgPublishGuard.
+      if (!WidgetManifest.IsValidPropName(prop.Name))
+      {
+        continue;
+      }
+
       if (Node.Props.Get(prop.Name) is { } value)
       {
         builder.AddAttribute(1, prop.Name, value);

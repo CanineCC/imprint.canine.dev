@@ -66,6 +66,18 @@ public static class WidgetManifest
                 throw new InvalidOperationException(
                     $"Widget tag '{descriptor.Tag}' is invalid: custom-element tags are lower-case ASCII with at least one hyphen.");
             }
+
+            // Prop names become HTML attribute names verbatim, so an on*/style name would
+            // ship a live event handler / inline style to visitors. Reject a malformed
+            // (or hostile) built-in manifest loudly rather than dropping the prop silently.
+            foreach (var prop in descriptor.Props)
+            {
+                if (!IsValidPropName(prop.Name))
+                {
+                    throw new InvalidOperationException(
+                        $"Widget '{descriptor.Tag}' declares an invalid prop name '{prop.Name}': prop names are lower-case ASCII data attributes, never an event handler (on…) or 'style'.");
+                }
+            }
         }
 
         return descriptors;
@@ -77,9 +89,49 @@ public static class WidgetManifest
         char.IsAsciiLetterLower(tag[0]) &&
         tag.All(c => char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c) || c == '-');
 
-    /// <summary>Prop names become HTML attribute names; keep them boring on purpose.</summary>
+    /// <summary>
+    /// Prop names become HTML attribute NAMES emitted verbatim (Blazor encodes attribute
+    /// values, not names), so they must be plain data attributes: lower-case ASCII, and
+    /// NEVER an HTML event handler or <c>style</c> — either would turn an author-controlled
+    /// value into live script / inline CSS on every visitor's page (the same denial
+    /// SvgPublishGuard applies to inlined SVG). Keep in sync with the domain copy in
+    /// <c>WidgetSubmission.IsValidPropName</c>.
+    /// </summary>
     public static bool IsValidPropName(string name) =>
         name.Length is > 0 and <= 64 &&
         char.IsAsciiLetterLower(name[0]) &&
-        name.All(c => char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c) || c == '-');
+        name.All(c => char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c) || c == '-') &&
+        !IsReservedAttributeName(name);
+
+    // A prop name is reserved when WidgetView itself emits an attribute of that name with
+    // security-sensitive meaning, so an author-controlled prop must never be allowed to
+    // shadow it: `style` (inline CSS) and the whole `data-island*` namespace, whose
+    // `data-island` value island-loader.js imports as a module URL — a prop with that name
+    // would be emitted as a duplicate attribute the browser resolves to the AUTHOR's value,
+    // running attacker-chosen JavaScript on every visitor (bypassing admin bundle review).
+    // Also every HTML event handler: "on" followed by an all-letter event name (onclick,
+    // onmouseover, …). Matching that shape — not any name merely starting with "on" —
+    // blocks every real handler while still allowing innocuous names like "only-item".
+    internal static bool IsReservedAttributeName(string name)
+    {
+        if (name == "style" || name.StartsWith("data-island", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        if (name.Length <= 2 || name[0] != 'o' || name[1] != 'n')
+        {
+            return false;
+        }
+
+        for (var i = 2; i < name.Length; i++)
+        {
+            if (!char.IsAsciiLetterLower(name[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }

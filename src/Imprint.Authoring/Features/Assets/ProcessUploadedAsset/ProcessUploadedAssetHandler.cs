@@ -49,13 +49,13 @@ public sealed class ProcessUploadedAssetHandler(
         {
             case AssetKind.Image:
             {
-                var variants = await processor.GenerateImageVariants(asset.Id, asset.OriginalStorageKey, ct);
+                var variants = await processor.GenerateImageVariants(asset.Id, asset.OriginalStorageKey, ct: ct);
                 return a => a.CompleteImageVariants(variants);
             }
 
             case AssetKind.Vector:
             {
-                var (storageKey, removedNodes) = await processor.SanitizeSvg(asset.Id, asset.OriginalStorageKey, ct);
+                var (storageKey, removedNodes) = await processor.SanitizeSvg(asset.Id, asset.OriginalStorageKey, ct: ct);
                 return a => a.CompleteSvgSanitize(storageKey, removedNodes);
             }
 

@@ -65,17 +65,20 @@ public sealed class DarkVariantViewTests
     }
 
     [Fact]
-    public async Task Only_the_light_rendition_claims_the_eager_first_image_slot()
+    public async Task First_image_with_a_dark_variant_is_never_eager_but_both_renditions_get_the_priority_hint()
     {
         var page = SampleNodes.Section(SampleNodes.Stack(SampleNodes.Image()));
 
         var html = await RenderHarness.RenderPage(WithDarkImage(RenderMode.Static), page);
 
-        // One node, one claim: the light copy is the LCP candidate, the dark copy stays lazy
-        // so both renditions are never eagerly downloaded at once.
-        Assert.Equal(1, Occurrences(html, "loading=\"eager\""));
-        Assert.Equal(1, Occurrences(html, "fetchpriority=\"high\""));
-        Assert.Equal(1, Occurrences(html, "loading=\"lazy\""));
+        // A hero with a dark variant cannot eager-load either rendition: display:none does
+        // not cancel an eager fetch, so eager on the CSS-hidden copy would download an image
+        // no visitor sees. Both stay lazy (the hidden one is never fetched), and both carry
+        // fetchpriority=high so whichever rendition the visitor's colour scheme reveals still
+        // gets the LCP priority.
+        Assert.Equal(0, Occurrences(html, "loading=\"eager\""));
+        Assert.Equal(2, Occurrences(html, "loading=\"lazy\""));
+        Assert.Equal(2, Occurrences(html, "fetchpriority=\"high\""));
     }
 
     [Fact]

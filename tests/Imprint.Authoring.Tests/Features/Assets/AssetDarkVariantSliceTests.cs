@@ -78,7 +78,10 @@ public sealed class AssetDarkVariantSliceTests
 
         var ready = host.Get<AssetLibrary>().Get(id)!;
         Assert.Equal(DarkVariantStatus.Ready, ready.DarkStatus);
-        Assert.Equal($"derived/{id.Compact}/clean.svg", ready.DarkDerivedStorageKey);
+        // The dark rendition lives under a DISTINCT key so it never overwrites the base
+        // sanitized SVG (both share the asset's derived/ folder and the same processing run).
+        Assert.Equal($"derived/{id.Compact}/dark-clean.svg", ready.DarkDerivedStorageKey);
+        Assert.NotEqual(ready.DerivedStorageKey, ready.DarkDerivedStorageKey);
     }
 
     [Fact]

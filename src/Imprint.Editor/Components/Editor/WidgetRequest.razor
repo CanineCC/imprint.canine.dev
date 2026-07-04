@@ -1,9 +1,11 @@
 @using System.Collections.Immutable
 @using Imprint.Authoring.Domain.Widgets
 @using Imprint.Editor.Services
+@using Imprint.EventSourcing
 @using Imprint.Rendering
 @inject CommandRunner Commands
 @inject EditorWidgetCatalog Widgets
+@inject EventMetadataProvider Metadata
 
 @* The "Request a widget" modal, opened from the insert picker's Widgets group. An editor
    describes a widget and pastes its ES-module source; submitting files it for admin
@@ -223,7 +225,10 @@
                 [.. row.Options.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)]))
             .ToImmutableArray();
 
+        // The requester is the app's current actor — the same identity the event envelope
+        // records, sourced from EventMetadataProvider (reverse-proxy-replaceable at startup).
         var command = new Authoring.Features.Widgets.SubmitWidget.SubmitWidget(
+            WidgetSubmissionId.New(),
             _tag.Trim(),
             _name.Trim(),
             _description.Trim(),
@@ -231,7 +236,8 @@
             string.IsNullOrWhiteSpace(_aspectRatio) ? null : _aspectRatio.Trim(),
             _eager,
             props,
-            _bundle);
+            _bundle,
+            Metadata.ActorSource());
 
         _busy = true;
         // The prescribed write path: CommandRunner surfaces any domain error as a toast.
@@ -267,7 +273,7 @@
         {
             if (!WidgetManifest.IsValidPropName(row.Name.Trim()))
             {
-                return $"'{row.Name.Trim()}' is not a valid setting name (lower-case ASCII, digits and hyphens).";
+                return $"'{row.Name.Trim()}' is not a valid setting name (lower-case ASCII, digits and hyphens; never an event handler like on… or 'style').";
             }
         }
 

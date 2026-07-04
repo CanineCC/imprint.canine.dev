@@ -48,13 +48,13 @@ public sealed class ProcessAssetDarkVariantHandler(
         {
             case AssetKind.Image:
             {
-                var variants = await processor.GenerateImageVariants(asset.Id, darkOriginal, ct);
+                var variants = await processor.GenerateImageVariants(asset.Id, darkOriginal, dark: true, ct: ct);
                 return a => a.CompleteDarkImageVariants(variants);
             }
 
             case AssetKind.Vector:
             {
-                var (storageKey, removedNodes) = await processor.SanitizeSvg(asset.Id, darkOriginal, ct);
+                var (storageKey, removedNodes) = await processor.SanitizeSvg(asset.Id, darkOriginal, dark: true, ct: ct);
                 return a => a.CompleteDarkSvg(storageKey, removedNodes);
             }
 

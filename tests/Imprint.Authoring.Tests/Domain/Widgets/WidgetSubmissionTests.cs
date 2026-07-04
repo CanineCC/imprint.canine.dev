@@ -119,6 +119,37 @@ public sealed class WidgetSubmissionTests
         Assert.Contains("property name", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("onclick")]
+    [InlineData("onmouseover")]
+    [InlineData("onerror")]
+    [InlineData("onfocus")]
+    [InlineData("style")]
+    [InlineData("data-island")]        // the island loader imports this value as a module URL
+    [InlineData("data-island-eager")]
+    public void Submit_with_a_reserved_attribute_prop_name_is_rejected(string propName)
+    {
+        // A prop name becomes an HTML attribute name verbatim. An on*/style name turns its
+        // author value into a live event handler / inline style; a data-island* name shadows
+        // the loader's own attribute so the browser imports an attacker-chosen module. None
+        // may ever clear submission — that would bypass admin bundle review entirely.
+        var ex = Assert.Throws<DomainException>(() =>
+            Submit(props: [new WidgetPropSpec(propName, "Label", "text", null, [])]));
+        Assert.Contains("property name", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("on")]          // bare "on" is not an event handler
+    [InlineData("only-item")]   // starts with "on" but has a hyphen — a plain data attribute
+    [InlineData("on-sale")]
+    public void Submit_with_a_prop_name_that_only_resembles_an_event_handler_is_allowed(string propName)
+    {
+        // The denial targets the real event-handler shape (on + letters), not any name that
+        // happens to begin with "on" — those legitimate names must still validate.
+        var submission = Submit(props: [new WidgetPropSpec(propName, "Label", "text", null, [])]);
+        Assert.Equal(propName, Assert.Single(submission.Props).Name);
+    }
+
     [Fact]
     public void Submit_with_more_than_twenty_props_is_rejected()
     {

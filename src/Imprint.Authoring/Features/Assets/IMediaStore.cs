@@ -33,11 +33,20 @@ public interface IMediaStore
 /// </summary>
 public interface IMediaProcessor
 {
-    /// <summary>WebP variants at the spec'd widths (docs/domain-model.md §3), plus intrinsic dimensions.</summary>
-    Task<IReadOnlyList<Domain.Assets.ImageVariant>> GenerateImageVariants(AssetId id, string originalKey, CancellationToken ct = default);
+    /// <summary>
+    /// WebP variants at the spec'd widths (docs/domain-model.md §3), plus intrinsic
+    /// dimensions. <paramref name="dark"/> routes the outputs to a distinct derived key
+    /// namespace so a dark-mode rendition never overwrites the base (light) rendition —
+    /// they share the same asset id but must not share storage keys.
+    /// </summary>
+    Task<IReadOnlyList<Domain.Assets.ImageVariant>> GenerateImageVariants(AssetId id, string originalKey, bool dark = false, CancellationToken ct = default);
 
-    /// <summary>Sanitizes an SVG (scripts, handlers, external refs). Returns the new key and how many nodes were removed.</summary>
-    Task<(string StorageKey, int RemovedNodes)> SanitizeSvg(AssetId id, string originalKey, CancellationToken ct = default);
+    /// <summary>
+    /// Sanitizes an SVG (scripts, handlers, external refs). Returns the new key and how
+    /// many nodes were removed. <paramref name="dark"/> routes the output to a distinct
+    /// derived key so the dark rendition never overwrites the base sanitized SVG.
+    /// </summary>
+    Task<(string StorageKey, int RemovedNodes)> SanitizeSvg(AssetId id, string originalKey, bool dark = false, CancellationToken ct = default);
 
     /// <summary>Null when transcoding is unavailable (no ffmpeg) — the caller records <c>asset.processing-skipped</c>.</summary>
     Task<(string StorageKey, long ByteSize)?> TranscodeToWebM(AssetId id, string originalKey, CancellationToken ct = default);

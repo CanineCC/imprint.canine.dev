@@ -59,20 +59,23 @@ public sealed class FakeMediaProcessor : IMediaProcessor
 
     public string? VideoUnavailableReason => VideoAvailable ? null : "ffmpeg is not installed (fake)";
 
-    public Task<IReadOnlyList<ImageVariant>> GenerateImageVariants(AssetId id, string originalKey, CancellationToken ct = default)
+    public Task<IReadOnlyList<ImageVariant>> GenerateImageVariants(AssetId id, string originalKey, bool dark = false, CancellationToken ct = default)
     {
         ThrowIfFailing();
+        // Mirror the real processor's contract: dark renditions get a distinct key so they
+        // never collide with the base — otherwise the fake would hide a key-overwrite bug.
+        var prefix = dark ? "dark-" : "";
         return Task.FromResult<IReadOnlyList<ImageVariant>>(
         [
-            new ImageVariant(480, 320, $"derived/{id.Compact}/480.webp", 10_000),
-            new ImageVariant(960, 640, $"derived/{id.Compact}/960.webp", 30_000),
+            new ImageVariant(480, 320, $"derived/{id.Compact}/{prefix}480.webp", 10_000),
+            new ImageVariant(960, 640, $"derived/{id.Compact}/{prefix}960.webp", 30_000),
         ]);
     }
 
-    public Task<(string StorageKey, int RemovedNodes)> SanitizeSvg(AssetId id, string originalKey, CancellationToken ct = default)
+    public Task<(string StorageKey, int RemovedNodes)> SanitizeSvg(AssetId id, string originalKey, bool dark = false, CancellationToken ct = default)
     {
         ThrowIfFailing();
-        return Task.FromResult(($"derived/{id.Compact}/clean.svg", 1));
+        return Task.FromResult(($"derived/{id.Compact}/{(dark ? "dark-" : "")}clean.svg", 1));
     }
 
     public Task<(string StorageKey, long ByteSize)?> TranscodeToWebM(AssetId id, string originalKey, CancellationToken ct = default)

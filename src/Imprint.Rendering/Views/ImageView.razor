@@ -26,27 +26,33 @@
 
     var light = info.ImageVariants.OrderBy(v => v.Width).ToList();
     var dark = info.DarkImageVariants.OrderBy(v => v.Width).ToList();
-    // One claim per image node, whichever renditions it emits: the light copy is the
-    // one that paints in the default (light) scheme, so it carries the LCP priority.
+    // One claim per image node: the first image is the LCP candidate. Consume the claim
+    // even when the node has a dark variant, so a later (below-the-fold) image never
+    // inherits the priority hint.
     var eager = PageState?.TryClaimFirstImage() == true;
 
     if (info.HasDark && dark.Count > 0)
     {
       // Both renditions ship; CSS (imprint-base.css) shows exactly one by colour scheme
-      // with zero JavaScript. The dark copy is aria-hidden and drops the alt so assistive
-      // tech announces the image once, from the light copy.
-      RenderRendition(builder, seq: 0, info, light, "ip-img-light", isDark: false, eager);
-      RenderRendition(builder, seq: 20, info, dark, "ip-img-dark", isDark: true, eager: false);
+      // with zero JavaScript, honouring prefers-color-scheme AND the data-theme toggle.
+      // Neither copy may be eager-loaded: `display:none` does not cancel an eager fetch,
+      // so eager on the hidden rendition would download an image no visitor sees. Both stay
+      // lazy — the hidden one is never fetched — and, for the first image, both carry
+      // fetchpriority=high so whichever rendition the visitor's scheme reveals still gets
+      // the LCP priority. The dark copy is aria-hidden and drops the alt so assistive tech
+      // announces the image once, from the light copy.
+      RenderRendition(builder, seq: 0, info, light, "ip-img-light", isDark: false, eager: false, priority: eager);
+      RenderRendition(builder, seq: 20, info, dark, "ip-img-dark", isDark: true, eager: false, priority: eager);
       return;
     }
 
-    // Neutral asset: a single image, unchanged.
-    RenderRendition(builder, seq: 0, info, light, variantClass: null, isDark: false, eager);
+    // Neutral asset: a single rendition that always paints — safe to eager-load as the LCP.
+    RenderRendition(builder, seq: 0, info, light, variantClass: null, isDark: false, eager, priority: false);
   }
 
   private void RenderRendition(
     RenderTreeBuilder builder, int seq, AssetRenderInfo info,
-    IReadOnlyList<ImageSource> sources, string? variantClass, bool isDark, bool eager)
+    IReadOnlyList<ImageSource> sources, string? variantClass, bool isDark, bool eager, bool priority)
   {
     // Middle variant as src: the fallback for pre-srcset consumers (readers, scrapers)
     // should be a reasonable size, not the largest download.
@@ -78,7 +84,13 @@
     }
     else
     {
-      builder.AddAttribute(seq + 10, "loading", "lazy");
+      builder.AddAttribute(seq + 8, "loading", "lazy");
+      // A lazy rendition may still be the LCP (an above-the-fold hero with a dark variant):
+      // hint its priority without eager-loading, which a hidden copy must never carry.
+      if (priority)
+      {
+        builder.AddAttribute(seq + 9, "fetchpriority", "high");
+      }
     }
 
     builder.AddAttribute(seq + 11, "decoding", "async");
