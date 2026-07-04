@@ -1,10 +1,14 @@
-// <cai-band-scale score="62" kicker="…" heading="…" lede="…" caption="…"
-//                 brand="watchdog|assay|cai">
+// <cai-band-scale api-base="…" owner="…" name="…" score="62" kicker="…" heading="…"
+//                 lede="…" caption="…" brand="watchdog|assay|cai">
 //
 // Port of the BandScale renderer (packages/ui/src/blocks.tsx): the canonical
 // full-width CAI band scale — five bands worst→best, the parked cutlines
-// 25/50/70/90, the display words, and an optional Score-pin marker at a sample
-// score. When `score` is unset it renders the bare scale (no pin).
+// 25/50/70/90, the display words, and an optional Score-pin marker.
+//
+// LIVE by default: when `api-base` is set it fetches {api}/api/oss and pins the scale
+// at a REAL published repo's live headline score — the repo named by `owner`+`name`,
+// else the curated hero (highest-quality published repo). Without `api-base`, or if the
+// fetch fails, it uses the seeded `score` attribute (or renders the bare scale, no pin).
 
 import {
   CaiIsland,
@@ -16,6 +20,7 @@ import {
 } from "./tokens.js";
 import { ladderHtml, SCORECARD_CSS } from "./scorecard.js";
 import { CAI_BANDS } from "./cai.js";
+import { pickCard, fetchJson } from "./live.js";
 
 const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + `
 .mk-bandscale { max-width: 46rem; margin: 0 auto; }
@@ -35,15 +40,33 @@ const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + `
 customElements.define(
   "cai-band-scale",
   class extends CaiIsland {
+    // Pin the scale at a real repo's live headline (peak) score. Cache + re-render.
+    async liveLoad() {
+      const api = this.apiBase();
+      if (!api) return;
+      const owner = this.getAttribute("owner") || "";
+      const name = this.getAttribute("name") || "";
+      const cards = await fetchJson(api, "/api/oss", null);
+      if (!Array.isArray(cards) || cards.length === 0) return;
+      const chosen = pickCard(cards, { owner, name });
+      const score = chosen && (chosen.bestScore != null ? chosen.bestScore : chosen.headlineScore);
+      if (score == null || !Number.isFinite(Number(score))) return;
+      this._liveScore = Number(score);
+      this.render(this.shadowRoot);
+    }
+
     render(root) {
+      // Prefer the LIVE score once it arrives; else the seeded `score` attribute.
       const scoreRaw = this.getAttribute("score");
-      const hasPin =
-        scoreRaw != null && scoreRaw !== "" && Number.isFinite(Number(scoreRaw));
+      const score = this._liveScore != null
+        ? this._liveScore
+        : (scoreRaw != null && scoreRaw !== "" && Number.isFinite(Number(scoreRaw)) ? Number(scoreRaw) : null);
+      const hasPin = score != null;
       const caption = this.getAttribute("caption");
 
       let rail;
       if (hasPin) {
-        rail = ladderHtml(Number(scoreRaw), { variant: "pin" });
+        rail = ladderHtml(score, { variant: "pin" });
       } else {
         const segs = CAI_BANDS.map((b) => `<i class="seg-${b.key}"></i>`).join("");
         rail =

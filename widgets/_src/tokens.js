@@ -206,7 +206,15 @@ export class CaiIsland extends HTMLElement {
   connectedCallback() {
     if (!this.shadowRoot) this.attachShadow({ mode: "open" });
     this.#reflectContext();
+    // Render the fallback/sample FIRST — zero layout shift, and the honest content
+    // when no live source is configured. A live subclass then upgrades in place.
     this.render(this.shadowRoot);
+    // Live widgets fetch real curated data from `api-base` and re-render on arrival.
+    // liveLoad() is a no-op on static widgets (evidence-flow, contact-form), and a
+    // no-op here when `api-base` is unset (the fetch helpers short-circuit to sample).
+    if (typeof this.liveLoad === "function") {
+      Promise.resolve(this.liveLoad()).catch(() => {});
+    }
     // Keep in visual sync with the document theme, changed by any control.
     this.#observer = new MutationObserver(() => {
       const before = this.dataset.theme;
@@ -217,6 +225,11 @@ export class CaiIsland extends HTMLElement {
       attributes: true,
       attributeFilter: ["data-theme"],
     });
+  }
+
+  /** The configured kennel public-API origin, or "" (fall back to the sample). */
+  apiBase() {
+    return (this.getAttribute("api-base") || "").trim();
   }
 
   disconnectedCallback() {
