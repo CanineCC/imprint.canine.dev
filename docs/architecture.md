@@ -175,9 +175,13 @@ What the publisher guarantees about its output (detail in
 ## Non-goals (v1) — deliberate, not forgotten
 
 - **Authentication/authorization.** Orthogonal to what this project teaches. The editor
-  is single-tenant and should sit behind your reverse-proxy auth. Command metadata
-  already carries an `actor`; wiring ASP.NET Identity in is an exercise left
-  documented, not half-done.
+  should sit behind your reverse-proxy auth; command metadata already carries an
+  `actor`. For the **multi-site SaaS** shape (many owners, one editor), the recommended
+  wiring — an OIDC auth proxy in front (e.g. oauth2-proxy + Google), per-circuit identity
+  capture, and site ownership filtering — is written up in
+  [multi-site-saas.md](multi-site-saas.md), not built in. Sites already record their
+  owner from the `site.created` envelope, so the remaining work is reading a forwarded
+  identity, not reshaping the domain.
 - **Scheduled publishing, approval workflows.** Both are natural event-sourced
   extensions (`PublishScheduled` + a clock; `ApprovalRequested/Granted`) and would make
   good community contributions.
@@ -188,6 +192,11 @@ What the publisher guarantees about its output (detail in
   a file. Swapping SQLite for Postgres and in-memory projections for durable ones is
   the documented path to scale-out. The *published site* scales infinitely — it's
   static files.
+
+Multi-site itself is **not** a non-goal — the domain has always been one `site-{id}`
+stream per site, and the editor, dashboard and per-site deploy pipeline are built on
+that (see [multi-site-saas.md](multi-site-saas.md)). What stays out of v1 is the *auth
+layer* that turns "many sites" into "many isolated tenants".
 
 ## Extension guide (where to start reading)
 
