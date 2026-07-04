@@ -41,46 +41,57 @@ customElements.define(
     async liveLoad() {
       const api = this.apiBase();
       if (!api) return;
+      // We have a live source and are fetching: the reserved frame reads "loading"
+      // (rather than a permanent placeholder on hosts that never set an api-base).
+      this._pending = true;
+      this.render(this.shadowRoot);
       const owner = this.getAttribute("owner") || "";
       const name = this.getAttribute("name") || "";
 
-      const c4 = await fetchJson(api, "/api/public/c4", null);
-      const items = (c4 && Array.isArray(c4.items)) ? c4.items : [];
-      if (items.length === 0) return;
+      try {
+        const c4 = await fetchJson(api, "/api/public/c4", null);
+        const items = (c4 && Array.isArray(c4.items)) ? c4.items : [];
+        if (items.length === 0) return;
 
-      // Recover owner/name per runId from the corpus (the c4 endpoint returns a label +
-      // run id only; Track K's public svg endpoint is addressed by owner/name).
-      const cards = await fetchJson(api, "/api/oss", null);
-      const byRun = new Map();
-      if (Array.isArray(cards)) {
-        for (const c of cards) {
-          const run = c.bestRunId || c.BestRunId;
-          if (run) byRun.set(String(run), c);
+        // Recover owner/name per runId from the corpus (the c4 endpoint returns a label +
+        // run id only; Track K's public svg endpoint is addressed by owner/name).
+        const cards = await fetchJson(api, "/api/oss", null);
+        const byRun = new Map();
+        if (Array.isArray(cards)) {
+          for (const c of cards) {
+            const run = c.bestRunId || c.BestRunId;
+            if (run) byRun.set(String(run), c);
+          }
         }
-      }
 
-      // The curated pick: the named repo (if its owner/name matches a c4 item's card),
-      // else the first item (biggest codebase = densest, most convincing heatmap).
-      let picked = null;
-      for (const it of items) {
-        const card = byRun.get(String(it.runId));
-        if (!card) continue;
-        if (owner && name) {
-          if (card.owner === owner && card.name === name) { picked = card; break; }
-        } else if (!picked) {
-          picked = card;
+        // The curated pick: the named repo (if its owner/name matches a c4 item's card),
+        // else the first item (biggest codebase = densest, most convincing heatmap).
+        let picked = null;
+        for (const it of items) {
+          const card = byRun.get(String(it.runId));
+          if (!card) continue;
+          if (owner && name) {
+            if (card.owner === owner && card.name === name) { picked = card; break; }
+          } else if (!picked) {
+            picked = card;
+          }
         }
+        if (!picked) return;
+
+        const svg = await fetchText(
+          api,
+          "/api/public/oss/" + encodeURIComponent(picked.owner) + "/" + encodeURIComponent(picked.name) + "/c4.svg"
+        );
+        if (!svg) return;
+
+        this._live = { owner: picked.owner, name: picked.name, svg };
+      } finally {
+        // Fetch settled: drop the loading state. If no live map arrived (empty corpus,
+        // failed svg), render() falls through to the section head alone — never a stuck
+        // spinner. If it did arrive, render() paints the real heat-map.
+        this._pending = false;
+        this.render(this.shadowRoot);
       }
-      if (!picked) return;
-
-      const svg = await fetchText(
-        api,
-        "/api/public/oss/" + encodeURIComponent(picked.owner) + "/" + encodeURIComponent(picked.name) + "/c4.svg"
-      );
-      if (!svg) return;
-
-      this._live = { owner: picked.owner, name: picked.name, svg };
-      this.render(this.shadowRoot);
     }
 
     render(root) {
@@ -88,8 +99,12 @@ customElements.define(
       html += sectionHeadHtml(this);
 
       if (!this._live) {
-        // No live source resolved yet: reserve the frame quietly (no fake map).
-        html += `<figure class="mk-c4"><div class="mk-c4-frame"><p class="mk-c4-loading">Loading the architecture map…</p></div></figure>`;
+        // While a live fetch is in flight, reserve the frame with a quiet loading note
+        // (never a fake map). With no api-base configured, or after a failed/empty fetch,
+        // render only the section head — the map is simply unavailable, not "loading".
+        if (this._pending) {
+          html += `<figure class="mk-c4"><div class="mk-c4-frame"><p class="mk-c4-loading">Loading the architecture map…</p></div></figure>`;
+        }
         root.innerHTML = html;
         return;
       }
