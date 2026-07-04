@@ -8,7 +8,7 @@
 <label class="ed-page-switcher">
     <span class="ed-visually-hidden">Page</span>
     <select class="ed-select" value="@(Session.CurrentPageId?.Compact ?? "")" @onchange="OnChange">
-        @foreach (var entry in Pages.All())
+        @foreach (var entry in (Session.ActiveSiteId is { } siteId ? Pages.All(siteId) : []))
         {
             <option value="@entry.Id.Compact">
                 @entry.Title.Resolve(Session.EditLocale, Session.EditLocale) (/@(entry.IsHome ? "" : entry.Slug.Value))

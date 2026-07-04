@@ -81,7 +81,7 @@ always the truth.
 | --- | --- |
 | `OutputPath` | Default output folder for the single-site (no-environments) fallback. |
 | `DeployRoot` | **Sandbox root.** When set, every environment folder is a path *relative to this root*, and anything resolving outside it (via `..` or an absolute-looking value) is rejected. When null, folders are used as absolute paths as typed. |
-| `BaseUrl` | Absolute site origin for canonical URLs / sitemap. Leave null for output that is portable across environments (root-relative links work on any host — which is also what makes byte-copy promotion valid across domains). |
+| `BaseUrl` | Absolute site origin for canonical URLs / sitemap, applied **only** to the single-site `OutputPath` fallback. Environment-folder output is always rendered **portable** (root-relative, no absolute origin) — a single global origin would be wrong for every site but one, and root-relative links are what make byte-copy promotion valid across domains. Per-environment canonical origins are a documented follow-up. |
 | `WidgetsDirectory` | Built-in widget manifest + bundles. |
 
 **`DeployRoot` is the multi-tenant safety switch.** With it null (trust mode) a single

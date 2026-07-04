@@ -44,14 +44,21 @@ public sealed class EditorSession(PageDrafts drafts, SiteOverview site) : IDispo
         CurrentPageId is { } id ? drafts.Get(id) : null;
 
     /// <summary>
-    /// The site currently being edited: the open page's owning site, falling back to the
-    /// first site when nothing is open yet (fresh load, between pages). Everything that
+    /// The site currently being edited: the open page's owning site. Everything that
     /// belongs to the edited site — its locales, theme, navigation, default locale — must
     /// read THIS, not <see cref="SiteOverview.Current"/>, so opening a page from any
     /// site's dashboard card edits <em>that</em> site, not always the first one.
+    ///
+    /// With <em>no</em> page open (fresh load, between pages) it is the first site — the
+    /// single-site fallback. But an open page that is <em>unknown</em> (a stale or shared
+    /// link, a page deleted in another tab) yields <c>null</c>, NOT the first site: the
+    /// editor must show an empty state, never silently retarget writes at whichever site
+    /// happens to be first.
     /// </summary>
     public Site? ActiveSite =>
-        (CurrentPage?.SiteId is { } siteId ? site.Get(siteId) : null) ?? site.Current;
+        CurrentPageId is null
+            ? site.Current
+            : CurrentPage?.SiteId is { } siteId ? site.Get(siteId) : null;
 
     public SiteId? ActiveSiteId => ActiveSite?.Id;
 

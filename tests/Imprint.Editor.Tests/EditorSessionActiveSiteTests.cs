@@ -78,4 +78,22 @@ public sealed class EditorSessionActiveSiteTests
 
         Assert.Equal(onlyId, session.ActiveSiteId);
     }
+
+    [Fact]
+    public void ActiveSite_is_null_for_an_unknown_open_page_not_the_first_site()
+    {
+        // A stale/shared link or a page deleted in another tab: the page id is set but
+        // resolves to nothing. ActiveSite must NOT silently fall back to the first site
+        // (which would let the editor write to the wrong site) — it must be null so the
+        // chrome shows an empty state.
+        var sites = new SiteOverview();
+        long position = 0;
+        Fold(Site.Create(SiteId.New(), "First", new Locale("en")), ref position, sites);
+
+        var session = new EditorSession(new PageDrafts(), sites);
+        session.OpenPage(PageId.New()); // never created
+
+        Assert.Null(session.ActiveSite);
+        Assert.Null(session.ActiveSiteId);
+    }
 }

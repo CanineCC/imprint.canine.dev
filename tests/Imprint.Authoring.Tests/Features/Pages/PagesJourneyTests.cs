@@ -58,7 +58,7 @@ public sealed class PagesJourneyTests
         await host.Ok(new ChangePageMeta(homeId, "en", "Launch — Home", "The little site that could."));
 
         // One command publishes everything stale.
-        await host.Ok(new PublishAllStale());
+        await host.Ok(new PublishAllStale(siteId));
 
         // The delivery plane sees every page…
         var published = host.Get<PublishedContent>();

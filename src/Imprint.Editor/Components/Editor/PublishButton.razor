@@ -8,9 +8,9 @@
 
 @* Publish is a domain decision; file generation follows eventually (the publisher is
    a projection). The split button covers "this page" and "everything stale". *@
-@if (Session.CurrentPageId is { } pageId && Pages.Get(pageId) is { } current)
+@if (Session.CurrentPageId is { } pageId && Pages.Get(pageId) is { } current && Session.ActiveSiteId is { } siteId)
 {
-    var stale = Pages.All().Count(p => p.Status != PageStatus.Published);
+    var stale = Pages.All(siteId).Count(p => p.Status != PageStatus.Published);
     <div class="ed-publish">
         <button type="button"
                 class="ed-btn ed-btn-primary"
@@ -25,7 +25,7 @@
         </button>
         @if (stale > 1)
         {
-            <button type="button" class="ed-btn" disabled="@_busy" @onclick="PublishAll">
+            <button type="button" class="ed-btn" disabled="@_busy" @onclick="() => PublishAll(siteId)">
                 Publish all (@stale)
             </button>
         }
@@ -54,10 +54,10 @@
         _busy = false;
     }
 
-    private async Task PublishAll()
+    private async Task PublishAll(Authoring.Domain.SiteId siteId)
     {
         _busy = true;
-        if (await Commands.Run(new Authoring.Features.Pages.PublishAllStale.PublishAllStale()))
+        if (await Commands.Run(new Authoring.Features.Pages.PublishAllStale.PublishAllStale(siteId)))
         {
             Toasts.Show("All pages published.");
         }

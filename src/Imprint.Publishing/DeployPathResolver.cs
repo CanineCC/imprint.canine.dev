@@ -20,29 +20,52 @@ public sealed class DeployPathResolver(PublishingOptions options)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(environmentPath);
 
+        string result;
         if (string.IsNullOrWhiteSpace(options.DeployRoot))
         {
             // Trust mode: the operator owns the target; take the path as given.
-            return Path.GetFullPath(environmentPath);
+            result = Path.GetFullPath(environmentPath);
+        }
+        else
+        {
+            var root = Path.GetFullPath(options.DeployRoot);
+
+            // Treat the value as relative even when it looks rooted — Path.Combine honors
+            // a rooted second argument and would let "/etc" or "C:\" escape the sandbox,
+            // so the leading separators are removed first.
+            var relative = environmentPath.Replace('\\', '/').TrimStart('/');
+            result = Path.GetFullPath(Path.Combine(root, relative));
+
+            var rootWithSeparator = root.EndsWith(Path.DirectorySeparatorChar)
+                ? root
+                : root + Path.DirectorySeparatorChar;
+
+            // STRICTLY under the root: the root itself is off-limits. A value that trims to
+            // empty ("/", "///") resolves onto the root, and publishing there would sweep
+            // away every other tenant's subfolder — so require a real subpath.
+            if (!result.StartsWith(rootWithSeparator, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"The publish folder '{environmentPath}' must be a subfolder of the deploy root; " +
+                    "it resolved outside it or onto the root itself and was rejected.");
+            }
         }
 
-        var root = Path.GetFullPath(options.DeployRoot);
-
-        // Treat the value as relative even when it looks rooted — Path.Combine honors a
-        // rooted second argument and would let "/etc" or "C:\" escape the sandbox, so the
-        // leading separators are removed first.
-        var relative = environmentPath.Replace('\\', '/').TrimStart('/');
-        var candidate = Path.GetFullPath(Path.Combine(root, relative));
-
-        var rootWithSeparator = root.EndsWith(Path.DirectorySeparatorChar)
-            ? root
-            : root + Path.DirectorySeparatorChar;
-        if (candidate != root && !candidate.StartsWith(rootWithSeparator, StringComparison.Ordinal))
+        // Never a filesystem root, in either mode — a publish pass sweeps its output
+        // folder, and sweeping "/" or "C:\" would erase the disk.
+        if (IsFilesystemRoot(result))
         {
             throw new InvalidOperationException(
-                $"The publish folder '{environmentPath}' resolves outside the configured deploy root and was rejected.");
+                $"The publish folder '{environmentPath}' resolves to a filesystem root, which is never a safe publish target.");
         }
 
-        return candidate;
+        return result;
+    }
+
+    private static bool IsFilesystemRoot(string path)
+    {
+        var normalized = Path.TrimEndingDirectorySeparator(path);
+        var root = Path.TrimEndingDirectorySeparator(Path.GetPathRoot(normalized) ?? string.Empty);
+        return normalized.Length == 0 || string.Equals(normalized, root, StringComparison.Ordinal);
     }
 }

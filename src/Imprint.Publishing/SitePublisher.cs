@@ -35,14 +35,9 @@ public sealed class SitePublisher(
     WidgetRegistry widgetRegistry,
     IMediaStore mediaStore,
     PublisherStatus status,
+    PublishGate gate,
     ILoggerFactory loggerFactory)
 {
-    // Serialized on purpose: the initial pass and debounced passes may overlap in
-    // time, and two writers over one output directory cannot both be a projection.
-    // Different target folders never conflict, but publishes are user-paced and rare,
-    // so one global gate is simpler than a per-folder lock table and costs nothing.
-    private readonly SemaphoreSlim _gate = new(1, 1);
-
     private readonly ILogger _logger = loggerFactory.CreateLogger<SitePublisher>();
 
     /// <summary>
@@ -61,10 +56,8 @@ public sealed class SitePublisher(
     }
 
     /// <summary>Render one site's published content to one output folder — the per-site, per-environment projection.</summary>
-    public async Task<PublishReport> Synchronize(PublishTarget target, CancellationToken ct = default)
-    {
-        await _gate.WaitAsync(ct);
-        try
+    public Task<PublishReport> Synchronize(PublishTarget target, CancellationToken ct = default) =>
+        gate.RunExclusive(async () =>
         {
             var pass = new Pass(
                 options, target.Site, target.OutputPath, target.BaseUrl, publishedContent,
@@ -72,12 +65,7 @@ public sealed class SitePublisher(
             var report = await pass.Run(ct);
             status.Record(report);
             return report;
-        }
-        finally
-        {
-            _gate.Release();
-        }
-    }
+        }, ct);
 
     /// <summary>
     /// One synchronize pass over an immutable snapshot of the inputs. Read models

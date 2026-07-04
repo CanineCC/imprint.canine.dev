@@ -30,7 +30,7 @@ public sealed class SiteDeployService(
     SitePublisher publisher,
     SiteOverview sites,
     DeployPathResolver paths,
-    PublishingOptions options,
+    PublishGate gate,
     ILogger<SiteDeployService> logger)
 {
     /// <summary>Render the site's published content into the named environment's folder.</summary>
@@ -41,7 +41,11 @@ public sealed class SiteDeployService(
         var folder = paths.Resolve(environment.Path);
         logger.LogInformation(
             "Publishing site {SiteId} to environment '{Environment}' at {Folder}.", siteId, environment.Name, folder);
-        return await publisher.Synchronize(new PublishTarget(site, folder, options.BaseUrl), ct);
+        // Environment output is addressed root-relative (BaseUrl null) so it is portable
+        // across origins — which is also what makes a byte-copy promotion valid across
+        // domains. Per-environment canonical origins are a documented follow-up, not a
+        // global BaseUrl that would be wrong for every site but one.
+        return await publisher.Synchronize(new PublishTarget(site, folder, BaseUrl: null), ct);
     }
 
     /// <summary>
@@ -58,10 +62,14 @@ public sealed class SiteDeployService(
         var fromFolder = paths.Resolve(from.Path);
         var toFolder = paths.Resolve(to.Path);
 
-        if (PathsEqual(fromFolder, toFolder))
+        // Same OR nested folders are both fatal to the mirror: if one is inside the other,
+        // the copy re-reads its own output and the sweep deletes live files in the shared
+        // subtree. Only fully-disjoint folders can be promoted between.
+        if (SameOrNested(fromFolder, toFolder))
         {
             throw new InvalidOperationException(
-                $"'{from.Name}' and '{to.Name}' point at the same folder; there is nothing to promote.");
+                $"'{from.Name}' and '{to.Name}' point at the same folder or one nested inside the other; " +
+                "a promotion needs two separate folders.");
         }
 
         if (!Directory.Exists(fromFolder))
@@ -73,7 +81,12 @@ public sealed class SiteDeployService(
         logger.LogInformation(
             "Promoting site {SiteId} from '{From}' to '{To}' ({FromFolder} → {ToFolder}).",
             siteId, from.Name, to.Name, fromFolder, toFolder);
-        await Task.Run(() => Mirror(fromFolder, toFolder, ct), ct);
+
+        // Under the shared publish gate: the mirror reads the source folder, which the
+        // auto-sync background pass continuously rewrites, and writes the destination — two
+        // writers over one folder must not overlap, or a promotion captures a torn
+        // half-rendered snapshot (or crashes on a file swept mid-copy).
+        await gate.RunExclusive(() => Task.Run(() => Mirror(fromFolder, toFolder, ct), ct), ct);
     }
 
     /// <summary>The live status of every environment configured on a site, in promotion order.</summary>
@@ -101,19 +114,31 @@ public sealed class SiteDeployService(
             }
 
             var manifestPath = Path.Combine(resolved, PublishManifest.FileName);
-            var manifest = PublishManifest.Load(manifestPath);
-            statuses.Add(manifest is null
-                ? new EnvironmentDeployStatus(
-                    environment.Name, environment.Path, resolved, Deployed: false, 0, 0, null, null)
-                : new EnvironmentDeployStatus(
-                    environment.Name,
-                    environment.Path,
-                    resolved,
-                    Deployed: true,
-                    manifest.SiteVersion,
-                    manifest.Pages.Count,
-                    File.GetLastWriteTimeUtc(manifestPath),
-                    null));
+            try
+            {
+                var manifest = PublishManifest.Load(manifestPath);
+                statuses.Add(manifest is null
+                    ? new EnvironmentDeployStatus(
+                        environment.Name, environment.Path, resolved, Deployed: false, 0, 0, null, null)
+                    : new EnvironmentDeployStatus(
+                        environment.Name,
+                        environment.Path,
+                        resolved,
+                        Deployed: true,
+                        manifest.SiteVersion,
+                        manifest.Pages.Count,
+                        File.GetLastWriteTimeUtc(manifestPath),
+                        null));
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            {
+                // A present-but-unreadable manifest (permission bits, a locked file) must
+                // degrade to a per-environment error, never take the whole status board
+                // down — one bad folder must not blind the operator to the others.
+                statuses.Add(new EnvironmentDeployStatus(
+                    environment.Name, environment.Path, resolved, Deployed: false, 0, 0, null,
+                    $"Could not read this environment's status: {e.Message}"));
+            }
         }
 
         return statuses;
@@ -130,11 +155,16 @@ public sealed class SiteDeployService(
         return (site, environment);
     }
 
-    private static bool PathsEqual(string a, string b) =>
-        string.Equals(
-            Path.TrimEndingDirectorySeparator(Path.GetFullPath(a)),
-            Path.TrimEndingDirectorySeparator(Path.GetFullPath(b)),
-            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+    /// <summary>True when a and b are the same folder, or one is an ancestor of the other.</summary>
+    private static bool SameOrNested(string a, string b)
+    {
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        var na = Path.TrimEndingDirectorySeparator(Path.GetFullPath(a));
+        var nb = Path.TrimEndingDirectorySeparator(Path.GetFullPath(b));
+        return string.Equals(na, nb, comparison)
+            || na.StartsWith(nb + Path.DirectorySeparatorChar, comparison)
+            || nb.StartsWith(na + Path.DirectorySeparatorChar, comparison);
+    }
 
     /// <summary>Make <paramref name="destination"/> an exact copy of <paramref name="source"/>: copy every file, delete anything extra.</summary>
     private static void Mirror(string source, string destination, CancellationToken ct)

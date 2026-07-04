@@ -33,7 +33,7 @@ public sealed class PublishAllStaleTests
         await host.Ok(new PublishPage(publishedId));
         var steadyVersionBefore = host.Get<PageList>().Get(publishedId)!.PublishedVersion;
 
-        await host.Ok(new PublishAllStale());
+        await host.Ok(new PublishAllStale(siteId));
 
         var published = host.Get<PublishedContent>();
         Assert.NotNull(published.Get(draftId));
@@ -46,6 +46,27 @@ public sealed class PublishAllStaleTests
     }
 
     [Fact]
+    public async Task PublishAllStale_only_publishes_its_own_sites_pages()
+    {
+        // Multi-site: publishing "all stale" from site A's editor must never publish
+        // site B's pages (the cross-site bug the review caught).
+        await using var host = PagesHost.Create();
+        var siteA = await PagesHost.SeedSite(host);
+        var siteB = await PagesHost.SeedSite(host);
+
+        var pageA = PageId.New();
+        await host.Ok(new CreatePage(pageA, siteA, "A page", "a", "en"));
+        var pageB = PageId.New();
+        await host.Ok(new CreatePage(pageB, siteB, "B page", "b", "en"));
+
+        await host.Ok(new PublishAllStale(siteA));
+
+        var published = host.Get<PublishedContent>();
+        Assert.NotNull(published.Get(pageA)); // A's page published…
+        Assert.Null(published.Get(pageB));    // …B's page left untouched.
+    }
+
+    [Fact]
     public async Task PublishAllStale_with_nothing_stale_is_ok()
     {
         await using var host = PagesHost.Create();
@@ -54,7 +75,7 @@ public sealed class PublishAllStaleTests
         await host.Ok(new CreatePage(pageId, siteId, "Home", "home", "en"));
         await host.Ok(new PublishPage(pageId));
 
-        await host.Ok(new PublishAllStale());
+        await host.Ok(new PublishAllStale(siteId));
     }
 
     [Fact]
@@ -76,7 +97,7 @@ public sealed class PublishAllStaleTests
         doomed.Delete();
         await store.Save(doomed);
 
-        var error = await host.Fails(new PublishAllStale());
+        var error = await host.Fails(new PublishAllStale(siteId));
         Assert.Contains("doomed: This page has been deleted.", error);
         Assert.DoesNotContain("good:", error);
 

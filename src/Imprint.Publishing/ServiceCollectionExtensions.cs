@@ -17,6 +17,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(options);
         services.AddSingleton<PublisherStatus>();
+        services.AddSingleton<PublishGate>();
         services.AddSingleton<SitePublisher>();
         services.AddSingleton<DeployPathResolver>();
         services.AddSingleton<SiteDeployService>();

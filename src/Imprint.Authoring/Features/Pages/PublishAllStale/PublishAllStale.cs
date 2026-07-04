@@ -1,6 +1,7 @@
+using Imprint.Authoring.Domain;
 using Imprint.EventSourcing;
 
 namespace Imprint.Authoring.Features.Pages.PublishAllStale;
 
-/// <summary>Publishes every page whose draft is ahead of (or has never had) a publish.</summary>
-public sealed record PublishAllStale : ICommand;
+/// <summary>Publishes every stale page <em>of one site</em> — a draft ahead of (or never given) a publish.</summary>
+public sealed record PublishAllStale(SiteId SiteId) : ICommand;

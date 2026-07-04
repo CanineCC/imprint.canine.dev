@@ -16,11 +16,12 @@ public sealed class PublishAllStaleHandler(IAggregateStore store, PageList pageL
     {
         var failures = new List<string>();
 
-        // The stale set comes from the PageList read model. Accepted race: a page
-        // edited, deleted or published in this same instant is decided against its
-        // *stream* when loaded below, so the worst case is a per-page domain error in
-        // the summary — never a wrong publish.
-        foreach (var summary in pageList.All().Where(page => page.Status != PageStatus.Published))
+        // The stale set comes from the PageList read model, scoped to the command's site
+        // so publishing from one site's editor never touches another site's pages.
+        // Accepted race: a page edited, deleted or published in this same instant is
+        // decided against its *stream* when loaded below, so the worst case is a per-page
+        // domain error in the summary — never a wrong publish.
+        foreach (var summary in pageList.All(command.SiteId).Where(page => page.Status != PageStatus.Published))
         {
             try
             {

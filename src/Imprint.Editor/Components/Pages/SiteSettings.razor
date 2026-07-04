@@ -65,7 +65,10 @@
                     @for (var i = 0; i < _envs.Count; i++)
                     {
                         var idx = i;
-                        <li class="env-row">
+                        @* @key ties browser state (focus/caret/selection) to the logical
+                           row, so reordering/removing moves the DOM node instead of
+                           re-labelling whichever node sits at that position. *@
+                        <li class="env-row" @key="_envs[idx]">
                             <span class="env-order" aria-hidden="true">@(idx + 1)</span>
                             <input class="ed-input env-name" placeholder="Test" aria-label="Environment name"
                                    disabled="@(!_interactive)" @bind="_envs[idx].Name" @bind:event="oninput" />
@@ -277,9 +280,9 @@
 
     private async Task PublishTo(string environment)
     {
-        if (_site is not { } site)
+        if (_busy || _site is not { } site)
         {
-            return;
+            return; // _busy guards re-entrancy in code, not just via the disabled attribute
         }
 
         _busy = true;
@@ -300,9 +303,9 @@
 
     private async Task Promote(string from, string to)
     {
-        if (_site is not { } site)
+        if (_busy || _site is not { } site)
         {
-            return;
+            return; // _busy guards re-entrancy in code, not just via the disabled attribute
         }
 
         _busy = true;

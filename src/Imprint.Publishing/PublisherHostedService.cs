@@ -70,22 +70,25 @@ public sealed class PublisherHostedService(
 
     private async Task TrySynchronize(CancellationToken ct)
     {
-        try
+        // Per-target guard: one site's publish failing (an unwritable folder, a render
+        // error) must not stall the sites after it in the loop — publishing is a
+        // projection, and a projection failure must not take the editing plane down with
+        // it. The next catch-up pass retries the failed site.
+        foreach (var target in ResolveTargets())
         {
-            foreach (var target in ResolveTargets())
+            ct.ThrowIfCancellationRequested();
+            try
             {
                 await publisher.Synchronize(target, ct);
             }
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception e)
-        {
-            // Never out of the service: publishing is a projection, and a projection
-            // failure must not take the editing plane down with it.
-            logger.LogError(e, "Publishing failed; will retry on the next change.");
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Publishing site {SiteId} failed; will retry on the next change.", target.Site.Id);
+            }
         }
     }
 
@@ -102,12 +105,19 @@ public sealed class PublisherHostedService(
         var targets = new List<PublishTarget>(sites.Count);
         foreach (var site in sites)
         {
-            if (site.Environments.Count > 0)
+            // Capture the live environments list ONCE — Site.Environments is a field getter
+            // a concurrent projection replay can reassign between a .Count and an index,
+            // and this loop runs without the projection engine's gate.
+            var environments = site.Environments;
+            if (environments.Count > 0)
             {
-                var environment = site.Environments[0];
+                var environment = environments[0];
                 try
                 {
-                    targets.Add(new PublishTarget(site, paths.Resolve(environment.Path), options.BaseUrl));
+                    // Environment output is portable (root-relative, BaseUrl null): a single
+                    // global BaseUrl would be wrong for every site but one (see
+                    // SiteDeployService and multi-site-saas.md).
+                    targets.Add(new PublishTarget(site, paths.Resolve(environment.Path), BaseUrl: null));
                 }
                 catch (Exception e) when (e is InvalidOperationException or ArgumentException)
                 {
@@ -118,6 +128,8 @@ public sealed class PublisherHostedService(
             }
             else if (site.Id == currentId && !string.IsNullOrWhiteSpace(options.OutputPath))
             {
+                // The legacy single-site fallback keeps the global BaseUrl, which is
+                // correct precisely because there is exactly one site in this branch.
                 targets.Add(new PublishTarget(site, options.OutputPath, options.BaseUrl));
             }
         }

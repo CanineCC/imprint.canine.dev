@@ -235,7 +235,60 @@ public sealed class SiteDeployTests
         var error = await Assert.ThrowsAsync<InvalidOperationException>(
             () => host.Deploy.PublishToEnvironment(siteId, "Test"));
 
-        Assert.Contains("outside the configured deploy root", error.Message);
+        Assert.Contains("subfolder of the deploy root", error.Message);
+    }
+
+    [Fact]
+    public async Task Sandboxed_environment_folder_that_resolves_onto_the_root_is_rejected()
+    {
+        // "/" trims to empty and resolves onto the deploy root itself — publishing there
+        // would sweep every other tenant's subfolder, so it must be refused.
+        await using var host = new PublishingTestHost(sandboxDeploys: true);
+        var (siteId, _) = await OneSite(host);
+        await host.SetEnvironments(siteId, ("Test", "/"));
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => host.Deploy.PublishToEnvironment(siteId, "Test"));
+
+        Assert.Contains("subfolder of the deploy root", error.Message);
+    }
+
+    [Fact]
+    public async Task Trust_mode_environment_folder_at_a_filesystem_root_is_rejected()
+    {
+        // No DeployRoot (trust mode): an absolute "/" resolves to the filesystem root; a
+        // publish sweeps its output folder, so this would erase the disk. Refuse it.
+        await using var host = new PublishingTestHost();
+        var (siteId, _) = await OneSite(host);
+        await host.SetEnvironments(siteId, ("Test", "/"));
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => host.Deploy.PublishToEnvironment(siteId, "Test"));
+
+        Assert.Contains("filesystem root", error.Message);
+    }
+
+    [Fact]
+    public async Task Promote_between_nested_folders_is_rejected()
+    {
+        await using var host = new PublishingTestHost();
+        var (siteId, _) = await OneSite(host);
+        var prod = Path.Combine(host.Root, "prod");
+        var backup = Path.Combine(prod, "backup"); // nested inside prod
+        await host.SetEnvironments(siteId, ("Prod", prod), ("Backup", backup));
+        await host.Deploy.PublishToEnvironment(siteId, "Prod");
+
+        // Either direction is fatal to the mirror (self-copy / cross-sweep), so both are refused.
+        var down = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => host.Deploy.Promote(siteId, "Prod", "Backup"));
+        Assert.Contains("nested", down.Message);
+
+        var up = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => host.Deploy.Promote(siteId, "Backup", "Prod"));
+        Assert.Contains("nested", up.Message);
+
+        // The live Prod output is untouched by the rejected promotions.
+        Assert.True(File.Exists(Path.Combine(prod, "index.html")));
     }
 
     [Fact]
