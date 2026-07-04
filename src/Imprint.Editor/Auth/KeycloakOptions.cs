@@ -29,6 +29,13 @@ public sealed class KeycloakOptions
     /// <summary>Require HTTPS for metadata/token retrieval. True in real deployments.</summary>
     public bool RequireHttps { get; set; } = true;
 
+    /// <summary>
+    /// Optional Keycloak identity-provider alias to jump straight to (sent as
+    /// <c>kc_idp_hint</c>), e.g. <c>google</c> — so the user lands on "Sign in with Google"
+    /// rather than a Keycloak username/password form. Leave null to show Keycloak's own page.
+    /// </summary>
+    public string? IdpHint { get; set; }
+
     /// <summary>Authentication is active only once an <see cref="Authority"/> is configured.</summary>
     public bool Enabled => !string.IsNullOrWhiteSpace(Authority);
 }

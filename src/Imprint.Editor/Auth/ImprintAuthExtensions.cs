@@ -125,6 +125,14 @@ public static class ImprintAuthExtensions
                         {
                             ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
                             ctx.HandleResponse();
+                            return Task.CompletedTask;
+                        }
+
+                        // Skip Keycloak's own login page and go straight to the hinted broker
+                        // (e.g. Google), matching how the estate's other apps land on their IdP.
+                        if (!string.IsNullOrWhiteSpace(options.IdpHint))
+                        {
+                            ctx.ProtocolMessage.SetParameter("kc_idp_hint", options.IdpHint);
                         }
 
                         return Task.CompletedTask;
