@@ -81,53 +81,94 @@ export function cardFromGallery(c) {
   };
 }
 
-/** The public report URL for a card — mirrors PublicFindingsEndpoint / _SurveyCard. */
-export function reportUrl(c) {
-  const run = c.bestRunId || c.BestRunId || "";
+/**
+ * A card is an INSPECTABLE PUBLIC report when it has both an open source URL (so a
+ * visitor can read the code — the private/internal canine repos have `sourceUrl:null`)
+ * AND a best run id (so a full report exists to link to). The marketing surfaces only
+ * ever flag / link repos that pass this gate; the internal canine repos, which the
+ * kennel corpus also carries, never surface as a flagship or a gallery peer.
+ */
+export function isPublicWithReport(c) {
+  if (!c) return false;
+  const src = c.sourceUrl || c.SourceUrl;
+  const run = c.bestRunId || c.BestRunId;
+  return !!(src && run);
+}
+
+/**
+ * The ABSOLUTE public report URL for a card — mirrors PublicFindingsEndpoint /
+ * _SurveyCard's `/api/oss/{owner}/{name}/report?run={BestRunId}`, but resolved against
+ * the kennel origin (`apiBase`). The marketing islands render on a STATIC cross-origin
+ * host, so an origin-less relative href would 404 there — it must carry the api-base.
+ * Returns "" for any card without an inspectable public report (no dead links).
+ */
+export function reportUrl(c, apiBase) {
+  if (!isPublicWithReport(c)) return "";
+  const base = (apiBase || "").trim().replace(/\/$/, "");
+  const run = c.bestRunId || c.BestRunId;
   return (
+    base +
     "/api/oss/" +
     encodeURIComponent(c.owner) +
     "/" +
     encodeURIComponent(c.name) +
     "/report?run=" +
-    run
+    encodeURIComponent(run)
   );
 }
 
 /**
- * The curated HERO pick from a corpus — the highest-quality published repo (peak
- * score, LoC as the tie-break), mirroring the survey-card `pick:"best"` demo default
- * the landing hero uses. `owner`/`name` (when both given) select an exact repo.
+ * The curated HERO pick from a corpus — the highest-quality INSPECTABLE PUBLIC repo
+ * (peak score, LoC as the tie-break), mirroring the survey-card `pick:"best"` demo
+ * default the landing hero uses, but never a private/internal canine repo (those have
+ * no open source to inspect). `owner`/`name` (when both given) select an exact repo,
+ * still gated to public-with-report so a named private repo never becomes the flagship.
  */
 export function pickCard(cards, { owner, name } = {}) {
   if (!Array.isArray(cards) || cards.length === 0) return null;
+  const publicCards = cards.filter(isPublicWithReport);
   if (owner && name) {
-    const exact = cards.find((c) => c.owner === owner && c.name === name);
+    const exact = publicCards.find((c) => c.owner === owner && c.name === name);
     if (exact) return exact;
   }
+  return publicRanked(cards)[0] || null;
+}
+
+/**
+ * Every INSPECTABLE PUBLIC repo, ranked best-first (peak score, LoC tie-break) — the
+ * flagship-quality ordering. Callers that must LINK a report (the hero card, the
+ * gallery) walk this and probe {@link reportOk} to skip any whose bundle hasn't landed
+ * yet, so the highest-quality repo with a *live* report wins.
+ */
+export function publicRanked(cards) {
   return cards
+    .filter(isPublicWithReport)
     .slice()
     .sort((a, b) => {
       const sa = a.bestScore != null ? a.bestScore : a.headlineScore;
       const sb = b.bestScore != null ? b.bestScore : b.headlineScore;
       return (sb - sa) || ((b.productionLoc || 0) - (a.productionLoc || 0));
-    })[0];
+    });
 }
 
 /**
- * The "quiet-peer" gallery ordering the public gallery uses: newest-published first,
- * then best score — so the grid reads as a living public record, not a leaderboard.
- * Mirrors PublicContent's Year*12+Month, then best-score sort.
+ * The QUALITY-forward gallery ordering — the "real reports, fully open, not a logo
+ * wall" showcase leads with the strongest repos, so it reads as a wall of proof, not a
+ * recency feed. Among INSPECTABLE PUBLIC repos only (never a private/internal canine
+ * repo), best score first, LoC as the tie-break. `exclude` (an {owner,name}) drops the
+ * hero so the gallery never duplicates the flagship card.
  */
-export function galleryOrder(cards) {
-  return cards.slice().sort((a, b) => {
-    const ta = Date.parse(a.lastUpdated || a.publishedAt || "") || 0;
-    const tb = Date.parse(b.lastUpdated || b.publishedAt || "") || 0;
-    if (tb !== ta) return tb - ta;
-    const sa = a.bestScore != null ? a.bestScore : a.headlineScore;
-    const sb = b.bestScore != null ? b.bestScore : b.headlineScore;
-    return sb - sa;
-  });
+export function galleryOrder(cards, { exclude } = {}) {
+  return cards
+    .filter(isPublicWithReport)
+    .filter((c) =>
+      exclude ? !(c.owner === exclude.owner && c.name === exclude.name) : true
+    )
+    .sort((a, b) => {
+      const sa = a.bestScore != null ? a.bestScore : a.headlineScore;
+      const sb = b.bestScore != null ? b.bestScore : b.headlineScore;
+      return (sb - sa) || ((b.productionLoc || 0) - (a.productionLoc || 0));
+    });
 }
 
 /**
@@ -144,6 +185,23 @@ export async function fetchJson(apiBase, path, fallback) {
     return await r.json();
   } catch {
     return fallback;
+  }
+}
+
+/**
+ * Does a repo's public report actually resolve right now? The corpus lists every
+ * opted-in repo, but a report bundle is only linkable once it exists on the public API
+ * (bundles are copied in asynchronously). A GET that 404s means "not yet" — the widgets
+ * probe before they link so a marketing card NEVER carries a dead "read the report" href.
+ * Any network error resolves false (better a card with no link than a broken one).
+ */
+export async function reportOk(url) {
+  if (!url) return false;
+  try {
+    const r = await fetch(url, { method: "GET" });
+    return r.ok;
+  } catch {
+    return false;
   }
 }
 

@@ -45,6 +45,8 @@ public sealed class BlockMapper(string origin, string? apiBase = null)
             "cardGallery" => CardGallery(block),
             "liveCard" => LiveCard(block),
             "bandScale" => BandScale(block),
+            "c4Heat" => C4Heat(block),
+            "findings" => Findings(block),
             "flow" => Flow(block),
             "contactForm" => ContactForm(block),
             _ => FlagUnknown(template, rel),
@@ -75,6 +77,8 @@ public sealed class BlockMapper(string origin, string? apiBase = null)
         "cardGallery" => SectionAppearance.Gallery,
         "liveCard" => SectionAppearance.LiveCard,
         "bandScale" => SectionAppearance.BandScale,
+        "c4Heat" => SectionAppearance.C4Heat,
+        "findings" => SectionAppearance.Findings,
         "flow" => SectionAppearance.Flow,
         "contactForm" => SectionAppearance.Contact,
         _ => SectionAppearance.Plain,
@@ -783,6 +787,34 @@ public sealed class BlockMapper(string origin, string? apiBase = null)
             {
                 props["score"] = score!;
             }
+        });
+
+    private SectionNode C4Heat(JsonNode block) =>
+        // The C4 architecture heat-map — a LIVE-ONLY island (no meaningful static twin of
+        // an architecture map). api-base + owner/name select the repo whose real C4-heat
+        // SVG is rendered; with no api-base it shows nothing. No sample fallback attribute.
+        WidgetSection(block, "cai-c4-heat", props =>
+        {
+            InjectApiBase(props);
+            CopyCuration(block, props);
+            Copy(block, "kicker", props, "kicker");
+            Copy(block, "heading", props, "heading");
+            Copy(block, "lede", props, "lede");
+            Copy(block, "caption", props, "caption");
+        });
+
+    private SectionNode Findings(JsonNode block) =>
+        // The deterministic architecture / domain-model / event findings located to
+        // file:line, from real published reports. api-base + owner/name/count drive live;
+        // the island keeps its own small labelled SAMPLE as the no-live fallback.
+        WidgetSection(block, "cai-findings", props =>
+        {
+            InjectApiBase(props);
+            CopyCuration(block, props);
+            Copy(block, "kicker", props, "kicker");
+            Copy(block, "heading", props, "heading");
+            Copy(block, "lede", props, "lede");
+            Copy(block, "footnote", props, "footnote");
         });
 
     private SectionNode Composition(JsonNode block) =>

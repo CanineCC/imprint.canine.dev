@@ -87,7 +87,16 @@ customElements.define(
         chosen = items.slice(0, this.#count());
       }
       if (chosen.length === 0) return;
-      this._live = chosen;
+      // The feed's reportUrl is an origin-less /api/oss/... path (same-origin in the app);
+      // on this cross-origin static host it must carry the api-base or it 404s. Resolve
+      // each to an ABSOLUTE link so the "+N more in the full report" href actually opens.
+      const base = api.replace(/\/$/, "");
+      this._live = chosen.map((it) => ({
+        ...it,
+        reportUrl: it.reportUrl
+          ? (/^https?:\/\//i.test(it.reportUrl) ? it.reportUrl : base + it.reportUrl)
+          : "",
+      }));
       this.render(this.shadowRoot);
     }
 

@@ -8,10 +8,11 @@
 //
 // Data (mirrors the app's C4 wheel): fetch {api}/api/public/c4 for the curated set of
 // gallery-opt-in repos whose latest published run passes the C4 gate (DDD + ≥2 bounded
-// contexts), biggest codebase first. Pick the repo named by `owner`+`name` if given, else
-// the first (densest heatmap). Recover its owner/name by matching the run id against
-// {api}/api/oss, then load the PUBLIC C4-heat SVG from Track K's endpoint
-// {api}/api/public/oss/{owner}/{name}/c4.svg and render it inline. Empty ⇒ nothing shown.
+// contexts), biggest codebase first. Each item carries a "owner/name" repo label. Pick
+// the repo named by `owner`+`name` if given, else the first INSPECTABLE-PUBLIC item
+// (skipping the private/internal canine repos, which also pass the gate), then load the
+// PUBLIC C4-heat SVG from Track K's endpoint {api}/api/public/oss/{owner}/{name}/c4.svg
+// and render it inline. Empty ⇒ nothing shown.
 
 import {
   CaiIsland,
@@ -22,7 +23,17 @@ import {
   renderInline,
   escapeHtml,
 } from "./tokens.js";
-import { fetchJson, fetchText } from "./live.js";
+import { fetchJson, fetchText, isPublicWithReport } from "./live.js";
+
+// The public C4 endpoint labels each item with a "owner/name" repo string and a per-run
+// id (NOT the corpus best-run id) — Track K's SVG endpoint is addressed by owner/name, so
+// we key off the label. Split it into { owner, name }, tolerant of owners with a slash.
+function splitRepo(repo) {
+  const s = String(repo || "");
+  const i = s.indexOf("/");
+  if (i <= 0 || i >= s.length - 1) return null;
+  return { owner: s.slice(0, i), name: s.slice(i + 1) };
+}
 
 const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + `
 .mk-c4 { max-width: 62rem; margin: 0 auto; }
@@ -53,28 +64,32 @@ customElements.define(
         const items = (c4 && Array.isArray(c4.items)) ? c4.items : [];
         if (items.length === 0) return;
 
-        // Recover owner/name per runId from the corpus (the c4 endpoint returns a label +
-        // run id only; Track K's public svg endpoint is addressed by owner/name).
+        // Each c4 item carries a "owner/name" repo label; split it to address the SVG
+        // endpoint. The corpus tells us which repos are inspectable-public (the private/
+        // internal canine repos also pass the C4 gate but must never be the flagship map).
         const cards = await fetchJson(api, "/api/oss", null);
-        const byRun = new Map();
+        const publicNames = new Set();
         if (Array.isArray(cards)) {
           for (const c of cards) {
-            const run = c.bestRunId || c.BestRunId;
-            if (run) byRun.set(String(run), c);
+            if (isPublicWithReport(c)) publicNames.add(c.owner + "/" + c.name);
           }
         }
 
-        // The curated pick: the named repo (if its owner/name matches a c4 item's card),
-        // else the first item (biggest codebase = densest, most convincing heatmap).
+        const candidates = items
+          .map((it) => splitRepo(it.repo))
+          .filter(Boolean);
+
+        // The curated pick: the named repo when given; else the first PUBLIC item (the c4
+        // endpoint already orders biggest-codebase first = the densest, most convincing
+        // heat-map). A named repo is honoured as-is (an author picked it deliberately).
         let picked = null;
-        for (const it of items) {
-          const card = byRun.get(String(it.runId));
-          if (!card) continue;
-          if (owner && name) {
-            if (card.owner === owner && card.name === name) { picked = card; break; }
-          } else if (!picked) {
-            picked = card;
-          }
+        if (owner && name) {
+          picked =
+            candidates.find((r) => r.owner === owner && r.name === name) || null;
+        } else {
+          picked =
+            candidates.find((r) => publicNames.has(r.owner + "/" + r.name)) ||
+            null;
         }
         if (!picked) return;
 
