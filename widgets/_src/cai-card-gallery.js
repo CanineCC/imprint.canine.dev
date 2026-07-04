@@ -5,10 +5,11 @@
 // logo wall" (port of the CardGallery renderer, packages/ui/src/blocks.tsx). Gallery
 // cards are quiet peers (a hairline border, no seal, no shadow), unlike the accent hero.
 //
-// LIVE by default: when `api-base` is set it fetches {api}/api/oss and renders the
-// curated set — newest-published first, then best score (the same quiet-peer ordering
-// the public gallery uses), capped at `count`. Each card links to its real report.
-// Without `api-base`, or if the fetch fails, it renders the labelled SAMPLE `cards`.
+// LIVE by default: when `api-base` is set it fetches {api}/api/public/showcase and renders
+// the SERVER-CURATED gallery slice — a diverse, quality-forward set of public-with-report
+// repos, hero excluded, no dupes (the server does the picking + ordering). Capped at
+// `count`. Each card links to its real report. Without `api-base`, or if the fetch fails,
+// it renders the labelled SAMPLE `cards`. No client-side sort.
 
 import {
   CaiIsland,
@@ -19,14 +20,7 @@ import {
   renderInline,
 } from "./tokens.js";
 import { scoreCardBodyHtml, parseCard, SCORECARD_CSS } from "./scorecard.js";
-import {
-  cardFromGallery,
-  reportUrl,
-  galleryOrder,
-  publicRanked,
-  reportOk,
-  fetchJson,
-} from "./live.js";
+import { cardFromGallery, reportUrl, fetchShowcase } from "./live.js";
 
 const DEFAULT_COUNT = 6;
 
@@ -46,36 +40,25 @@ customElements.define(
       return raw != null && raw !== "" && Number.isFinite(n) && n > 0 ? Math.floor(n) : DEFAULT_COUNT;
     }
 
-    // Fetch the corpus, curate it QUALITY-forward (strongest inspectable-public repos
-    // first — the "not a logo wall" showcase, never a private/internal repo, never a
-    // recency feed), drop the flagship hero so the grid doesn't dupe it, and keep only
-    // repos whose report ACTUALLY resolves (bundles copy in asynchronously — a card that
-    // links a 404 is worse than none), capped at `count`. Each links its ABSOLUTE report.
-    // Empty/failed ⇒ the labelled sample stays.
+    // Read the SERVER-CURATED gallery slice from the shared showcase document. The server
+    // already curated it QUALITY-forward, excluded the hero and de-duped — the widget just
+    // maps each GalleryCard to a card, attaches its absolute report link, and caps at
+    // `count`. No client sort, no /api/oss. Empty/failed ⇒ the labelled sample stays.
     async liveLoad() {
       const api = this.apiBase();
       if (!api) return;
-      const cards = await fetchJson(api, "/api/oss", null);
-      if (!Array.isArray(cards) || cards.length === 0) return;
-
-      // The hero is the best public repo with a LIVE report — exclude it so the grid
-      // never dupes the flagship. (Mirror the score-card's live-report hero selection.)
-      const ranked = publicRanked(cards);
-      let hero = null;
-      for (const c of ranked) {
-        if (await reportOk(reportUrl(c, api))) { hero = c; break; }
-      }
-      const exclude = hero ? { owner: hero.owner, name: hero.name } : undefined;
+      const showcase = await fetchShowcase(api);
+      const gallery = showcase && Array.isArray(showcase.gallery) ? showcase.gallery : null;
+      if (!gallery || gallery.length === 0) return;
 
       const want = this.#count();
       const mapped = [];
-      for (const c of galleryOrder(cards, { exclude })) {
+      for (const c of gallery) {
         if (mapped.length >= want) break;
-        const href = reportUrl(c, api);
-        if (!href || !(await reportOk(href))) continue;
         const m = cardFromGallery(c);
         if (!m) continue;
-        m.href = href;
+        const href = reportUrl(c, api);
+        if (href) m.href = href;
         mapped.push(m);
       }
       if (mapped.length === 0) return;

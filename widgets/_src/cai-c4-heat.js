@@ -1,4 +1,4 @@
-// <cai-c4-heat api-base="…" owner="…" name="…" kicker="…" heading="…" lede="…"
+// <cai-c4-heat api-base="…" kicker="…" heading="…" lede="…"
 //              caption="…" brand="watchdog|assay|cai">
 //
 // The C4 architecture heat-map — the "no line-scanner produces this" system view that
@@ -6,13 +6,11 @@
 // they talk, coloured by health. A LIVE-ONLY island (there is no meaningful static twin
 // of an architecture map, so it renders nothing when no live source resolves).
 //
-// Data (mirrors the app's C4 wheel): fetch {api}/api/public/c4 for the curated set of
-// gallery-opt-in repos whose latest published run passes the C4 gate (DDD + ≥2 bounded
-// contexts), biggest codebase first. Each item carries a "owner/name" repo label. Pick
-// the repo named by `owner`+`name` if given, else the first INSPECTABLE-PUBLIC item
-// (skipping the private/internal canine repos, which also pass the gate), then load the
-// PUBLIC C4-heat SVG from Track K's endpoint {api}/api/public/oss/{owner}/{name}/c4.svg
-// and render it inline. Empty ⇒ nothing shown.
+// Data (mirrors the app's C4 wheel): fetch {api}/api/public/showcase and read the
+// SERVER-CURATED c4 slice { owner, name, runId } — the public repo whose architecture map
+// is the richest / most illustrative (the server does the picking; NO hardcoded repo). Then
+// load the PUBLIC C4-heat SVG from Track K's endpoint
+// {api}/api/public/oss/{owner}/{name}/c4.svg and render it inline. Empty ⇒ nothing shown.
 
 import {
   CaiIsland,
@@ -23,17 +21,7 @@ import {
   renderInline,
   escapeHtml,
 } from "./tokens.js";
-import { fetchJson, fetchText, isPublicWithReport } from "./live.js";
-
-// The public C4 endpoint labels each item with a "owner/name" repo string and a per-run
-// id (NOT the corpus best-run id) — Track K's SVG endpoint is addressed by owner/name, so
-// we key off the label. Split it into { owner, name }, tolerant of owners with a slash.
-function splitRepo(repo) {
-  const s = String(repo || "");
-  const i = s.indexOf("/");
-  if (i <= 0 || i >= s.length - 1) return null;
-  return { owner: s.slice(0, i), name: s.slice(i + 1) };
-}
+import { fetchShowcase, fetchText } from "./live.js";
 
 const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + `
 .mk-c4 { max-width: 62rem; margin: 0 auto; }
@@ -56,50 +44,23 @@ customElements.define(
       // (rather than a permanent placeholder on hosts that never set an api-base).
       this._pending = true;
       this.render(this.shadowRoot);
-      const owner = this.getAttribute("owner") || "";
-      const name = this.getAttribute("name") || "";
 
       try {
-        const c4 = await fetchJson(api, "/api/public/c4", null);
-        const items = (c4 && Array.isArray(c4.items)) ? c4.items : [];
-        if (items.length === 0) return;
-
-        // Each c4 item carries a "owner/name" repo label; split it to address the SVG
-        // endpoint. The corpus tells us which repos are inspectable-public (the private/
-        // internal canine repos also pass the C4 gate but must never be the flagship map).
-        const cards = await fetchJson(api, "/api/oss", null);
-        const publicNames = new Set();
-        if (Array.isArray(cards)) {
-          for (const c of cards) {
-            if (isPublicWithReport(c)) publicNames.add(c.owner + "/" + c.name);
-          }
-        }
-
-        const candidates = items
-          .map((it) => splitRepo(it.repo))
-          .filter(Boolean);
-
-        // The curated pick: the named repo when given; else the first PUBLIC item (the c4
-        // endpoint already orders biggest-codebase first = the densest, most convincing
-        // heat-map). A named repo is honoured as-is (an author picked it deliberately).
-        let picked = null;
-        if (owner && name) {
-          picked =
-            candidates.find((r) => r.owner === owner && r.name === name) || null;
-        } else {
-          picked =
-            candidates.find((r) => publicNames.has(r.owner + "/" + r.name)) ||
-            null;
-        }
-        if (!picked) return;
+        // The SERVER-CURATED c4 candidate — { owner, name, runId } — the richest public
+        // architecture map. No hardcoded repo, no client picking; the server chose it.
+        const showcase = await fetchShowcase(api);
+        const c4 = showcase && showcase.c4;
+        const owner = c4 && c4.owner;
+        const name = c4 && c4.name;
+        if (!owner || !name) return;
 
         const svg = await fetchText(
           api,
-          "/api/public/oss/" + encodeURIComponent(picked.owner) + "/" + encodeURIComponent(picked.name) + "/c4.svg"
+          "/api/public/oss/" + encodeURIComponent(owner) + "/" + encodeURIComponent(name) + "/c4.svg"
         );
         if (!svg) return;
 
-        this._live = { owner: picked.owner, name: picked.name, svg };
+        this._live = { owner, name, svg };
       } finally {
         // Fetch settled: drop the loading state. If no live map arrived (empty corpus,
         // failed svg), render() falls through to the section head alone — never a stuck

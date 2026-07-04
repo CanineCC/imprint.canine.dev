@@ -1,4 +1,4 @@
-// <cai-composition-bar api-base="…" owner="…" name="…"
+// <cai-composition-bar api-base="…"
 //                      segments='[{"label":"Brilliant","pct":32,"band":"exemplary"},…]'
 //                      kicker="…" heading="…" lede="…" caption="…"
 //                      brand="watchdog|assay|cai">
@@ -7,11 +7,11 @@
 // slop split as a pure-SVG proportion bar, band colours from the CAI vocabulary. Segment
 // widths are proportional to pct over the segment total.
 //
-// LIVE by default: when `api-base` is set it fetches {api}/api/oss and builds the three
-// segments from a REAL published repo's measured composition — brilliant% and slop% off
-// the card (fine = 100 − brilliant − slop). The repo is named by `owner`+`name`, else the
-// curated hero. Without `api-base`, or if the fetch fails (or the repo has no measured
-// split), it renders the seeded `segments` sample.
+// LIVE by default: when `api-base` is set it fetches {api}/api/public/showcase and builds
+// the three segments from the SERVER-CURATED composition (showcase.composition) — the real
+// public repo whose brilliant/slop split the server chose as the most telling. Without
+// `api-base`, or if the fetch fails (or the slice carries no split), it renders the seeded
+// `segments` sample. No client-side pick.
 
 import {
   CaiIsland,
@@ -22,7 +22,7 @@ import {
   renderInline,
   escapeHtml,
 } from "./tokens.js";
-import { pickCard, fetchJson } from "./live.js";
+import { fetchShowcase } from "./live.js";
 
 const BAND_FILL = {
   exemplary: "var(--band-exemplary)",
@@ -47,14 +47,18 @@ const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + `
 .mk-compbar-cap { font-size: var(--fs-xs); color: var(--muted); margin-top: 0.4rem; text-align: center; }
 `;
 
-// The brilliant / fine / slop split → the three CAI-banded segments the bar renders.
-// Round to one decimal (the app's fileQuality rounding) and clamp fine at 0.
-function segmentsFromCard(c) {
+// The server-curated composition slice { brilliantPct, slopPct, finePct } → the three
+// CAI-banded segments the bar renders. Prefer the server's explicit finePct; fall back to
+// 100 − brilliant − slop when it's absent. Round to one decimal (the app's fileQuality
+// rounding) and clamp fine at 0.
+function segmentsFromComposition(c) {
   if (!c) return null;
   const brilliant = c.brilliantPct == null ? null : Number(c.brilliantPct);
   const slop = c.slopPct == null ? null : Number(c.slopPct);
   if (brilliant == null || slop == null) return null;
-  const fine = Math.max(0, 100 - brilliant - slop);
+  const fine = c.finePct != null
+    ? Math.max(0, Number(c.finePct))
+    : Math.max(0, 100 - brilliant - slop);
   const r1 = (n) => Math.round(n * 10) / 10;
   return [
     { label: "Brilliant", pct: r1(brilliant), band: "exemplary" },
@@ -66,15 +70,12 @@ function segmentsFromCard(c) {
 customElements.define(
   "cai-composition-bar",
   class extends CaiIsland {
-    // Build the segments from a real repo's measured composition. Cache + re-render.
+    // Build the segments from the SERVER-CURATED composition slice. Cache + re-render.
     async liveLoad() {
       const api = this.apiBase();
       if (!api) return;
-      const owner = this.getAttribute("owner") || "";
-      const name = this.getAttribute("name") || "";
-      const cards = await fetchJson(api, "/api/oss", null);
-      if (!Array.isArray(cards) || cards.length === 0) return;
-      const built = segmentsFromCard(pickCard(cards, { owner, name }));
+      const showcase = await fetchShowcase(api);
+      const built = segmentsFromComposition(showcase && showcase.composition);
       if (!built || built.length === 0) return;
       this._live = built;
       this.render(this.shadowRoot);

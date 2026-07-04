@@ -6,22 +6,15 @@
 // trend sparkline, the first→best arc, the lens bars and the detail rows. Port of
 // packages/ui/src/CaiScoreCard.tsx.
 //
-// LIVE by default (the watchdog.canine.dev survey-card pattern): when `api-base` is set
-// it fetches {api}/api/oss and renders a REAL published card — the exact repo named by
-// `owner`+`name`, else the curated hero (the highest-quality published repo: peak score,
-// LoC tie-break). Without `api-base`, or if the fetch fails, it renders the labelled
-// SAMPLE from the `card` attribute (never a fake-live read). Scalar attributes override.
+// LIVE by default: when `api-base` is set it fetches {api}/api/public/showcase and renders
+// the SERVER-CURATED hero — the single strongest public repo with an inspectable public
+// report (the server does the picking; the widget just renders showcase.hero). Without
+// `api-base`, or if the fetch fails, it renders the labelled SAMPLE from the `card`
+// attribute (never a fake-live read). Scalar attributes override.
 
 import { CaiIsland, TOKENS_CSS, BASE_CSS, escapeHtml } from "./tokens.js";
 import { scoreCardBodyHtml, parseCard, SCORECARD_CSS } from "./scorecard.js";
-import {
-  cardFromGallery,
-  reportUrl,
-  pickCard,
-  publicRanked,
-  reportOk,
-  fetchJson,
-} from "./live.js";
+import { cardFromGallery, reportUrl, fetchShowcase } from "./live.js";
 
 // The built-in sample — the same illustrative artifact the CMS hero ships
 // (blocks.tsx SAMPLE_CARD): acme/checkout-service, an Adequate verdict, a
@@ -55,43 +48,21 @@ const CSS = TOKENS_CSS + BASE_CSS + SCORECARD_CSS + `
 customElements.define(
   "cai-score-card",
   class extends CaiIsland {
-    // Fetch a real published card from the corpus, map it to the card model, cache it,
-    // and re-render. Selected by owner/name if both set, else the curated hero. On any
-    // failure this leaves _live unset and the sample stays (render() already drew it).
+    // Read the SERVER-CURATED hero from the shared showcase document, map it to the card
+    // model, and re-render. The server does all the picking (strongest public repo with an
+    // inspectable report) — no client ranking here. On any failure this leaves _live unset
+    // and the sample stays (render() already drew it).
     async liveLoad() {
       const api = this.apiBase();
       if (!api) return;
-      const owner = this.getAttribute("owner") || "";
-      const name = this.getAttribute("name") || "";
-      const cards = await fetchJson(api, "/api/oss", null);
-      if (!Array.isArray(cards) || cards.length === 0) return;
+      const showcase = await fetchShowcase(api);
+      const hero = showcase && showcase.hero;
+      if (!hero) return;
 
-      // An author-named repo is honoured as-is; otherwise the curated hero is the
-      // highest-quality public repo whose report ACTUALLY resolves — the corpus lists
-      // opted-in repos before their report bundle has necessarily been copied in, and a
-      // hero that links a 404 is worse than the next-best repo that links a live report.
-      let chosen = null;
-      let href = "";
-      if (owner && name) {
-        chosen = pickCard(cards, { owner, name });
-        if (chosen) {
-          const u = reportUrl(chosen, api);
-          if (u && (await reportOk(u))) href = u;
-        }
-      } else {
-        for (const c of publicRanked(cards)) {
-          const u = reportUrl(c, api);
-          if (u && (await reportOk(u))) {
-            chosen = c;
-            href = u;
-            break;
-          }
-        }
-      }
-      if (!chosen) return;
-
-      const mapped = cardFromGallery(chosen);
+      const mapped = cardFromGallery(hero);
       if (!mapped) return;
+      // The absolute report link uses the card's bestRunId (the showcase carries it).
+      const href = reportUrl(hero, api);
       if (href) mapped.href = href;
       this._live = mapped;
       this.render(this.shadowRoot);
@@ -113,8 +84,8 @@ customElements.define(
       const score = this.getAttribute("score");
       const seal = this.getAttribute("seal-text");
       const href = this.getAttribute("href");
-      // owner/name are ALSO the live selectors, so only let them override the label
-      // text when we are NOT rendering a live card (a live card already IS that repo).
+      // owner/name only label the offline SAMPLE — a live card already IS the curated
+      // repo the server picked, so its own name/owner win over any seeded label.
       if (!this._live) {
         if (name != null && name !== "") data.name = name;
         if (owner != null && owner !== "") data.owner = owner;

@@ -1,15 +1,17 @@
-// <cai-findings api-base="…" owner="…" name="…" count="1" kicker="…" heading="…"
+// <cai-findings api-base="…" kicker="…" heading="…"
 //               lede="…" footnote="…" brand="watchdog|assay|cai">
 //
 // The findings a scanner can't produce — the deterministic architecture / domain-model /
 // event findings located to file:line, from real PUBLISHED reports (the insight gallery's
-// "Findings a scanner can't produce" widget). Each repo shows its curated hero findings
+// "Findings a scanner can't produce" widget). The repo shows its curated hero findings
 // with the honest "showing N of M" and a link to the full report.
 //
-// LIVE by default: when `api-base` is set it fetches {api}/api/public/findings and renders
-// the curated repo(s) — the one named by `owner`+`name` if given, else the top `count`
-// (the endpoint already ranks by finding weight). Without `api-base`, or on failure, it
-// renders a small labelled SAMPLE so the section is never empty in a static preview.
+// LIVE by default: when `api-base` is set it fetches {api}/api/public/showcase and renders
+// the SERVER-CURATED findings repo (showcase.findings) — the public repo whose curated
+// findings the server chose as most illustrative, located to file:line, with the honest
+// "showing N of M" and an absolute link to the full report (the server does the picking).
+// Without `api-base`, or on failure, it renders a small labelled SAMPLE so the section is
+// never empty in a static preview. No client-side pick.
 
 import {
   CaiIsland,
@@ -20,9 +22,7 @@ import {
   renderInline,
   escapeHtml,
 } from "./tokens.js";
-import { fetchJson } from "./live.js";
-
-const DEFAULT_COUNT = 1;
+import { fetchShowcase } from "./live.js";
 
 // The labelled fallback — clearly illustrative (acme/checkout-service, the sample repo the
 // score card also uses), shown only when no live source resolves. Never a fake-live read.
@@ -64,39 +64,27 @@ const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + `
 customElements.define(
   "cai-findings",
   class extends CaiIsland {
-    #count() {
-      const raw = this.getAttribute("count");
-      const n = Number(raw);
-      return raw != null && raw !== "" && Number.isFinite(n) && n > 0 ? Math.floor(n) : DEFAULT_COUNT;
-    }
-
     async liveLoad() {
       const api = this.apiBase();
       if (!api) return;
-      const owner = this.getAttribute("owner") || "";
-      const name = this.getAttribute("name") || "";
-      const data = await fetchJson(api, "/api/public/findings", null);
-      const items = (data && Array.isArray(data.items)) ? data.items : [];
-      if (items.length === 0) return;
+      // The SERVER-CURATED findings repo — a single { owner, name, reportUrl, shown,
+      // total, findings[] } object. No client picking; the server chose the most
+      // illustrative one and curated its findings.
+      const showcase = await fetchShowcase(api);
+      const it = showcase && showcase.findings;
+      if (!it || !Array.isArray(it.findings) || it.findings.length === 0) return;
 
-      let chosen;
-      if (owner && name) {
-        const exact = items.find((it) => it.owner === owner && it.name === name);
-        chosen = exact ? [exact] : items.slice(0, this.#count());
-      } else {
-        chosen = items.slice(0, this.#count());
-      }
-      if (chosen.length === 0) return;
-      // The feed's reportUrl is an origin-less /api/oss/... path (same-origin in the app);
-      // on this cross-origin static host it must carry the api-base or it 404s. Resolve
-      // each to an ABSOLUTE link so the "+N more in the full report" href actually opens.
+      // The slice's reportUrl may be an origin-less /api/oss/... path (same-origin in the
+      // app); on this cross-origin static host it must carry the api-base or it 404s.
+      // Resolve to an ABSOLUTE link so the "+N more in the full report" href opens.
       const base = api.replace(/\/$/, "");
-      this._live = chosen.map((it) => ({
+      const resolved = {
         ...it,
         reportUrl: it.reportUrl
           ? (/^https?:\/\//i.test(it.reportUrl) ? it.reportUrl : base + it.reportUrl)
           : "",
-      }));
+      };
+      this._live = [resolved];
       this.render(this.shadowRoot);
     }
 

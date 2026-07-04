@@ -724,14 +724,17 @@ public sealed class BlockMapper(string origin, string? apiBase = null)
         return Nodes.Section(Nodes.Stack([.. stack]));
     }
 
-    // Curation props (owner/name/count) an author set on a block become the widget's live
-    // selectors — an exact repo, or how many to show — INSTEAD of the sample JSON. Absent
-    // from today's CMS blocks (which carry only sample data), so this is future-proofing:
-    // when present they are honoured; when absent the widget picks the curated hero.
-    private static void CopyCuration(JsonNode block, Dictionary<string, string> props)
+    // The SERVER curates WHICH repo each CAI data widget shows (from /api/public/showcase),
+    // so blocks no longer carry an owner/name pin to drive a client-side pick. Two narrow,
+    // still-meaningful knobs remain:
+    //
+    //  • CopyCount     — the display cap the gallery widget honours (how many curated cards
+    //                    to render). Not a repo pin.
+    //  • CopySampleLabel — owner/name that label the OFFLINE SAMPLE card only (an optional
+    //                    author override); a LIVE card always IS the server-curated repo, so
+    //                    these never influence the live pick.
+    private static void CopyCount(JsonNode block, Dictionary<string, string> props)
     {
-        Copy(block, "owner", props, "owner");
-        Copy(block, "name", props, "name");
         var count = block.Str("count");
         if (!string.IsNullOrWhiteSpace(count))
         {
@@ -739,13 +742,21 @@ public sealed class BlockMapper(string origin, string? apiBase = null)
         }
     }
 
+    private static void CopySampleLabel(JsonNode block, Dictionary<string, string> props)
+    {
+        Copy(block, "owner", props, "owner");
+        Copy(block, "name", props, "name");
+    }
+
     private SectionNode CardGallery(JsonNode block) =>
         WidgetSection(block, "cai-card-gallery", props =>
         {
-            // The labelled sample stays as the fallback attribute; api-base + count drive live.
+            // The labelled sample stays as the fallback attribute; api-base drives live.
+            // The SERVER curates the gallery slice (hero-excluded, de-duped, quality-forward)
+            // from /api/public/showcase — no owner/name pin here, only the display `count`.
             props["cards"] = block.Arr("cards").ToJsonString();
             InjectApiBase(props);
-            CopyCuration(block, props);
+            CopyCount(block, props);
             Copy(block, "kicker", props, "kicker");
             Copy(block, "heading", props, "heading");
             Copy(block, "lede", props, "lede");
@@ -753,8 +764,9 @@ public sealed class BlockMapper(string origin, string? apiBase = null)
         });
 
     private SectionNode LiveCard(JsonNode block) =>
-        // Live from the corpus when an api-base is set (curated hero, or owner/name);
-        // the labelled SAMPLE card is kept as the no-live fallback attribute.
+        // Live from the SERVER-CURATED hero (/api/public/showcase → showcase.hero) when an
+        // api-base is set; the labelled SAMPLE card is kept as the no-live fallback attribute.
+        // owner/name only label the OFFLINE sample (an optional override), never a live pin.
         WidgetSection(block, "cai-score-card", props =>
         {
             var card = block.Obj("card");
@@ -769,14 +781,15 @@ public sealed class BlockMapper(string origin, string? apiBase = null)
             }
 
             InjectApiBase(props);
-            CopyCuration(block, props);
+            CopySampleLabel(block, props);
         });
 
     private SectionNode BandScale(JsonNode block) =>
+        // The SERVER curates the representative pin score (/api/public/showcase →
+        // showcase.bandScale) when an api-base is set — no owner/name pin here.
         WidgetSection(block, "cai-band-scale", props =>
         {
             InjectApiBase(props);
-            CopyCuration(block, props);
             Copy(block, "kicker", props, "kicker");
             Copy(block, "heading", props, "heading");
             Copy(block, "lede", props, "lede");
@@ -791,12 +804,12 @@ public sealed class BlockMapper(string origin, string? apiBase = null)
 
     private SectionNode C4Heat(JsonNode block) =>
         // The C4 architecture heat-map — a LIVE-ONLY island (no meaningful static twin of
-        // an architecture map). api-base + owner/name select the repo whose real C4-heat
-        // SVG is rendered; with no api-base it shows nothing. No sample fallback attribute.
+        // an architecture map). The SERVER curates which repo's C4 map to show (the richest
+        // one) from /api/public/showcase; the widget just renders showcase.c4. So we stamp
+        // ONLY api-base — no hardcoded owner/name pin. With no api-base it shows nothing.
         WidgetSection(block, "cai-c4-heat", props =>
         {
             InjectApiBase(props);
-            CopyCuration(block, props);
             Copy(block, "kicker", props, "kicker");
             Copy(block, "heading", props, "heading");
             Copy(block, "lede", props, "lede");
@@ -805,12 +818,13 @@ public sealed class BlockMapper(string origin, string? apiBase = null)
 
     private SectionNode Findings(JsonNode block) =>
         // The deterministic architecture / domain-model / event findings located to
-        // file:line, from real published reports. api-base + owner/name/count drive live;
-        // the island keeps its own small labelled SAMPLE as the no-live fallback.
+        // file:line, from real published reports. The SERVER curates the most illustrative
+        // findings repo (/api/public/showcase → showcase.findings); the widget just renders
+        // it. So we stamp ONLY api-base — no hardcoded owner/name pin. The island keeps its
+        // own small labelled SAMPLE as the no-live fallback.
         WidgetSection(block, "cai-findings", props =>
         {
             InjectApiBase(props);
-            CopyCuration(block, props);
             Copy(block, "kicker", props, "kicker");
             Copy(block, "heading", props, "heading");
             Copy(block, "lede", props, "lede");
@@ -820,10 +834,11 @@ public sealed class BlockMapper(string origin, string? apiBase = null)
     private SectionNode Composition(JsonNode block) =>
         WidgetSection(block, "cai-composition-bar", props =>
         {
-            // The seeded segments stay as the fallback; api-base + owner/name drive live.
+            // The seeded segments stay as the fallback; api-base drives live. The SERVER
+            // curates the composition slice (/api/public/showcase → showcase.composition) —
+            // no owner/name pin here.
             props["segments"] = block.Arr("segments").ToJsonString();
             InjectApiBase(props);
-            CopyCuration(block, props);
             Copy(block, "kicker", props, "kicker");
             Copy(block, "heading", props, "heading");
             Copy(block, "lede", props, "lede");

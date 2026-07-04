@@ -1,14 +1,15 @@
-// <cai-band-scale api-base="…" owner="…" name="…" score="62" kicker="…" heading="…"
+// <cai-band-scale api-base="…" score="62" kicker="…" heading="…"
 //                 lede="…" caption="…" brand="watchdog|assay|cai">
 //
 // Port of the BandScale renderer (packages/ui/src/blocks.tsx): the canonical
 // full-width CAI band scale — five bands worst→best, the parked cutlines
 // 25/50/70/90, the display words, and an optional Score-pin marker.
 //
-// LIVE by default: when `api-base` is set it fetches {api}/api/oss and pins the scale
-// at a REAL published repo's live headline score — the repo named by `owner`+`name`,
-// else the curated hero (highest-quality published repo). Without `api-base`, or if the
-// fetch fails, it uses the seeded `score` attribute (or renders the bare scale, no pin).
+// LIVE by default: when `api-base` is set it fetches {api}/api/public/showcase and pins the
+// scale at the SERVER-CURATED representative score (showcase.bandScale.score) — a real
+// public repo the server chose to best illustrate the band ladder. Without `api-base`, or
+// if the fetch fails, it uses the seeded `score` attribute (or renders the bare scale, no
+// pin). No client-side pick.
 
 import {
   CaiIsland,
@@ -20,7 +21,7 @@ import {
 } from "./tokens.js";
 import { ladderHtml, SCORECARD_CSS } from "./scorecard.js";
 import { CAI_BANDS } from "./cai.js";
-import { pickCard, fetchJson } from "./live.js";
+import { fetchShowcase } from "./live.js";
 
 const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + `
 .mk-bandscale { max-width: 46rem; margin: 0 auto; }
@@ -40,16 +41,13 @@ const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + `
 customElements.define(
   "cai-band-scale",
   class extends CaiIsland {
-    // Pin the scale at a real repo's live headline (peak) score. Cache + re-render.
+    // Pin the scale at the SERVER-CURATED representative score. Cache + re-render.
     async liveLoad() {
       const api = this.apiBase();
       if (!api) return;
-      const owner = this.getAttribute("owner") || "";
-      const name = this.getAttribute("name") || "";
-      const cards = await fetchJson(api, "/api/oss", null);
-      if (!Array.isArray(cards) || cards.length === 0) return;
-      const chosen = pickCard(cards, { owner, name });
-      const score = chosen && (chosen.bestScore != null ? chosen.bestScore : chosen.headlineScore);
+      const showcase = await fetchShowcase(api);
+      const bs = showcase && showcase.bandScale;
+      const score = bs && bs.score;
       if (score == null || !Number.isFinite(Number(score))) return;
       this._liveScore = Number(score);
       this.render(this.shadowRoot);

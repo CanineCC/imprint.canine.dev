@@ -1,17 +1,28 @@
 // Shared LIVE-fetch plumbing for the CAI marketing islands.
 //
-// The proven pattern from watchdog.canine.dev's R4 islands (../rearch
-// watchdog-survey-card.js / watchdog-insight-gallery.js): each widget reads an
-// `api-base` attribute (the kennel public-API origin) and fetches the SAME real
-// endpoints the app serves — /api/oss, /api/public/insights, /api/public/findings,
-// /api/public/c4 — then renders REAL curated data. When `api-base` is unset, or the
-// fetch fails, the widget falls back to the labelled SAMPLE it was seeded with
-// (never a fake-live read). That is the ONLY time the sample shows.
+// ONE server-curated source of truth: GET {api-base}/api/public/showcase returns the
+// SERVER's best candidate for EACH widget (the agreed showcase contract). The widget just
+// renders its slice — no client-side candidate-picking, no /api/oss sort, no hardcoded
+// repo pins. The server does all the curation (HasPublicSource-gated, deterministic,
+// reusing the kennel's own curation primitives) so the widgets can stay dumb renderers.
 //
-// The GalleryCard JSON shape (List<GalleryCard> from /api/oss) is the authoritative
-// kennel contract — Kennel.Watchdog.PublicGallery.GalleryCard. This module maps it
-// onto the scorecard.js `card` model the renderers already understand, so a live
-// card and a seeded sample card render through the identical code path.
+// Shape returned by /api/public/showcase (Track K owns the endpoint):
+//   {
+//     hero:        GalleryCard,                       // the flagship card
+//     gallery:     GalleryCard[],                     // the curated set, hero excluded
+//     c4:          { owner, name, runId },            // the richest architecture map
+//     findings:    { owner, name, reportUrl, shown, total, findings:[{lens,dim,title,file,line}] },
+//     composition: { owner, name, brilliantPct, slopPct, finePct },
+//     bandScale:   { owner, name, score, band }
+//   }
+//
+// When `api-base` is unset, or the fetch fails, each widget falls back to the labelled
+// SAMPLE it was seeded with (never a fake-live read). That is the ONLY time a sample shows.
+//
+// The GalleryCard JSON shape (hero + gallery items) is the authoritative kennel contract —
+// Kennel.Watchdog.PublicGallery.GalleryCard. cardFromGallery() maps it onto the
+// scorecard.js `card` model the renderers already understand, so a live card and a seeded
+// sample card render through the identical code path.
 
 // The five public (scanner-overlap) lenses, in report order — the wd-card.js LENSES
 // table, byte-for-byte. `value` may be null (not measured that run) → an em-dash row.
@@ -45,11 +56,11 @@ function measuredRow(c) {
 }
 
 /**
- * Map ONE /api/oss GalleryCard (or an /api/public/insights item, which carries the
- * same lens + arc fields) onto the scorecard.js `card` model. The published FACE of a
- * repo is its PEAK run: score = bestScore (headlineScore fallback), the arc is
- * firstScore→bestScore, the series is the climb history. Lens bars come from the five
- * public lenses; the detail rows carry the honest measured/rebuild-cost facts.
+ * Map ONE GalleryCard (the showcase hero, or a gallery item — same lens + arc fields)
+ * onto the scorecard.js `card` model. The published FACE of a repo is its PEAK run:
+ * score = bestScore (headlineScore fallback), the arc is firstScore→bestScore, the series
+ * is the climb history. Lens bars come from the five public lenses; the detail rows carry
+ * the honest measured/rebuild-cost facts.
  */
 export function cardFromGallery(c) {
   if (!c) return null;
@@ -82,134 +93,77 @@ export function cardFromGallery(c) {
 }
 
 /**
- * A card is an INSPECTABLE PUBLIC report when it has both an open source URL (so a
- * visitor can read the code — the private/internal canine repos have `sourceUrl:null`)
- * AND a best run id (so a full report exists to link to). The marketing surfaces only
- * ever flag / link repos that pass this gate; the internal canine repos, which the
- * kennel corpus also carries, never surface as a flagship or a gallery peer.
- */
-export function isPublicWithReport(c) {
-  if (!c) return false;
-  const src = c.sourceUrl || c.SourceUrl;
-  const run = c.bestRunId || c.BestRunId;
-  return !!(src && run);
-}
-
-/**
- * The ABSOLUTE public report URL for a card — mirrors PublicFindingsEndpoint /
- * _SurveyCard's `/api/oss/{owner}/{name}/report?run={BestRunId}`, but resolved against
- * the kennel origin (`apiBase`). The marketing islands render on a STATIC cross-origin
- * host, so an origin-less relative href would 404 there — it must carry the api-base.
- * Returns "" for any card without an inspectable public report (no dead links).
+ * The ABSOLUTE public report URL for a showcase GalleryCard — mirrors the app's
+ * `/api/oss/{owner}/{name}/report?run={bestRunId}`, resolved against the kennel origin
+ * (`apiBase`). The marketing islands render on a STATIC cross-origin host, so an
+ * origin-less relative href would 404 there — it must carry the api-base. The server only
+ * ever curates public-with-report repos into the showcase, so every hero/gallery card
+ * carries a bestRunId; returns "" defensively if one is somehow missing (no dead links).
  */
 export function reportUrl(c, apiBase) {
-  if (!isPublicWithReport(c)) return "";
-  const base = (apiBase || "").trim().replace(/\/$/, "");
+  if (!c) return "";
   const run = c.bestRunId || c.BestRunId;
+  const owner = c.owner || c.Owner;
+  const name = c.name || c.Name;
+  if (!run || !owner || !name) return "";
+  const base = (apiBase || "").trim().replace(/\/$/, "");
   return (
     base +
     "/api/oss/" +
-    encodeURIComponent(c.owner) +
+    encodeURIComponent(owner) +
     "/" +
-    encodeURIComponent(c.name) +
+    encodeURIComponent(name) +
     "/report?run=" +
     encodeURIComponent(run)
   );
 }
 
-/**
- * The curated HERO pick from a corpus — the highest-quality INSPECTABLE PUBLIC repo
- * (peak score, LoC as the tie-break), mirroring the survey-card `pick:"best"` demo
- * default the landing hero uses, but never a private/internal canine repo (those have
- * no open source to inspect). `owner`/`name` (when both given) select an exact repo,
- * still gated to public-with-report so a named private repo never becomes the flagship.
- */
-export function pickCard(cards, { owner, name } = {}) {
-  if (!Array.isArray(cards) || cards.length === 0) return null;
-  const publicCards = cards.filter(isPublicWithReport);
-  if (owner && name) {
-    const exact = publicCards.find((c) => c.owner === owner && c.name === name);
-    if (exact) return exact;
-  }
-  return publicRanked(cards)[0] || null;
+// ── the one shared showcase fetch ────────────────────────────────────────────
+//
+// Every island on a page reads the SAME /api/public/showcase document. We fetch it once
+// per (api-base, cohort) and hand every island the cached promise, so N islands = 1 GET.
+
+const _showcaseCache = new Map();
+
+/** The cache key for a given api-base + optional cohort. */
+function showcaseKey(base, cohort) {
+  return base + " " + (cohort || "");
 }
 
 /**
- * Every INSPECTABLE PUBLIC repo, ranked best-first (peak score, LoC tie-break) — the
- * flagship-quality ordering. Callers that must LINK a report (the hero card, the
- * gallery) walk this and probe {@link reportOk} to skip any whose bundle hasn't landed
- * yet, so the highest-quality repo with a *live* report wins.
+ * Fetch the server-curated showcase document from `{apiBase}/api/public/showcase`
+ * (optionally scoped to a `cohort`), DEDUPED + CACHED across every island on the page.
+ * Resolves to `null` on any failure (no network, non-2xx, bad JSON) OR when `apiBase` is
+ * empty — an empty base means the widget was seeded without a live URL and must show its
+ * labelled sample, never attempt a same-origin fetch that would 404 on the static host.
+ * A failed fetch is cached as a rejected-to-null promise so islands don't each retry.
  */
-export function publicRanked(cards) {
-  return cards
-    .filter(isPublicWithReport)
-    .slice()
-    .sort((a, b) => {
-      const sa = a.bestScore != null ? a.bestScore : a.headlineScore;
-      const sb = b.bestScore != null ? b.bestScore : b.headlineScore;
-      return (sb - sa) || ((b.productionLoc || 0) - (a.productionLoc || 0));
-    });
+export function fetchShowcase(apiBase, cohort) {
+  const base = (apiBase || "").trim().replace(/\/$/, "");
+  if (!base) return Promise.resolve(null);
+  const key = showcaseKey(base, cohort);
+  let pending = _showcaseCache.get(key);
+  if (pending) return pending;
+  const q = cohort ? "?cohort=" + encodeURIComponent(cohort) : "";
+  pending = (async () => {
+    try {
+      const r = await fetch(base + "/api/public/showcase" + q);
+      if (!r.ok) return null;
+      return await r.json();
+    } catch {
+      return null;
+    }
+  })();
+  _showcaseCache.set(key, pending);
+  return pending;
 }
 
-/**
- * The QUALITY-forward gallery ordering — the "real reports, fully open, not a logo
- * wall" showcase leads with the strongest repos, so it reads as a wall of proof, not a
- * recency feed. Among INSPECTABLE PUBLIC repos only (never a private/internal canine
- * repo), best score first, LoC as the tie-break. `exclude` (an {owner,name}) drops the
- * hero so the gallery never duplicates the flagship card.
- */
-export function galleryOrder(cards, { exclude } = {}) {
-  return cards
-    .filter(isPublicWithReport)
-    .filter((c) =>
-      exclude ? !(c.owner === exclude.owner && c.name === exclude.name) : true
-    )
-    .sort((a, b) => {
-      const sa = a.bestScore != null ? a.bestScore : a.headlineScore;
-      const sb = b.bestScore != null ? b.bestScore : b.headlineScore;
-      return (sb - sa) || ((b.productionLoc || 0) - (a.productionLoc || 0));
-    });
-}
-
-/**
- * Fetch JSON from `${apiBase}${path}`, resolving to `fallback` on any failure (no
- * network, non-2xx, bad JSON) OR when `apiBase` is empty. An empty base means the
- * widget was seeded without a live URL — it must show its labelled sample, never
- * attempt a same-origin fetch that would 404 on the static marketing host.
- */
-export async function fetchJson(apiBase, path, fallback) {
-  if (!apiBase) return fallback;
-  try {
-    const r = await fetch(apiBase.replace(/\/$/, "") + path);
-    if (!r.ok) return fallback;
-    return await r.json();
-  } catch {
-    return fallback;
-  }
-}
-
-/**
- * Does a repo's public report actually resolve right now? The corpus lists every
- * opted-in repo, but a report bundle is only linkable once it exists on the public API
- * (bundles are copied in asynchronously). A GET that 404s means "not yet" — the widgets
- * probe before they link so a marketing card NEVER carries a dead "read the report" href.
- * Any network error resolves false (better a card with no link than a broken one).
- */
-export async function reportOk(url) {
-  if (!url) return false;
-  try {
-    const r = await fetch(url, { method: "GET" });
-    return r.ok;
-  } catch {
-    return false;
-  }
-}
-
-/** Fetch text (an SVG) with the same fallback discipline as {@link fetchJson}. */
+/** Fetch text (an SVG) from `{apiBase}${path}`, resolving to null on any failure. */
 export async function fetchText(apiBase, path) {
-  if (!apiBase) return null;
+  const base = (apiBase || "").trim().replace(/\/$/, "");
+  if (!base) return null;
   try {
-    const r = await fetch(apiBase.replace(/\/$/, "") + path);
+    const r = await fetch(base + path);
     if (!r.ok) return null;
     return await r.text();
   } catch {
