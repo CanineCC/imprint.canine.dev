@@ -104,7 +104,11 @@ public sealed class PageList : ReadModel
                 break;
 
             case SiteNavigationChanged navigation when StreamIds.IdOf(@event.StreamId, "site-") is { } siteGuid:
-                _navigation[SiteId.From(siteGuid)] = [.. navigation.Items.Select(item => item.PageId)];
+                // Only top-level direct page links carry a PageId and therefore a
+                // navigation order / home candidacy; group headings and external links
+                // are chrome, not pages, so they never decide a site's home page.
+                _navigation[SiteId.From(siteGuid)] =
+                    [.. navigation.Items.Select(item => item.PageId).OfType<PageId>()];
                 break;
 
             default:

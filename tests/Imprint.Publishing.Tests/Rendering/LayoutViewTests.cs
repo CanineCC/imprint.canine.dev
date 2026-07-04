@@ -67,6 +67,32 @@ public sealed class LayoutViewTests
     }
 
     [Fact]
+    public async Task Section_plain_appearance_emits_no_appearance_class()
+    {
+        var html = await RenderHarness.RenderNode(Static, SampleNodes.Section());
+
+        Assert.Contains("<section class=\"ip-section\"", html);
+        Assert.DoesNotContain("ip-ap-", html);
+    }
+
+    [Fact]
+    public async Task Section_named_appearance_emits_its_ip_ap_class_alongside_structural_ones()
+    {
+        var section = SampleNodes.Section() with
+        {
+            Background = SectionBackground.SurfaceAlt,
+            Appearance = SectionAppearance.FeatureGrid,
+        };
+
+        var html = await RenderHarness.RenderNode(Static, section);
+
+        // The appearance class rides alongside the structural background class.
+        Assert.Contains("ip-section", html);
+        Assert.Contains("ip-bg-surface-alt", html);
+        Assert.Contains("ip-ap-feature-grid", html);
+    }
+
+    [Fact]
     public async Task Stack_gap_and_align_variants_emit_their_classes()
     {
         var stack = SampleNodes.Stack() with { Gap = Gap.Tight, Align = StackAlign.Center };

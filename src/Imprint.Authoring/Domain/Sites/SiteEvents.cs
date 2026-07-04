@@ -67,3 +67,32 @@ public sealed record SiteEnvironmentsChanged(IReadOnlyList<DeployEnvironment> En
         return hash.ToHashCode();
     }
 }
+
+// ── Marketing chrome around the page content: footer columns, header actions, copy ──
+
+[EventType("site.footer-changed", 1)]
+public sealed record SiteFooterChanged(IReadOnlyList<FooterLinkGroup> Groups)
+{
+    // Ordered columns of ordered links are the value — sequence equality, like navigation.
+    public bool Equals(SiteFooterChanged? other) =>
+        other is not null && Groups.SequenceEqual(other.Groups);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        foreach (var group in Groups)
+        {
+            hash.Add(group);
+        }
+
+        return hash.ToHashCode();
+    }
+}
+
+// The two header actions travel together: they occupy the same header slot and the
+// editor sets them as a pair, so one event carries both (either may be null).
+[EventType("site.header-actions-changed", 1)]
+public sealed record SiteHeaderActionsChanged(HeaderAction? Cta, HeaderAction? Quiet);
+
+[EventType("site.copy-line-changed", 1)]
+public sealed record SiteCopyLineChanged(CopyLine? CopyLine);

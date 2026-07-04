@@ -3,8 +3,12 @@
    template: one stylesheet link, the two sanctioned inline scripts (theme toggle in
    <head> before the stylesheet so an explicit choice applies at first paint; island
    loader at the end of <body> so it can see the islands), landmarks, skip link, nav
-   with aria-current. The body carries .ip-page so the chrome inherits the site theme;
-   PageView emits its own .ip-page wrapper, which nests harmlessly. *@
+   with aria-current. The header/footer reproduce the marketing chrome (brand mark,
+   grouped dropdown nav, quiet link + CTA, footer link columns + fine print) using
+   imprint's own ip-* class names, which the marketing theme styles against. Every href
+   and label is already resolved for this locale by the publisher; this stays a dumb
+   template. The body carries .ip-page so the chrome inherits the site theme; PageView
+   emits its own .ip-page wrapper, which nests harmlessly. *@
 <html lang="@Chrome.Lang">
 <head>
   <meta charset="utf-8" />
@@ -27,17 +31,48 @@
 </head>
 <body class="ip-page">
   <a href="#main">Skip to content</a>
-  <header>
-    <a href="@Chrome.HomeHref">@Chrome.SiteName</a>
-    <nav aria-label="Main">
+  <header class="ip-site-header">
+    <a class="ip-brand" href="@Chrome.HomeHref"><span class="ip-brand-dot" aria-hidden="true"></span>@Chrome.SiteName</a>
+    <nav class="ip-nav" aria-label="Main">
       <ul>
         @foreach (var item in Chrome.Nav)
         {
-          <li><a href="@item.Href" aria-current="@(item.IsCurrent ? "page" : null)">@item.Label</a></li>
+          @if (item.IsGroup)
+          {
+            <li class="ip-nav-group">
+              <button type="button" class="ip-nav-trigger" aria-haspopup="true">@item.Label</button>
+              <div class="ip-nav-panel">
+                @foreach (var child in item.Children)
+                {
+                  <a class="ip-nav-card" href="@child.Href" aria-current="@(child.IsCurrent ? "page" : null)">
+                    <strong>@child.Label</strong>
+                    @if (child.Description is not null)
+                    {
+                      <span>@child.Description</span>
+                    }
+                  </a>
+                }
+              </div>
+            </li>
+          }
+          else
+          {
+            <li><a href="@item.Href" aria-current="@(item.IsCurrent ? "page" : null)">@item.Label</a></li>
+          }
         }
       </ul>
     </nav>
-    <button type="button" data-theme-toggle aria-label="Switch color theme">◐</button>
+    <div class="ip-header-actions">
+      @if (Chrome.HeaderQuiet is not null)
+      {
+        <a class="ip-header-quiet" href="@Chrome.HeaderQuiet.Href">@Chrome.HeaderQuiet.Label</a>
+      }
+      @if (Chrome.HeaderCta is not null)
+      {
+        <a class="ip-header-cta" href="@Chrome.HeaderCta.Href">@Chrome.HeaderCta.Label</a>
+      }
+      <button type="button" data-theme-toggle aria-label="Switch color theme">◐</button>
+    </div>
   </header>
   <main id="main">
     @if (Content is not null)
@@ -51,8 +86,31 @@
       </CascadingValue>
     }
   </main>
-  <footer>
-    <p>@Chrome.SiteName</p>
+  <footer class="ip-site-footer">
+    @if (Chrome.FooterGroups.Count > 0)
+    {
+      <div class="ip-footer-cols">
+        @foreach (var group in Chrome.FooterGroups)
+        {
+          <nav class="ip-footer-group" aria-label="@group.Heading">
+            <span class="ip-footer-h">@group.Heading</span>
+            @foreach (var link in group.Links)
+            {
+              <a href="@link.Href">@link.Label</a>
+            }
+          </nav>
+        }
+      </div>
+    }
+    <div class="ip-footer-fine">
+      <span class="ip-footer-brand"><span class="ip-brand-dot" aria-hidden="true"></span>@Chrome.SiteName</span>
+      <span class="ip-footer-byline">by <a href="https://canine.dev">Canine Development</a></span>
+      @if (Chrome.CopyLine is not null)
+      {
+        <p class="ip-footer-copy">@Chrome.CopyLine</p>
+      }
+      <button type="button" data-theme-toggle class="ip-footer-theme" aria-label="Switch color theme">Theme</button>
+    </div>
   </footer>
   @if (Chrome.IncludeIslandLoader)
   {

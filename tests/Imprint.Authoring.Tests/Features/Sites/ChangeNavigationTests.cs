@@ -16,8 +16,8 @@ public sealed class ChangeNavigationTests
         var about = await host.CreateTestPage(siteId, "about", "About");
 
         await host.Ok(new ChangeNavigation(siteId, [
-            new NavigationItem(home, null),
-            new NavigationItem(about, LocalizedText.Of(new Locale("en"), "Who we are")),
+            NavigationItem.Page(home, null),
+            NavigationItem.Page(about, LocalizedText.Of(new Locale("en"), "Who we are")),
         ]));
 
         var site = host.Get<SiteOverview>().Current!;
@@ -37,8 +37,8 @@ public sealed class ChangeNavigationTests
         var home = await host.CreateTestPage(siteId);
 
         var error = await host.Fails(new ChangeNavigation(siteId, [
-            new NavigationItem(home, null),
-            new NavigationItem(PageId.New(), null),
+            NavigationItem.Page(home, null),
+            NavigationItem.Page(PageId.New(), null),
         ]));
 
         Assert.Contains("no longer exists", error);
@@ -53,7 +53,7 @@ public sealed class ChangeNavigationTests
         var page = await host.CreateTestPage(siteId);
         await host.MutatePage(page, p => p.Delete());
 
-        var error = await host.Fails(new ChangeNavigation(siteId, [new NavigationItem(page, null)]));
+        var error = await host.Fails(new ChangeNavigation(siteId, [NavigationItem.Page(page, null)]));
 
         Assert.Contains("no longer exists", error);
     }
@@ -66,8 +66,8 @@ public sealed class ChangeNavigationTests
         var home = await host.CreateTestPage(siteId);
 
         var error = await host.Fails(new ChangeNavigation(siteId, [
-            new NavigationItem(home, null),
-            new NavigationItem(home, null),
+            NavigationItem.Page(home, null),
+            NavigationItem.Page(home, null),
         ]));
 
         Assert.Contains("same page twice", error);
@@ -79,7 +79,7 @@ public sealed class ChangeNavigationTests
         await using var host = new AuthoringTestHost();
         var siteId = await host.CreateTestSite();
         var home = await host.CreateTestPage(siteId);
-        await host.Ok(new ChangeNavigation(siteId, [new NavigationItem(home, null)]));
+        await host.Ok(new ChangeNavigation(siteId, [NavigationItem.Page(home, null)]));
 
         await host.Ok(new ChangeNavigation(siteId, []));
 

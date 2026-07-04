@@ -1,0 +1,647 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   imprint-marketing.css — the marketing design LAYER.
+
+   Reproduces the canine.css marketing look (watchdog / assay / cai) through
+   imprint's own model: it re-keys every rule onto imprint's semantic theme
+   tokens (--ip-*), the section-appearance hooks the renderer emits
+   (.ip-ap-{kebab}), and the publisher chrome classes (.ip-site-header, .ip-nav,
+   .ip-footer-*). Nothing here hard-codes a brand hue — the accent ramp comes from
+   the site's theme tokens, so this one stylesheet re-skins for all three brands
+   AND both light/dark just by shipping different --ip-* values.
+
+   Source of truth: cms.canine.dev/packages/ui/styles/canine.css (the rules) +
+   packages/ui/src/blocks.tsx (the markup each block emits). The classes there
+   (.mk-*, .cai-*) are re-keyed here to imprint's generic node markup
+   (.ip-stack / .ip-grid / .ip-columns / .ip-prose / h1–4 / .ip-btn) and the
+   shadow-DOM widget islands (which read the --band-*/--accent*/--font-* custom
+   properties this layer defines from their host).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Self-hosted variable fonts (the publisher writes these to /fonts/) ─────── */
+@font-face {
+  font-family: "Schibsted Grotesk";
+  src: url("/fonts/schibsted-var.woff2") format("woff2-variations");
+  font-weight: 400 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/jetbrains-var.woff2") format("woff2-variations");
+  font-weight: 100 800;
+  font-display: swap;
+}
+
+/* ── The derived token family ───────────────────────────────────────────────
+   The canine marketing system (and the shadow-DOM widget islands) speak a token
+   vocabulary richer than imprint's nine semantic tokens. Bridge it here:
+     • ALIAS the overlapping roles to imprint's theme tokens, so they inherit the
+       site's palette and its light/dark values (via the --ip-* light-dark()).
+     • DEFINE the roles imprint's tokens don't cover — the CAI band hues (fixed,
+       identical across all three brands, per Kennel.Cai/CaiBands.cs), the type
+       scale, radii, the ladder marker, shadows — as fixed custom properties, with
+       light-dark() where a value must flip with the theme.
+   Custom properties inherit through shadow roots, so defining them on :root is
+   exactly what makes the self-contained widget cards pick up the brand + theme. */
+:root {
+  /* neutrals → imprint semantic tokens (already light-dark, already per-brand) */
+  --bg: var(--ip-background);
+  --surface: var(--ip-surface);
+  --surface-2: var(--ip-surface-alt);
+  --border: var(--ip-border);
+  --ink: var(--ip-text);
+  --ink-soft: var(--ip-text);
+  --muted: var(--ip-text-muted);
+  --heading: var(--ip-text);
+  --hairline: var(--ip-border);
+  /* border-strong: a touch firmer than the hairline for control/button edges */
+  --border-strong: light-dark(#cbd3da, #3a444f);
+
+  /* accent ramp → the primary token family (five roles, brand + theme aware) */
+  --accent: var(--ip-primary);
+  --accent-ink: var(--ip-primary-ink);
+  --accent-wash: var(--ip-primary-wash);
+  --accent-strong: var(--ip-primary-strong);
+  --on-accent: var(--ip-on-primary);
+
+  /* CAI band hues — the shared vocabulary, identical across products; dark/light
+     pinned to the canonical band table (CaiBands.cs Dark/Light hex). */
+  --band-exemplary: light-dark(#0e5c3a, #3fb97c);
+  --band-healthy: light-dark(#3c8f59, #62c088);
+  --band-fair: light-dark(#ad8217, #d6a93a);
+  --band-poor: light-dark(#cf6b3a, #e08a5c);
+  --band-critical: light-dark(#9c2d2a, #d8635c);
+  --band-exemplary-text: light-dark(#0e5c3a, #3fb97c);
+  --band-healthy-text: light-dark(#2e6e45, #62c088);
+  --band-fair-text: light-dark(#7e5f10, #d6a93a);
+  --band-poor-text: light-dark(#a84e22, #e08a5c);
+  --band-critical-text: light-dark(#9c2d2a, #d8635c);
+
+  /* CAI ladder marker — theme-fixed dark ink on an explicit white casing so the
+     dark-badge-on-white-ring premise holds in both themes. */
+  --mk: #1c2522;
+  --mk-on: #ffffff;
+
+  /* shape & depth */
+  --r-sm: 6px;
+  --r-md: var(--ip-radius);
+  --r-lg: 14px;
+  --r-full: 999px;
+  --shadow-overlay: light-dark(0 4px 16px rgb(20 25 30 / 0.1), 0 4px 16px rgb(0 0 0 / 0.35));
+
+  /* type — Schibsted Grotesk UI / JetBrains Mono code, from the theme fonts */
+  --font-ui: var(--ip-font-heading);
+  --font-mono: var(--ip-font-mono);
+  --fs-2xs: 11px;
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 25px;
+  --fs-3xl: 31px;
+  --fs-4xl: 39px;
+
+  /* marketing scaffolding measures */
+  --mk-display: clamp(2.4rem, 1.4rem + 3.4vw, 3.6rem);
+  --mk-h2: clamp(1.5rem, 1.1rem + 1.4vw, 2.1rem);
+  --mk-measure: 60ch;
+  --mk-gap: clamp(2rem, 1rem + 3vw, 3.25rem);
+  --mk-section: clamp(2.5rem, 1.5rem + 2.8vw, 4rem);
+}
+
+/* Body baseline lifted to the marketing look (Schibsted Grotesk, antialiased). */
+.ip-page {
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+.ip-page code {
+  background: var(--surface-2);
+  padding: 1px 5px;
+  border-radius: var(--r-sm);
+  font: 500 var(--fs-xs) var(--font-mono);
+}
+
+/* Band utilities the widgets + a few sections reference for inks/fills. */
+.ink-exemplary { color: var(--band-exemplary-text); }
+.ink-healthy { color: var(--band-healthy-text); }
+.ink-fair { color: var(--band-fair-text); }
+.ink-poor { color: var(--band-poor-text); }
+.ink-critical { color: var(--band-critical-text); }
+.fill-exemplary { background: var(--band-exemplary); }
+.fill-healthy { background: var(--band-healthy); }
+.fill-fair { background: var(--band-fair); }
+.fill-poor { background: var(--band-poor); }
+.fill-critical { background: var(--band-critical); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CHROME — header, nav dropdowns, header actions, footer. Re-keyed from
+   canine.css .mk-header/.mk-nav/.mk-footer onto the classes StaticPageDocument
+   emits (.ip-site-header, .ip-brand, .ip-nav, .ip-nav-group/.ip-nav-panel/
+   .ip-nav-card, .ip-header-*, .ip-site-footer, .ip-footer-*).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Skip link (the first <a> in <body>) */
+.ip-page > a[href="#main"] {
+  position: absolute; left: -9999px; top: 0; z-index: 100;
+  background: var(--accent-strong); color: var(--on-accent);
+  padding: 8px 14px; border-radius: var(--r-md);
+}
+.ip-page > a[href="#main"]:focus { left: 12px; top: 10px; }
+
+.ip-site-header {
+  position: sticky; top: 0; z-index: 40;
+  display: flex; align-items: center; gap: 1.25rem; min-height: 62px;
+  padding-inline: max(1.1rem, calc(50% - 570px));
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  backdrop-filter: saturate(1.1) blur(8px);
+  border-bottom: 1px solid var(--hairline);
+}
+.ip-brand {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-size: 17px; font-weight: 600; letter-spacing: -0.01em;
+  color: var(--heading); text-decoration: none;
+}
+.ip-brand:hover { text-decoration: none; opacity: 0.85; }
+.ip-brand-dot {
+  width: 11px; height: 11px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 0 4px var(--accent-wash); flex: none;
+}
+
+.ip-nav { display: flex; align-items: center; margin-left: 1rem; }
+.ip-nav > ul { display: flex; align-items: center; gap: 0.15rem; list-style: none; margin: 0; padding: 0; }
+.ip-nav a,
+.ip-nav-trigger {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  color: var(--muted); font-size: var(--fs-sm); font-weight: 500;
+  padding: 0.5rem 0.7rem; border-radius: var(--r-md);
+  background: none; border: 0; cursor: pointer; font-family: inherit; line-height: 1;
+  text-decoration: none;
+}
+.ip-nav a:hover,
+.ip-nav-trigger:hover { color: var(--heading); text-decoration: none; }
+.ip-nav a[aria-current="page"] { color: var(--heading); }
+
+/* Dropdown group: a chevron on the trigger, a card panel on hover/focus-within. */
+.ip-nav-group { position: relative; display: inline-flex; }
+.ip-nav-trigger::after {
+  content: ""; width: 13px; height: 13px; opacity: 0.8;
+  background: currentColor; transition: transform 0.15s ease;
+  -webkit-mask: no-repeat center / contain
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  mask: no-repeat center / contain
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+.ip-nav-group:hover .ip-nav-trigger::after,
+.ip-nav-group:focus-within .ip-nav-trigger::after { transform: rotate(180deg); }
+.ip-nav-panel {
+  position: absolute; top: calc(100% + 10px); left: 0;
+  min-width: 420px; padding: 0.5rem;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.15rem;
+  background: var(--bg); border: 1px solid var(--hairline);
+  border-radius: var(--r-lg); box-shadow: var(--shadow-overlay);
+  opacity: 0; visibility: hidden; transform: translateY(5px);
+  transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s; z-index: 60;
+}
+.ip-nav-panel::before { content: ""; position: absolute; top: -10px; left: 0; right: 0; height: 10px; }
+.ip-nav-group:hover > .ip-nav-panel,
+.ip-nav-group:focus-within > .ip-nav-panel { opacity: 1; visibility: visible; transform: none; }
+.ip-nav-card { display: block; padding: 0.7rem 0.75rem; border-radius: var(--r-md); color: var(--ink); text-decoration: none; }
+.ip-nav-card:hover { background: var(--surface-2); text-decoration: none; }
+.ip-nav-card strong { display: block; color: var(--heading); font-size: var(--fs-sm); font-weight: 600; }
+.ip-nav-card span { display: block; color: var(--muted); font-size: var(--fs-xs); line-height: 1.35; margin-top: 1px; }
+
+.ip-header-actions { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; }
+.ip-header-quiet { color: var(--muted); font-size: var(--fs-sm); font-weight: 500; white-space: nowrap; text-decoration: none; }
+.ip-header-quiet:hover { color: var(--heading); text-decoration: none; }
+.ip-header-cta {
+  display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+  font: 600 var(--fs-md) / 1.2 var(--font-ui);
+  background: var(--accent-strong); border: 1px solid var(--accent-strong);
+  color: var(--on-accent); border-radius: var(--r-sm); padding: 8px 14px; text-decoration: none;
+  transition: opacity 0.12s ease;
+}
+.ip-header-cta:hover { opacity: 0.92; text-decoration: none; }
+/* The header theme toggle — a quiet round icon button. */
+.ip-header-actions [data-theme-toggle] {
+  display: inline-grid; place-items: center; width: 34px; height: 34px;
+  border: 1px solid var(--hairline); border-radius: var(--r-full);
+  background: transparent; color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1;
+}
+.ip-header-actions [data-theme-toggle]:hover { color: var(--heading); background: var(--surface-2); }
+
+@media (max-width: 900px) {
+  .ip-nav, .ip-header-quiet { display: none; }
+}
+@media (max-width: 620px) { .ip-header-cta { display: none; } }
+
+/* Footer */
+.ip-site-footer {
+  border-top: 1px solid var(--hairline);
+  padding: var(--mk-section) max(1.1rem, calc(50% - 570px)) 2.5rem;
+  margin-top: var(--mk-section);
+}
+.ip-footer-cols {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 1.5rem; margin: 0 0 1.75rem;
+}
+.ip-footer-group { display: flex; flex-direction: column; gap: 0.5rem; }
+.ip-footer-h {
+  font-size: var(--fs-2xs); font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--heading); margin-bottom: 0.35rem;
+}
+.ip-footer-group a { color: var(--muted); font-size: var(--fs-sm); text-decoration: none; }
+.ip-footer-group a:hover { color: var(--heading); text-decoration: none; }
+.ip-footer-fine {
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  border-top: 1px solid var(--hairline); padding-top: 1.25rem;
+}
+.ip-footer-brand { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: var(--heading); }
+.ip-footer-byline { font-size: var(--fs-xs); color: var(--muted); }
+.ip-footer-byline a { color: var(--muted); text-decoration: none; }
+.ip-footer-byline a:hover { color: var(--heading); }
+.ip-footer-copy { font-size: var(--fs-xs); color: var(--muted); margin: 0; }
+.ip-footer-theme {
+  display: inline-flex; align-items: center; gap: 0.4rem; margin-left: auto;
+  padding: 0.4rem 0.75rem; border: 1px solid var(--hairline); border-radius: var(--r-full);
+  font: inherit; font-size: var(--fs-xs); color: var(--muted); background: transparent; cursor: pointer;
+}
+.ip-footer-theme:hover { color: var(--heading); background: var(--surface-2); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BUTTONS — the marketing button system, applied to imprint's .ip-btn variants.
+   canine's default .btn is a secondary outline; .btn-primary is the filled accent.
+   ip-btn-primary → filled accent CTA, ip-btn-secondary → outline, ip-btn-ghost →
+   a quiet link-button (the "Dimensions →" per-card links).
+   ═══════════════════════════════════════════════════════════════════════════ */
+.ip-btn {
+  font: 600 var(--fs-md) / 1.2 var(--font-ui);
+  border-radius: var(--r-sm);
+  padding: 12px 22px; /* the canine btn-lg the CTAs use */
+  gap: 8px;
+}
+.ip-btn-primary {
+  background: var(--accent-strong); border-color: var(--accent-strong); color: var(--on-accent);
+}
+.ip-btn-primary:hover { background: var(--accent-strong); opacity: 0.92; }
+.ip-btn-secondary {
+  background: transparent; border-color: var(--border-strong); color: var(--ink); font-weight: 500;
+}
+.ip-btn-secondary:hover { background: var(--surface-2); border-color: var(--border-strong); }
+/* ghost = the small quiet in-card link (canine .mk-*-link / btn text) */
+.ip-btn-ghost {
+  padding: 0; border: 0; background: transparent; color: var(--accent-ink);
+  font-size: var(--fs-sm); font-weight: 500; align-self: flex-start;
+}
+.ip-btn-ghost:hover { background: transparent; text-decoration: underline; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SECTION RHYTHM + HEAD — every appearance is a .ip-section whose immediate
+   child .ip-stack holds a "head" (a bold-only kicker prose, an h1/h2, a lede
+   prose) and then the block body. Style the head generically; each appearance
+   refines the body below.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* A kicker is a prose paragraph whose only content is a single <strong> — the
+   seeder authors `<p><strong>…</strong></p>` for every block kicker/tag. Render it
+   as canine's uppercase accent-barred eyebrow. */
+[class*="ip-ap-"] .ip-prose:has(> p > strong:only-child):first-child,
+.ip-prose.ip-kicker {
+  font-size: 0; /* collapse whitespace text nodes; the strong re-sets its own size */
+}
+[class*="ip-ap-"] .ip-prose:has(> p > strong:only-child):first-child > p > strong {
+  display: inline-flex; align-items: center; gap: 0.55rem;
+  font-size: var(--fs-2xs); font-weight: 600; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--muted);
+}
+[class*="ip-ap-"] .ip-prose:has(> p > strong:only-child):first-child > p > strong::before {
+  content: ""; width: 18px; height: 1px; background: var(--accent); display: inline-block;
+}
+
+/* Section headings + lede. h1 is hero-only; h2 is the section title. */
+[class*="ip-ap-"] h2 {
+  font-size: var(--mk-h2); line-height: 1.12; letter-spacing: -0.02em; color: var(--heading);
+}
+[class*="ip-ap-"] h3 { font-size: var(--fs-lg); color: var(--heading); }
+/* The lede: the first prose paragraph after the head heading. */
+[class*="ip-ap-"] > .ip-stack > .ip-prose:not(:has(> p > strong:only-child)) {
+  color: var(--muted); font-size: var(--fs-lg); line-height: 1.6; max-width: var(--mk-measure);
+}
+[class*="ip-ap-"] .ip-prose p strong { color: var(--ink); }
+[class*="ip-ap-"] .ip-prose a { color: var(--accent-ink); }
+
+/* Center the head for grid/list appearances (canine .mk-section-head is centered);
+   hero + boundary + table keep it left, handled per-appearance below. */
+.ip-ap-feature-grid > .ip-stack,
+.ip-ap-personas > .ip-stack,
+.ip-ap-steps > .ip-stack,
+.ip-ap-panels > .ip-stack,
+.ip-ap-pricing > .ip-stack,
+.ip-ap-composition > .ip-stack,
+.ip-ap-flow > .ip-stack,
+.ip-ap-band-scale > .ip-stack,
+.ip-ap-gallery > .ip-stack,
+.ip-ap-live-card > .ip-stack,
+.ip-ap-contact > .ip-stack {
+  align-items: center;
+}
+.ip-ap-feature-grid > .ip-stack > :is(.ip-prose, h2),
+.ip-ap-personas > .ip-stack > :is(.ip-prose, h2),
+.ip-ap-steps > .ip-stack > :is(.ip-prose, h2),
+.ip-ap-panels > .ip-stack > :is(.ip-prose, h2),
+.ip-ap-composition > .ip-stack > :is(.ip-prose, h2),
+.ip-ap-flow > .ip-stack > :is(.ip-prose, h2),
+.ip-ap-band-scale > .ip-stack > :is(.ip-prose, h2),
+.ip-ap-gallery > .ip-stack > :is(.ip-prose, h2),
+.ip-ap-live-card > .ip-stack > :is(.ip-prose, h2),
+.ip-ap-contact > .ip-stack > :is(.ip-prose, h2) {
+  text-align: center; max-width: var(--mk-measure); margin-inline: auto;
+}
+/* the head grid/columns/widgets must still span full width even with a centered head */
+[class*="ip-ap-"] > .ip-stack > :is(.ip-grid, .ip-columns) { width: 100%; align-self: stretch; }
+
+/* ── HERO ─────────────────────────────────────────────────────────────────── */
+.ip-ap-hero { padding-block: clamp(3rem, 1.5rem + 5vw, 5.5rem) var(--mk-section); }
+/* Two-up: copy column + the evidence card (the widget). The stack becomes a grid
+   ONLY when a widget card is present (canine's .mk-hero-grid); a solo hero with no
+   card is a single full-width column (canine's .mk-hero-solo). Align to the top so
+   the card sits beside the H1 (the copy column is usually shorter than the 460px
+   card — centering would leave a gap above the copy).
+
+   ROW-GAP MUST BE ZERO HERE. imprint's hero is a FLAT stack — every copy item
+   (kicker/h1/lede/CTAs/microcopy) is a sibling of the card in one grid, so the card
+   has to span all the copy rows (grid-row below). Canine's markup instead wraps the
+   copy in ONE grid cell (.mk-hero-copy), so its `gap` only ever falls between the two
+   real columns. Here the card's multi-row span manufactures a row PER copy item; if
+   `gap` also set row-gap, that gutter would be inserted between every one of those
+   rows AND the empty rows the span reserves beyond them — ~97 phantom gutters,
+   ballooning the hero by thousands of px (the spurious blank band under the card).
+   So: column-gap = the two-up gutter; row-gap = 0; copy rhythm is restored as a
+   margin between consecutive copy items just below. */
+.ip-ap-hero > .ip-stack:has(> :is(cai-score-card, cai-card-gallery, cai-band-scale, cai-composition-bar, cai-evidence-flow)) {
+  display: grid; grid-template-columns: 1.05fr 0.95fr;
+  column-gap: var(--mk-gap); row-gap: 0; align-items: start;
+}
+/* solo hero: a single measure-width copy column */
+.ip-ap-hero > .ip-stack:not(:has(> :is(cai-score-card, cai-card-gallery, cai-band-scale, cai-composition-bar, cai-evidence-flow))) h1 {
+  max-width: 24ch;
+}
+/* All copy (kicker, h1, lede, CTAs, microcopy) sits in the left column; the widget
+   card spans the right column across all the copy rows. Copy rhythm lives on the
+   items (margin between consecutive copy siblings), NOT on the grid's row-gap —
+   see the row-gap:0 note above. */
+.ip-ap-hero > .ip-stack > :not(cai-score-card):not(cai-card-gallery):not(contact-form):not(cai-band-scale):not(cai-composition-bar):not(cai-evidence-flow) {
+  grid-column: 1;
+}
+.ip-ap-hero > .ip-stack:has(> :is(cai-score-card, cai-card-gallery, cai-band-scale, cai-composition-bar, cai-evidence-flow))
+  > :not(cai-score-card):not(cai-card-gallery):not(contact-form):not(cai-band-scale):not(cai-composition-bar):not(cai-evidence-flow)
+  + :not(cai-score-card):not(cai-card-gallery):not(contact-form):not(cai-band-scale):not(cai-composition-bar):not(cai-evidence-flow) {
+  margin-top: 1.1rem;
+}
+.ip-ap-hero > .ip-stack > :is(cai-score-card, cai-card-gallery, cai-band-scale, cai-composition-bar, cai-evidence-flow) {
+  grid-column: 2; grid-row: 1 / 99; justify-self: end; align-self: start;
+}
+.ip-ap-hero h1 {
+  font-size: var(--mk-display); line-height: 1.05; letter-spacing: -0.03em;
+  color: var(--heading); max-width: 18ch;
+}
+.ip-ap-hero > .ip-stack > .ip-prose:not(:has(> p > strong:only-child)) {
+  font-size: var(--fs-xl); line-height: 1.5; color: var(--ink); max-width: 52ch;
+}
+.ip-ap-hero > .ip-stack > .ip-prose:not(:has(> p > strong:only-child)) strong { color: var(--heading); }
+/* the trailing microcopy prose is small + muted */
+.ip-ap-hero > .ip-stack > .ip-prose:last-of-type { font-size: var(--fs-sm); color: var(--muted); }
+@media (max-width: 900px) {
+  .ip-ap-hero > .ip-stack { grid-template-columns: 1fr; }
+  .ip-ap-hero > .ip-stack > * { grid-column: 1 !important; }
+  .ip-ap-hero > .ip-stack > :is(cai-score-card, cai-card-gallery, cai-band-scale, cai-composition-bar, cai-evidence-flow) {
+    grid-row: auto !important; justify-self: stretch;
+  }
+}
+
+/* CTA rows: consecutive .ip-btn siblings sit on one wrapping row. */
+[class*="ip-ap-"] .ip-btn + .ip-btn { margin-left: 0; }
+.ip-ap-hero > .ip-stack,
+.ip-ap-cta > .ip-stack { row-gap: 1.1rem; }
+
+/* ── BOUNDARY (is / is-not two columns) ─────────────────────────────────────── */
+.ip-ap-boundary h2 { max-width: var(--mk-measure); }
+.ip-ap-boundary .ip-columns > .ip-stack {
+  border: 1px solid var(--hairline); border-radius: var(--r-lg); padding: 1.2rem 1.35rem;
+}
+.ip-ap-boundary .ip-columns > .ip-stack:first-child { border-left: 3px solid var(--muted); }
+.ip-ap-boundary .ip-columns > .ip-stack:last-child { border-left: 3px solid var(--accent); }
+.ip-ap-boundary .ip-columns h3 {
+  font-size: var(--fs-2xs); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); margin: 0 0 0.4rem;
+}
+.ip-ap-boundary .ip-prose ul { list-style: none; padding: 0; display: grid; gap: 0.65rem; }
+.ip-ap-boundary .ip-prose li strong { display: block; color: var(--heading); font-size: var(--fs-md); }
+.ip-ap-boundary .ip-prose li { color: var(--muted); font-size: var(--fs-sm); line-height: 1.45; }
+
+/* ── FEATURE GRID / PANELS / PERSONAS / STEPS — bordered cards in a grid ────── */
+.ip-ap-feature-grid .ip-grid > .ip-stack,
+.ip-ap-personas .ip-grid > .ip-stack {
+  border: 1px solid var(--hairline); border-radius: var(--r-lg); padding: 1.2rem 1.35rem;
+  gap: 0.35rem;
+}
+.ip-ap-personas .ip-grid > .ip-stack:hover { border-color: var(--accent); background: var(--surface); }
+.ip-ap-feature-grid .ip-grid h3,
+.ip-ap-personas .ip-grid h3 { font-size: var(--fs-md); margin: 0; }
+.ip-ap-feature-grid .ip-grid .ip-prose,
+.ip-ap-personas .ip-grid .ip-prose { color: var(--muted); font-size: var(--fs-sm); line-height: 1.55; }
+/* the per-card tag (bold-only prose) → mono accent eyebrow */
+.ip-ap-feature-grid .ip-grid .ip-prose:has(> p > strong:only-child) > p > strong {
+  font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--accent-ink); font-weight: 600;
+}
+/* footnote / note under the grid → centered small muted */
+.ip-ap-feature-grid > .ip-stack > .ip-prose:last-child:not(:has(> p > strong:only-child)),
+.ip-ap-personas > .ip-stack > .ip-prose:last-child:not(:has(> p > strong:only-child)),
+.ip-ap-steps > .ip-stack > .ip-prose:last-child:not(:has(> p > strong:only-child)) {
+  font-size: var(--fs-xs); color: var(--muted); text-align: center; max-width: var(--mk-measure); margin-inline: auto;
+}
+
+/* ── STEPS (numbered) ───────────────────────────────────────────────────────── */
+.ip-ap-steps .ip-grid { counter-reset: ip-step; }
+.ip-ap-steps .ip-grid > .ip-stack {
+  border: 1px solid var(--hairline); border-radius: var(--r-lg); padding: 1.4rem 1.35rem; gap: 0.35rem;
+}
+.ip-ap-steps .ip-grid > .ip-stack::before {
+  counter-increment: ip-step; content: counter(ip-step);
+  display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%;
+  background: var(--accent-wash); color: var(--accent-ink);
+  font-family: var(--font-mono); font-weight: 600; font-size: var(--fs-sm); margin-bottom: 0.4rem;
+}
+.ip-ap-steps .ip-grid h3 { font-size: var(--fs-lg); margin: 0; }
+.ip-ap-steps .ip-grid .ip-prose { color: var(--muted); font-size: var(--fs-sm); line-height: 1.55; }
+
+/* ── PANELS (two-up feature panels with a left tone bar) ────────────────────── */
+.ip-ap-panels .ip-columns > .ip-stack,
+.ip-ap-panels .ip-grid > .ip-stack {
+  border: 1px solid var(--hairline); border-radius: var(--r-lg);
+  padding: 1.5rem 1.6rem; gap: 0.5rem;
+}
+.ip-ap-panels h3 {
+  font-size: clamp(1.15rem, 1rem + 0.8vw, 1.5rem); line-height: 1.2; letter-spacing: -0.01em; margin: 0.1rem 0 0.2rem;
+}
+.ip-ap-panels .ip-prose { color: var(--muted); font-size: var(--fs-sm); line-height: 1.6; }
+.ip-ap-panels .ip-prose:has(> p > strong:only-child) > p > strong {
+  display: inline-flex; align-items: center; gap: 0.55rem;
+  font-size: var(--fs-2xs); font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+}
+.ip-ap-panels .ip-prose:has(> p > strong:only-child) > p > strong::before {
+  content: ""; width: 18px; height: 1px; background: var(--accent); display: inline-block;
+}
+
+/* ── STAT BAND ──────────────────────────────────────────────────────────────── */
+.ip-ap-stat-band .ip-grid {
+  gap: 1px; background: var(--hairline); border: 1px solid var(--hairline);
+  border-radius: var(--r-md); overflow: hidden;
+}
+.ip-ap-stat-band .ip-grid > .ip-stack { background: var(--bg); padding: 1.1rem 1.25rem; gap: 0.2rem; }
+.ip-ap-stat-band .ip-grid h2 {
+  font-family: var(--font-mono); font-size: var(--fs-2xl); font-weight: 600; color: var(--heading);
+  letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.1;
+}
+.ip-ap-stat-band .ip-grid .ip-prose { font-size: var(--fs-xs); color: var(--muted); }
+
+/* ── PRICING TIERS ──────────────────────────────────────────────────────────── */
+.ip-ap-pricing .ip-columns > .ip-stack,
+.ip-ap-pricing .ip-grid > .ip-stack {
+  position: relative; border: 1px solid var(--hairline); border-radius: var(--r-lg);
+  padding: 1.6rem 1.5rem; background: var(--surface); gap: 0.35rem;
+}
+.ip-ap-pricing h3 { font-size: var(--fs-lg); font-weight: 600; margin: 0; }
+.ip-ap-pricing .ip-prose { color: var(--muted); font-size: var(--fs-sm); line-height: 1.45; }
+/* the price (an h4) → mono numeral */
+.ip-ap-pricing h4 {
+  font-family: var(--font-mono); font-size: var(--fs-2xl); font-weight: 600; color: var(--heading);
+  letter-spacing: -0.02em; margin: 0.3rem 0 0;
+}
+/* the featured badge (bold-only prose) → accent-wash pill */
+.ip-ap-pricing .ip-prose:has(> p > strong:only-child):first-child > p > strong {
+  display: inline-block; font-size: var(--fs-2xs); font-weight: 600; color: var(--accent-ink);
+  background: var(--accent-wash); padding: 2px 8px; border-radius: var(--r-sm); text-transform: none; letter-spacing: 0;
+}
+.ip-ap-pricing .ip-prose:has(> p > strong:only-child):first-child > p > strong::before { content: none; }
+/* the feature list with checkmarks */
+.ip-ap-pricing .ip-prose ul { list-style: none; padding: 0; display: grid; gap: 0.5rem; }
+.ip-ap-pricing .ip-prose ul li { font-size: var(--fs-sm); color: var(--ink); padding-left: 1.4rem; position: relative; line-height: 1.45; }
+.ip-ap-pricing .ip-prose ul li::before { content: "\2713"; position: absolute; left: 0; color: var(--band-exemplary-text); font-weight: 700; }
+.ip-ap-pricing .ip-btn { margin-top: auto; align-self: stretch; }
+.ip-ap-pricing > .ip-stack > .ip-prose:last-child {
+  font-size: var(--fs-sm); color: var(--muted); text-align: center; max-width: var(--mk-measure); margin-inline: auto;
+}
+
+/* ── TABLE LIST (canonical bulleted rendering of a CMS table) ───────────────── */
+.ip-ap-table-list > .ip-stack { align-items: stretch; }
+.ip-ap-table-list .ip-prose ul {
+  list-style: none; padding: 0; margin: 0; border: 1px solid var(--hairline); border-radius: var(--r-lg); overflow: hidden;
+}
+.ip-ap-table-list .ip-prose ul li {
+  padding: 0.7rem 1rem; border-bottom: 1px solid var(--hairline); font-size: var(--fs-sm); color: var(--ink);
+}
+.ip-ap-table-list .ip-prose ul li:first-child {
+  background: var(--surface-2); color: var(--muted); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.04em;
+}
+.ip-ap-table-list .ip-prose ul li:last-child { border-bottom: 0; }
+.ip-ap-table-list > .ip-stack > .ip-prose:last-child:not(:has(ul)) {
+  font-size: var(--fs-xs); color: var(--muted); text-align: center;
+}
+
+/* ── DOCMOCK (a document-sample card) ───────────────────────────────────────── */
+.ip-ap-docmock > .ip-stack {
+  border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 1.5rem 1.6rem;
+  background: var(--surface); max-width: 46rem; margin-inline: auto; gap: 0.6rem;
+}
+.ip-ap-docmock h4 { font-size: var(--fs-lg); color: var(--heading); }
+.ip-ap-docmock .ip-prose:has(> p > strong:only-child) > p > strong {
+  font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600;
+}
+.ip-ap-docmock .ip-prose ul { list-style: none; padding: 0; display: grid; gap: 0.35rem; }
+.ip-ap-docmock .ip-prose ul li {
+  display: flex; justify-content: space-between; gap: 1rem; padding: 0.4rem 0;
+  border-bottom: 1px dashed var(--hairline); font-size: var(--fs-sm); color: var(--muted);
+}
+.ip-ap-docmock .ip-prose ul li strong { color: var(--heading); font-weight: 600; }
+
+/* ── NOTE / CALLOUT ─────────────────────────────────────────────────────────── */
+.ip-ap-note > .ip-stack {
+  border: 1px solid var(--hairline); border-left: 3px solid var(--accent); border-radius: var(--r-md);
+  padding: 0.9rem 1.1rem; background: var(--surface); max-width: 46rem; margin-inline: auto;
+  font-size: var(--fs-sm); color: var(--ink); line-height: 1.55; gap: 0.25rem;
+}
+.ip-ap-note h3 { color: var(--heading); font-weight: 600; font-size: var(--fs-md); }
+/* a warn note carries the Primary background flag from the seeder; retint its bar */
+.ip-ap-note.ip-bg-primary { background: transparent; color: var(--ink); }
+.ip-ap-note.ip-bg-primary > .ip-stack { border-left-color: var(--band-fair); }
+
+/* ── CTA (the closing full-width call) ──────────────────────────────────────── */
+.ip-ap-cta > .ip-stack { align-items: center; text-align: center; }
+.ip-ap-cta h2 { font-size: clamp(1.9rem, 1.3rem + 2vw, 2.6rem); letter-spacing: -0.02em; max-width: 30ch; }
+.ip-ap-cta .ip-prose { max-width: var(--mk-measure); text-align: center; }
+.ip-ap-cta > .ip-stack > .ip-prose:first-of-type { font-size: var(--fs-xl); color: var(--ink); }
+
+/* ── DOC (long-form legal / prose — canine .mk-doc reading column) ──────────── */
+.ip-ap-doc > .ip-stack {
+  max-width: 50rem; margin-inline: auto; width: 100%; gap: 0;
+}
+.ip-ap-doc h1 {
+  font-size: var(--mk-h2); line-height: 1.12; letter-spacing: -0.02em; color: var(--heading);
+  margin-block: 0.2rem 0.6rem;
+}
+.ip-ap-doc h2 {
+  font-size: var(--fs-xl); color: var(--heading); letter-spacing: -0.01em;
+  margin-block: 2.4rem 0.8rem; scroll-margin-top: 80px;
+}
+.ip-ap-doc h3 { font-size: var(--fs-lg); color: var(--heading); margin-block: 1.6rem 0.5rem; }
+.ip-ap-doc .ip-prose { color: var(--ink); }
+.ip-ap-doc .ip-prose p, .ip-ap-doc .ip-prose li { font-size: var(--fs-md); line-height: 1.7; }
+.ip-ap-doc .ip-prose p { margin-block: 0 1rem; }
+.ip-ap-doc .ip-prose ul, .ip-ap-doc .ip-prose ol { margin-block: 0 1.2rem; display: grid; gap: 0.4rem; }
+.ip-ap-doc .ip-prose strong { color: var(--heading); }
+.ip-ap-doc .ip-prose a { color: var(--accent-ink); text-decoration: underline; }
+/* the lead line right under the H1 (the doc-meta) — muted, with a rule below it */
+.ip-ap-doc h1 + .ip-prose {
+  font-size: var(--fs-xs); color: var(--muted); margin-block: 0 2rem;
+  padding-bottom: 1.25rem; border-bottom: 1px solid var(--hairline);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   WIDGET APPEARANCES — the six island blocks are shadow-DOM self-styled; they
+   only need the host tokens (defined above) plus block-level width/centering.
+   The custom elements render as block-level, width-constrained, centered figures.
+   ═══════════════════════════════════════════════════════════════════════════ */
+cai-score-card, cai-card-gallery, cai-band-scale, cai-composition-bar, cai-evidence-flow, contact-form {
+  display: block; width: 100%;
+}
+/* These five widgets re-render the block's own kicker/heading/lede INSIDE their
+   shadow root (they were given those props), so the section-level head the seeder
+   also authored is a visible duplicate. Hide the section head for them — the
+   widget's head is the canonical, faithfully-styled rendering. (LiveCard/hero score
+   cards do NOT render a head, so ip-ap-live-card keeps its section head.) */
+.ip-ap-gallery > .ip-stack > :is(.ip-prose, h1, h2, h3),
+.ip-ap-band-scale > .ip-stack > :is(.ip-prose, h1, h2, h3),
+.ip-ap-composition > .ip-stack > :is(.ip-prose, h1, h2, h3),
+.ip-ap-flow > .ip-stack > :is(.ip-prose, h1, h2, h3),
+.ip-ap-contact > .ip-stack > :is(.ip-prose, h1, h2, h3) {
+  display: none;
+}
+/* gallery + flow + bandscale + composition are wide, centered figures */
+.ip-ap-gallery cai-card-gallery,
+.ip-ap-flow cai-evidence-flow { max-width: 100%; }
+.ip-ap-band-scale cai-band-scale,
+.ip-ap-composition cai-composition-bar { max-width: 46rem; margin-inline: auto; }
+/* a live/standalone score card is a single 460px card, centered */
+.ip-ap-live-card cai-score-card { max-width: 460px; margin-inline: auto; }
+.ip-ap-contact contact-form { max-width: 40rem; margin-inline: auto; }
+/* section caption prose that follows a widget → small muted centered */
+[class*="ip-ap-"] > .ip-stack > .ip-prose:last-child:not(:has(> p > strong:only-child)):not(:has(ul)) {
+  font-size: var(--fs-xs);
+}
+
+/* ── Reduced motion already handled by imprint-base; nav transitions respect it. */
+@media (prefers-reduced-motion: reduce) {
+  .ip-nav-panel, .ip-nav-trigger::after { transition: none !important; }
+}

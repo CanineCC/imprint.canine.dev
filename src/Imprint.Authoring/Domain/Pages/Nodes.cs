@@ -44,6 +44,43 @@ public interface IContainerNode
 [JsonConverter(typeof(JsonStringEnumConverter))] public enum SectionWidth { Normal, Wide, Full }
 [JsonConverter(typeof(JsonStringEnumConverter))] public enum SectionBackground { None, Surface, SurfaceAlt, Primary }
 [JsonConverter(typeof(JsonStringEnumConverter))] public enum SectionPadding { None, Normal, Large }
+
+/// <summary>
+/// The visual role a section plays — the one dimension that lets a Section reproduce a
+/// named marketing "block appearance" (a CMS <c>_template</c>) without inventing a new
+/// node type per block. <see cref="Plain"/> is the structural default (emits no extra
+/// class); every other value emits <c>ip-ap-{kebab-name}</c>, which the marketing theme
+/// keys its chrome CSS off. The set is the shared contract between the block seeder, the
+/// renderer and the marketing stylesheet — one value per CMS block template.
+/// A value the reader does not know reads back as <see cref="Plain"/> (forward-compatible).
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum SectionAppearance
+{
+    Plain,
+    Hero,
+    Boundary,
+    FeatureGrid,
+    StatBand,
+    Personas,
+    Steps,
+    Panels,
+    Pricing,
+    Composition,
+    TableList,
+    Docmock,
+    Note,
+    Cta,
+    Flow,
+    BandScale,
+    Gallery,
+    LiveCard,
+    Contact,
+    // Long-form legal / prose document (canine's .mk-doc): a measure-width, centered
+    // reading column. Not a CMS block template — it's the marketing look for a whole
+    // markdown page — but part of the same appearance vocabulary so any page reproduces.
+    Doc,
+}
 [JsonConverter(typeof(JsonStringEnumConverter))] public enum Gap { Tight, Normal, Loose }
 [JsonConverter(typeof(JsonStringEnumConverter))] public enum StackAlign { Start, Center, End }
 [JsonConverter(typeof(JsonStringEnumConverter))] public enum CollapseBreakpoint { Px480 = 480, Px640 = 640, Px768 = 768 }
@@ -59,6 +96,14 @@ public sealed record SectionNode : Node, IContainerNode
     public SectionWidth Width { get; init; } = SectionWidth.Normal;
     public SectionBackground Background { get; init; } = SectionBackground.None;
     public SectionPadding Padding { get; init; } = SectionPadding.Normal;
+
+    /// <summary>
+    /// The named appearance this section plays (marketing block role). Defaults to
+    /// <see cref="SectionAppearance.Plain"/>; a value missing from persisted JSON reads
+    /// back as Plain, so older streams stay renderable.
+    /// </summary>
+    public SectionAppearance Appearance { get; init; } = SectionAppearance.Plain;
+
     public NodeList Children { get; init; } = NodeList.Empty;
     public override string DisplayName => "Section";
     public Node WithChildren(NodeList children) => this with { Children = children };

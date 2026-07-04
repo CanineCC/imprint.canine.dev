@@ -8,6 +8,9 @@
     <Project Path="src/Imprint.Rendering/Imprint.Rendering.csproj" />
     <Project Path="src/Imprint.Site/Imprint.Site.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/ContentSeeder/ContentSeeder.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Imprint.Authoring.Tests/Imprint.Authoring.Tests.csproj" />
     <Project Path="tests/Imprint.E2E/Imprint.E2E.csproj" />

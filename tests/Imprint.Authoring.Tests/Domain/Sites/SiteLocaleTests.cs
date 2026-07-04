@@ -104,7 +104,7 @@ public sealed class SiteLocaleTests
     {
         // Removing a locale that navigation overrides still mention is fine: labels
         // resolve with fallback, so the stale values simply stop being used.
-        var item = new NavigationItem(PageId.New(), LocalizedText.Of(En, "Home").With(DaDk, "Hjem"));
+        var item = NavigationItem.Page(PageId.New(), LocalizedText.Of(En, "Home").With(DaDk, "Hjem"));
 
         AggregateSpec.For<Site>()
             .Given(Created, new SiteLocaleAdded(DaDk), new SiteNavigationChanged([item]))

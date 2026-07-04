@@ -51,10 +51,10 @@ public sealed class CreateSiteFromTemplateTests
         // to page titles.
         var expectedNavSlugs = template.Pages.Where(p => p.InNavigation).Select(p => p.Slug).ToList();
         var actualNavSlugs = site.Navigation
-            .Select(item => pageList.Get(item.PageId)!.Slug.Value)
+            .Select(item => pageList.Get(item.PageId!.Value)!.Slug.Value)
             .ToList();
         Assert.Equal(expectedNavSlugs, actualNavSlugs);
-        Assert.All(site.Navigation, item => Assert.Null(item.LabelOverride));
+        Assert.All(site.Navigation, item => Assert.Null(item.Label));
     }
 
     [Fact]

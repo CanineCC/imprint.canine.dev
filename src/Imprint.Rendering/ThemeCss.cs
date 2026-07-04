@@ -13,6 +13,7 @@ namespace Imprint.Rendering;
 public static class ThemeCss
 {
     private static string? _structuralCss;
+    private static string? _marketingCss;
 
     public static string Emit(Theme theme) => EmitFor(theme, ":root");
 
@@ -29,7 +30,17 @@ public static class ThemeCss
     /// depending on static-web-asset paths; the wwwroot copy of the same file serves
     /// the editor canvas.
     /// </summary>
-    public static string StructuralCss => _structuralCss ??= LoadStructuralCss();
+    public static string StructuralCss => _structuralCss ??= LoadEmbedded("imprint-base.css");
+
+    /// <summary>
+    /// The marketing chrome + section-appearance layer (imprint-marketing.css), embedded
+    /// and appended after the structural styles. It defines the derived design-token family
+    /// the marketing look and the widget islands consume (bands, accent ramp, type scale,
+    /// radii, shadows, self-hosted fonts) and styles the chrome (<c>.ip-site-header</c> …)
+    /// and every named section appearance (<c>.ip-ap-*</c>). Token-driven throughout, so it
+    /// re-skins with the site theme.
+    /// </summary>
+    public static string MarketingCss => _marketingCss ??= LoadEmbedded("imprint-marketing.css");
 
     private static string EmitFor(Theme theme, string selector)
     {
@@ -43,6 +54,10 @@ public static class ThemeCss
         var typography = theme.Typography;
         props["--ip-font-heading"] = FontStackCss(typography.Heading);
         props["--ip-font-body"] = FontStackCss(typography.Body);
+        // A dedicated monospace var so code, tabular numerals and the marketing layer's
+        // mono surfaces (the CAI numeral, evidence rows, band cutlines) can key off the
+        // theme rather than a hard-coded stack. Always the curated Mono family.
+        props["--ip-font-mono"] = FontStackCss(FontStack.Mono);
         props["--ip-radius"] = $"{typography.RadiusPx}px";
 
         var spacing = typography.Spacing switch
@@ -114,13 +129,17 @@ public static class ThemeCss
         FontStack.Serif => "Charter, 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif",
         FontStack.Slab => "Rockwell, 'Rockwell Nova', 'Roboto Slab', 'DejaVu Serif', 'Sitka Small', serif",
         FontStack.Mono => "ui-monospace, 'Cascadia Code', Menlo, Consolas, 'Source Code Pro', monospace",
+        // Schibsted Grotesk — the one self-hosted family; the marketing layer's @font-face
+        // provides the file, and the system sans is the fallback if it is ever absent.
+        FontStack.Grotesk => "'Schibsted Grotesk', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
         _ => "system-ui, sans-serif",
     };
 
-    private static string LoadStructuralCss()
+    private static string LoadEmbedded(string fileName)
     {
-        using var stream = typeof(ThemeCss).Assembly.GetManifestResourceStream("Imprint.Rendering.styles.imprint-base.css")
-            ?? throw new InvalidOperationException("Embedded resource 'imprint-base.css' is missing from Imprint.Rendering.");
+        var resource = $"Imprint.Rendering.styles.{fileName}";
+        using var stream = typeof(ThemeCss).Assembly.GetManifestResourceStream(resource)
+            ?? throw new InvalidOperationException($"Embedded resource '{fileName}' is missing from Imprint.Rendering.");
         using var reader = new StreamReader(stream, Encoding.UTF8);
         return reader.ReadToEnd();
     }

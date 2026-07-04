@@ -1,3 +1,4 @@
+using Imprint.Authoring.Domain.Pages;
 using Imprint.Authoring.Domain.Sites.Events;
 using Imprint.EventSourcing;
 
@@ -13,12 +14,21 @@ public sealed class Site : AggregateRoot
 {
     public const int MaxNameLength = 100;
     public const int MaxLocales = 10;
+
+    // Top-level nav entries and per-group children are capped separately: a grouped menu
+    // (dropdowns) legitimately holds far more links than a flat bar, so the flat 20 became
+    // 20 top-level entries × up to 12 children each (matches the marketing header's shape).
     public const int MaxNavigationItems = 20;
+    public const int MaxNavigationChildren = 12;
+
+    public const int MaxFooterGroups = 8;
+    public const int MaxFooterLinksPerGroup = 20;
     public const int MaxEnvironments = 8;
     public const int MaxEnvironmentNameLength = 40;
 
     private readonly List<Locale> _locales = [];
     private IReadOnlyList<NavigationItem> _navigation = [];
+    private IReadOnlyList<FooterLinkGroup> _footerGroups = [];
     private IReadOnlyList<DeployEnvironment> _environments = [];
 
     public SiteId Id { get; private set; }
@@ -30,6 +40,13 @@ public sealed class Site : AggregateRoot
     public Locale DefaultLocale { get; private set; }
     public Theme Theme { get; private set; } = Theme.Default;
     public IReadOnlyList<NavigationItem> Navigation => _navigation;
+
+    // Marketing chrome around the page content. All optional: a site with none renders the
+    // plain shell (site name → home, flat nav, minimal footer), exactly as before.
+    public IReadOnlyList<FooterLinkGroup> FooterGroups => _footerGroups;
+    public HeaderAction? HeaderCta { get; private set; }
+    public HeaderAction? HeaderQuiet { get; private set; }
+    public CopyLine? CopyLine { get; private set; }
 
     // The site's deploy targets, in promotion order (e.g. Test → Staging → Production).
     // A site with none has never been given a publish destination; the dashboard's gear
@@ -155,7 +172,16 @@ public sealed class Site : AggregateRoot
             throw new DomainException($"Navigation can hold at most {MaxNavigationItems} items.");
         }
 
-        if (items.Select(i => i.PageId).Distinct().Count() != items.Count)
+        foreach (var item in items)
+        {
+            ValidateNavigationItem(item);
+        }
+
+        // A same-site page may appear at most once as a top-level DIRECT link — that is
+        // what makes navigation order and the home page (nav-first page) well-defined.
+        // Group children and external links carry no page identity, so they are exempt.
+        var topLevelPages = items.Select(i => i.PageId).OfType<PageId>().ToList();
+        if (topLevelPages.Distinct().Count() != topLevelPages.Count)
         {
             throw new DomainException("Navigation cannot contain the same page twice.");
         }
@@ -170,6 +196,127 @@ public sealed class Site : AggregateRoot
         }
 
         Raise(new SiteNavigationChanged([.. items]));
+    }
+
+    private static void ValidateNavigationItem(NavigationItem item)
+    {
+        if (item.IsGroup)
+        {
+            // A group is a heading + its dropdown children: it needs a label and at least
+            // one child, and neither a direct link (it is not one) nor too many children.
+            if (item.Link is not null)
+            {
+                throw new DomainException("A navigation group cannot also be a direct link.");
+            }
+
+            if (item.Label is null || item.Label.IsEmpty)
+            {
+                throw new DomainException("A navigation group must have a label.");
+            }
+
+            if (item.Children.Count > MaxNavigationChildren)
+            {
+                throw new DomainException($"A navigation group can hold at most {MaxNavigationChildren} links.");
+            }
+
+            foreach (var child in item.Children)
+            {
+                // An external child link's label is the only text it has, so require it;
+                // a page child may omit the label and inherit the page title.
+                if (child.Link is ExternalLink && (child.Label is null || child.Label.IsEmpty))
+                {
+                    throw new DomainException("An external navigation link must have a label.");
+                }
+            }
+
+            return;
+        }
+
+        // A direct entry must have a link; an external one must carry its own label.
+        if (item.Link is null)
+        {
+            throw new DomainException("A navigation entry must be either a link or a group with children.");
+        }
+
+        if (item.Link is ExternalLink && (item.Label is null || item.Label.IsEmpty))
+        {
+            throw new DomainException("An external navigation link must have a label.");
+        }
+    }
+
+    /// <summary>Replace the footer's named link columns. Empty clears the footer.</summary>
+    public void SetFooter(IReadOnlyList<FooterLinkGroup> groups)
+    {
+        if (groups.Count > MaxFooterGroups)
+        {
+            throw new DomainException($"The footer can hold at most {MaxFooterGroups} link groups.");
+        }
+
+        foreach (var group in groups)
+        {
+            if (group.Heading.IsEmpty)
+            {
+                throw new DomainException("A footer link group must have a heading.");
+            }
+
+            if (group.Links.Count > MaxFooterLinksPerGroup)
+            {
+                throw new DomainException($"A footer link group can hold at most {MaxFooterLinksPerGroup} links.");
+            }
+
+            foreach (var link in group.Links)
+            {
+                if (link.Link is ExternalLink && (link.Label is null || link.Label.IsEmpty))
+                {
+                    throw new DomainException("An external footer link must have a label.");
+                }
+            }
+        }
+
+        if (_footerGroups.SequenceEqual(groups))
+        {
+            return;
+        }
+
+        Raise(new SiteFooterChanged([.. groups]));
+    }
+
+    /// <summary>
+    /// Set (or clear, with two nulls) the header's primary CTA and quiet link. They share
+    /// a slot and the editor sets them together, so one call carries both.
+    /// </summary>
+    public void SetHeaderActions(HeaderAction? cta, HeaderAction? quiet)
+    {
+        foreach (var action in new[] { cta, quiet })
+        {
+            if (action is not null && action.Label.IsEmpty)
+            {
+                throw new DomainException("A header action must have a label.");
+            }
+        }
+
+        if (Equals(HeaderCta, cta) && Equals(HeaderQuiet, quiet))
+        {
+            return;
+        }
+
+        Raise(new SiteHeaderActionsChanged(cta, quiet));
+    }
+
+    /// <summary>Set (or clear, with null) the footer's fine-print copy line.</summary>
+    public void SetCopyLine(CopyLine? copyLine)
+    {
+        if (copyLine is not null && copyLine.Text.IsEmpty)
+        {
+            throw new DomainException("The copy line cannot be empty (pass null to clear it).");
+        }
+
+        if (Equals(CopyLine, copyLine))
+        {
+            return;
+        }
+
+        Raise(new SiteCopyLineChanged(copyLine));
     }
 
     /// <summary>
@@ -254,6 +401,16 @@ public sealed class Site : AggregateRoot
                 break;
             case SiteNavigationChanged e:
                 _navigation = [.. e.Items];
+                break;
+            case SiteFooterChanged e:
+                _footerGroups = [.. e.Groups];
+                break;
+            case SiteHeaderActionsChanged e:
+                HeaderCta = e.Cta;
+                HeaderQuiet = e.Quiet;
+                break;
+            case SiteCopyLineChanged e:
+                CopyLine = e.CopyLine;
                 break;
             case SiteEnvironmentsChanged e:
                 _environments = [.. e.Environments];

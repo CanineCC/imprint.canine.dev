@@ -143,7 +143,35 @@ internal sealed class PublishingTestHost : IAsyncDisposable
     public async Task SetNavigation(SiteId siteId, params PageId[] pages)
     {
         var site = await Store.Load<Site>(siteId.Stream);
-        site.SetNavigation([.. pages.Select(page => new NavigationItem(page, null))]);
+        site.SetNavigation([.. pages.Select(page => NavigationItem.Page(page))]);
+        await Commit(site);
+    }
+
+    public async Task SetNavigation(SiteId siteId, IReadOnlyList<NavigationItem> items)
+    {
+        var site = await Store.Load<Site>(siteId.Stream);
+        site.SetNavigation(items);
+        await Commit(site);
+    }
+
+    public async Task SetFooter(SiteId siteId, IReadOnlyList<FooterLinkGroup> groups)
+    {
+        var site = await Store.Load<Site>(siteId.Stream);
+        site.SetFooter(groups);
+        await Commit(site);
+    }
+
+    public async Task SetHeaderActions(SiteId siteId, HeaderAction? cta, HeaderAction? quiet)
+    {
+        var site = await Store.Load<Site>(siteId.Stream);
+        site.SetHeaderActions(cta, quiet);
+        await Commit(site);
+    }
+
+    public async Task SetCopyLine(SiteId siteId, CopyLine? copyLine)
+    {
+        var site = await Store.Load<Site>(siteId.Stream);
+        site.SetCopyLine(copyLine);
         await Commit(site);
     }
 
