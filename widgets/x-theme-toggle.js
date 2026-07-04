@@ -57,7 +57,13 @@ const template = `
     :host([data-variant='switch'][data-on='dark']) .switch { background: var(--ip-primary, currentColor); }
     :host([data-variant='switch'][data-on='dark']) .switch::after { transform: translate(1.1em, -50%); }
 
-    @media (prefers-reduced-motion: reduce) { .toggle, .glyph svg, .switch, .switch::after { transition-duration: 0ms; } }
+    /* The circle variant's .sun transition is redeclared by a higher-specificity
+       :host([data-variant='circle']) .sun rule, so it must be named here at matching
+       specificity or reduced-motion would not silence its 180° rotation. */
+    @media (prefers-reduced-motion: reduce) {
+      .toggle, .glyph svg, .switch, .switch::after,
+      :host([data-variant='circle']) .sun { transition-duration: 0ms; }
+    }
   </style>
   <button class="toggle" type="button" role="switch">
     <span class="glyph" aria-hidden="true">
