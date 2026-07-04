@@ -15,7 +15,10 @@ using Microsoft.Extensions.Logging;
 
 // ── args ─────────────────────────────────────────────────────────────────────
 // ContentSeeder --db <path> [--cms <cmsRoot>] [--widgets <dir>] [--publish <dir>]
-//               [--media <dir>] [--no-publish]
+//               [--media <dir>] [--api-base <url>] [--no-publish]
+// --api-base is the kennel PUBLIC-API origin the CAI data widgets fetch live from
+// (e.g. https://api.watchdog.canine.dev). Empty ⇒ widgets ship their labelled sample
+// as the offline default. The PARENT sets this to Track K's real URL at reseed time.
 // Defaults target a fresh LOCAL verify store under ./_seedtest.
 var opts = Args.Parse(args);
 var cmsRoot = opts.Cms ?? "/home/jimmy/RiderProjects/cms.canine.dev";
@@ -31,6 +34,7 @@ Console.WriteLine($"  CMS source : {cmsRoot}");
 Console.WriteLine($"  Widgets    : {widgetsDir}");
 Console.WriteLine($"  Target DB  : {dbPath}");
 Console.WriteLine($"  Publish to : {publishRoot}");
+Console.WriteLine($"  API base   : {(string.IsNullOrWhiteSpace(opts.ApiBase) ? "(none — widgets ship the labelled sample)" : opts.ApiBase)}");
 Console.WriteLine();
 
 Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
@@ -78,7 +82,7 @@ foreach (var site in Sites.All(cmsRoot))
 }
 
 // ── 2. migrate ──
-var migrator = new Migrator(dispatcher);
+var migrator = new Migrator(dispatcher, opts.ApiBase);
 var results = new List<Migrator.SiteResult>();
 foreach (var site in Sites.All(cmsRoot))
 {
@@ -157,13 +161,13 @@ static string? FindRepoRoot()
 }
 
 internal sealed record Options(
-    string? Db, string? Cms, string? Widgets, string? Publish, string? Media, bool NoPublish);
+    string? Db, string? Cms, string? Widgets, string? Publish, string? Media, string? ApiBase, bool NoPublish);
 
 internal static class Args
 {
     public static Options Parse(string[] args)
     {
-        string? db = null, cms = null, widgets = null, publish = null, media = null;
+        string? db = null, cms = null, widgets = null, publish = null, media = null, apiBase = null;
         var noPublish = false;
         for (var i = 0; i < args.Length; i++)
         {
@@ -174,6 +178,7 @@ internal static class Args
                 case "--widgets": widgets = args[++i]; break;
                 case "--publish": publish = args[++i]; break;
                 case "--media": media = args[++i]; break;
+                case "--api-base": apiBase = args[++i]; break;
                 case "--no-publish": noPublish = true; break;
                 default:
                     Console.Error.WriteLine($"Unknown argument: {args[i]}");
@@ -181,6 +186,6 @@ internal static class Args
             }
         }
 
-        return new Options(db, cms, widgets, publish, media, noPublish);
+        return new Options(db, cms, widgets, publish, media, apiBase, noPublish);
     }
 }

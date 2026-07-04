@@ -7,13 +7,17 @@ namespace ContentSeeder;
 /// The deterministic BLOCK → NODE mapper. One method per CMS block template
 /// (packages/tina-shared/src/blocks.ts + the renderers in packages/ui/src/blocks.tsx).
 /// COPY blocks become native Imprint Section/Stack/Columns/Grid/Heading/RichText/Button
-/// subtrees carrying the block's kicker/heading/lede/items copy VERBATIM. The six
+/// subtrees carrying the block's kicker/heading/lede/items copy VERBATIM. The
 /// widget-embedding blocks (cardGallery, liveCard, bandScale, composition, flow,
-/// contactForm) become a Section wrapping the block's section head plus a WidgetNode
-/// with the sample data passed through as JSON props (faithful default — never wired
-/// live). Nothing is invented; an unknown template is flagged.
+/// contactForm) become a Section wrapping the block's section head plus a WidgetNode.
+/// When an <paramref name="apiBase"/> is supplied (the --api-base seeder flag, set to
+/// the kennel public-API origin), the CAI data widgets are seeded to fetch REAL curated
+/// data live from it — the labelled SAMPLE JSON is still emitted, but only as the
+/// no-live fallback attribute — plus the per-widget curation props (owner/name/count).
+/// With no api-base the widgets carry the sample alone (the faithful offline default).
+/// Nothing is invented; an unknown template is flagged.
 /// </summary>
-public sealed class BlockMapper(string origin)
+public sealed class BlockMapper(string origin, string? apiBase = null)
 {
     public sealed record Flag(string Rel, string Note);
 
@@ -144,7 +148,8 @@ public sealed class BlockMapper(string origin)
             items.Add(Nodes.Paragraph(microcopy, origin));
         }
 
-        // The hero proof object: the CAI score card as a labelled-sample widget.
+        // The hero proof object: the CAI score card. Live from the corpus when an
+        // api-base is configured (the curated hero repo), else the labelled sample.
         if (block.Bool("showCard"))
         {
             var card = block.Obj("card");
@@ -156,6 +161,7 @@ public sealed class BlockMapper(string origin)
                     ["brand"] = origin.Contains("assay") ? "assay" : origin.Contains("cai.") ? "cai" : "watchdog",
                     ["seal-text"] = "✓ Signed evidence",
                 };
+                InjectApiBase(props);
                 var caption = card.Str("caption");
                 if (!string.IsNullOrWhiteSpace(caption))
                 {
@@ -688,6 +694,21 @@ public sealed class BlockMapper(string origin)
 
     private string Brand() => origin.Contains("assay") ? "assay" : origin.Contains("cai.") ? "cai" : "watchdog";
 
+    /// <summary>
+    /// Stamp the live kennel API origin onto a CAI data widget's props when the
+    /// --api-base flag was supplied. This is the ONE toggle that turns a seeded sample
+    /// widget into a live-fetching one: the island reads `api-base` and, when set, fetches
+    /// real curated data — falling back to the sample attribute only on failure/absence.
+    /// The parent sets this to Track K's public API base at reseed time.
+    /// </summary>
+    private void InjectApiBase(Dictionary<string, string> props)
+    {
+        if (!string.IsNullOrWhiteSpace(apiBase))
+        {
+            props["api-base"] = apiBase!.Trim();
+        }
+    }
+
     private SectionNode WidgetSection(JsonNode block, string tag, Action<Dictionary<string, string>> fill)
     {
         var stack = new List<Node>();
@@ -699,10 +720,28 @@ public sealed class BlockMapper(string origin)
         return Nodes.Section(Nodes.Stack([.. stack]));
     }
 
+    // Curation props (owner/name/count) an author set on a block become the widget's live
+    // selectors — an exact repo, or how many to show — INSTEAD of the sample JSON. Absent
+    // from today's CMS blocks (which carry only sample data), so this is future-proofing:
+    // when present they are honoured; when absent the widget picks the curated hero.
+    private static void CopyCuration(JsonNode block, Dictionary<string, string> props)
+    {
+        Copy(block, "owner", props, "owner");
+        Copy(block, "name", props, "name");
+        var count = block.Str("count");
+        if (!string.IsNullOrWhiteSpace(count))
+        {
+            props["count"] = count!;
+        }
+    }
+
     private SectionNode CardGallery(JsonNode block) =>
         WidgetSection(block, "cai-card-gallery", props =>
         {
+            // The labelled sample stays as the fallback attribute; api-base + count drive live.
             props["cards"] = block.Arr("cards").ToJsonString();
+            InjectApiBase(props);
+            CopyCuration(block, props);
             Copy(block, "kicker", props, "kicker");
             Copy(block, "heading", props, "heading");
             Copy(block, "lede", props, "lede");
@@ -710,7 +749,8 @@ public sealed class BlockMapper(string origin)
         });
 
     private SectionNode LiveCard(JsonNode block) =>
-        // FAITHFUL DEFAULT: migrate the labelled SAMPLE card the CMS ships, NOT wired live.
+        // Live from the corpus when an api-base is set (curated hero, or owner/name);
+        // the labelled SAMPLE card is kept as the no-live fallback attribute.
         WidgetSection(block, "cai-score-card", props =>
         {
             var card = block.Obj("card");
@@ -723,15 +763,21 @@ public sealed class BlockMapper(string origin)
                     props["caption"] = caption!;
                 }
             }
+
+            InjectApiBase(props);
+            CopyCuration(block, props);
         });
 
     private SectionNode BandScale(JsonNode block) =>
         WidgetSection(block, "cai-band-scale", props =>
         {
+            InjectApiBase(props);
+            CopyCuration(block, props);
             Copy(block, "kicker", props, "kicker");
             Copy(block, "heading", props, "heading");
             Copy(block, "lede", props, "lede");
             Copy(block, "caption", props, "caption");
+            // The seeded score is the no-live fallback pin.
             var score = block.Str("score");
             if (!string.IsNullOrWhiteSpace(score))
             {
@@ -742,7 +788,10 @@ public sealed class BlockMapper(string origin)
     private SectionNode Composition(JsonNode block) =>
         WidgetSection(block, "cai-composition-bar", props =>
         {
+            // The seeded segments stay as the fallback; api-base + owner/name drive live.
             props["segments"] = block.Arr("segments").ToJsonString();
+            InjectApiBase(props);
+            CopyCuration(block, props);
             Copy(block, "kicker", props, "kicker");
             Copy(block, "heading", props, "heading");
             Copy(block, "lede", props, "lede");
