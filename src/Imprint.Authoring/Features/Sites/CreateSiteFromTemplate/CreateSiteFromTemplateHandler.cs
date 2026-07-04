@@ -1,7 +1,6 @@
 using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Pages;
 using Imprint.Authoring.Domain.Sites;
-using Imprint.Authoring.Projections;
 using Imprint.EventSourcing;
 
 namespace Imprint.Authoring.Features.Sites.CreateSiteFromTemplate;
@@ -10,7 +9,7 @@ namespace Imprint.Authoring.Features.Sites.CreateSiteFromTemplate;
 /// The seed-stream pattern: a template is executed as ordinary domain behaviors across
 /// ordinary streams, so a templated site's history reads exactly like a hand-built one.
 /// </summary>
-public sealed class CreateSiteFromTemplateHandler(IAggregateStore store, SiteOverview overview)
+public sealed class CreateSiteFromTemplateHandler(IAggregateStore store)
     : ICommandHandler<CreateSiteFromTemplate>
 {
     public async Task<Result> Handle(CreateSiteFromTemplate cmd, CancellationToken ct)
@@ -22,14 +21,8 @@ public sealed class CreateSiteFromTemplateHandler(IAggregateStore store, SiteOve
                 $"Available templates: {string.Join(", ", SiteTemplates.All.Select(t => t.Key))}.");
         }
 
-        // Single-site UX over a multi-site domain — same guard and same accepted race
-        // as CreateSite: the second of two simultaneous first-run submissions creates
-        // a site that is never Current and never rendered.
-        if (overview.Current is not null)
-        {
-            return Result.Fail("This installation already has a site.");
-        }
-
+        // Multi-site: an owner may create any number of sites (ownership is the actor on
+        // the site.created envelope). No cross-site guard — each site is its own stream.
         // One logical onboarding operation across N streams (site + one per page),
         // deliberately built against IAggregateStore rather than nested commands.
         // It is NOT atomic: a mid-way failure leaves a visible, fixable partial site

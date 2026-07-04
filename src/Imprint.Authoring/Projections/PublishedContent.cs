@@ -8,6 +8,7 @@ namespace Imprint.Authoring.Projections;
 /// <summary>A page as the delivery plane sees it: the state that was current when it was published.</summary>
 public sealed record PublishedPage(
     PageId Id,
+    SiteId SiteId,
     Slug Slug,
     LocalizedText Title,
     LocalizedText MetaTitle,
@@ -30,6 +31,10 @@ public sealed class PublishedContent : ReadModel
     private readonly Dictionary<PageId, PublishedPage> _published = [];
 
     public IReadOnlyCollection<PublishedPage> All => _published.Values;
+
+    /// <summary>The published pages of one site — the per-site publisher's page source.</summary>
+    public IReadOnlyList<PublishedPage> AllForSite(SiteId site) =>
+        [.. _published.Values.Where(page => page.SiteId == site)];
 
     public PublishedPage? Get(PageId id) => _published.GetValueOrDefault(id);
 

@@ -23,14 +23,15 @@ public sealed class CreateSiteTests
     }
 
     [Fact]
-    public async Task CreateSite_when_a_site_already_exists_is_rejected()
+    public async Task CreateSite_can_create_multiple_sites()
     {
+        // Multi-site: an owner may create many sites; the first stays Current.
         await using var host = new AuthoringTestHost();
         await host.Ok(new CreateSite(SiteId.New(), "First", "en"));
 
-        var error = await host.Fails(new CreateSite(SiteId.New(), "Second", "en"));
+        await host.Ok(new CreateSite(SiteId.New(), "Second", "en"));
 
-        Assert.Contains("already has a site", error);
+        Assert.Equal(new[] { "First", "Second" }, host.Get<SiteOverview>().All.Select(s => s.Name).ToArray());
         Assert.Equal("First", host.Get<SiteOverview>().Current!.Name);
     }
 

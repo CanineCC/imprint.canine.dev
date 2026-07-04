@@ -93,15 +93,18 @@ public sealed class CreateSiteFromTemplateTests
     }
 
     [Fact]
-    public async Task Template_creation_when_a_site_already_exists_is_rejected()
+    public async Task A_second_site_can_be_created_alongside_the_first()
     {
+        // Multi-site: an owner may create many sites. Both coexist; the first stays Current
+        // for the single-site call sites still being migrated.
         await using var host = new AuthoringTestHost();
-        await host.Ok(new CreateSite(SiteId.New(), "First", "en"));
+        var first = SiteId.New();
+        await host.Ok(new CreateSite(first, "First", "en"));
 
-        var error = await host.Fails(new CreateSiteFromTemplate(SiteId.New(), "Second", "en", "blank", []));
+        await host.Ok(new CreateSiteFromTemplate(SiteId.New(), "Second", "en", "blank", []));
 
-        Assert.Contains("already has a site", error);
-        Assert.Empty(host.Get<PageList>().All());
+        Assert.Equal(2, host.Get<SiteOverview>().All.Count);
+        Assert.Equal(first, host.Get<SiteOverview>().Current?.Id);
     }
 
     [Fact]

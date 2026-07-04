@@ -18,9 +18,10 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         string connectionString,
         IReadOnlyList<Assembly> domainAssemblies,
-        Action<JsonSerializerOptions>? configureJson = null)
+        Action<JsonSerializerOptions>? configureJson = null,
+        IReadOnlyList<IEventUpcaster>? upcasters = null)
     {
-        services.AddSingleton(new EventRegistry(domainAssemblies, configureJson));
+        services.AddSingleton(new EventRegistry(domainAssemblies, upcasters ?? [], configureJson));
         services.AddSingleton<IEventStore>(provider =>
             new SqliteEventStore(connectionString, provider.GetRequiredService<EventRegistry>()));
         services.AddSingleton<EventMetadataProvider>();
