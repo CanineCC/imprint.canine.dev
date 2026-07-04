@@ -11,9 +11,11 @@ namespace ContentSeeder;
 /// widget-embedding blocks (cardGallery, liveCard, bandScale, composition, flow,
 /// contactForm) become a Section wrapping the block's section head plus a WidgetNode.
 /// When an <paramref name="apiBase"/> is supplied (the --api-base seeder flag, set to
-/// the kennel public-API origin), the CAI data widgets are seeded to fetch REAL curated
-/// data live from it — the labelled SAMPLE JSON is still emitted, but only as the
-/// no-live fallback attribute — plus the per-widget curation props (owner/name/count).
+/// the kennel public-API origin), the CAI data widgets are seeded to fetch REAL data live
+/// from it — each widget hits its OWN already-published-gated endpoint (/api/oss for the
+/// hero + home gallery + band-scale + composition, /api/public/c4 for the C4 carousel,
+/// /api/public/findings for the findings carousel) and does its own selection client-side.
+/// The labelled SAMPLE JSON is still emitted, but only as the no-live fallback attribute.
 /// With no api-base the widgets carry the sample alone (the faithful offline default).
 /// Nothing is invented; an unknown template is flagged.
 /// </summary>
@@ -724,15 +726,16 @@ public sealed class BlockMapper(string origin, string? apiBase = null)
         return Nodes.Section(Nodes.Stack([.. stack]));
     }
 
-    // The SERVER curates WHICH repo each CAI data widget shows (from /api/public/showcase),
-    // so blocks no longer carry an owner/name pin to drive a client-side pick. Two narrow,
-    // still-meaningful knobs remain:
+    // Each CAI data widget picks WHICH repo(s) it shows from its own published-gated endpoint
+    // (the hero = highest bestScore; the home gallery = second-best + most-improved + random;
+    // the carousels cycle the server's LoC / weighted order), so blocks carry no owner/name
+    // pin to drive the live pick. Two narrow, still-meaningful knobs remain:
     //
-    //  • CopyCount     — the display cap the gallery widget honours (how many curated cards
-    //                    to render). Not a repo pin.
+    //  • CopyCount     — the display cap the gallery widget honours (how many cards to
+    //                    render). Not a repo pin.
     //  • CopySampleLabel — owner/name that label the OFFLINE SAMPLE card only (an optional
-    //                    author override); a LIVE card always IS the server-curated repo, so
-    //                    these never influence the live pick.
+    //                    author override); a LIVE card always IS the repo the widget picked,
+    //                    so these never influence the live pick.
     private static void CopyCount(JsonNode block, Dictionary<string, string> props)
     {
         var count = block.Str("count");
@@ -752,8 +755,8 @@ public sealed class BlockMapper(string origin, string? apiBase = null)
         WidgetSection(block, "cai-card-gallery", props =>
         {
             // The labelled sample stays as the fallback attribute; api-base drives live.
-            // The SERVER curates the gallery slice (hero-excluded, de-duped, quality-forward)
-            // from /api/public/showcase — no owner/name pin here, only the display `count`.
+            // The widget fetches /api/oss and picks the home trio (second-best + most-improved
+            // + random, hero-excluded) itself — no owner/name pin here, only the display `count`.
             props["cards"] = block.Arr("cards").ToJsonString();
             InjectApiBase(props);
             CopyCount(block, props);
@@ -764,9 +767,9 @@ public sealed class BlockMapper(string origin, string? apiBase = null)
         });
 
     private SectionNode LiveCard(JsonNode block) =>
-        // Live from the SERVER-CURATED hero (/api/public/showcase → showcase.hero) when an
-        // api-base is set; the labelled SAMPLE card is kept as the no-live fallback attribute.
-        // owner/name only label the OFFLINE sample (an optional override), never a live pin.
+        // Live from the HERO (the widget fetches /api/oss and picks the highest bestScore)
+        // when an api-base is set; the labelled SAMPLE card is kept as the no-live fallback
+        // attribute. owner/name only label the OFFLINE sample (an override), never a live pin.
         WidgetSection(block, "cai-score-card", props =>
         {
             var card = block.Obj("card");
@@ -785,8 +788,8 @@ public sealed class BlockMapper(string origin, string? apiBase = null)
         });
 
     private SectionNode BandScale(JsonNode block) =>
-        // The SERVER curates the representative pin score (/api/public/showcase →
-        // showcase.bandScale) when an api-base is set — no owner/name pin here.
+        // Pins at the HERO published card's bestScore (the widget fetches /api/oss and picks
+        // the highest-scoring repo) when an api-base is set — no owner/name pin here.
         WidgetSection(block, "cai-band-scale", props =>
         {
             InjectApiBase(props);
@@ -803,10 +806,10 @@ public sealed class BlockMapper(string origin, string? apiBase = null)
         });
 
     private SectionNode C4Heat(JsonNode block) =>
-        // The C4 architecture heat-map — a LIVE-ONLY island (no meaningful static twin of
-        // an architecture map). The SERVER curates which repo's C4 map to show (the richest
-        // one) from /api/public/showcase; the widget just renders showcase.c4. So we stamp
-        // ONLY api-base — no hardcoded owner/name pin. With no api-base it shows nothing.
+        // The C4 architecture heat-map CAROUSEL — a LIVE-ONLY island (no meaningful static
+        // twin of an architecture map). The widget fetches /api/public/c4 (the LoC-ordered
+        // published C4-eligible repos) and cycles them, loading each repo's public c4.svg. So
+        // we stamp ONLY api-base — no owner/name pin. With no api-base it shows nothing.
         WidgetSection(block, "cai-c4-heat", props =>
         {
             InjectApiBase(props);
@@ -818,10 +821,10 @@ public sealed class BlockMapper(string origin, string? apiBase = null)
 
     private SectionNode Findings(JsonNode block) =>
         // The deterministic architecture / domain-model / event findings located to
-        // file:line, from real published reports. The SERVER curates the most illustrative
-        // findings repo (/api/public/showcase → showcase.findings); the widget just renders
-        // it. So we stamp ONLY api-base — no hardcoded owner/name pin. The island keeps its
-        // own small labelled SAMPLE as the no-live fallback.
+        // file:line, from real published reports — a CAROUSEL. The widget fetches
+        // /api/public/findings (the DDD-moat weighted list) and cycles the repos. So we stamp
+        // ONLY api-base — no owner/name pin. The island keeps its own small labelled SAMPLE
+        // as the no-live fallback.
         WidgetSection(block, "cai-findings", props =>
         {
             InjectApiBase(props);
@@ -834,8 +837,8 @@ public sealed class BlockMapper(string origin, string? apiBase = null)
     private SectionNode Composition(JsonNode block) =>
         WidgetSection(block, "cai-composition-bar", props =>
         {
-            // The seeded segments stay as the fallback; api-base drives live. The SERVER
-            // curates the composition slice (/api/public/showcase → showcase.composition) —
+            // The seeded segments stay as the fallback; api-base drives live. The widget
+            // fetches /api/oss and builds the split from the HERO card's brilliant%/slop% —
             // no owner/name pin here.
             props["segments"] = block.Arr("segments").ToJsonString();
             InjectApiBase(props);

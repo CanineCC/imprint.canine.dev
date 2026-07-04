@@ -6,15 +6,16 @@
 // trend sparkline, the first→best arc, the lens bars and the detail rows. Port of
 // packages/ui/src/CaiScoreCard.tsx.
 //
-// LIVE by default: when `api-base` is set it fetches {api}/api/public/showcase and renders
-// the SERVER-CURATED hero — the single strongest public repo with an inspectable public
-// report (the server does the picking; the widget just renders showcase.hero). Without
-// `api-base`, or if the fetch fails, it renders the labelled SAMPLE from the `card`
-// attribute (never a fake-live read). Scalar attributes override.
+// LIVE by default: when `api-base` is set it fetches {api}/api/oss (the published gallery
+// cards) and renders the HERO — the single highest-bestScore published repo (tie-break
+// productionLoc), exactly the app's GalleryHeroViewComponent pickBy=bestScore. The endpoint
+// is already published-gated server-side, so the widget just picks the top card (NO client
+// sourceUrl filtering). Without `api-base`, or if the fetch fails, it renders the labelled
+// SAMPLE from the `card` attribute (never a fake-live read). Scalar attributes override.
 
 import { CaiIsland, TOKENS_CSS, BASE_CSS, escapeHtml } from "./tokens.js";
 import { scoreCardBodyHtml, parseCard, SCORECARD_CSS } from "./scorecard.js";
-import { cardFromGallery, reportUrl, fetchShowcase } from "./live.js";
+import { cardFromGallery, reportUrl, fetchGallery, pickHero } from "./live.js";
 
 // The built-in sample — the same illustrative artifact the CMS hero ships
 // (blocks.tsx SAMPLE_CARD): acme/checkout-service, an Adequate verdict, a
@@ -48,20 +49,20 @@ const CSS = TOKENS_CSS + BASE_CSS + SCORECARD_CSS + `
 customElements.define(
   "cai-score-card",
   class extends CaiIsland {
-    // Read the SERVER-CURATED hero from the shared showcase document, map it to the card
-    // model, and re-render. The server does all the picking (strongest public repo with an
-    // inspectable report) — no client ranking here. On any failure this leaves _live unset
-    // and the sample stays (render() already drew it).
+    // Fetch the published gallery cards, pick the HERO (highest bestScore, tie-break
+    // productionLoc — the app's GalleryHeroViewComponent), map it to the card model, and
+    // re-render. On any failure this leaves _live unset and the sample stays (render()
+    // already drew it).
     async liveLoad() {
       const api = this.apiBase();
       if (!api) return;
-      const showcase = await fetchShowcase(api);
-      const hero = showcase && showcase.hero;
+      const cards = await fetchGallery(api);
+      const hero = pickHero(cards);
       if (!hero) return;
 
       const mapped = cardFromGallery(hero);
       if (!mapped) return;
-      // The absolute report link uses the card's bestRunId (the showcase carries it).
+      // The absolute report link uses the card's bestRunId (the gallery card carries it).
       const href = reportUrl(hero, api);
       if (href) mapped.href = href;
       this._live = mapped;
