@@ -762,3 +762,16 @@ button { font: inherit; color: inherit; }
 /* Back/gear affordances in the editor top bar. */
 .ed-back { font-size: 1.1rem; text-decoration: none; }
 .ed-gear { font-size: 1rem; text-decoration: none; }
+
+
+/* Canvas light/dark IMAGE preview. The ☀/☾ toggle sets data-theme on .ed-canvas, but the
+   shared media rules (imprint-base.css) key off :root[data-theme] / prefers-color-scheme —
+   correct for the published <html>, but in the editor :root has no data-theme, so toggling
+   the preview never switched which rendition of a light/dark image shows. Mirror the rules
+   scoped to the canvas; higher specificity than the base rule and the prefers-color-scheme
+   media query, so the explicit preview toggle wins (matching how the site's toggle beats
+   the OS). Also covers inline-SVG wrappers, which carry the same classes. */
+.ed-canvas[data-theme="light"] .ip-img-light { display: revert; }
+.ed-canvas[data-theme="light"] .ip-img-dark  { display: none; }
+.ed-canvas[data-theme="dark"]  .ip-img-light { display: none; }
+.ed-canvas[data-theme="dark"]  .ip-img-dark  { display: revert; }
