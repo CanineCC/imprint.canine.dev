@@ -14,9 +14,12 @@ public sealed class Site : AggregateRoot
     public const int MaxNameLength = 100;
     public const int MaxLocales = 10;
     public const int MaxNavigationItems = 20;
+    public const int MaxEnvironments = 8;
+    public const int MaxEnvironmentNameLength = 40;
 
     private readonly List<Locale> _locales = [];
     private IReadOnlyList<NavigationItem> _navigation = [];
+    private IReadOnlyList<DeployEnvironment> _environments = [];
 
     public SiteId Id { get; private set; }
     public string Name { get; private set; } = string.Empty;
@@ -27,6 +30,11 @@ public sealed class Site : AggregateRoot
     public Locale DefaultLocale { get; private set; }
     public Theme Theme { get; private set; } = Theme.Default;
     public IReadOnlyList<NavigationItem> Navigation => _navigation;
+
+    // The site's deploy targets, in promotion order (e.g. Test → Staging → Production).
+    // A site with none has never been given a publish destination; the dashboard's gear
+    // is where they are configured.
+    public IReadOnlyList<DeployEnvironment> Environments => _environments;
 
     public override string StreamId => Id.Stream;
 
@@ -164,6 +172,57 @@ public sealed class Site : AggregateRoot
         Raise(new SiteNavigationChanged([.. items]));
     }
 
+    /// <summary>
+    /// Replace the site's ordered deploy targets. Names identify an environment in the UI
+    /// and in promotion ("promote Test → Staging"), so they must be present and unique;
+    /// the path is where static output is written. Whether the path is a <em>safe</em>
+    /// place to write (sandbox root, traversal) is a filesystem-policy question the deploy
+    /// infrastructure answers — the aggregate only guarantees the config is well-formed.
+    /// </summary>
+    public void SetEnvironments(IReadOnlyList<DeployEnvironment> environments)
+    {
+        if (environments.Count > MaxEnvironments)
+        {
+            throw new DomainException($"A site can have at most {MaxEnvironments} deploy environments.");
+        }
+
+        var normalized = new List<DeployEnvironment>(environments.Count);
+        foreach (var environment in environments)
+        {
+            var name = environment.Name?.Trim() ?? string.Empty;
+            if (name.Length == 0)
+            {
+                throw new DomainException("A deploy environment must have a name.");
+            }
+
+            if (name.Length > MaxEnvironmentNameLength)
+            {
+                throw new DomainException(
+                    $"A deploy environment name must be {MaxEnvironmentNameLength} characters or fewer.");
+            }
+
+            var path = environment.Path?.Trim() ?? string.Empty;
+            if (path.Length == 0)
+            {
+                throw new DomainException($"The '{name}' environment must have a publish folder.");
+            }
+
+            normalized.Add(new DeployEnvironment(name, path));
+        }
+
+        if (normalized.Select(e => e.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() != normalized.Count)
+        {
+            throw new DomainException("Deploy environment names must be unique (case-insensitive).");
+        }
+
+        if (_environments.SequenceEqual(normalized))
+        {
+            return;
+        }
+
+        Raise(new SiteEnvironmentsChanged(normalized));
+    }
+
     protected override void When(object @event)
     {
         switch (@event)
@@ -195,6 +254,9 @@ public sealed class Site : AggregateRoot
                 break;
             case SiteNavigationChanged e:
                 _navigation = [.. e.Items];
+                break;
+            case SiteEnvironmentsChanged e:
+                _environments = [.. e.Environments];
                 break;
             default:
                 throw new InvalidOperationException($"Site cannot apply unknown event {@event.GetType().Name}.");

@@ -14,12 +14,17 @@ using RenderMode = Imprint.Rendering.RenderMode;
 
 namespace Imprint.Publishing;
 
+/// <summary>One site rendered to one output folder, addressed by one base URL — the unit a publish pass acts on.</summary>
+public sealed record PublishTarget(Site Site, string OutputPath, string? BaseUrl);
+
 /// <summary>
-/// The file-system projection: keeps <c>OutputPath</c> equal to "the published state of
-/// the site, rendered". <see cref="Synchronize"/> is idempotent and diff-driven — the
-/// publish manifest is the durable checkpoint, staleness is manifest vs. current read
-/// models, and same inputs produce byte-identical outputs (content hashes included),
-/// so an up-to-date pass writes nothing at all.
+/// The file-system projection: keeps an output folder equal to "the published state of
+/// a site, rendered". <see cref="Synchronize(PublishTarget, CancellationToken)"/> is
+/// idempotent and diff-driven — the publish manifest in that folder is the durable
+/// checkpoint, staleness is manifest vs. current read models, and same inputs produce
+/// byte-identical outputs (content hashes included), so an up-to-date pass writes
+/// nothing at all. Each (site, folder) target converges independently against its own
+/// manifest, which is what lets one site publish to several environment folders.
 /// </summary>
 public sealed class SitePublisher(
     PublishingOptions options,
@@ -34,18 +39,36 @@ public sealed class SitePublisher(
 {
     // Serialized on purpose: the initial pass and debounced passes may overlap in
     // time, and two writers over one output directory cannot both be a projection.
+    // Different target folders never conflict, but publishes are user-paced and rare,
+    // so one global gate is simpler than a per-folder lock table and costs nothing.
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     private readonly ILogger _logger = loggerFactory.CreateLogger<SitePublisher>();
 
-    public async Task<PublishReport> Synchronize(CancellationToken ct = default)
+    /// <summary>
+    /// Legacy single-site sync: the first-created site to the globally configured
+    /// <see cref="PublishingOptions.OutputPath"/>. Retained for single-site installs and
+    /// as the hosted service's fallback for a site with no environments configured.
+    /// </summary>
+    public Task<PublishReport> Synchronize(CancellationToken ct = default)
+    {
+        var site = siteOverview.Current;
+        return site is null
+            // Nothing exists to publish yet; report empty (the folder is left untouched
+            // by the pass, which never runs) rather than sweeping a real output away.
+            ? Task.FromResult(new PublishReport(0, 0, 0, 0, [], DateTimeOffset.UtcNow, TimeSpan.Zero))
+            : Synchronize(new PublishTarget(site, options.OutputPath, options.BaseUrl), ct);
+    }
+
+    /// <summary>Render one site's published content to one output folder — the per-site, per-environment projection.</summary>
+    public async Task<PublishReport> Synchronize(PublishTarget target, CancellationToken ct = default)
     {
         await _gate.WaitAsync(ct);
         try
         {
             var pass = new Pass(
-                options, siteOverview, publishedContent, assetLibrary, blockLibrary,
-                widgetRegistry, mediaStore, loggerFactory, _logger);
+                options, target.Site, target.OutputPath, target.BaseUrl, publishedContent,
+                assetLibrary, blockLibrary, widgetRegistry, mediaStore, loggerFactory, _logger);
             var report = await pass.Run(ct);
             status.Record(report);
             return report;
@@ -65,7 +88,9 @@ public sealed class SitePublisher(
     /// </summary>
     private sealed class Pass(
         PublishingOptions options,
-        SiteOverview siteOverview,
+        Site site,
+        string outputPath,
+        string? baseUrl,
         PublishedContent publishedContent,
         AssetLibrary assetLibrary,
         BlockLibrary blockLibrary,
@@ -82,8 +107,8 @@ public sealed class SitePublisher(
             IReadOnlyList<string> Dependencies,
             bool Stale);
 
-        private readonly string _outputRoot = Path.GetFullPath(options.OutputPath);
-        private readonly string? _baseUrl = options.BaseUrl?.TrimEnd('/');
+        private readonly string _outputRoot = Path.GetFullPath(outputPath);
+        private readonly string? _baseUrl = baseUrl?.TrimEnd('/');
 
         // Serializes a block definition's spec to a stable content hash. Node
         // polymorphism + value-object converters come from the authoring context.
@@ -117,14 +142,6 @@ public sealed class SitePublisher(
             var startedTimestamp = Stopwatch.GetTimestamp();
             Directory.CreateDirectory(_outputRoot);
 
-            var site = siteOverview.Current;
-            if (site is null)
-            {
-                // Nothing exists to publish yet; leave the directory alone rather than
-                // sweeping it — an empty read model must never destroy a real output.
-                return new PublishReport(0, 0, 0, 0, [], DateTimeOffset.UtcNow, Stopwatch.GetElapsedTime(startedTimestamp));
-            }
-
             // Version FIRST, data after (see the class comment for why that order matters).
             _siteVersion = site.Version;
             _siteName = site.Name;
@@ -132,7 +149,8 @@ public sealed class SitePublisher(
             _defaultLocale = site.DefaultLocale;
             _locales = [.. site.Locales];
             _navigation = [.. site.Navigation];
-            _pages = [.. publishedContent.All];
+            // Only THIS site's published pages — a target folder holds exactly one site.
+            _pages = [.. publishedContent.AllForSite(site.Id)];
             _pageById = _pages.ToDictionary(page => page.Id);
 
             var oldManifest =

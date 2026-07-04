@@ -18,6 +18,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(options);
         services.AddSingleton<PublisherStatus>();
         services.AddSingleton<SitePublisher>();
+        services.AddSingleton<DeployPathResolver>();
+        services.AddSingleton<SiteDeployService>();
         services.AddHostedService<PublisherHostedService>();
         return services;
     }

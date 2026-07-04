@@ -33,6 +33,14 @@ public sealed class SiteEventSamples : IEventSampleProvider
                 new NavigationItem(PageId.New(), LocalizedText.Of(en, "Home").With(daDk, "Hjem")),
                 new NavigationItem(PageId.New(), null),
             ]);
+
+            // A promotion pipeline: several ordered deploy targets, exercising the list
+            // payload's sequence value-equality on round trip.
+            yield return new SiteEnvironmentsChanged([
+                new DeployEnvironment("Test", "/srv/www/acme/test"),
+                new DeployEnvironment("Staging", "staging"),
+                new DeployEnvironment("Production", "/srv/www/acme"),
+            ]);
         }
     }
 }

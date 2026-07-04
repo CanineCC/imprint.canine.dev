@@ -4,6 +4,7 @@ using Imprint.Authoring.Features.Sites.AddLocale;
 using Imprint.Authoring.Features.Sites.ChangeDefaultLocale;
 using Imprint.Authoring.Features.Sites.ChangeThemeToken;
 using Imprint.Authoring.Features.Sites.ChangeTypography;
+using Imprint.Authoring.Features.Sites.ConfigureEnvironments;
 using Imprint.Authoring.Features.Sites.RemoveLocale;
 using Imprint.Authoring.Features.Sites.RenameSite;
 using Imprint.Authoring.Projections;
@@ -212,5 +213,48 @@ public sealed class SiteSettingsSliceTests
         var error = await host.Fails(new ChangeTypography(siteId, tooSmall));
 
         Assert.Contains("out of range", error);
+    }
+
+    // ------------------------------------------------------ ConfigureEnvironments
+
+    [Fact]
+    public async Task ConfigureEnvironments_happy_path_updates_SiteOverview()
+    {
+        await using var host = new AuthoringTestHost();
+        var siteId = await host.CreateTestSite();
+        var environments = new DeployEnvironment[]
+        {
+            new("Test", "/var/www/test"),
+            new("Production", "/var/www/prod"),
+        };
+
+        await host.Ok(new ConfigureEnvironments(siteId, environments));
+
+        Assert.Equal(environments, host.Get<SiteOverview>().Get(siteId)!.Environments);
+    }
+
+    [Fact]
+    public async Task ConfigureEnvironments_with_duplicate_names_is_rejected()
+    {
+        await using var host = new AuthoringTestHost();
+        var siteId = await host.CreateTestSite();
+
+        var error = await host.Fails(new ConfigureEnvironments(
+            siteId, [new DeployEnvironment("Prod", "/a"), new DeployEnvironment("prod", "/b")]));
+
+        Assert.Contains("unique", error);
+        Assert.Empty(host.Get<SiteOverview>().Get(siteId)!.Environments);
+    }
+
+    [Fact]
+    public async Task ConfigureEnvironments_with_missing_folder_is_rejected()
+    {
+        await using var host = new AuthoringTestHost();
+        var siteId = await host.CreateTestSite();
+
+        var error = await host.Fails(new ConfigureEnvironments(
+            siteId, [new DeployEnvironment("Test", "  ")]));
+
+        Assert.Contains("publish folder", error);
     }
 }

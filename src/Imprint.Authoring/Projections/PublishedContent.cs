@@ -57,7 +57,7 @@ public sealed class PublishedContent : ReadModel
             case PagePublished published when _drafts.TryGetValue(id, out var page):
                 page.LoadFrom([@event.Event]);
                 _published[id] = new PublishedPage(
-                    id, page.Slug, page.Title, page.MetaTitle, page.MetaDescription,
+                    id, page.SiteId, page.Slug, page.Title, page.MetaTitle, page.MetaDescription,
                     page.Tree, published.Version);
                 break;
 

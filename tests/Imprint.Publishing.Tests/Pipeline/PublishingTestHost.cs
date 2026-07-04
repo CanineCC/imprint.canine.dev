@@ -30,11 +30,12 @@ internal sealed class PublishingTestHost : IAsyncDisposable
     private readonly SqliteTestDatabase _database = new();
     private readonly DirectoryInfo _root;
 
-    public PublishingTestHost(string? baseUrl = null)
+    public PublishingTestHost(string? baseUrl = null, bool sandboxDeploys = false)
     {
         _root = Directory.CreateTempSubdirectory("imprint-publish-");
         OutputPath = Path.Combine(_root.FullName, "output");
         WidgetsDirectory = Path.Combine(_root.FullName, "widgets");
+        DeployRoot = sandboxDeploys ? Path.Combine(_root.FullName, "deploy-root") : null;
         Directory.CreateDirectory(WidgetsDirectory);
         File.WriteAllText(Path.Combine(WidgetsDirectory, "manifest.json"), "[]");
 
@@ -46,6 +47,7 @@ internal sealed class PublishingTestHost : IAsyncDisposable
         services.AddImprintPublishing(new PublishingOptions
         {
             OutputPath = OutputPath,
+            DeployRoot = DeployRoot,
             WidgetsDirectory = WidgetsDirectory,
             BaseUrl = baseUrl,
             DebounceMilliseconds = 50,
@@ -60,10 +62,38 @@ internal sealed class PublishingTestHost : IAsyncDisposable
 
     public string WidgetsDirectory { get; }
 
+    /// <summary>The temp root every per-test path lives under — build absolute environment folders from it.</summary>
+    public string Root => _root.FullName;
+
+    /// <summary>The sandbox root when the host was built with sandboxed deploys, else null (trust mode).</summary>
+    public string? DeployRoot { get; }
+
     public SitePublisher Publisher => Services.GetRequiredService<SitePublisher>();
+    public SiteDeployService Deploy => Services.GetRequiredService<SiteDeployService>();
     public PublisherStatus Status => Services.GetRequiredService<PublisherStatus>();
     public ProjectionEngine Projections => Services.GetRequiredService<ProjectionEngine>();
     public InMemoryMediaStore Media => (InMemoryMediaStore)Services.GetRequiredService<IMediaStore>();
+
+    // -------------------------------------------------------- deploy environments
+
+    /// <summary>Configure a site's ordered deploy environments through the real aggregate + projection path.</summary>
+    public async Task SetEnvironments(SiteId siteId, params (string Name, string Path)[] environments)
+    {
+        var site = await Store.Load<Site>(siteId.Stream);
+        site.SetEnvironments([.. environments.Select(e => new DeployEnvironment(e.Name, e.Path))]);
+        await Commit(site);
+    }
+
+    /// <summary>Every file under a folder, relative and ordered — for asserting on an environment's output.</summary>
+    public static IReadOnlyList<string> FilesUnder(string folder) =>
+        !Directory.Exists(folder)
+            ? []
+            :
+            [
+                .. Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories)
+                    .Select(file => Path.GetRelativePath(folder, file).Replace('\\', '/'))
+                    .Order(StringComparer.Ordinal),
+            ];
 
     private IAggregateStore Store => Services.GetRequiredService<IAggregateStore>();
 
@@ -77,12 +107,7 @@ internal sealed class PublishingTestHost : IAsyncDisposable
 
     public byte[] ReadBytes(string relative) => File.ReadAllBytes(FullPath(relative));
 
-    public IReadOnlyList<string> AllFiles() =>
-    [
-        .. Directory.EnumerateFiles(OutputPath, "*", SearchOption.AllDirectories)
-            .Select(file => Path.GetRelativePath(OutputPath, file).Replace('\\', '/'))
-            .Order(StringComparer.Ordinal),
-    ];
+    public IReadOnlyList<string> AllFiles() => FilesUnder(OutputPath);
 
     public IReadOnlyList<string> FilesMatching(string prefix, string suffix = "") =>
         [.. AllFiles().Where(f => f.StartsWith(prefix, StringComparison.Ordinal) && f.EndsWith(suffix, StringComparison.Ordinal))];

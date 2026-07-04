@@ -47,3 +47,23 @@ public sealed record SiteNavigationChanged(IReadOnlyList<NavigationItem> Items)
         return hash.ToHashCode();
     }
 }
+
+[EventType("site.environments-changed", 1)]
+public sealed record SiteEnvironmentsChanged(IReadOnlyList<DeployEnvironment> Environments)
+{
+    // Same list-equality reasoning as SiteNavigationChanged: the ordered set of deploy
+    // targets is the value, so equality is by sequence for Given/When/Then round-trips.
+    public bool Equals(SiteEnvironmentsChanged? other) =>
+        other is not null && Environments.SequenceEqual(other.Environments);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        foreach (var environment in Environments)
+        {
+            hash.Add(environment);
+        }
+
+        return hash.ToHashCode();
+    }
+}
