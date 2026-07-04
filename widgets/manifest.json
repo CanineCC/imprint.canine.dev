@@ -39,5 +39,100 @@
       { "name": "speed", "label": "Animation", "type": "choice", "default": "smooth", "options": ["instant", "smooth", "playful"] },
       { "name": "label", "label": "Label (optional)", "type": "text", "default": "" }
     ]
+  },
+  {
+    "tag": "cai-score-card",
+    "name": "CAI score card",
+    "description": "The Codebase Assurance Index score card: band chip, band-inked score, the worst→best band ladder with a “you are here” marker, trend sparkline, lens bars and detail rows. Renders the labelled sample data (not a live registry read).",
+    "bundle": "cai-score-card.js",
+    "placeholder": "CAI score card",
+    "props": [
+      { "name": "card", "label": "Card data (JSON — name, owner, score, series, arcFirst, arcBest, lenses, rows)", "type": "text", "default": "" },
+      { "name": "name", "label": "Repo / artifact name (overrides card)", "type": "text", "default": "" },
+      { "name": "owner", "label": "Owner — rendered as “by …” (overrides card)", "type": "text", "default": "" },
+      { "name": "score", "label": "CAI score 0–100 (overrides card)", "type": "number", "default": "" },
+      { "name": "seal-text", "label": "Seal badge text (e.g. ✓ Signed by Watchdog)", "type": "text", "default": "" },
+      { "name": "caption", "label": "Caption under the card", "type": "text", "default": "" },
+      { "name": "href", "label": "Link the whole card to a URL", "type": "url", "default": "" },
+      { "name": "brand", "label": "Brand accent", "type": "choice", "default": "watchdog", "options": ["watchdog", "assay", "cai"] }
+    ]
+  },
+  {
+    "tag": "cai-card-gallery",
+    "name": "CAI score-card gallery",
+    "description": "A responsive grid of CAI score cards — the public-record gallery of real published surveys (quiet-peer cards, not the accent hero artifact). Cards come from a JSON array of card objects.",
+    "bundle": "cai-card-gallery.js",
+    "placeholder": "CAI score-card gallery",
+    "props": [
+      { "name": "cards", "label": "Cards (JSON array of card objects)", "type": "text", "default": "[]" },
+      { "name": "kicker", "label": "Kicker (small uppercase intro)", "type": "text", "default": "" },
+      { "name": "heading", "label": "Heading", "type": "text", "default": "" },
+      { "name": "lede", "label": "Lede / intro paragraph", "type": "text", "default": "" },
+      { "name": "footnote", "label": "Footnote under the gallery", "type": "text", "default": "" },
+      { "name": "brand", "label": "Brand accent", "type": "choice", "default": "watchdog", "options": ["watchdog", "assay", "cai"] }
+    ]
+  },
+  {
+    "tag": "cai-band-scale",
+    "name": "CAI band scale",
+    "description": "The canonical CAI presentation scale: five bands worst→best, cutlines 25/50/70/90, the display words, and an optional Score pin at a sample score.",
+    "bundle": "cai-band-scale.js",
+    "placeholder": "CAI band scale",
+    "props": [
+      { "name": "score", "label": "Pin a sample score on the scale (optional, 0–100)", "type": "number", "default": "" },
+      { "name": "kicker", "label": "Kicker (small uppercase intro)", "type": "text", "default": "" },
+      { "name": "heading", "label": "Heading", "type": "text", "default": "" },
+      { "name": "lede", "label": "Lede / intro paragraph", "type": "text", "default": "" },
+      { "name": "caption", "label": "Caption under the scale", "type": "text", "default": "" },
+      { "name": "brand", "label": "Brand accent", "type": "choice", "default": "watchdog", "options": ["watchdog", "assay", "cai"] }
+    ]
+  },
+  {
+    "tag": "cai-composition-bar",
+    "name": "CAI composition bar",
+    "description": "A pure-SVG proportion bar for the brilliant / fine / slop code-composition split, coloured with the CAI band vocabulary. Segments come from a JSON array of { label, pct, band }.",
+    "bundle": "cai-composition-bar.js",
+    "placeholder": "Composition bar",
+    "props": [
+      { "name": "segments", "label": "Segments (JSON array of {label, pct, band})", "type": "text", "default": "[]" },
+      { "name": "kicker", "label": "Kicker (small uppercase intro)", "type": "text", "default": "" },
+      { "name": "heading", "label": "Heading", "type": "text", "default": "" },
+      { "name": "lede", "label": "Lede / intro paragraph", "type": "text", "default": "" },
+      { "name": "caption", "label": "Caption under the bar", "type": "text", "default": "" },
+      { "name": "brand", "label": "Brand accent", "type": "choice", "default": "watchdog", "options": ["watchdog", "assay", "cai"] }
+    ]
+  },
+  {
+    "tag": "cai-evidence-flow",
+    "name": "CAI evidence flow",
+    "description": "A left→right node strip with arrow connectors and an optional dashed loop-back path — the produce → hold → consume / measure → fix → prove diagram. Nodes come from a JSON array of { title, body, tone }.",
+    "bundle": "cai-evidence-flow.js",
+    "placeholder": "Evidence flow diagram",
+    "props": [
+      { "name": "nodes", "label": "Nodes (JSON array of {title, body, tone})", "type": "text", "default": "[]" },
+      { "name": "loop-label", "label": "Loop-back label (draws a dashed return path when set)", "type": "text", "default": "" },
+      { "name": "kicker", "label": "Kicker (small uppercase intro)", "type": "text", "default": "" },
+      { "name": "heading", "label": "Heading", "type": "text", "default": "" },
+      { "name": "lede", "label": "Lede / intro paragraph", "type": "text", "default": "" },
+      { "name": "footnote", "label": "Footnote under the diagram", "type": "text", "default": "" },
+      { "name": "brand", "label": "Brand accent", "type": "choice", "default": "watchdog", "options": ["watchdog", "assay", "cai"] }
+    ]
+  },
+  {
+    "tag": "contact-form",
+    "name": "Contact form",
+    "description": "A contact form with a topic selector (?topic= prefill), name / email / organisation / message fields and a spam honeypot. Static pages have no API, so it submits to a configurable endpoint, defaulting to a mailto: to the fallback email.",
+    "bundle": "contact-form.js",
+    "placeholder": "Contact form",
+    "props": [
+      { "name": "topics", "label": "Topic options (JSON array of strings)", "type": "text", "default": "[]" },
+      { "name": "fallback-email", "label": "Fallback email (mailto target / shown on failure)", "type": "text", "default": "sales@canine.dev" },
+      { "name": "action", "label": "Form POST endpoint (optional — empty = mailto the fallback)", "type": "url", "default": "" },
+      { "name": "kicker", "label": "Kicker (small uppercase intro)", "type": "text", "default": "" },
+      { "name": "heading", "label": "Heading", "type": "text", "default": "" },
+      { "name": "lede", "label": "Lede / intro paragraph", "type": "text", "default": "" },
+      { "name": "privacy-note", "label": "Privacy note under the form", "type": "text", "default": "" },
+      { "name": "brand", "label": "Brand accent", "type": "choice", "default": "watchdog", "options": ["watchdog", "assay", "cai"] }
+    ]
   }
 ]
