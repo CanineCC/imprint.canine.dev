@@ -12,16 +12,17 @@
         A second file shown only in dark mode — ideal for a logo that would disappear on a dark background.
     </p>
 
-    @if (_uploading)
+    @if (Asset.DarkStatus == DarkVariantStatus.None)
     {
-        <div class="asset-dark-status" role="status">Uploading…</div>
-    }
-    else if (Asset.DarkStatus == DarkVariantStatus.None)
-    {
-        <label class="ed-btn ed-btn-ghost asset-dark-add">
-            Add dark version
+        @* The InputFile must stay mounted while its stream is read: flipping to a
+           separate "Uploading…" element would dispose the component mid-read and make
+           OpenReadStream fail ("Reading … from the browser failed"). So the busy state
+           only relabels and disables this same label — the InputFile never unmounts.
+           Mirrors AssetsPanel, whose upload control lives in an always-rendered header. *@
+        <label class="ed-btn ed-btn-ghost asset-dark-add @(_uploading ? "is-busy" : null)">
+            @(_uploading ? "Uploading…" : "Add dark version")
             <InputFile OnChange="OnFile" accept="@AcceptFor(Asset.Kind)" class="ed-visually-hidden"
-                       aria-label="Upload a dark-mode version" />
+                       disabled="@_uploading" aria-label="Upload a dark-mode version" />
         </label>
     }
     else if (Asset.DarkStatus == DarkVariantStatus.Pending)

@@ -82,8 +82,9 @@
     {
         _parentId = parentId;
         _index = index;
-        // (0,0) means "keyboard-opened": anchor near the canvas top instead.
-        _x = x == 0 ? 320 : Math.Min(x, 1200);
+        // (0,0) means "keyboard-opened": anchor near the canvas top instead. A pill-opened
+        // point is already clamped by JS to keep the picker on-screen, so it's used as-is.
+        _x = x == 0 ? 320 : x;
         _y = y == 0 ? 160 : y;
         _query = "";
         _highlighted = 0;
@@ -123,6 +124,15 @@
                     .Where(d => d.TypeName == "section" && Matches(d.Name, d.Description))
                     .Select(d => new Item("Empty section", d.Description, () => InsertNode(d.Create(locale)))),
             ]);
+            // A widget can't be a direct child of the page root (only sections can), but
+            // *requesting* one isn't an insertion — offer it here too so an editor can
+            // always find it, not only from inside a container.
+            if (Matches("Request a new widget…", "Submit a custom widget for admin approval"))
+            {
+                yield return new Group("Widgets",
+                    [new Item("Request a new widget…", "Submit a custom widget for admin approval", OpenRequest)]);
+            }
+
             yield break;
         }
 

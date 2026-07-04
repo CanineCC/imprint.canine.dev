@@ -532,7 +532,9 @@ button { font: inherit; color: inherit; }
   position: fixed;
   z-index: 41;
   width: 320px;
-  max-height: 420px;
+  /* Never taller than the viewport: the internal list scrolls (ed-picker-list is
+     overflow-y:auto), and JS clamps the anchor so this box stays fully on-screen. */
+  max-height: min(420px, calc(100vh - 24px));
   display: flex;
   flex-direction: column;
   gap: 8px;

@@ -25,5 +25,19 @@
       { "name": "before-label", "label": "Before label", "type": "text", "default": "Before" },
       { "name": "after-label", "label": "After label", "type": "text", "default": "After" }
     ]
+  },
+  {
+    "tag": "x-theme-toggle",
+    "name": "Theme toggle",
+    "description": "A light / dark switch your visitors can click. Remembers their choice and stays in sync with the site.",
+    "bundle": "x-theme-toggle.js",
+    "eager": true,
+    "placeholder": "Light / dark toggle",
+    "props": [
+      { "name": "variant", "label": "Style", "type": "choice", "default": "sun-moon", "options": ["sun-moon", "switch", "circle"] },
+      { "name": "size", "label": "Size", "type": "choice", "default": "medium", "options": ["small", "medium", "large"] },
+      { "name": "speed", "label": "Animation", "type": "choice", "default": "smooth", "options": ["instant", "smooth", "playful"] },
+      { "name": "label", "label": "Label (optional)", "type": "text", "default": "" }
+    ]
   }
 ]

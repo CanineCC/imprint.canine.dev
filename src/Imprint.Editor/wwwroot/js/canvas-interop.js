@@ -126,7 +126,15 @@ function attachListeners() {
     if (state.gap) {
       const { parentId, index } = state.gap;
       const rect = state.ui.gapPill.getBoundingClientRect();
-      invoke('ReportGapClick', parentId, index, rect.left + rect.width / 2, rect.bottom);
+      // Clamp the open point so the ~320x420 picker stays fully on-screen. Without this,
+      // opening near the viewport bottom/right pushes the picker's last group (Widgets +
+      // "Request a new widget…") below the fold where it can't be reached or scrolled to.
+      const margin = 12;
+      const pickerW = 320;
+      const pickerH = Math.min(420, window.innerHeight - margin * 2);
+      const x = Math.max(margin, Math.min(rect.left + rect.width / 2, window.innerWidth - pickerW - margin));
+      const y = Math.max(margin, Math.min(rect.bottom, window.innerHeight - pickerH - margin));
+      invoke('ReportGapClick', parentId, index, x, y);
     }
   }, opts);
 }
