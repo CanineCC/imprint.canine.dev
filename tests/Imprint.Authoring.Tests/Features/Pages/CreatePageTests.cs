@@ -86,4 +86,32 @@ public sealed class CreatePageTests
         var error = await host.Fails(new CreatePage(PageId.New(), SiteId.New(), "About", "about", "en"));
         Assert.Contains("site no longer exists", error);
     }
+
+    [Fact]
+    public async Task The_same_slug_is_allowed_on_two_different_sites()
+    {
+        // Slugs are unique per site, not globally: each site may have its own 'home'.
+        await using var host = PagesHost.Create();
+        var siteA = await PagesHost.SeedSite(host);
+        var siteB = await PagesHost.SeedSite(host);
+
+        await host.Ok(new CreatePage(PageId.New(), siteA, "Home", "home", "en"));
+        await host.Ok(new CreatePage(PageId.New(), siteB, "Home", "home", "en"));
+
+        Assert.Single(host.Get<PageList>().All(siteA));
+        Assert.Single(host.Get<PageList>().All(siteB));
+    }
+
+    [Fact]
+    public async Task A_duplicate_slug_within_the_same_site_is_still_rejected()
+    {
+        await using var host = PagesHost.Create();
+        var siteA = await PagesHost.SeedSite(host);
+        var siteB = await PagesHost.SeedSite(host);
+        await host.Ok(new CreatePage(PageId.New(), siteA, "Home", "home", "en"));
+        await host.Ok(new CreatePage(PageId.New(), siteB, "Home", "home", "en"));
+
+        var error = await host.Fails(new CreatePage(PageId.New(), siteA, "Home again", "home", "en"));
+        Assert.Contains("already used by another page on this site", error);
+    }
 }

@@ -31,9 +31,9 @@ public sealed class CreatePageHandler(IAggregateStore store, SiteOverview sites,
         // editors can claim the same slug in the same instant and both pass — the
         // publisher detects the collision and fails that page's render with a visible
         // error (docs/publishing.md), so the site never silently serves the wrong page.
-        if (pageList.SlugTaken(slug))
+        if (pageList.SlugTaken(cmd.SiteId, slug))
         {
-            return Result.Fail($"The slug '{slug}' is already used by another page.");
+            return Result.Fail($"The slug '{slug}' is already used by another page on this site.");
         }
 
         var page = Page.Create(cmd.PageId, cmd.SiteId, slug, locale, cmd.Title);

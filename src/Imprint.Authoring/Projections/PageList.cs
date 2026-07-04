@@ -50,28 +50,41 @@ public sealed record PageSummary(
 public sealed class PageList : ReadModel
 {
     private sealed record Entry(
-        Slug Slug, LocalizedText Title, long Version, long? PublishedVersion, DateTimeOffset UpdatedAt);
+        SiteId SiteId, Slug Slug, LocalizedText Title, long Version, long? PublishedVersion, DateTimeOffset UpdatedAt);
 
     private readonly Dictionary<PageId, Entry> _pages = [];
-    private List<PageId> _navigation = [];
 
-    /// <summary>Navigation pages first (in nav order), then the rest by slug.</summary>
-    public IReadOnlyList<PageSummary> All()
-    {
-        var summaries = _pages.Select(pair => Summarize(pair.Key, pair.Value)).ToList();
-        return
-        [
-            .. summaries
-                .OrderBy(page => page.NavigationOrder ?? int.MaxValue)
-                .ThenBy(page => page.Slug.Value, StringComparer.Ordinal),
-        ];
-    }
+    // Navigation is per-site (each site owns its own menu), keyed by the site stream the
+    // SiteNavigationChanged event came from. A single shared list would let one site's
+    // menu decide another's home page and nav order.
+    private readonly Dictionary<SiteId, List<PageId>> _navigation = [];
+
+    /// <summary>Every page across all sites — navigation pages first, then the rest by slug.</summary>
+    public IReadOnlyList<PageSummary> All() => Ordered(_pages.Select(pair => Summarize(pair.Key, pair.Value)));
+
+    /// <summary>The pages of one site — the multi-site dashboard/nav view.</summary>
+    public IReadOnlyList<PageSummary> All(SiteId site) =>
+        Ordered(_pages.Where(pair => pair.Value.SiteId == site).Select(pair => Summarize(pair.Key, pair.Value)));
+
+    private static IReadOnlyList<PageSummary> Ordered(IEnumerable<PageSummary> summaries) =>
+    [
+        .. summaries
+            .OrderBy(page => page.NavigationOrder ?? int.MaxValue)
+            .ThenBy(page => page.Slug.Value, StringComparer.Ordinal),
+    ];
 
     public PageSummary? Get(PageId id) =>
         _pages.TryGetValue(id, out var entry) ? Summarize(id, entry) : null;
 
-    public bool SlugTaken(Slug slug, PageId? except = null) =>
-        _pages.Any(pair => pair.Value.Slug == slug && pair.Key != except);
+    /// <summary>
+    /// Whether a slug is already used <em>within the given site</em>. Slugs are unique per
+    /// site, not globally — two different sites may each have a 'home' or 'about' page.
+    /// </summary>
+    public bool SlugTaken(SiteId site, Slug slug, PageId? except = null) =>
+        _pages.Any(pair => pair.Value.SiteId == site && pair.Value.Slug == slug && pair.Key != except);
+
+    /// <summary>The home page of one site (nav-first), for multi-site publishing/routing.</summary>
+    public PageSummary? HomeOf(SiteId site) => All(site).FirstOrDefault(page => page.IsHome);
 
     public PageSummary? Home => All().FirstOrDefault(page => page.IsHome);
 
@@ -82,6 +95,7 @@ public sealed class PageList : ReadModel
             case PageCreated created:
                 Slug.TryCreate(created.Slug, out var createdSlug, out _);
                 _pages[created.PageId] = new Entry(
+                    created.SiteId,
                     createdSlug,
                     LocalizedText.Of(created.InitialLocale, created.Title),
                     Version: 1,
@@ -89,8 +103,8 @@ public sealed class PageList : ReadModel
                     @event.Metadata.TimestampUtc);
                 break;
 
-            case SiteNavigationChanged navigation:
-                _navigation = [.. navigation.Items.Select(item => item.PageId)];
+            case SiteNavigationChanged navigation when StreamIds.IdOf(@event.StreamId, "site-") is { } siteGuid:
+                _navigation[SiteId.From(siteGuid)] = [.. navigation.Items.Select(item => item.PageId)];
                 break;
 
             default:
@@ -133,12 +147,14 @@ public sealed class PageList : ReadModel
     public override void Reset()
     {
         _pages.Clear();
-        _navigation = [];
+        _navigation.Clear();
     }
 
     private PageSummary Summarize(PageId id, Entry entry)
     {
-        var order = _navigation.IndexOf(id);
+        // Navigation order is looked up in the page's OWN site's menu, so a page is only
+        // "home" (order 0) relative to its site.
+        var order = _navigation.GetValueOrDefault(entry.SiteId)?.IndexOf(id) ?? -1;
         return new PageSummary(
             id, entry.Slug, entry.Title, entry.Version, entry.PublishedVersion,
             order < 0 ? null : order, entry.UpdatedAt);
