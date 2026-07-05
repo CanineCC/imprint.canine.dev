@@ -64,8 +64,12 @@ var dispatcher = provider.GetRequiredService<ICommandDispatcher>();
 var siteOverview = provider.GetRequiredService<SiteOverview>();
 var pageList = provider.GetRequiredService<PageList>();
 
-// ── 1. ensure the three sites + their empty home pages exist (mirror prod ids) ──
-foreach (var site in Sites.All(cmsRoot))
+// The four target sites: watchdog/assay/cai read the CMS checkout; canine's transcribed
+// content ships inside this repo (tools/ContentSeeder/canine), resolved via repoRoot.
+var sites = Sites.All(cmsRoot, repoRoot);
+
+// ── 1. ensure the four sites + their empty home pages exist (mirror prod ids) ──
+foreach (var site in sites)
 {
     if (siteOverview.Get(site.SiteId) is null)
     {
@@ -84,7 +88,7 @@ foreach (var site in Sites.All(cmsRoot))
 // ── 2. migrate ──
 var migrator = new Migrator(dispatcher, opts.ApiBase);
 var results = new List<Migrator.SiteResult>();
-foreach (var site in Sites.All(cmsRoot))
+foreach (var site in sites)
 {
     var r = await migrator.MigrateSite(site);
     results.Add(r);
@@ -99,7 +103,7 @@ if (!opts.NoPublish)
     var publisher = provider.GetRequiredService<SitePublisher>();
     var projections = provider.GetRequiredService<ProjectionEngine>();
     await projections.CatchUp();
-    foreach (var site in Sites.All(cmsRoot))
+    foreach (var site in sites)
     {
         var aggregate = await provider.GetRequiredService<IAggregateStore>().Load<Site>(site.SiteId.Stream);
         var target = new PublishTarget(aggregate, Path.Combine(publishRoot, site.Key), site.Origin);
@@ -116,7 +120,7 @@ if (!opts.NoPublish)
 Console.WriteLine();
 
 // ── 4. verify ──
-var ok = await Verify.Run(provider, Sites.All(cmsRoot), publishRoot, opts.NoPublish);
+var ok = await Verify.Run(provider, sites, publishRoot, opts.NoPublish);
 
 Console.WriteLine();
 Console.WriteLine("== FLAGS (blocks/copy that could not map 1:1 — never invented) ==");

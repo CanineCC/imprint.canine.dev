@@ -55,7 +55,8 @@ public sealed record SiteDef(
 
 public static class Sites
 {
-    // The three Imprint sites (prod ids mirrored locally for the verify DB).
+    // The four Imprint sites (prod ids mirrored locally for the verify DB; the canine
+    // ids are fixed constants minted here — prod inherits them at first seed).
     public static readonly SiteId WatchdogSite = SiteId.From(Guid.Parse("63030ae7-aeb9-4355-a019-362c150fd420"));
     public static readonly PageId WatchdogHome = PageId.From(Guid.Parse("1e4fad3b-fb44-44f0-a73e-174f0f975396"));
 
@@ -65,7 +66,15 @@ public static class Sites
     public static readonly SiteId AssaySite = SiteId.From(Guid.Parse("91884b35-d865-42a8-98bd-c7960fce6f89"));
     public static readonly PageId AssayHome = PageId.From(Guid.Parse("e192c652-7e28-44c7-8674-aba7de5860ca"));
 
-    public static IReadOnlyList<SiteDef> All(string cmsRoot) =>
+    public static readonly SiteId CanineSite = SiteId.From(Guid.Parse("30d6c379-2712-4e26-9204-6abdc716f5eb"));
+    public static readonly PageId CanineHome = PageId.From(Guid.Parse("2e800859-de7e-4daf-a969-bbe9a3f9473a"));
+
+    /// <param name="cmsRoot">The cms.canine.dev checkout (watchdog / assay / cai content).</param>
+    /// <param name="repoRoot">This repo's root — the canine studio site's content lives IN
+    /// this repo (tools/ContentSeeder/canine/content), not in the CMS checkout, because its
+    /// source of truth is the hand-written canine.dev Blazor site, transcribed once into the
+    /// same CMS content shape so the whole Migrator/BlockMapper/Verify pipeline applies.</param>
+    public static IReadOnlyList<SiteDef> All(string cmsRoot, string repoRoot) =>
     [
         new SiteDef("watchdog", "Watchdog", "https://watchdog.canine.dev",
             Path.Combine(cmsRoot, "sites", "watchdog", "content"),
@@ -83,6 +92,13 @@ public static class Sites
             CaiSite, CaiHome,
             CaiNav, CaiCta, CaiQuiet, CaiFooter, CaiCopy,
             Themes.Cai, Themes.Neutrals, Themes.Marketing),
+        new SiteDef("canine", "Canine", "https://www.canine.dev",
+            Path.Combine(repoRoot, "tools", "ContentSeeder", "canine", "content"),
+            CanineSite, CanineHome,
+            CanineNav, CanineCta, CanineQuiet, CanineFooter, CanineCopy,
+            // canine.dev wears the family default look verbatim: its app.css tokens ARE the
+            // shared graphite/paper neutrals + the steel accent (canine :root), same type.
+            Themes.Watchdog, Themes.Neutrals, Themes.Marketing),
     ];
 
     // ── Chrome, lifted verbatim from sites/*/lib/site.ts. The header nav preserves the
@@ -280,6 +296,46 @@ public static class Sites
             new("About Canine Development", "https://watchdog.canine.dev/about"),
             new("Security & data", "https://watchdog.canine.dev/security"),
             new("Contact", "https://watchdog.canine.dev/contact"),
+        ]),
+    ];
+
+    // ── canine (the studio marketing site, www.canine.dev) ───────────────────────
+    // Chrome lifted verbatim from the Blazor source (canine.dev
+    // Components/Layout/MainLayout.razor), the same way the others mirror site.ts.
+    // Transcription notes (the source is hand-written Razor, not CMS content):
+    //  • The header/footer "/#what"-style in-page anchors keep their real deployed
+    //    hrefs (origin + fragment); published sections carry no named anchors, so the
+    //    fragment lands at the top of home — labels and destinations stay truthful.
+    //  • The header "Contact" nav-cta pill is the header CTA; there is no quiet link.
+    //  • The footer-about blurb ("Independent software-assurance studio · Denmark,
+    //    since 2021.") has no slot in Imprint's footer model — the same line appears
+    //    verbatim as the home hero kicker, so no copy is lost.
+    //  • The copy line freezes the layout's dynamic © year at 2026 (migration time).
+    private static readonly IReadOnlyList<NavEntry> CanineNav =
+    [
+        new("What we do", "/#what"),
+        new("Products", "/#products"),
+        new("How we work", "/#doctrine"),
+        new("Team", "/#team"),
+    ];
+
+    private static readonly HeaderAct CanineCta = new("Contact", "/contact");
+    private static readonly HeaderAct? CanineQuiet = null;
+    private const string CanineCopy = "© 2026 Canine Development — assuring software quality since 2021.";
+
+    private static readonly IReadOnlyList<FooterCol> CanineFooter =
+    [
+        new("Products",
+        [
+            new("Watchdog", "https://watchdog.canine.dev"),
+            new("CAI standard", "https://cai.canine.dev"),
+            new("Unfold", "https://unfold.canine.dev"),
+        ]),
+        new("Studio",
+        [
+            new("What we do", "/#what"),
+            new("Team", "/#team"),
+            new("Contact", "/contact"),
         ]),
     ];
 }

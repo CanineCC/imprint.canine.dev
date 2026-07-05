@@ -29,7 +29,7 @@ public static class Verify
             ok &= condition;
         }
 
-        // ── 1. 44 surfaces exist and are all published ──
+        // ── 1. 46 surfaces exist and are all published ──
         var expected = 0;
         var publishedCount = 0;
         foreach (var site in sites)
@@ -60,7 +60,7 @@ public static class Verify
             }
         }
 
-        Check(expected == 44, $"expected 44 surfaces across 3 sites — found {expected}");
+        Check(expected == 46, $"expected 46 surfaces across 4 sites — found {expected}");
         Check(publishedCount == expected, $"all {expected} surfaces published — {publishedCount} confirmed");
 
         // ── 1b. no page block silently dropped: each PAGE (not doc) authors exactly one
@@ -125,6 +125,23 @@ public static class Verify
               HasWidgetAnywhere(published, pageList, Sites.CaiSite, "cai-composition-bar") ||
               HasWidgetAnywhere(published, pageList, Sites.CaiSite, "cai-evidence-flow"),
             "CAI site carries at least one CAI diagram widget");
+
+        // Canine studio home: verbatim hero H1, the products section counting FOUR
+        // (Assay joins Unfold/Watchdog/CAI — the one sanctioned content change), and
+        // the contact page carrying the form island.
+        Check(HasHeading(published, pageList, Sites.CanineSite, "home",
+                "We don't build your software. We make sure it's world-class."),
+            "Canine home carries the verbatim hero H1");
+        Check(HasHeading(published, pageList, Sites.CanineSite, "home",
+                "Four products, one standard of quality."),
+            "Canine home products heading counts four (Assay added)");
+        Check(HasCopy(published, pageList, Sites.CanineSite, "home",
+                "Know what the software is worth before you sign."),
+            "Canine home carries the Assay product card");
+        Check(PageExists(pageList, Sites.CanineSite, "contact"),
+            "Canine contact page exists");
+        Check(HasWidget(published, pageList, Sites.CanineSite, "contact", "contact-form"),
+            "Canine contact carries the contact-form island");
 
         // WD pricing page: pricingTiers copy + first-scan-free line
         Check(PageExists(pageList, Sites.WatchdogSite, "pricing"),

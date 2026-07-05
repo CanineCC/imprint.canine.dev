@@ -47,6 +47,7 @@ public sealed class BlockMapper(
             "steps" => Steps(block),
             "panels" => Panels(block),
             "pricingTiers" => PricingTiers(block),
+            "prose" => Prose(block),
             "composition" => Composition(block),
             "table" => Table(block),
             "docmock" => Docmock(block),
@@ -80,6 +81,7 @@ public sealed class BlockMapper(
         "steps" => SectionAppearance.Steps,
         "panels" => SectionAppearance.Panels,
         "pricingTiers" => SectionAppearance.Pricing,
+        "prose" => SectionAppearance.Plain,
         "composition" => SectionAppearance.Composition,
         "table" => SectionAppearance.TableList,
         "docmock" => SectionAppearance.Docmock,
@@ -538,6 +540,49 @@ public sealed class BlockMapper(
         else if (cells.Count > 0)
         {
             stack.Add(Nodes.Grid(280, [.. cells]));
+        }
+
+        var footnote = block.Str("footnote");
+        if (!string.IsNullOrWhiteSpace(footnote))
+        {
+            stack.Add(Nodes.Paragraph(footnote, origin));
+        }
+
+        return Nodes.Section(Nodes.Stack([.. stack]));
+    }
+
+    /// <summary>
+    /// Long-form marketing prose: the section head, then body paragraphs, then an
+    /// optional bulleted list, then a closing footnote paragraph. Not a Tina template —
+    /// added for the canine.dev studio site, whose hand-written Blazor home page has
+    /// multi-paragraph manifesto/mission/doctrine/timeline sections that no CMS block
+    /// shape carries. The copy is transcribed verbatim into this shape.
+    /// </summary>
+    private SectionNode Prose(JsonNode block)
+    {
+        var stack = new List<Node>();
+        stack.AddRange(SectionHead(block));
+
+        foreach (var paragraph in block.Arr("paragraphs"))
+        {
+            var text = paragraph?.ToString();
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                stack.Add(Nodes.Paragraph(text, origin));
+            }
+        }
+
+        var items = block.Arr("items");
+        if (items.Count > 0)
+        {
+            var sb = new System.Text.StringBuilder("<ul>");
+            foreach (var item in items)
+            {
+                sb.Append("<li>").Append(Inline.ToCanonicalInline(item?.ToString(), origin)).Append("</li>");
+            }
+
+            sb.Append("</ul>");
+            stack.Add(Nodes.RichHtml(sb.ToString()));
         }
 
         var footnote = block.Str("footnote");

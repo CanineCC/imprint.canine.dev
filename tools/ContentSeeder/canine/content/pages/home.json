@@ -1,0 +1,184 @@
+{
+  "title": "Canine Development — independent software-assurance studio",
+  "description": "Canine Development — an independent software-assurance studio. The open CAI standard, the Watchdog surveyor, and correct-by-construction tooling that make software verifiably world-class.",
+  "blocks": [
+    {
+      "_template": "hero",
+      "kicker": "Independent software-assurance studio · Denmark, since 2021",
+      "heading": "We don't build your software. We make sure it's world-class.",
+      "lede": "Canine Development is an independent software-**assurance** studio. We don't take build contracts — we build the open standard, the independent surveyor, and the correct-by-construction tooling that turn \"trust me\" into something anyone can verify.",
+      "ctaLabel": "Meet Watchdog",
+      "ctaHref": "https://watchdog.canine.dev",
+      "cta2Label": "Read the CAI standard",
+      "cta2Href": "https://cai.canine.dev",
+      "microcopy": "or try [Unfold](https://unfold.canine.dev) →"
+    },
+    {
+      "_template": "prose",
+      "kicker": "Our conviction",
+      "heading": "The source of truth isn't the code.",
+      "paragraphs": [
+        "Most teams think their codebase is the source of truth. It isn't. The truth is the **WHAT** and the **WHY** — your domain, your rules, your architecture, written down as ADRs and DDRs (Architecture & Domain Decision Records). Code is the **HOW**: an artifact derived from those decisions. And like any artifact, it drifts, decays, and quietly stops telling the truth. That gap — between what the software was meant to do and what the code actually does — is exactly where bugs, risk, and AI slop live.",
+        "Assurance is the discipline of measuring that gap — in the open, the same way every time.",
+        "**Code is an artifact, not the truth. Our job is to measure whether the artifact still tells it.**"
+      ]
+    },
+    {
+      "_template": "features",
+      "kicker": "What we do",
+      "heading": "We work the full arc of software trust.",
+      "lede": "From the moment code is written to the moment someone has to stake the business on it.",
+      "items": [
+        {
+          "tag": "01",
+          "title": "Build it right",
+          "body": "The decisions become the software — not a slide deck nobody reads.",
+          "linkLabel": "→ Unfold",
+          "href": "https://unfold.canine.dev"
+        },
+        {
+          "tag": "02",
+          "title": "Measure it honestly",
+          "body": "An open 0–100 standard, and an independent surveyor that applies it. Same code in, same score out.",
+          "linkLabel": "→ CAI + Watchdog",
+          "href": "https://cai.canine.dev"
+        },
+        {
+          "tag": "03",
+          "title": "Govern & prove it",
+          "body": "When evidence has to become governance, the measurements flow on. → Everdue (partner)"
+        }
+      ]
+    },
+    {
+      "_template": "features",
+      "kicker": "The work",
+      "heading": "Four products, one standard of quality.",
+      "items": [
+        {
+          "tag": "Preview · Born summer 2025",
+          "title": "Unfold",
+          "body": "Describe your business in plain language; get a maintainable, domain-driven .NET codebase that's correct by construction — it compiles, obeys your rules, and passes your scenarios. For the person who knows the business, not the framework.",
+          "linkLabel": "unfold.canine.dev →",
+          "href": "https://unfold.canine.dev"
+        },
+        {
+          "tag": "Live · Born December 2025",
+          "title": "Watchdog",
+          "body": "The independent surveyor for C#/.NET. A reproducible 0–100 Codebase Assurance Index across ten lenses, with commit-pinned reports in PDF + JSON. Get the software surveyed before you trust it with the business — you'd never buy a house on the seller's word.",
+          "linkLabel": "watchdog.canine.dev →",
+          "href": "https://watchdog.canine.dev"
+        },
+        {
+          "tag": "Open standard · Standard since June 2026",
+          "title": "CAI",
+          "body": "The Codebase Assurance Index — the open, reproducible scoring standard we extracted from Watchdog and gave to everyone. 0–100, 124 public dimensions, ten versioned lenses. Same code in, same score out — verifiable by anyone, with no vendor lock-in.",
+          "linkLabel": "cai.canine.dev →",
+          "href": "https://cai.canine.dev"
+        },
+        {
+          "tag": "Live · By the makers of Watchdog",
+          "title": "Assay",
+          "body": "Independent software due diligence and appraisal for code you can't read. Assay turns a reproducible Codebase Assurance survey into a decision you can defend — to a board, a committee, or a court. Know what the software is worth before you sign.",
+          "linkLabel": "assay.canine.dev →",
+          "href": "https://assay.canine.dev/"
+        }
+      ],
+      "footnote": "Watchdog also powers **Everdue**, a governance platform built with our partner consultancy: Watchdog supplies the evidence, Everdue turns it into traceable governance. Everdue is that partnership's product — and its credit."
+    },
+    {
+      "_template": "features",
+      "kicker": "What \"world-class\" means",
+      "heading": "\"World-class\" isn't a feeling. It's ten lenses, scored.",
+      "items": [
+        {
+          "title": "Always on",
+          "body": "Code Health · Architecture · Maturity · Readiness · Security"
+        },
+        {
+          "title": "When they apply",
+          "body": "Domain Modeling · Event-Driven · Event Sourcing · Accessibility · Performance"
+        }
+      ],
+      "footnote": "124 public dimensions. One reproducible number. [See the full open standard →](https://cai.canine.dev)"
+    },
+    {
+      "_template": "prose",
+      "kicker": "How we work",
+      "heading": "We don't have opinions about your code. We have a discipline.",
+      "lede": "Everything we build and measure rests on the same engineering doctrine.",
+      "items": [
+        "**Domain-Driven Design (DDD)** — model the business, not the database.",
+        "**Test- & Behaviour-Driven Development (TDD / BDD)** — prove behaviour before you trust it.",
+        "**Vertical Slice Architecture (VSA) + Clean / Hexagonal** — boundaries that survive change.",
+        "**ADR + ADL and DDR + DDL** — Architecture and Domain Decisions, written down and kept as a living library, so the WHAT and WHY outlive any developer, framework, or LLM."
+      ],
+      "footnote": "It's what Unfold builds from, and what Watchdog scores against."
+    },
+    {
+      "_template": "prose",
+      "kicker": "Why we exist",
+      "heading": "Raise the floor — and the ceiling — for enterprise software in Denmark.",
+      "paragraphs": [
+        "We started as a consultancy in 2021. We've seen what ships. We'd rather spend the next decade spreading best practice — DDD, TDD, BDD, vertical slices, clean architecture, decisions-as-truth — than write one more bespoke system for hire. So we build the standards and tools that make class-leading software the default, not the exception."
+      ]
+    },
+    {
+      "_template": "prose",
+      "kicker": "How we got here",
+      "heading": "From consultancy to assurance.",
+      "items": [
+        "**2021** — Founded as a software **consultancy**.",
+        "**Summer 2025** — **Unfold** is born: correct-by-construction code from plain-language decisions.",
+        "**End of 2025** — We stop taking build contracts. Canine becomes an **independent software-assurance studio**.",
+        "**December 2025** — **Watchdog** is born: the independent surveyor.",
+        "**June 2026** — We extract **CAI** from Watchdog and publish it as an open standard."
+      ]
+    },
+    {
+      "_template": "personas",
+      "kicker": "Who we are",
+      "heading": "Assurance isn't a feature we added. It's who we are.",
+      "lede": "We're a small Danish team — and half of us do QA. That's not an accident; it's the entire point.",
+      "cards": [
+        { "title": "Jimmy Borch", "body": "CEO" },
+        { "title": "Lasse", "body": "Customer Success" },
+        { "title": "Glenn", "body": "Marketing & QA" },
+        { "title": "Alina", "body": "Quality Assurance" }
+      ]
+    },
+    {
+      "_template": "features",
+      "kicker": "What we hold to",
+      "heading": "Four commitments.",
+      "items": [
+        {
+          "title": "Independent",
+          "body": "We don't build the software we assess; our only product is an honest measurement."
+        },
+        {
+          "title": "Reproducible",
+          "body": "Same code in, same score out. No black boxes, no moving the number."
+        },
+        {
+          "title": "Read-only",
+          "body": "When we assess, we measure and advise; we never touch your code."
+        },
+        {
+          "title": "Honest about stage",
+          "body": "Live, preview, or alpha — we'll always tell you which."
+        }
+      ]
+    },
+    {
+      "_template": "cta",
+      "heading": "Curious where your software really stands?",
+      "lede": "Send a note, or start with the independent surveyor.",
+      "ctaLabel": "Talk to us",
+      "ctaHref": "/contact",
+      "cta2Label": "Meet Watchdog",
+      "cta2Href": "https://watchdog.canine.dev",
+      "microcopy": "[Read the CAI standard](https://cai.canine.dev)"
+    }
+  ]
+}

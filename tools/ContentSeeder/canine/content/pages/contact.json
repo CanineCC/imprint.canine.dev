@@ -1,0 +1,17 @@
+{
+  "title": "Contact — Canine Development",
+  "blocks": [
+    {
+      "_template": "hero",
+      "kicker": "Contact",
+      "heading": "Talk to Canine.",
+      "lede": "Curious where your software really stands, or how independent assurance could fit your team? Send a note — it reaches us directly."
+    },
+    {
+      "_template": "contactForm",
+      "topics": [],
+      "fallbackEmail": "sales@canine.dev",
+      "privacyNote": "No inbox addresses are published on this site — your message is delivered straight to the team."
+    }
+  ]
+}
