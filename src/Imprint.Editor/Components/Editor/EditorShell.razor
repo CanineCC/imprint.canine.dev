@@ -10,7 +10,6 @@
 @inject ToastService Toasts
 @inject IConfiguration Config
 @inject KeycloakOptions Auth
-@inject SiteAccess Access
 
 @* The frame: top bar, icon rail, contextual left panel, canvas column, inspector,
    status bar, toast host. Panels own their interiors; the shell owns arrangement. *@
@@ -19,7 +18,7 @@
     <header class="ed-topbar">
         <a class="ed-btn ed-btn-ghost ed-back" href="/" title="All sites" aria-label="Back to all sites">←</a>
         <span class="ed-site-name">@(Session.ActiveSite?.Name ?? "Imprint")</span>
-        @if (Session.ActiveSiteId is { } activeId && _ownsActiveSite)
+        @if (Session.ActiveSiteId is { } activeId)
         {
             <a class="ed-btn ed-btn-ghost ed-gear" href="@($"/sites/{activeId.Compact}/settings")"
                title="Site settings &amp; publishing" aria-label="Site settings and publishing">⚙</a>
@@ -138,11 +137,6 @@
     // the route must still be protected by your reverse proxy.
     private bool AdminEnabled => Config.GetValue("ImprintAdmin", true);
 
-    // Settings (the gear) are the owner's surface — hidden from collaborators, whose
-    // scope is the editor itself. Re-resolved on session/site changes because the
-    // active site follows the open page.
-    private bool _ownsActiveSite;
-
     protected override void OnInitialized()
     {
         Session.Changed += Refresh;
@@ -150,16 +144,7 @@
         Site.Changed += Refresh;
     }
 
-    protected override async Task OnInitializedAsync() => await ResolveOwnership();
-
-    private async Task ResolveOwnership() =>
-        _ownsActiveSite = Session.ActiveSiteId is { } siteId && await Access.IsOwnerAsync(siteId);
-
-    private void Refresh() => _ = InvokeAsync(async () =>
-    {
-        await ResolveOwnership();
-        StateHasChanged();
-    });
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
 
     public void Dispose()
     {

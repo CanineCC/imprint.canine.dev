@@ -44,16 +44,19 @@
             <a class="ed-btn" href="@OpenHref(site.Id)">Open editor →</a>
         </div>
 
-        @* ---- Name ---- *@
-        <section class="settings-card" aria-labelledby="set-name">
-            <h2 id="set-name">Name</h2>
-            <div class="settings-row">
-                <input class="ed-input" aria-label="Site name" disabled="@(!_interactive)" @bind="_name" @bind:event="oninput" />
-                <button type="button" class="ed-btn ed-btn-primary"
-                        disabled="@(!_interactive || _name.Trim().Length == 0 || _name.Trim() == site.Name)"
-                        @onclick="SaveName">Save name</button>
-            </div>
-        </section>
+        @* ---- Name (owner-only: site identity is administration, not content) ---- *@
+        @if (_isOwner)
+        {
+            <section class="settings-card" aria-labelledby="set-name">
+                <h2 id="set-name">Name</h2>
+                <div class="settings-row">
+                    <input class="ed-input" aria-label="Site name" disabled="@(!_interactive)" @bind="_name" @bind:event="oninput" />
+                    <button type="button" class="ed-btn ed-btn-primary"
+                            disabled="@(!_interactive || _name.Trim().Length == 0 || _name.Trim() == site.Name)"
+                            @onclick="SaveName">Save name</button>
+                </div>
+            </section>
+        }
 
         @* ---- Header & footer (marketing chrome) ---- *@
         <section class="settings-card" aria-labelledby="set-chrome">
@@ -194,8 +197,15 @@
                             @onclick="AddPerson">Add editor</button>
                 </div>
             }
+            else
+            {
+                <p class="settings-hint">Only the site's owner can add or remove people.</p>
+            }
         </section>
 
+        @* ---- Publish folders + deploy (owner-only: where bytes land is administration) ---- *@
+        @if (_isOwner)
+        {
         @* ---- Publish folders (deploy environments) ---- *@
         <section class="settings-card" aria-labelledby="set-envs">
             <h2 id="set-envs">Publish folders</h2>
@@ -301,6 +311,7 @@
                 </ol>
             }
         </section>
+        }
     }
 </div>
 
@@ -361,15 +372,16 @@
         await ResolveAccess();
     }
 
-    // The settings URL is guessable, so loading it is an access check. Settings are the
-    // OWNER's surface (rename, publish folders, deploy, people) — a collaborator edits
-    // and publishes content but never configures the site, so anyone who isn't the
-    // owner gets the same "could not be found" card as an unknown id.
+    // The settings URL is guessable, so loading it is an access check: anyone without
+    // edit access gets the same "could not be found" card as an unknown id. Within the
+    // page, the cards split by role — a collaborator maintains the marketing chrome
+    // (header & footer), while site administration (name, publish folders, deploy,
+    // people) renders for the OWNER only.
     private async Task ResolveAccess()
     {
         _user = await Access.UserAsync();
-        _canAccess = _loadedId is { } id && await Access.IsOwnerAsync(id);
-        _isOwner = _canAccess;
+        _canAccess = _loadedId is { } id && await Access.CanAccessAsync(id);
+        _isOwner = _canAccess && _loadedId is { } ownedId && await Access.IsOwnerAsync(ownedId);
     }
 
     protected override void OnAfterRender(bool firstRender)

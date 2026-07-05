@@ -129,10 +129,11 @@ Ownership exists and is now **enforced** whenever auth is enabled:
 - **Collaborators.** A site's settings page has a **People** card: the owner adds or
   removes editors by the email they sign in with (`site.collaborator-added` /
   `site.collaborator-removed` on the Site aggregate). A collaborator sees the site on
-  their dashboard and can edit and publish content — but the **settings page is
-  owner-only** (rename, publish folders, deploy/promote, people): a non-owner opening
-  the settings URL gets the same "not found" card as an unknown id, and the gear icons
-  are hidden for them. With auth off the list is kept but not enforced.
+  their dashboard, edits and publishes content, and maintains the **Header & footer**
+  card on the settings page — but the administration cards (**Name, Publish folders,
+  Publish & promote, People management**) render for the owner only; a stranger
+  opening the settings URL gets the same "not found" card as an unknown id. With auth
+  off the list is kept but not enforced.
 
 > **Blazor Server trap.** The interactive circuit has **no `HttpContext`**, so the
 > forwarded identity header is unreadable from inside a component the normal way, and the

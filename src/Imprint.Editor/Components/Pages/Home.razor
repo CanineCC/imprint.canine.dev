@@ -58,11 +58,8 @@ else
                             }
                         </span>
                     </button>
-                    @if (_owned.Contains(site.Id))
-                    {
-                        <a class="dash-gear" href="@SettingsHref(site.Id)"
-                           title="Site settings" aria-label="@($"Settings for {site.Name}")">⚙</a>
-                    }
+                    <a class="dash-gear" href="@SettingsHref(site.Id)"
+                       title="Site settings" aria-label="@($"Settings for {site.Name}")">⚙</a>
                 </li>
             }
 
@@ -79,34 +76,19 @@ else
 
 @code {
     private IReadOnlyList<Site> _sites = [];
-    private readonly HashSet<SiteId> _owned = [];
     private string? _user;
 
     protected override async Task OnInitializedAsync()
     {
         Sites.Changed += OnChanged;
         _user = await Access.UserAsync();
-        await LoadSites();
-    }
-
-    // Settings (the gear) are the owner's surface; a collaborator gets the editor only.
-    private async Task LoadSites()
-    {
         _sites = await Access.SitesAsync();
-        _owned.Clear();
-        foreach (var site in _sites)
-        {
-            if (await Access.IsOwnerAsync(site.Id))
-            {
-                _owned.Add(site.Id);
-            }
-        }
     }
 
     // Re-filter, not just re-render: a change may add or remove a site this user can see.
     private void OnChanged() => _ = InvokeAsync(async () =>
     {
-        await LoadSites();
+        _sites = await Access.SitesAsync();
         StateHasChanged();
     });
 
@@ -123,18 +105,10 @@ else
 
     private void OpenSite(SiteId id)
     {
-        // Land on the site's home page (nav-first), else its first page; a pageless site
-        // goes to its settings so the OWNER is never at a dead end. A collaborator has no
-        // settings surface, so for them a pageless site simply stays on the dashboard.
+        // Land on the site's home page (nav-first), else its first page; a site with no
+        // pages at all goes to its settings so it is never a dead end.
         var target = Pages.HomeOf(id) ?? Pages.All(id).FirstOrDefault();
-        if (target is not null)
-        {
-            Navigation.NavigateTo($"/edit/{target.Id.Compact}");
-        }
-        else if (_owned.Contains(id))
-        {
-            Navigation.NavigateTo(SettingsHref(id));
-        }
+        Navigation.NavigateTo(target is not null ? $"/edit/{target.Id.Compact}" : SettingsHref(id));
     }
 
     public void Dispose() => Sites.Changed -= OnChanged;
