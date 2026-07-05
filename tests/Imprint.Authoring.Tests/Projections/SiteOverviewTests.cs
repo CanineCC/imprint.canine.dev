@@ -1,6 +1,7 @@
 using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Sites;
 using Imprint.Authoring.Features.Sites.AddCollaborator;
+using Imprint.Authoring.Features.Sites.ClaimSite;
 using Imprint.Authoring.Features.Sites.RemoveCollaborator;
 using Imprint.Authoring.Projections;
 using Imprint.Authoring.Tests.Features;
@@ -101,8 +102,41 @@ public sealed class SiteOverviewTests
         var legacy = await CreateSiteAs(host, actor: "", name: "Legacy Site");
 
         var overview = host.Get<SiteOverview>();
+        Assert.True(overview.IsUnclaimed(legacy));
         Assert.True(overview.CanAccess(legacy, "anyone@example.com"));
         Assert.True(overview.IsOwner(legacy, "anyone@example.com"));
+    }
+
+    [Fact]
+    public async Task A_site_owned_by_an_os_username_is_unclaimed_and_accessible_to_everyone()
+    {
+        // Pre-auth installs stamp the OS user (e.g. "jimmy") as the creator — an actor
+        // that can never match a login email, so it must not lock anyone out.
+        await using var host = new AuthoringTestHost();
+        var seeded = await CreateSiteAs(host, actor: "jimmy", name: "Seeded Site");
+
+        var overview = host.Get<SiteOverview>();
+        Assert.True(overview.IsUnclaimed(seeded));
+        Assert.True(overview.CanAccess(seeded, "anyone@example.com"));
+        Assert.True(overview.IsOwner(seeded, "anyone@example.com"));
+        Assert.Contains(seeded, overview.AccessibleTo("anyone@example.com").Select(s => s.Id));
+    }
+
+    [Fact]
+    public async Task Claiming_an_unclaimed_site_makes_the_claimant_its_owner()
+    {
+        await using var host = new AuthoringTestHost();
+        var seeded = await CreateSiteAs(host, actor: "jimmy", name: "Seeded Site");
+
+        host.Get<EventMetadataProvider>().ActorSource = () => "alice@example.com";
+        await host.Ok(new ClaimSite(seeded));
+
+        var overview = host.Get<SiteOverview>();
+        Assert.False(overview.IsUnclaimed(seeded));
+        Assert.Equal("alice@example.com", overview.OwnerOf(seeded));
+        Assert.True(overview.IsOwner(seeded, "alice@example.com"));
+        Assert.False(overview.CanAccess(seeded, "bob@example.com"));
+        Assert.Empty(overview.AccessibleTo("bob@example.com"));
     }
 
     [Fact]

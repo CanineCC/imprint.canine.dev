@@ -142,9 +142,11 @@ Ownership exists and is now **enforced** whenever auth is enabled:
 
 ### Remaining sharp edges
 
-- A legacy site with an empty owner stays visible to everyone (so single-tenant
-  installs keep working and no site is orphaned) — right for a demo, tighten before
-  onboarding real tenants.
+- A site whose recorded owner is empty **or an OS username** (no `@` — stamped before
+  sign-in existed) is *unclaimed*: visible and editable by every signed-in user, so no
+  site is ever orphaned. The settings People card offers **Take ownership** on such a
+  site (`site.ownership-claimed`; the claimant is the envelope actor) — claim your
+  pre-auth sites before onboarding a second tenant.
 - `/media` requires login but is not owner-scoped: any signed-in user who knows a
   storage key can fetch any site's media bytes.
 - Owner-only management of the People card is enforced in the UI, not in the command

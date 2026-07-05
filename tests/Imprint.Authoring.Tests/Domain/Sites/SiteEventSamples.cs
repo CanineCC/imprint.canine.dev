@@ -67,6 +67,7 @@ public sealed class SiteEventSamples : IEventSampleProvider
             yield return new SiteCopyLineChanged(
                 new CopyLine(LocalizedText.Of(en, "© 2025–2026 · The independent surveyor.")));
 
+            yield return new SiteOwnershipClaimed();
             yield return new SiteCollaboratorAdded("colleague@example.com");
             yield return new SiteCollaboratorRemoved("colleague@example.com");
 

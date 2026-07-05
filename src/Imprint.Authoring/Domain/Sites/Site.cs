@@ -379,6 +379,14 @@ public sealed class Site : AggregateRoot
     }
 
     /// <summary>
+    /// Record that the signed-in user takes ownership of this site. Ownership itself is
+    /// envelope metadata (the claim event's actor becomes the owner — see SiteOverview),
+    /// so the aggregate carries no owner state and the event no payload. Whether a claim
+    /// is allowed (the site is unclaimed) is the read model's question, guarded at the UI.
+    /// </summary>
+    public void ClaimOwnership() => Raise(new SiteOwnershipClaimed());
+
+    /// <summary>
     /// Grant another person edit access by the email they sign in with. The aggregate
     /// validates shape only — whether the address belongs to a real, reachable person is
     /// the operator's concern (access simply never matches a mistyped email).
@@ -482,6 +490,8 @@ public sealed class Site : AggregateRoot
             case SiteEnvironmentsChanged e:
                 _environments = [.. e.Environments];
                 break;
+            case SiteOwnershipClaimed:
+                break; // ownership lives in the envelope actor; no aggregate state changes
             case SiteCollaboratorAdded e:
                 _collaborators.Add(e.Email);
                 break;

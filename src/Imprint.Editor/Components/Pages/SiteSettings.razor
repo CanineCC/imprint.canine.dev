@@ -5,6 +5,7 @@
 @using Imprint.Authoring.Features.Sites.RenameSite
 @using Imprint.Authoring.Features.Sites.ConfigureEnvironments
 @using Imprint.Authoring.Features.Sites.AddCollaborator
+@using Imprint.Authoring.Features.Sites.ClaimSite
 @using Imprint.Authoring.Features.Sites.RemoveCollaborator
 @using Imprint.Editor.Auth
 @using Imprint.Editor.Services
@@ -64,8 +65,23 @@
 
             <ul class="people-list">
                 <li class="people-row">
-                    <span class="people-email">@(Sites.OwnerOf(site.Id) is { Length: > 0 } owner ? owner : "(no recorded owner — visible to everyone)")</span>
-                    <span class="people-role">Owner</span>
+                    @if (Sites.IsUnclaimed(site.Id))
+                    {
+                        <span class="people-email">
+                            Unclaimed — created before sign-in@(Sites.OwnerOf(site.Id) is { Length: > 0 } legacy ? $" (as '{legacy}')" : "").
+                            Visible to every signed-in user until someone takes ownership.
+                        </span>
+                        @if (Access.Enforced && _user is { Length: > 0 })
+                        {
+                            <button type="button" class="ed-btn ed-btn-primary" disabled="@(!_interactive || _busy)"
+                                    @onclick="TakeOwnership">Take ownership</button>
+                        }
+                    }
+                    else
+                    {
+                        <span class="people-email">@Sites.OwnerOf(site.Id)</span>
+                        <span class="people-role">Owner</span>
+                    }
                 </li>
                 @foreach (var collaborator in site.Collaborators)
                 {
@@ -216,6 +232,7 @@
     private SiteId? _loadedId;
     private string _name = "";
     private string _newPerson = "";
+    private string? _user;
     private readonly List<EnvRow> _envs = [];
     private bool _interactive;
     private bool _busy;
@@ -234,6 +251,7 @@
     // may not touch renders the same "could not be found" card as an unknown id.
     private async Task ResolveAccess()
     {
+        _user = await Access.UserAsync();
         _canAccess = _loadedId is { } id && await Access.CanAccessAsync(id);
         _isOwner = _canAccess && _loadedId is { } ownedId && await Access.IsOwnerAsync(ownedId);
     }
@@ -327,6 +345,19 @@
         }
 
         await Commands.Run(new RenameSite(site.Id, _name.Trim()));
+    }
+
+    private async Task TakeOwnership()
+    {
+        if (_busy || _site is not { } site || !Sites.IsUnclaimed(site.Id))
+        {
+            return;
+        }
+
+        if (await Commands.Run(new ClaimSite(site.Id)))
+        {
+            Toasts.Show($"You are now the owner of {site.Name}.");
+        }
     }
 
     private async Task AddPerson()

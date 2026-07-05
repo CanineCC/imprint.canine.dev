@@ -42,13 +42,19 @@ public sealed class SiteOverview : ReadModel
         [.. _order.Where(id => IsOwner(id, actor)).Select(id => _sites[id])];
 
     /// <summary>
-    /// Whether <paramref name="actor"/> is the site's owner. A legacy site with no
-    /// recorded owner (empty string) counts as everyone's — same rationale as
-    /// <see cref="OwnedBy"/>.
+    /// Whether the site has no claimable owner yet: none recorded, or an OS username
+    /// stamped before sign-in existed (an actor without '@' can never match a login
+    /// email). Such a site is everyone's until someone takes ownership — same
+    /// no-orphans rationale as <see cref="OwnedBy"/>.
     /// </summary>
-    public bool IsOwner(SiteId id, string actor) =>
+    public bool IsUnclaimed(SiteId id) =>
         _owners.GetValueOrDefault(id, string.Empty) is var owner
-        && (owner.Length == 0 || string.Equals(owner, actor, StringComparison.OrdinalIgnoreCase));
+        && (owner.Length == 0 || !owner.Contains('@'));
+
+    /// <summary>Whether <paramref name="actor"/> is the site's owner (any actor, while unclaimed).</summary>
+    public bool IsOwner(SiteId id, string actor) =>
+        IsUnclaimed(id)
+        || string.Equals(_owners.GetValueOrDefault(id, string.Empty), actor, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Whether <paramref name="actor"/> may open and edit the site: its owner, one of
@@ -87,6 +93,13 @@ public sealed class SiteOverview : ReadModel
         }
         else if (_sites.TryGetValue(id, out var site))
         {
+            // A claim re-keys ownership to whoever raised it — the actor rides the
+            // envelope, exactly like site.created, so the payload stays empty.
+            if (@event.Event is SiteOwnershipClaimed)
+            {
+                _owners[id] = @event.Metadata.Actor ?? string.Empty;
+            }
+
             site.LoadFrom([@event.Event]);
         }
         else

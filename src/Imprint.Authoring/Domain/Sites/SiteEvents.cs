@@ -101,6 +101,11 @@ public sealed record SiteCopyLineChanged(CopyLine? CopyLine);
 // The email is the same identity the auth layer stamps as the envelope actor, so a
 // collaborator's access check and their attribution in history use one value.
 
+// The claimant is the envelope actor (like site.created's owner), so the payload is
+// empty: whoever raised the event owns the site from that point on.
+[EventType("site.ownership-claimed", 1)]
+public sealed record SiteOwnershipClaimed;
+
 [EventType("site.collaborator-added", 1)]
 public sealed record SiteCollaboratorAdded(string Email);
 
