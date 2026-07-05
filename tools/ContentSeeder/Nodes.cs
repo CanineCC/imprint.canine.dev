@@ -13,6 +13,7 @@ namespace ContentSeeder;
 public static class Nodes
 {
     public static readonly Locale En = new("en");
+    public static readonly Locale Da = new("da");
 
     private const int HeadingMax = 500; // Page.MaxTextLength / NodeContentRules
     private const int PlainMax = 500;   // headings + button labels are plain, capped at 500

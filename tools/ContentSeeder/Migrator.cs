@@ -36,6 +36,22 @@ public sealed class Migrator(ICommandDispatcher dispatcher, string? apiBase = nu
         IReadOnlyList<string> Flags);
 
     private readonly List<string> _flags = [];
+    private Translations? _chrome;
+
+    /// <summary>
+    /// Supply a translation map so the site CHROME (nav labels + descriptions, footer headings +
+    /// links, header action labels, copy line) is authored bilingually — English plus every match
+    /// in the map, keyed by the English label. Page content is NOT translated here (that is the
+    /// TranslationSeeder's EditText pass); this only covers the site-level furniture the publisher
+    /// renders on every localized page. Pass null (default) for English-only chrome.
+    /// </summary>
+    public void UseChromeTranslations(Translations? translations) => _chrome = translations;
+
+    /// <summary>A chrome label as bilingual LocalizedText: English, plus Danish when the map has it.</summary>
+    private LocalizedText Chrome(string english) =>
+        _chrome is { } t && t.TryGet(english, out var danish)
+            ? Nodes.Text(english).With(Nodes.Da, danish)
+            : Nodes.Text(english);
 
     public async Task<SiteResult> MigrateSite(SiteDef site)
     {
@@ -131,13 +147,13 @@ public sealed class Migrator(ICommandDispatcher dispatcher, string? apiBase = nu
 
             // Keep the CMS label + optional description verbatim (the dropdown card copy
             // is authored, not the page title).
-            var desc = string.IsNullOrWhiteSpace(link.Desc) ? null : Nodes.Text(link.Desc!);
-            return new NavigationChild(Nodes.Text(link.Label), target, desc);
+            var desc = string.IsNullOrWhiteSpace(link.Desc) ? null : Chrome(link.Desc!);
+            return new NavigationChild(Chrome(link.Label), target, desc);
         }
 
         // ── 2. header navigation: home page first (so it renders at "/"), then the
         //       CMS header entries — direct links and dropdown groups, preserved. ──
-        var navItems = new List<NavigationItem> { NavigationItem.Page(site.HomePageId, Nodes.Text("Home")) };
+        var navItems = new List<NavigationItem> { NavigationItem.Page(site.HomePageId, Chrome("Home")) };
         foreach (var entry in site.HeaderNav)
         {
             if (entry.IsGroup)
@@ -145,7 +161,7 @@ public sealed class Migrator(ICommandDispatcher dispatcher, string? apiBase = nu
                 var children = entry.Children!.Select(ToChild).OfType<NavigationChild>().ToList();
                 if (children.Count > 0)
                 {
-                    navItems.Add(NavigationItem.Group(Nodes.Text(entry.Label), children));
+                    navItems.Add(NavigationItem.Group(Chrome(entry.Label), children));
                 }
 
                 continue;
@@ -167,7 +183,7 @@ public sealed class Migrator(ICommandDispatcher dispatcher, string? apiBase = nu
 
             // The CMS header carries its own label verbatim (it need not equal the page
             // title), so keep it for both link kinds.
-            navItems.Add(new NavigationItem { Label = Nodes.Text(entry.Label), Link = link });
+            navItems.Add(new NavigationItem { Label = Chrome(entry.Label), Link = link });
         }
 
         await Ok(new ChangeNavigation(site.SiteId, navItems), $"ChangeNavigation {site.Key}");
@@ -183,12 +199,12 @@ public sealed class Migrator(ICommandDispatcher dispatcher, string? apiBase = nu
             }
 
             // Footer labels are authored copy, kept verbatim for both link kinds.
-            return new FooterLink(Nodes.Text(link.Label), target);
+            return new FooterLink(Chrome(link.Label), target);
         }
 
         var footerGroups = site.FooterGroups
             .Select(col => new FooterLinkGroup(
-                Nodes.Text(col.Heading),
+                Chrome(col.Heading),
                 col.Links.Select(ToFooterLink).OfType<FooterLink>().ToList()))
             .Where(col => col.Links.Count > 0)
             .ToList();
@@ -201,12 +217,12 @@ public sealed class Migrator(ICommandDispatcher dispatcher, string? apiBase = nu
                 return null;
             }
 
-            return new HeaderAction(Nodes.Text(act.Label), target);
+            return new HeaderAction(Chrome(act.Label), target);
         }
 
         await Ok(new SetHeaderActions(site.SiteId, ToAction(site.HeaderCta), ToAction(site.HeaderQuiet)),
             $"SetHeaderActions {site.Key}");
-        await Ok(new SetCopyLine(site.SiteId, new CopyLine(Nodes.Text(site.CopyLine))), $"SetCopyLine {site.Key}");
+        await Ok(new SetCopyLine(site.SiteId, new CopyLine(Chrome(site.CopyLine))), $"SetCopyLine {site.Key}");
 
         // ── design theme: this brand's neutral family + accent ramp, then its typography
         //    (watchdog/cai wear the shared canine look; assay wears "Dal" — warm paper,

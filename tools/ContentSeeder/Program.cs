@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ContentSeeder;
 using Imprint.Authoring;
 using Imprint.Authoring.Domain;
@@ -151,6 +152,13 @@ foreach (var site in skipAuthoring ? [] : sites)
     }
 }
 
+// Load the Danish maps ONCE (shared with the 2c page-field pass below) so chrome misses and
+// page-field misses accumulate in the same Translations instance and report together.
+var daDir = Path.Combine(repoRoot, "tools", "ContentSeeder", "da");
+var daMaps = opts.SeedDa
+    ? sites.ToDictionary(s => s.Key, s => Translations.Load(Path.Combine(daDir, $"{s.Key}.da.json")))
+    : [];
+
 // ── 2. migrate (full authoring) OR rebrand (brand layer only) ──
 var migrator = new Migrator(dispatcher, opts.ApiBase);
 var results = new List<Migrator.SiteResult>();
@@ -166,6 +174,8 @@ else
 {
     foreach (var site in skipAuthoring ? [] : sites)
     {
+        // Bilingual site chrome (nav/footer/header/copy) when seeding Danish; en-only otherwise.
+        migrator.UseChromeTranslations(daMaps.GetValueOrDefault(site.Key));
         var r = await migrator.MigrateSite(site);
         results.Add(r);
         Console.WriteLine($"  {site.Key,-9} authored {r.PagesAuthored} pages + {r.DocsAuthored} docs, published {r.Published}");
@@ -173,6 +183,51 @@ else
 }
 
 Console.WriteLine();
+
+// ── 2c. non-default locale (Danish) content: register the locale + author every translatable
+// field from tools/ContentSeeder/da/<siteKey>.da.json (keyed by English source). Runs after the
+// English authoring above (works with --reauthor too), and writes a <siteKey>.missing.json
+// skeleton of any untranslated fields so the corpus stays honest — an untranslated field falls
+// back to English at publish, never a blank. Scope with --only to a single site.
+if (opts.SeedDa)
+{
+    var projections = provider.GetRequiredService<ProjectionEngine>();
+    await projections.CatchUp();
+    var trSeeder = new TranslationSeeder(
+        dispatcher,
+        provider.GetRequiredService<TranslationCoverage>(),
+        pageList,
+        siteOverview,
+        projections);
+    foreach (var site in sites)
+    {
+        // Reuse the SAME map instance the chrome pass used, so its missing report covers both.
+        var translations = daMaps.GetValueOrDefault(site.Key) ?? Translations.Load(Path.Combine(daDir, $"{site.Key}.da.json"));
+        var result = await trSeeder.Seed(site, "da", translations);
+        Console.WriteLine($"  da {site.Key,-9} {result.Translated}/{result.Total} fields translated" +
+                          (result.Missing.Count > 0 ? $" — {result.Missing.Count} MISSING" : " — complete") +
+                          (result.Rejected.Count > 0 ? $" — {result.Rejected.Count} REJECTED (non-canonical)" : ""));
+        foreach (var reject in result.Rejected)
+        {
+            Console.WriteLine($"    REJECTED {reject}");
+        }
+        if (result.Missing.Count > 0)
+        {
+            Directory.CreateDirectory(daDir);
+            var skeleton = result.Missing.ToDictionary(s => s, _ => "");
+            File.WriteAllText(
+                Path.Combine(daDir, $"{site.Key}.missing.json"),
+                JsonSerializer.Serialize(skeleton, new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+                }));
+            Console.WriteLine($"    → wrote da/{site.Key}.missing.json ({result.Missing.Count} strings to translate)");
+        }
+    }
+
+    Console.WriteLine();
+}
 
 // ── 2b. production environment config (cutover): one "Production" deploy target per
 // site in the run — the estate's convention ({root}/{key}, BaseUrl = the site's
@@ -259,7 +314,7 @@ static string? FindRepoRoot()
 
 internal sealed record Options(
     string? Db, string? Cms, string? Widgets, string? Publish, string? Media, string? ApiBase, bool NoPublish,
-    IReadOnlyList<string>? Only, bool PublishOnly, string? ProdEnvRoot, bool Rebrand, bool Reauthor);
+    IReadOnlyList<string>? Only, bool PublishOnly, string? ProdEnvRoot, bool Rebrand, bool Reauthor, bool SeedDa);
 
 internal static class Args
 {
@@ -270,6 +325,7 @@ internal static class Args
         var publishOnly = false;
         var rebrand = false;
         var reauthor = false;
+        var seedDa = false;
         string? prodEnvRoot = null;
         List<string>? only = null;
         for (var i = 0; i < args.Length; i++)
@@ -287,6 +343,7 @@ internal static class Args
                 case "--publish-only": publishOnly = true; break;
                 case "--rebrand": rebrand = true; break;
                 case "--reauthor": reauthor = true; break;
+                case "--seed-da": seedDa = true; break;
                 case "--prod-env-root": prodEnvRoot = args[++i]; break;
                 default:
                     Console.Error.WriteLine($"Unknown argument: {args[i]}");
@@ -294,6 +351,6 @@ internal static class Args
             }
         }
 
-        return new Options(db, cms, widgets, publish, media, apiBase, noPublish, only, publishOnly, prodEnvRoot, rebrand, reauthor);
+        return new Options(db, cms, widgets, publish, media, apiBase, noPublish, only, publishOnly, prodEnvRoot, rebrand, reauthor, seedDa);
     }
 }
