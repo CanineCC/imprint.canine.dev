@@ -147,6 +147,8 @@ public static class Verify
             "Canine contact page exists");
         Check(HasWidget(published, pageList, Sites.CanineSite, "contact", "contact-form"),
             "Canine contact carries the contact-form island");
+        Check(ContactFormPostsToEndpoint(published, pageList, Sites.CanineSite),
+            "Canine contact form posts to /api/contact (action prop set, no fallback-email in markup)");
 
         // WD pricing page: pricingTiers copy + first-scan-free line
         Check(PageExists(pageList, Sites.WatchdogSite, "pricing"),
@@ -303,6 +305,19 @@ public static class Verify
     {
         var page = Page(published, list, site, slug);
         return page is not null && page.Tree.All().OfType<WidgetNode>().Any(w => w.Tag == tag);
+    }
+
+    // The form must never advertise an inbox: it posts to the imprint editor's
+    // /api/contact (the address lives in that app's server config) and no
+    // fallback-email prop may reach the published markup.
+    private static bool ContactFormPostsToEndpoint(PublishedContent published, PageList list, SiteId site)
+    {
+        var page = Page(published, list, site, "contact");
+        var widget = page?.Tree.All().OfType<WidgetNode>().FirstOrDefault(w => w.Tag == "contact-form");
+        return widget is not null
+            && widget.Props.Get("action") is { Length: > 0 } action
+            && action.EndsWith("/api/contact", StringComparison.Ordinal)
+            && widget.Props.Get("fallback-email") is null;
     }
 
     private static int SvgNodeCount(

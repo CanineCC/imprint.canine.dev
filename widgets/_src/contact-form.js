@@ -1,15 +1,15 @@
 // <contact-form topics='["Book an appraisal","Sales & pricing",…]'
-//               fallback-email="sales@canine.dev" action=""
+//               action="https://app.imprint.canine.dev/api/contact" fallback-email=""
 //               kicker="…" heading="…" lede="…" privacy-note="…"
 //               brand="watchdog|assay|cai">
 //
 // Port of packages/ui/src/ContactForm.tsx markup: the topic <select> (with the
 // ?topic= prefill and the same TOPIC_KEY_MATCHERS), name / email / org /
-// message fields, and the hidden `website` honeypot. The CMS posts JSON to a
-// server /api/contact route; imprint publishes static pages with NO API, so
-// this island submits with a plain HTML form POST to a configurable `action`,
-// defaulting to a mailto: to `fallback-email`. The provenance is honest: with
-// no action it opens the visitor's mail client pre-addressed.
+// message fields, and the hidden `website` honeypot. With an `action` set the
+// island fetch()es a form-encoded POST to that endpoint (the imprint editor's
+// anonymous /api/contact) and reports the result inline in .mk-form-status —
+// no inbox address anywhere in the page. The mailto: path to `fallback-email`
+// survives ONLY as the legacy no-action mode.
 
 import {
   CaiIsland,
@@ -78,7 +78,7 @@ customElements.define(
   class extends CaiIsland {
     render(root) {
       const topics = (this.json("topics", []) || []).map(String);
-      const fallback = this.getAttribute("fallback-email") || "sales@canine.dev";
+      const fallback = this.getAttribute("fallback-email") || "";
       const action = (this.getAttribute("action") || "").trim();
       const privacyNote = this.getAttribute("privacy-note");
 
@@ -92,8 +92,9 @@ customElements.define(
         /* no window/URL — keep the first option */
       }
 
-      // No API on imprint: post to a configured endpoint, else mailto the fallback.
-      const formAction = action || `mailto:${fallback}`;
+      // Post to the configured endpoint; the mailto: fallback is legacy-only and
+      // needs an explicit fallback-email (never a baked-in default address).
+      const formAction = action || (fallback ? `mailto:${fallback}` : "");
       const isMailto = !action;
 
       const topicSelect =
@@ -123,25 +124,81 @@ customElements.define(
       html += `<label>How can we help?<textarea name="message" required></textarea></label>`;
       // Honeypot — humans never see it; bots fill it.
       html += `<label class="mk-form-hp" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>`;
+      if (action) {
+        // The submitting site's hostname, so one endpoint triages all brands.
+        let site = "";
+        try {
+          site = window.location.hostname;
+        } catch {
+          /* no window — leave it blank */
+        }
+        html += `<input type="hidden" name="site" value="${escapeHtml(site)}">`;
+      }
       html += `<div class="mk-cta-row"><button class="btn btn-primary btn-lg" type="submit">Send message</button></div>`;
-      html += `<p class="mk-form-status">This form opens your mail app addressed to <a href="mailto:${escapeHtml(fallback)}">${escapeHtml(fallback)}</a>.</p>`;
+      if (action) {
+        // Endpoint mode: the status line is the inline send-result — and it NEVER
+        // mentions an email address.
+        html += `<p class="mk-form-status" aria-live="polite"></p>`;
+      } else if (fallback) {
+        html += `<p class="mk-form-status">This form opens your mail app addressed to <a href="mailto:${escapeHtml(fallback)}">${escapeHtml(fallback)}</a>.</p>`;
+      }
       if (privacyNote)
         html += `<p class="mk-form-status">${renderInline(privacyNote)}</p>`;
       html += `</form>`;
       root.innerHTML = html;
 
-      // Drop the honeypot from a mailto: submission (a filled honeypot is a bot;
-      // and even empty it needn't clutter the mail body). Native submit otherwise.
       const form = root.querySelector("form");
       if (!form) return;
-      form.addEventListener("submit", (e) => {
+      const status = action ? form.querySelector(".mk-form-status") : null;
+      const button = form.querySelector('button[type="submit"]');
+      const showStatus = (text, ok) => {
+        if (!status) return;
+        status.textContent = text;
+        status.classList.toggle("is-ok", ok === true);
+        status.classList.toggle("is-error", ok === false);
+      };
+
+      form.addEventListener("submit", async (e) => {
         const hp = form.querySelector('input[name="website"]');
+
+        if (action) {
+          // Endpoint mode: fetch() the form-encoded fields (a preflight-free simple
+          // request) and answer inline — the page never navigates.
+          e.preventDefault();
+          if (hp && hp.value.trim() !== "") {
+            // A filled honeypot is a bot — pretend success, send nothing.
+            showStatus("Thanks — we'll get back to you.", true);
+            return;
+          }
+          if (button) button.disabled = true; // no double-sends
+          showStatus("Sending…", null);
+          try {
+            const res = await fetch(action, {
+              method: "POST",
+              body: new URLSearchParams(new FormData(form)),
+            });
+            if (!res.ok) throw new Error(String(res.status));
+            form.reset();
+            showStatus("Thanks — we'll get back to you.", true);
+          } catch {
+            // Never reveal an address here — retry is the only recovery we offer.
+            showStatus(
+              "Something went wrong sending your message — please try again in a minute.",
+              false
+            );
+          } finally {
+            if (button) button.disabled = false;
+          }
+          return;
+        }
+
+        // Legacy mailto: drop the honeypot from the serialized body (a filled one is
+        // a bot; even empty it needn't clutter the mail). Native submit otherwise.
         if (hp && hp.value.trim() !== "") {
-          // Looks like a bot — swallow the submit silently.
           e.preventDefault();
           return;
         }
-        if (hp) hp.disabled = true; // keep it out of the serialized body
+        if (hp) hp.disabled = true;
       });
     }
   }

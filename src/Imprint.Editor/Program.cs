@@ -1,13 +1,17 @@
+using System.Text.Json;
+using System.Threading.RateLimiting;
 using Imprint.Authoring;
 using Imprint.Authoring.Features.Assets;
 using Imprint.Authoring.Features.Pages;
 using Imprint.Authoring.Projections;
 using Imprint.Editor.Auth;
 using Imprint.Editor.Components;
+using Imprint.Editor.Contact;
 using Imprint.Editor.Services;
 using Imprint.EventSourcing;
 using Imprint.Media;
 using Imprint.Publishing;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,6 +68,28 @@ builder.Services.AddScoped<ToastService>();
 builder.Services.AddScoped<CommandRunner>();
 builder.Services.AddScoped<CanvasBridge>();
 
+// The public contact intake (/api/contact): this app's one anonymous write surface.
+// CORS pins it to the published marketing origins and a small per-IP window blunts
+// drive-by spam. Neither registration defines a default policy / global limiter, so
+// nothing else in the pipeline changes — only the contact endpoint opts in below.
+builder.Services.AddCors(cors => cors.AddPolicy("contact", policy => policy
+    .WithOrigins(
+        "https://canine.dev", "https://www.canine.dev",
+        "https://watchdog.canine.dev", "https://assay.canine.dev", "https://cai.canine.dev")
+    .WithMethods("POST")
+    .WithHeaders("Content-Type")));
+builder.Services.AddRateLimiter(limiter =>
+{
+    limiter.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    limiter.AddPolicy("contact", http => RateLimitPartition.GetFixedWindowLimiter(
+        http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(1) }));
+});
+builder.Services.AddSingleton(provider => new ContactIntake(
+    provider.GetRequiredService<IConfiguration>(),
+    dataDirectory,
+    provider.GetRequiredService<ILogger<ContactIntake>>()));
+
 // Optional in-app Keycloak/OIDC protection. Off until Keycloak:Authority is configured;
 // refuses to run unauthenticated in Production (see ImprintAuthExtensions).
 var authOptions = builder.AddImprintEditorAuth();
@@ -76,6 +102,13 @@ var app = builder.Build();
 // process-wide delegate.
 app.Services.GetRequiredService<EventMetadataProvider>().ActorSource =
     () => EditorActor.Current ?? Environment.UserName;
+
+// CORS + rate limiting exist ONLY for /api/contact (RequireCors/RequireRateLimiting on
+// that endpoint); with no default policy and no global limiter these middlewares are
+// no-ops for every other request. CORS runs before authentication so a cross-origin
+// preflight is answered without ever touching the auth stack.
+app.UseCors();
+app.UseRateLimiter();
 
 // TLS terminates on the reverse proxy; when auth is enabled the app must see the forwarded
 // scheme/host to build correct redirect URIs, and enforce login before anything else runs.
@@ -174,6 +207,28 @@ if (authOptions.Enabled)
     widgetBundles.RequireAuthorization();
 }
 
+// Public contact intake: the published marketing sites' <contact-form> islands POST here
+// (fetch, form-encoded; JSON works too for API callers). Fully anonymous BY DESIGN, like
+// /healthz — a visitor sending a sales note has no Keycloak login, and RequireAuthorization
+// above is per-endpoint, so it never covers this route. The recipient inbox lives in
+// server config (ContactIntake) — no email address ever appears in page markup.
+app.MapPost("/api/contact", async (HttpContext http, ContactIntake intake, CancellationToken ct) =>
+{
+    var fields = await ReadContactFields(http, ct);
+    if (fields is null)
+    {
+        return Results.BadRequest(new { ok = false, errors = new[] { "unreadable submission" } });
+    }
+
+    var errors = await intake.Handle(fields, ct);
+    return errors.Count == 0
+        ? Results.Ok(new { ok = true })
+        : Results.BadRequest(new { ok = false, errors });
+})
+.AllowAnonymous()
+.RequireCors("contact")
+.RequireRateLimiting("contact");
+
 // Public preview: the founder reviews the real published page (chrome + marketing CSS +
 // hydrated live islands) at /preview/{site} and /preview/{site}/{slug}. Anonymous by
 // design — this is public marketing content, not the editor. /preview (no site) lists the
@@ -221,6 +276,26 @@ app.MapGet("/preview/{site}/{**path}", (string site, string? path, SitePreview p
 await app.Services.InitializeImprintEventSourcing();
 
 app.Run();
+
+// The island posts application/x-www-form-urlencoded (a preflight-free "simple" CORS
+// request); JSON is accepted for programmatic callers. Both carry the same wire names.
+static async Task<ContactFields?> ReadContactFields(HttpContext http, CancellationToken ct)
+{
+    if (http.Request.HasFormContentType)
+    {
+        var form = await http.Request.ReadFormAsync(ct);
+        return new(form["topic"], form["name"], form["email"], form["org"], form["message"], form["website"], form["site"]);
+    }
+
+    try
+    {
+        return await http.Request.ReadFromJsonAsync<ContactFields>(ct);
+    }
+    catch (JsonException)
+    {
+        return null; // malformed body → one 400, not an unhandled 500
+    }
+}
 
 static string ResolveWidgetsDirectory(WebApplicationBuilder builder)
 {

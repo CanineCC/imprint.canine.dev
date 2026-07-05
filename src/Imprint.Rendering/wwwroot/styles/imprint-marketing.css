@@ -323,18 +323,15 @@
 
 /* A kicker is a prose paragraph whose only content is a single <strong> — the
    seeder authors `<p><strong>…</strong></p>` for every block kicker/tag. Render it
-   as canine's uppercase accent-barred eyebrow. */
+   as canine's mono accent kicker (app.css .kicker): no dash, one inline line. */
 [class*="ip-ap-"] .ip-prose:has(> p > strong:only-child):first-child,
 .ip-prose.ip-kicker {
   font-size: 0; /* collapse whitespace text nodes; the strong re-sets its own size */
 }
 [class*="ip-ap-"] .ip-prose:has(> p > strong:only-child):first-child > p > strong {
-  display: inline-flex; align-items: center; gap: 0.55rem;
-  font-size: var(--fs-2xs); font-weight: 600; letter-spacing: 0.09em;
-  text-transform: uppercase; color: var(--muted);
-}
-[class*="ip-ap-"] .ip-prose:has(> p > strong:only-child):first-child > p > strong::before {
-  content: ""; width: 18px; height: 1px; background: var(--accent); display: inline-block;
+  display: inline-block;
+  font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent);
 }
 
 /* Section headings + lede. h1 is hero-only; h2 is the section title. */

@@ -1114,8 +1114,12 @@ public sealed class BlockMapper(
         WidgetSection(block, "contact-form", props =>
         {
             props["topics"] = block.Arr("topics").ToJsonString();
-            var fallback = block.Str("fallbackEmail");
-            props["fallback-email"] = string.IsNullOrWhiteSpace(fallback) ? "sales@canine.dev" : fallback!;
+            // Every site's form posts to the imprint editor's anonymous /api/contact —
+            // the inbox address lives in that app's server config, NEVER in page markup,
+            // so the block's legacy fallbackEmail is deliberately not stamped (it would
+            // put a scrapable address back into the published HTML).
+            var action = block.Str("action");
+            props["action"] = string.IsNullOrWhiteSpace(action) ? "https://app.imprint.canine.dev/api/contact" : action!;
             Copy(block, "kicker", props, "kicker");
             Copy(block, "heading", props, "heading");
             Copy(block, "lede", props, "lede");

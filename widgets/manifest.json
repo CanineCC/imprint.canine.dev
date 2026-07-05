@@ -156,13 +156,13 @@
   {
     "tag": "contact-form",
     "name": "Contact form",
-    "description": "A contact form with a topic selector (?topic= prefill), name / email / organisation / message fields and a spam honeypot. Static pages have no API, so it submits to a configurable endpoint, defaulting to a mailto: to the fallback email.",
+    "description": "A contact form with a topic selector (?topic= prefill), name / email / organisation / message fields and a spam honeypot. Submits via fetch() to the configurable `action` endpoint (the imprint editor's anonymous /api/contact) and reports success/failure inline — the inbox address stays server-side, never in the page. A mailto: to the fallback email survives only as the legacy no-action mode.",
     "bundle": "contact-form.js",
     "placeholder": "Contact form",
     "props": [
       { "name": "topics", "label": "Topic options (JSON array of strings)", "type": "text", "default": "[]" },
-      { "name": "fallback-email", "label": "Fallback email (mailto target / shown on failure)", "type": "text", "default": "sales@canine.dev" },
-      { "name": "action", "label": "Form POST endpoint (optional — empty = mailto the fallback)", "type": "url", "default": "" },
+      { "name": "fallback-email", "label": "Legacy mailto target (used — and rendered — only when no action is set)", "type": "text", "default": "" },
+      { "name": "action", "label": "Form POST endpoint (empty = legacy mailto to the fallback email)", "type": "url", "default": "https://app.imprint.canine.dev/api/contact" },
       { "name": "kicker", "label": "Kicker (small uppercase intro)", "type": "text", "default": "" },
       { "name": "heading", "label": "Heading", "type": "text", "default": "" },
       { "name": "lede", "label": "Lede / intro paragraph", "type": "text", "default": "" },
