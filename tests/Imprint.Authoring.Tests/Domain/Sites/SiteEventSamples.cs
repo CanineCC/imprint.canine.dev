@@ -67,6 +67,9 @@ public sealed class SiteEventSamples : IEventSampleProvider
             yield return new SiteCopyLineChanged(
                 new CopyLine(LocalizedText.Of(en, "© 2025–2026 · The independent surveyor.")));
 
+            yield return new SiteCollaboratorAdded("colleague@example.com");
+            yield return new SiteCollaboratorRemoved("colleague@example.com");
+
             // A promotion pipeline: several ordered deploy targets, exercising the list
             // payload's sequence value-equality on round trip.
             yield return new SiteEnvironmentsChanged([

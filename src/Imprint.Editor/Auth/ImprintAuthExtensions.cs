@@ -33,6 +33,13 @@ public static class ImprintAuthExtensions
         // AuthenticationStateProvider is present (i.e. auth is enabled below).
         builder.Services.AddScoped(sp => new EditorActor(sp.GetService<AuthenticationStateProvider>()));
 
+        // Same for the per-site access gate: registered always, enforcing only when enabled,
+        // so components can inject it unconditionally.
+        builder.Services.AddScoped(sp => new SiteAccess(
+            options,
+            sp.GetRequiredService<EditorActor>(),
+            sp.GetRequiredService<Imprint.Authoring.Projections.SiteOverview>()));
+
         if (!options.Enabled)
         {
             var allowAnonymous = builder.Configuration.GetValue("Imprint:AllowUnauthenticated", false);

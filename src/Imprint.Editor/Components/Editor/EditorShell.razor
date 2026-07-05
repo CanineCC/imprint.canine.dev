@@ -1,12 +1,15 @@
 @using Imprint.Authoring.Projections
+@using Imprint.Editor.Auth
 @using Imprint.Editor.Services
 @using Microsoft.Extensions.Configuration
 @implements IDisposable
 @inject EditorSession Session
 @inject SiteOverview Site
+@inject PageList Pages
 @inject CommandRunner Commands
 @inject ToastService Toasts
 @inject IConfiguration Config
+@inject KeycloakOptions Auth
 
 @* The frame: top bar, icon rail, contextual left panel, canvas column, inspector,
    status bar, toast host. Panels own their interiors; the shell owns arrangement. *@
@@ -28,7 +31,19 @@
                 aria-label="Toggle canvas dark mode" @onclick="Session.ToggleCanvasDark">
             @(Session.CanvasDark ? "☾" : "☀")
         </button>
+        @if (PreviewHref is { } previewHref)
+        {
+            <a class="ed-btn ed-btn-ghost" href="@previewHref" target="_blank" rel="noopener"
+               title="Open the published site in a new tab — no editor chrome, fully navigable, not deployed"
+               aria-label="Open preview in a new tab">Preview&nbsp;↗</a>
+        }
         <PublishButton />
+        @if (Auth.Enabled)
+        {
+            <form class="ed-signout" method="post" action="/auth/logout">
+                <button type="submit" class="ed-btn ed-btn-ghost" title="Sign out" aria-label="Sign out">⎋</button>
+            </form>
+        }
     </header>
 
     <nav class="ed-rail" aria-label="Editor panels">
@@ -96,6 +111,26 @@
         (EditorPanel.Theme, "◐", "Theme"),
         (EditorPanel.Translations, "文", "Translations"),
     ];
+
+    // The reachable published-style preview (/preview/{site}) of the active site, at the
+    // open page when that page has been published, else the site root. The preview plane
+    // resolves a site by slug OR compact id — the id is the stable choice here.
+    private string? PreviewHref
+    {
+        get
+        {
+            if (Session.ActiveSiteId is not { } siteId)
+            {
+                return null;
+            }
+
+            var root = $"/preview/{siteId.Compact}/";
+            return Session.CurrentPageId is { } pageId
+                   && Pages.Get(pageId) is { PublishedVersion: not null, IsHome: false } page
+                ? $"{root}{page.Slug.Value}/"
+                : root;
+        }
+    }
 
     // Gate for the /admin/widgets link (and the page itself). Default on for the demo;
     // set ImprintAdmin=false to hide it. This is a visibility gate, not access control —

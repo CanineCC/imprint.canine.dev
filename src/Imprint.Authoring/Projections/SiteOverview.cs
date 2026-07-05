@@ -39,12 +39,29 @@ public sealed class SiteOverview : ReadModel
     /// single-tenant install keeps working and no site is ever orphaned.
     /// </summary>
     public IReadOnlyList<Site> OwnedBy(string actor) =>
-    [
-        .. _order
-            .Where(id => _owners.GetValueOrDefault(id, string.Empty) is var owner
-                && (owner.Length == 0 || string.Equals(owner, actor, StringComparison.OrdinalIgnoreCase)))
-            .Select(id => _sites[id]),
-    ];
+        [.. _order.Where(id => IsOwner(id, actor)).Select(id => _sites[id])];
+
+    /// <summary>
+    /// Whether <paramref name="actor"/> is the site's owner. A legacy site with no
+    /// recorded owner (empty string) counts as everyone's — same rationale as
+    /// <see cref="OwnedBy"/>.
+    /// </summary>
+    public bool IsOwner(SiteId id, string actor) =>
+        _owners.GetValueOrDefault(id, string.Empty) is var owner
+        && (owner.Length == 0 || string.Equals(owner, actor, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Whether <paramref name="actor"/> may open and edit the site: its owner, one of
+    /// its collaborators (<see cref="Site.Collaborators"/>), or anyone when the site
+    /// predates ownership.
+    /// </summary>
+    public bool CanAccess(SiteId id, string actor) =>
+        _sites.TryGetValue(id, out var site)
+        && (IsOwner(id, actor) || site.Collaborators.Contains(actor, StringComparer.OrdinalIgnoreCase));
+
+    /// <summary>The sites <paramref name="actor"/> may edit, in creation order — the dashboard list.</summary>
+    public IReadOnlyList<Site> AccessibleTo(string actor) =>
+        [.. _order.Where(id => CanAccess(id, actor)).Select(id => _sites[id])];
 
     public override void Apply(StoredEvent @event)
     {

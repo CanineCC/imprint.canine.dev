@@ -25,8 +25,11 @@ public sealed class Site : AggregateRoot
     public const int MaxFooterLinksPerGroup = 20;
     public const int MaxEnvironments = 8;
     public const int MaxEnvironmentNameLength = 40;
+    public const int MaxCollaborators = 20;
+    public const int MaxCollaboratorEmailLength = 254;
 
     private readonly List<Locale> _locales = [];
+    private readonly List<string> _collaborators = [];
     private IReadOnlyList<NavigationItem> _navigation = [];
     private IReadOnlyList<FooterLinkGroup> _footerGroups = [];
     private IReadOnlyList<DeployEnvironment> _environments = [];
@@ -47,6 +50,11 @@ public sealed class Site : AggregateRoot
     public HeaderAction? HeaderCta { get; private set; }
     public HeaderAction? HeaderQuiet { get; private set; }
     public CopyLine? CopyLine { get; private set; }
+
+    // Emails of the people who may edit this site besides its owner, in the order they
+    // were added. The owner is not in this list — it lives on the site.created envelope
+    // actor (see SiteOverview), so the two never drift.
+    public IReadOnlyList<string> Collaborators => _collaborators;
 
     // The site's deploy targets, in promotion order (e.g. Test → Staging → Production).
     // A site with none has never been given a publish destination; the dashboard's gear
@@ -370,6 +378,65 @@ public sealed class Site : AggregateRoot
         Raise(new SiteEnvironmentsChanged(normalized));
     }
 
+    /// <summary>
+    /// Grant another person edit access by the email they sign in with. The aggregate
+    /// validates shape only — whether the address belongs to a real, reachable person is
+    /// the operator's concern (access simply never matches a mistyped email).
+    /// </summary>
+    public void AddCollaborator(string email)
+    {
+        var address = ValidCollaboratorEmail(email);
+        if (_collaborators.Contains(address, StringComparer.OrdinalIgnoreCase))
+        {
+            throw new DomainException($"'{address}' is already a collaborator on this site.");
+        }
+
+        if (_collaborators.Count >= MaxCollaborators)
+        {
+            throw new DomainException($"A site can have at most {MaxCollaborators} collaborators.");
+        }
+
+        Raise(new SiteCollaboratorAdded(address));
+    }
+
+    public void RemoveCollaborator(string email)
+    {
+        var address = ValidCollaboratorEmail(email);
+        if (!_collaborators.Contains(address, StringComparer.OrdinalIgnoreCase))
+        {
+            throw new DomainException($"'{address}' is not a collaborator on this site.");
+        }
+
+        Raise(new SiteCollaboratorRemoved(address));
+    }
+
+    private static string ValidCollaboratorEmail(string email)
+    {
+        var trimmed = email?.Trim() ?? string.Empty;
+        if (trimmed.Length == 0)
+        {
+            throw new DomainException("The collaborator email cannot be empty.");
+        }
+
+        if (trimmed.Length > MaxCollaboratorEmailLength)
+        {
+            throw new DomainException(
+                $"A collaborator email must be {MaxCollaboratorEmailLength} characters or fewer.");
+        }
+
+        // Deliberately loose: one '@' with something on both sides, no whitespace. The
+        // check exists to catch obvious typos, not to adjudicate RFC 5322 — the IdP is
+        // the authority on what a valid login email is.
+        var at = trimmed.IndexOf('@');
+        if (at <= 0 || at == trimmed.Length - 1 || trimmed.IndexOf('@', at + 1) >= 0 ||
+            trimmed.Any(char.IsWhiteSpace))
+        {
+            throw new DomainException($"'{trimmed}' does not look like an email address.");
+        }
+
+        return trimmed;
+    }
+
     protected override void When(object @event)
     {
         switch (@event)
@@ -414,6 +481,12 @@ public sealed class Site : AggregateRoot
                 break;
             case SiteEnvironmentsChanged e:
                 _environments = [.. e.Environments];
+                break;
+            case SiteCollaboratorAdded e:
+                _collaborators.Add(e.Email);
+                break;
+            case SiteCollaboratorRemoved e:
+                _collaborators.RemoveAll(c => string.Equals(c, e.Email, StringComparison.OrdinalIgnoreCase));
                 break;
             default:
                 throw new InvalidOperationException($"Site cannot apply unknown event {@event.GetType().Name}.");

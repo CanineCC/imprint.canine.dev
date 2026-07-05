@@ -617,6 +617,25 @@ button { font: inherit; color: inherit; }
 .dash-head h1 { font-size: 1.9rem; margin: 0 0 6px; }
 .dash-sub { color: var(--ed-text-muted); max-width: 60ch; margin: 0; }
 
+/* Signed-in identity + sign-out, top-right of the dashboard header. */
+.dash-head { position: relative; }
+.dash-user {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dash-user-email {
+  color: var(--ed-text-muted);
+  font-size: 0.85rem;
+  max-width: 32ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .dash-grid {
   list-style: none;
   margin: 0;
@@ -726,6 +745,19 @@ button { font: inherit; color: inherit; }
 
 .settings-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .settings-dirty { color: var(--ed-warn); font-size: .82rem; }
+
+/* People: the owner + collaborator rows on the settings page. */
+.people-list { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.people-row { display: flex; align-items: center; gap: 10px; }
+.people-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.people-role {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--ed-surface-2);
+  color: var(--ed-text-muted);
+  font-size: .75rem;
+}
 
 .env-list { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .env-row { display: flex; align-items: center; gap: 8px; }

@@ -1,5 +1,7 @@
 using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Sites;
+using Imprint.Authoring.Features.Sites.AddCollaborator;
+using Imprint.Authoring.Features.Sites.RemoveCollaborator;
 using Imprint.Authoring.Projections;
 using Imprint.Authoring.Tests.Features;
 using Imprint.EventSourcing;
@@ -56,6 +58,51 @@ public sealed class SiteOverviewTests
         var overview = host.Get<SiteOverview>();
         Assert.Equal(string.Empty, overview.OwnerOf(legacy));
         Assert.Contains(legacy, overview.OwnedBy("anyone@example.com").Select(s => s.Id));
+    }
+
+    [Fact]
+    public async Task A_collaborator_gains_access_but_not_ownership()
+    {
+        await using var host = new AuthoringTestHost();
+        var alice = await CreateSiteAs(host, "alice@example.com", "Alice Co");
+
+        var overview = host.Get<SiteOverview>();
+        Assert.False(overview.CanAccess(alice, "bob@example.com"));
+
+        // Grant through the real slice so the projection folds a stored event.
+        await host.Ok(new AddCollaborator(alice, "Bob@Example.com"));
+
+        Assert.True(overview.CanAccess(alice, "bob@example.com"));
+        Assert.False(overview.IsOwner(alice, "bob@example.com"));
+        Assert.Equal([alice], overview.AccessibleTo("bob@example.com").Select(s => s.Id).ToArray());
+        Assert.Empty(overview.OwnedBy("bob@example.com"));
+
+        await host.Ok(new RemoveCollaborator(alice, "bob@example.com"));
+        Assert.False(overview.CanAccess(alice, "bob@example.com"));
+        Assert.Empty(overview.AccessibleTo("bob@example.com"));
+    }
+
+    [Fact]
+    public async Task The_owner_can_access_without_being_a_collaborator()
+    {
+        await using var host = new AuthoringTestHost();
+        var alice = await CreateSiteAs(host, "Alice@Example.com", "Alice Co");
+
+        var overview = host.Get<SiteOverview>();
+        Assert.True(overview.CanAccess(alice, "alice@example.com"));
+        Assert.True(overview.IsOwner(alice, "alice@example.com"));
+        Assert.Equal([alice], overview.AccessibleTo("alice@example.com").Select(s => s.Id).ToArray());
+    }
+
+    [Fact]
+    public async Task A_legacy_site_with_no_recorded_owner_is_accessible_to_everyone()
+    {
+        await using var host = new AuthoringTestHost();
+        var legacy = await CreateSiteAs(host, actor: "", name: "Legacy Site");
+
+        var overview = host.Get<SiteOverview>();
+        Assert.True(overview.CanAccess(legacy, "anyone@example.com"));
+        Assert.True(overview.IsOwner(legacy, "anyone@example.com"));
     }
 
     [Fact]

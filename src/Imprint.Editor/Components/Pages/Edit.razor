@@ -1,7 +1,9 @@
 @page "/edit/{PageIdValue}"
 @using Imprint.Authoring.Domain
+@using Imprint.Editor.Auth
 @using Imprint.Editor.Services
 @inject EditorSession Session
+@inject SiteAccess Access
 @inject NavigationManager Navigation
 
 <PageTitle>@(Session.CurrentPage?.Title.Resolve(Session.EditLocale, Session.EditLocale) is { Length: > 0 } title ? $"{title} · Imprint" : "Imprint")</PageTitle>
@@ -11,11 +13,19 @@
 @code {
     [Parameter] public string PageIdValue { get; set; } = "";
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
         if (Guid.TryParseExact(PageIdValue, "N", out var guid) || Guid.TryParse(PageIdValue, out guid))
         {
             Session.OpenPage(PageId.From(guid));
+
+            // A page URL is guessable, so opening one is an access check: a page of a
+            // site this user may not touch bounces to the dashboard (same treatment as
+            // an unknown id — existence is not revealed).
+            if (Session.CurrentPage?.SiteId is { } siteId && !await Access.CanAccessAsync(siteId))
+            {
+                Navigation.NavigateTo("/");
+            }
         }
         else
         {

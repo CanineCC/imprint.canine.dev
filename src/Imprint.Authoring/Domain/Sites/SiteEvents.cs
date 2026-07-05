@@ -96,3 +96,13 @@ public sealed record SiteHeaderActionsChanged(HeaderAction? Cta, HeaderAction? Q
 
 [EventType("site.copy-line-changed", 1)]
 public sealed record SiteCopyLineChanged(CopyLine? CopyLine);
+
+// ── Access: who may open and edit the site besides its owner ──
+// The email is the same identity the auth layer stamps as the envelope actor, so a
+// collaborator's access check and their attribution in history use one value.
+
+[EventType("site.collaborator-added", 1)]
+public sealed record SiteCollaboratorAdded(string Email);
+
+[EventType("site.collaborator-removed", 1)]
+public sealed record SiteCollaboratorRemoved(string Email);

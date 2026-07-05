@@ -29,6 +29,13 @@ public sealed class EditorActor(AuthenticationStateProvider? authState = null)
     public static string? Current => CurrentActor.Value;
 
     /// <summary>
+    /// The signed-in user's email for this circuit, or null when auth is disabled (or the
+    /// visitor is somehow anonymous). This is the same value commands are stamped with, so
+    /// ownership checks and event attribution can never disagree.
+    /// </summary>
+    public ValueTask<string?> IdentityAsync() => ResolveAsync();
+
+    /// <summary>
     /// Pushes the signed-in user's email as the ambient actor until the returned scope is
     /// disposed. Resolve the identity once per circuit and cache it — a circuit is one user.
     /// </summary>

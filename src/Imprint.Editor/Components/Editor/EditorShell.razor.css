@@ -8,3 +8,8 @@
     color: var(--ed-text);
     text-decoration: underline;
 }
+
+/* The sign-out form is layout-invisible: its button sits in the top bar's flex row. */
+.ed-signout {
+    display: contents;
+}

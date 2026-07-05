@@ -1,19 +1,22 @@
 @page "/"
 @using Imprint.Authoring.Domain
 @using Imprint.Authoring.Projections
+@using Imprint.Editor.Auth
 @using Imprint.Editor.Services
 @using Imprint.Publishing
 @implements IDisposable
 @inject SiteOverview Sites
+@inject SiteAccess Access
 @inject PageList Pages
 @inject SiteDeployService Deploy
 @inject NavigationManager Navigation
 
 <PageTitle>Your sites · Imprint</PageTitle>
 
-@if (Sites.All.Count == 0)
+@if (_sites.Count == 0)
 {
-    @* First run: no site yet — create one, then drop straight into its editor. *@
+    @* First run — or a signed-in user with no sites yet: create one, then drop
+       straight into its editor. *@
     <Onboarding OnCreated="OpenSite" />
 }
 else
@@ -22,10 +25,19 @@ else
         <header class="dash-head">
             <h1>Your sites</h1>
             <p class="dash-sub">Open a site to edit it, or start a new one. Editing is saved as you go; publishing is a separate, deliberate step.</p>
+            @if (Access.Enforced && _user is { Length: > 0 })
+            {
+                <div class="dash-user">
+                    <span class="dash-user-email" title="Signed in as @_user">@_user</span>
+                    <form method="post" action="/auth/logout">
+                        <button type="submit" class="ed-btn ed-btn-ghost">Sign out</button>
+                    </form>
+                </div>
+            }
         </header>
 
         <ul class="dash-grid" aria-label="Sites">
-            @foreach (var site in Sites.All)
+            @foreach (var site in _sites)
             {
                 <li class="dash-card">
                     <button type="button" class="dash-open" @onclick="() => OpenSite(site.Id)">
@@ -63,9 +75,22 @@ else
 }
 
 @code {
-    protected override void OnInitialized() => Sites.Changed += OnChanged;
+    private IReadOnlyList<Site> _sites = [];
+    private string? _user;
 
-    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+    protected override async Task OnInitializedAsync()
+    {
+        Sites.Changed += OnChanged;
+        _user = await Access.UserAsync();
+        _sites = await Access.SitesAsync();
+    }
+
+    // Re-filter, not just re-render: a change may add or remove a site this user can see.
+    private void OnChanged() => _ = InvokeAsync(async () =>
+    {
+        _sites = await Access.SitesAsync();
+        StateHasChanged();
+    });
 
     private int PageCount(SiteId id) => Pages.All(id).Count;
 

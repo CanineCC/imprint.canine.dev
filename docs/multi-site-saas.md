@@ -113,16 +113,24 @@ changes. And for a single operator today it works with **no auth at all** — Im
 the OS user as the actor and shows every site; auth only becomes necessary when a second
 customer must not see your sites.
 
-### The one app-side change (whatever proxy you choose)
+### The app-side wiring (built)
 
-Ownership already exists: `SiteOverview` records each site's owner from the
-`site.created` envelope's `actor`, and exposes `OwnedBy(actor)`. Two wires remain:
+Ownership exists and is now **enforced** whenever auth is enabled:
 
-- **Stamp the owner on create.** `EventMetadataProvider.ActorSource` (a `Func<string>`,
-  default `Environment.UserName`) sets `EventMetadata.Actor`. Point it at the
-  authenticated user's email so new sites are owned by their creator.
-- **Filter the dashboard.** Swap `SiteOverview.All` for `OwnedBy(currentUser)` on the
-  dashboard, and guard the editor/settings routes by ownership.
+- **Owner stamped on create.** `EventMetadataProvider.ActorSource` is pointed at the
+  signed-in user's email (`EditorActor` bridges the circuit identity to the write
+  path), so every new site is owned by its creator.
+- **Access enforced at the UI entry points.** `SiteAccess` (per-circuit) answers
+  "which sites may this user touch": the dashboard lists `SiteOverview.AccessibleTo`,
+  and the `/edit/{page}` and `/sites/{id}/settings` routes bounce users who fail
+  `CanAccess` — the same "not found" treatment as an unknown id, so existence is not
+  revealed. In Blazor Server these entry points are the attack surface: every command
+  is dispatched from a component that first had to get past one of them.
+- **Collaborators.** A site's settings page has a **People** card: the owner adds or
+  removes editors by the email they sign in with (`site.collaborator-added` /
+  `site.collaborator-removed` on the Site aggregate). A collaborator sees the site on
+  their dashboard and can edit and publish it; only the owner manages the list. With
+  auth off the list is kept but not enforced.
 
 > **Blazor Server trap.** The interactive circuit has **no `HttpContext`**, so the
 > forwarded identity header is unreadable from inside a component the normal way, and the
@@ -132,10 +140,14 @@ Ownership already exists: `SiteOverview` records each site's owner from the
 > duration of that circuit's commands. This is the same small change regardless of proxy
 > vs in-app OIDC.
 
-### Still a non-goal in v1
+### Remaining sharp edges
 
-The identity wiring above is documented, not built: no login UI, no per-tenant data
-isolation beyond ownership filtering, no roles. A legacy site with an empty owner stays
-visible to everyone (so single-tenant installs keep working and no site is orphaned) —
-which is the right default for a demo but must be tightened before onboarding real
-tenants.
+- A legacy site with an empty owner stays visible to everyone (so single-tenant
+  installs keep working and no site is orphaned) — right for a demo, tighten before
+  onboarding real tenants.
+- `/media` requires login but is not owner-scoped: any signed-in user who knows a
+  storage key can fetch any site's media bytes.
+- Owner-only management of the People card is enforced in the UI, not in the command
+  handler — fine while every dispatch path runs behind the gated components.
+- There are no roles beyond owner/editor: a collaborator can edit, publish and change
+  settings, but not manage access.

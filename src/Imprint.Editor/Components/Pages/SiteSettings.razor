@@ -4,10 +4,14 @@
 @using Imprint.Authoring.Projections
 @using Imprint.Authoring.Features.Sites.RenameSite
 @using Imprint.Authoring.Features.Sites.ConfigureEnvironments
+@using Imprint.Authoring.Features.Sites.AddCollaborator
+@using Imprint.Authoring.Features.Sites.RemoveCollaborator
+@using Imprint.Editor.Auth
 @using Imprint.Editor.Services
 @using Imprint.Publishing
 @implements IDisposable
 @inject SiteOverview Sites
+@inject SiteAccess Access
 @inject PageList Pages
 @inject PublishedContent Published
 @inject CommandRunner Commands
@@ -22,7 +26,7 @@
         <a class="dash-back" href="/">← All sites</a>
     </header>
 
-    @if (_site is not { } site)
+    @if (_site is not { } site || !_canAccess)
     {
         <section class="settings-card">
             <p class="panel-empty">This site could not be found. <a href="/">Back to your sites.</a></p>
@@ -44,6 +48,56 @@
                         disabled="@(!_interactive || _name.Trim().Length == 0 || _name.Trim() == site.Name)"
                         @onclick="SaveName">Save name</button>
             </div>
+        </section>
+
+        @* ---- People (owner + collaborators) ---- *@
+        <section class="settings-card" aria-labelledby="set-people">
+            <h2 id="set-people">People</h2>
+            <p class="settings-hint">
+                The owner and everyone listed here can open, edit and publish this site.
+                Access follows the email a person signs in with.
+                @if (!Access.Enforced)
+                {
+                    <text> Sign-in is not enabled on this install, so the list is kept but not enforced yet.</text>
+                }
+            </p>
+
+            <ul class="people-list">
+                <li class="people-row">
+                    <span class="people-email">@(Sites.OwnerOf(site.Id) is { Length: > 0 } owner ? owner : "(no recorded owner — visible to everyone)")</span>
+                    <span class="people-role">Owner</span>
+                </li>
+                @foreach (var collaborator in site.Collaborators)
+                {
+                    <li class="people-row" @key="collaborator">
+                        <span class="people-email">@collaborator</span>
+                        <span class="people-role">Editor</span>
+                        @if (_isOwner)
+                        {
+                            <button type="button" class="ed-btn ed-btn-ghost ed-btn-danger" title="Remove access"
+                                    aria-label="@($"Remove {collaborator}")"
+                                    disabled="@(!_interactive || _busy)" @onclick="() => RemovePerson(collaborator)">✕</button>
+                        }
+                    </li>
+                }
+            </ul>
+
+            @if (_isOwner)
+            {
+                <div class="settings-row">
+                    <input class="ed-input" type="email" placeholder="colleague@example.com"
+                           aria-label="Email of the person to add" disabled="@(!_interactive || _busy)"
+                           @bind="_newPerson" @bind:event="oninput"
+                           @onkeydown="@(e => e.Key == "Enter" ? AddPerson() : Task.CompletedTask)" />
+                    <button type="button" class="ed-btn ed-btn-primary"
+                            disabled="@(!_interactive || _busy || _newPerson.Trim().Length == 0)"
+                            @onclick="AddPerson">Add editor</button>
+                </div>
+            }
+            else
+            {
+                <p class="settings-hint">Only the site's owner can add or remove people.</p>
+            }
         </section>
 
         @* ---- Publish folders (deploy environments) ---- *@
@@ -161,13 +215,28 @@
     private Site? _site;
     private SiteId? _loadedId;
     private string _name = "";
+    private string _newPerson = "";
     private readonly List<EnvRow> _envs = [];
     private bool _interactive;
     private bool _busy;
+    private bool _canAccess;
+    private bool _isOwner;
 
     protected override void OnInitialized() => Sites.Changed += OnSitesChanged;
 
-    protected override void OnParametersSet() => Load();
+    protected override async Task OnParametersSetAsync()
+    {
+        Load();
+        await ResolveAccess();
+    }
+
+    // The settings URL is guessable, so loading it is an access check: a site this user
+    // may not touch renders the same "could not be found" card as an unknown id.
+    private async Task ResolveAccess()
+    {
+        _canAccess = _loadedId is { } id && await Access.CanAccessAsync(id);
+        _isOwner = _canAccess && _loadedId is { } ownedId && await Access.IsOwnerAsync(ownedId);
+    }
 
     protected override void OnAfterRender(bool firstRender)
     {
@@ -178,11 +247,13 @@
         }
     }
 
-    private void OnSitesChanged() => _ = InvokeAsync(() =>
+    private void OnSitesChanged() => _ = InvokeAsync(async () =>
     {
         // A rename/environments change elsewhere refreshes our snapshot, but never
         // clobbers in-progress edits: Load only re-seeds when the site identity changes.
+        // Access is re-resolved too, so being removed as a collaborator takes effect live.
         _site = _loadedId is { } id ? Sites.Get(id) : null;
+        await ResolveAccess();
         StateHasChanged();
     });
 
@@ -256,6 +327,33 @@
         }
 
         await Commands.Run(new RenameSite(site.Id, _name.Trim()));
+    }
+
+    private async Task AddPerson()
+    {
+        if (_busy || _site is not { } site || _newPerson.Trim().Length == 0)
+        {
+            return;
+        }
+
+        if (await Commands.Run(new AddCollaborator(site.Id, _newPerson.Trim())))
+        {
+            Toasts.Show($"{_newPerson.Trim()} can now edit this site.");
+            _newPerson = "";
+        }
+    }
+
+    private async Task RemovePerson(string email)
+    {
+        if (_busy || _site is not { } site)
+        {
+            return;
+        }
+
+        if (await Commands.Run(new RemoveCollaborator(site.Id, email)))
+        {
+            Toasts.Show($"Removed {email} from this site.");
+        }
     }
 
     private async Task SaveEnvs()
