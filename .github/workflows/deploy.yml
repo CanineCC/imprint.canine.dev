@@ -13,6 +13,18 @@ concurrency:
   group: deploy-main
   cancel-in-progress: false
 
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+  # The runner host (canine-wrx1) is shared with the watchdog scan fleet; .NET Server GC under that
+  # contention intermittently aborts the runtime (Internal CLR error 0x80131506, exit 134 — this
+  # workflow flaked on it 2/2 during the apex cutover). Workstation GC + tiered-JIT off shrink the
+  # footprint — same mitigation as the watchdog + kennel deploy workflows. Paired with
+  # -m:1 /p:UseSharedCompilation=false on the build/test/publish invocations below.
+  DOTNET_gcServer: "0"
+  DOTNET_TieredCompilation: "0"
+  DOTNET_TieredPGO: "0"
+
 # Zero-downtime deploy of the Imprint editor (app.imprint.canine.dev). The editor runs as a PUBLISHED
 # artifact in a blue/green pair (imprint-blue/imprint-green, ports 18102/19102) behind wrx1's host nginx
 # on :8102; dgx1 terminates TLS and proxies the LAN. A code push bounces ONLY the idle colour, then flips
@@ -35,19 +47,19 @@ jobs:
         run: dotnet restore Imprint.slnx
 
       - name: Build (Release)
-        run: dotnet build Imprint.slnx --no-restore -c Release
+        run: dotnet build Imprint.slnx --no-restore -c Release -m:1 /p:UseSharedCompilation=false
 
       # Fast correctness gate. The E2E suite (Imprint.E2E) is excluded: it drives a real browser via
       # Playwright against a live editor, which the deploy host does not carry and the health-gated
       # cutover already guards. Unit + integration tests run from the just-built binaries.
       - name: Test (unit + integration; E2E excluded)
-        run: dotnet test Imprint.slnx --no-build -c Release --filter "FullyQualifiedName!~Imprint.E2E"
+        run: dotnet test Imprint.slnx --no-build -c Release -m:1 /p:UseSharedCompilation=false --filter "FullyQualifiedName!~Imprint.E2E"
 
       # ---------- PUBLISH (next to the live colours; nothing is swapped yet) ----------
       - name: Publish editor artifact
         run: |
           rm -rf /home/jimmy/apps/imprint/app.new
-          dotnet publish src/Imprint.Editor -c Release -o /home/jimmy/apps/imprint/app.new
+          dotnet publish src/Imprint.Editor -c Release -m:1 /p:UseSharedCompilation=false -o /home/jimmy/apps/imprint/app.new
           test -f /home/jimmy/apps/imprint/app.new/Imprint.Editor.dll
 
       - name: Shut down build servers
