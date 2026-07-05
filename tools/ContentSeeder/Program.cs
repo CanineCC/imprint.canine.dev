@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 
 // ── args ─────────────────────────────────────────────────────────────────────
 // ContentSeeder --db <path> [--cms <cmsRoot>] [--widgets <dir>] [--publish <dir>]
-//               [--media <dir>] [--api-base <url>] [--no-publish]
+//               [--media <dir>] [--api-base <url>] [--no-publish] [--reauthor]
 // --api-base is the kennel PUBLIC-API origin the CAI data widgets fetch live from
 // (e.g. https://api.watchdog.canine.dev). Empty ⇒ widgets ship their labelled sample
 // as the offline default. The PARENT sets this to Track K's real URL at reseed time.
@@ -81,6 +81,58 @@ if (opts.Only is { Count: > 0 } only)
 //                    existing aggregates — no page creation, so a live store's content
 //                    and locale history (incl. editor-authored translations) survive.
 var skipAuthoring = opts.PublishOnly || opts.Rebrand;
+
+// ── 0. --reauthor: tear down the run's existing authored pages so MigrateSite (which
+// assumes its pages don't exist yet) can re-author into a store that already carries
+// the site. Composable with --only/--prod-env-root. Per site: clear the navigation
+// first (nav membership blocks DeletePage), then delete every non-home page through
+// the real DeletePage slice (slug freed; the publisher removes its files on the next
+// synchronize). The HOME page keeps its fixed id — a deleted stream can never be
+// re-created at version 0 — so it is emptied root-by-root via RemoveNode instead and
+// MigrateSite re-authors it in place.
+if (opts.Reauthor && !skipAuthoring)
+{
+    var aggregates = provider.GetRequiredService<IAggregateStore>();
+    foreach (var site in sites)
+    {
+        if (siteOverview.Get(site.SiteId) is null)
+        {
+            continue; // never seeded — plain first-time authoring takes over below
+        }
+
+        await Dispatch(
+            new Imprint.Authoring.Features.Sites.ChangeNavigation.ChangeNavigation(site.SiteId, []),
+            $"ClearNavigation {site.Key}");
+
+        var deleted = 0;
+        var homeRootsRemoved = 0;
+        foreach (var page in pageList.All(site.SiteId))
+        {
+            if (page.Id == site.HomePageId)
+            {
+                var home = await aggregates.Load<Imprint.Authoring.Domain.Pages.Page>(page.Id.Stream);
+                foreach (var root in home.Tree.Roots)
+                {
+                    await Dispatch(
+                        new Imprint.Authoring.Features.Pages.RemoveNode.RemoveNode(page.Id, root.Id),
+                        $"RemoveNode {site.Key}/home");
+                    homeRootsRemoved++;
+                }
+            }
+            else
+            {
+                await Dispatch(
+                    new Imprint.Authoring.Features.Pages.DeletePage.DeletePage(page.Id),
+                    $"DeletePage {site.Key}/{page.Slug.Value}");
+                deleted++;
+            }
+        }
+
+        Console.WriteLine($"  {site.Key,-9} reauthor: nav cleared, {deleted} pages deleted, home emptied ({homeRootsRemoved} sections)");
+    }
+
+    Console.WriteLine();
+}
 
 // ── 1. ensure the four sites + their empty home pages exist (mirror prod ids) ──
 foreach (var site in skipAuthoring ? [] : sites)
@@ -207,7 +259,7 @@ static string? FindRepoRoot()
 
 internal sealed record Options(
     string? Db, string? Cms, string? Widgets, string? Publish, string? Media, string? ApiBase, bool NoPublish,
-    IReadOnlyList<string>? Only, bool PublishOnly, string? ProdEnvRoot, bool Rebrand);
+    IReadOnlyList<string>? Only, bool PublishOnly, string? ProdEnvRoot, bool Rebrand, bool Reauthor);
 
 internal static class Args
 {
@@ -217,6 +269,7 @@ internal static class Args
         var noPublish = false;
         var publishOnly = false;
         var rebrand = false;
+        var reauthor = false;
         string? prodEnvRoot = null;
         List<string>? only = null;
         for (var i = 0; i < args.Length; i++)
@@ -233,6 +286,7 @@ internal static class Args
                 case "--only": only = [.. args[++i].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)]; break;
                 case "--publish-only": publishOnly = true; break;
                 case "--rebrand": rebrand = true; break;
+                case "--reauthor": reauthor = true; break;
                 case "--prod-env-root": prodEnvRoot = args[++i]; break;
                 default:
                     Console.Error.WriteLine($"Unknown argument: {args[i]}");
@@ -240,6 +294,6 @@ internal static class Args
             }
         }
 
-        return new Options(db, cms, widgets, publish, media, apiBase, noPublish, only, publishOnly, prodEnvRoot, rebrand);
+        return new Options(db, cms, widgets, publish, media, apiBase, noPublish, only, publishOnly, prodEnvRoot, rebrand, reauthor);
     }
 }

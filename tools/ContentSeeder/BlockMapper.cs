@@ -48,6 +48,7 @@ public sealed class BlockMapper(
             "panels" => Panels(block),
             "pricingTiers" => PricingTiers(block),
             "prose" => Prose(block),
+            "timeline" => Timeline(block),
             "composition" => Composition(block),
             "table" => Table(block),
             "docmock" => Docmock(block),
@@ -64,11 +65,42 @@ public sealed class BlockMapper(
             _ => FlagUnknown(template, rel),
         };
 
+        if (section is null)
+        {
+            return null;
+        }
+
         // Stamp the marketing appearance (the ip-ap-* hook) from the block template — the
         // shared contract between this seeder, the SectionNode model and the theme. An
         // unmapped template keeps Plain. Done once here so each builder stays focused on copy.
-        return section is null ? null : section with { Appearance = AppearanceOf(template) };
+        section = section with { Appearance = AppearanceOf(template) };
+
+        // Optional per-block presentation the CMS shape now carries: an in-page anchor
+        // (the header's "/#products"-style nav targets) and an authored band background
+        // (the alternating section strata). Only stamped when present, so each builder's
+        // own default background (statband/docmock/note/cta) stays authoritative.
+        if (SectionAnchor.Sanitize(block.Str("anchor")) is { } anchor)
+        {
+            section = section with { Anchor = anchor };
+        }
+
+        if (BackgroundOf(block.Str("background")) is { } background)
+        {
+            section = section with { Background = background };
+        }
+
+        return section;
     }
+
+    // The authored band background vocabulary ("background" on any block). Unknown
+    // values are ignored (never invented) — the builder's default stands.
+    private static SectionBackground? BackgroundOf(string? value) => value switch
+    {
+        "surface" => SectionBackground.Surface,
+        "surface-alt" => SectionBackground.SurfaceAlt,
+        "primary" => SectionBackground.Primary,
+        _ => null,
+    };
 
     // The one-per-template appearance contract (kept in lockstep with SectionAppearance).
     private static SectionAppearance AppearanceOf(string template) => template switch
@@ -81,7 +113,8 @@ public sealed class BlockMapper(
         "steps" => SectionAppearance.Steps,
         "panels" => SectionAppearance.Panels,
         "pricingTiers" => SectionAppearance.Pricing,
-        "prose" => SectionAppearance.Plain,
+        "prose" => SectionAppearance.Prose,
+        "timeline" => SectionAppearance.Timeline,
         "composition" => SectionAppearance.Composition,
         "table" => SectionAppearance.TableList,
         "docmock" => SectionAppearance.Docmock,
@@ -127,16 +160,25 @@ public sealed class BlockMapper(
 
     private IEnumerable<Node> CtaRow(JsonNode block)
     {
+        var buttons = new List<Node>();
         var l1 = block.Str("ctaLabel");
         if (!string.IsNullOrWhiteSpace(l1))
         {
-            yield return Nodes.Button(l1!, block.Str("ctaHref"), origin, ButtonVariant.Primary);
+            buttons.Add(Nodes.Button(l1!, block.Str("ctaHref"), origin, ButtonVariant.Primary));
         }
 
         var l2 = block.Str("cta2Label");
         if (!string.IsNullOrWhiteSpace(l2))
         {
-            yield return Nodes.Button(l2!, block.Str("cta2Href"), origin, ButtonVariant.Secondary);
+            buttons.Add(Nodes.Button(l2!, block.Str("cta2Href"), origin, ButtonVariant.Secondary));
+        }
+
+        // One Stack holding only the buttons — the theme lays a button-first Stack out as
+        // a horizontal wrapping row, so hero/closing-band CTAs sit side by side,
+        // shrink-wrapped, instead of stacking full-width.
+        if (buttons.Count > 0)
+        {
+            yield return Nodes.Stack([.. buttons]);
         }
     }
 
@@ -175,7 +217,7 @@ public sealed class BlockMapper(
                 var props = new Dictionary<string, string>(StringComparer.Ordinal)
                 {
                     ["card"] = card.ToJsonString(),
-                    ["brand"] = origin.Contains("assay") ? "assay" : origin.Contains("cai.") ? "cai" : "watchdog",
+                    ["brand"] = Brand(),
                     ["seal-text"] = "✓ Signed evidence",
                 };
                 InjectApiBase(props);
@@ -251,6 +293,15 @@ public sealed class BlockMapper(
                 cell.Add(Nodes.RichHtml($"<p><strong>{Inline.Escape(tag!)}</strong></p>"));
             }
 
+            // The optional status badge (Live / Preview / Open standard) sits right
+            // before the h3; the theme renders a non-first bold-only prose followed by
+            // an h3 as the accent-wash pill.
+            var badge = item.Str("badge");
+            if (!string.IsNullOrWhiteSpace(badge))
+            {
+                cell.Add(Nodes.RichHtml($"<p><strong>{Inline.Escape(badge!)}</strong></p>"));
+            }
+
             var title = item.Str("title");
             if (!string.IsNullOrWhiteSpace(title))
             {
@@ -322,6 +373,15 @@ public sealed class BlockMapper(
             }
 
             var cell = new List<Node>();
+
+            // The avatar: a bold-only initials prose FIRST in the card — the theme
+            // renders it as the circular accent-wash badge above the name.
+            var initials = card.Str("initials");
+            if (!string.IsNullOrWhiteSpace(initials))
+            {
+                cell.Add(Nodes.RichHtml($"<p><strong>{Inline.Escape(initials!)}</strong></p>"));
+            }
+
             var title = card.Str("title");
             if (!string.IsNullOrWhiteSpace(title))
             {
@@ -594,6 +654,68 @@ public sealed class BlockMapper(
         return Nodes.Section(Nodes.Stack([.. stack]));
     }
 
+    /// <summary>
+    /// Date/body rows (canine's "How we got here"). Each item is authored as
+    /// "**date** — body"; the date is lifted into a leading <c>&lt;strong&gt;</c> so the
+    /// theme can set it as the mono accent date column, with the body beside it. An item
+    /// without the leading bold date keeps its whole copy as the body — never invented.
+    /// </summary>
+    private SectionNode Timeline(JsonNode block)
+    {
+        var stack = new List<Node>();
+        stack.AddRange(SectionHead(block));
+
+        var items = block.Arr("items");
+        if (items.Count > 0)
+        {
+            var sb = new System.Text.StringBuilder("<ul>");
+            foreach (var item in items)
+            {
+                var (date, body) = SplitTimelineItem(item?.ToString() ?? "");
+                sb.Append("<li>");
+                if (date.Length > 0)
+                {
+                    // The trailing space keeps date and body legible without the theme
+                    // (screen readers, reader modes); CSS collapses it in the layout.
+                    sb.Append("<strong>").Append(Inline.Escape(date)).Append("</strong> ");
+                }
+
+                sb.Append(Inline.ToCanonicalInline(body, origin)).Append("</li>");
+            }
+
+            sb.Append("</ul>");
+            stack.Add(Nodes.RichHtml(sb.ToString()));
+        }
+
+        var footnote = block.Str("footnote");
+        if (!string.IsNullOrWhiteSpace(footnote))
+        {
+            stack.Add(Nodes.Paragraph(footnote, origin));
+        }
+
+        return Nodes.Section(Nodes.Stack([.. stack]));
+    }
+
+    // "**date** — body" → (date, body); the joining dash is presentation (the theme's
+    // two-column row carries the separation), so it is dropped with the split.
+    private static (string Date, string Body) SplitTimelineItem(string raw)
+    {
+        var text = raw.Trim();
+        if (text.StartsWith("**", StringComparison.Ordinal))
+        {
+            var close = text.IndexOf("**", 2, StringComparison.Ordinal);
+            if (close > 2)
+            {
+                var date = text[2..close].Trim();
+                var body = text[(close + 2)..].TrimStart();
+                body = body.TrimStart('—', '–', '-').TrimStart();
+                return (date, body);
+            }
+        }
+
+        return ("", text);
+    }
+
     private SectionNode Table(JsonNode block)
     {
         var stack = new List<Node>();
@@ -747,7 +869,9 @@ public sealed class BlockMapper(
             stack.Add(Nodes.Paragraph(microcopy, origin));
         }
 
-        return Nodes.Section(SectionBackground.SurfaceAlt, Nodes.Stack([.. stack]));
+        // The closing band rides the accent (Primary) fill — the theme inverts the
+        // buttons and lifts the copy to on-primary ink under .ip-ap-cta.ip-bg-primary.
+        return Nodes.Section(SectionBackground.Primary, Nodes.Stack([.. stack]));
     }
 
     /// <summary>
@@ -811,7 +935,17 @@ public sealed class BlockMapper(
 
     // ─────────────────────────────────────────────────────── WIDGET blocks ─────
 
-    private string Brand() => origin.Contains("assay") ? "assay" : origin.Contains("cai.") ? "cai" : "watchdog";
+    // The widget brand key. The islands whitelist assay/cai/watchdog and drop anything
+    // else back to their base (watchdog) skin, so canine's own key is safe today and
+    // lights up automatically the day the islands learn a canine skin — canine.dev wears
+    // the watchdog look verbatim (Themes.Watchdog) either way. The apex check runs LAST:
+    // every product origin also contains "canine.dev", so the subdomains must win first.
+    private string Brand() =>
+        origin.Contains("assay") ? "assay"
+        : origin.Contains("cai.") ? "cai"
+        : origin.Contains("watchdog") ? "watchdog"
+        : origin.Contains("canine.dev") ? "canine"
+        : "watchdog";
 
     /// <summary>
     /// Stamp the live kennel API origin onto a CAI data widget's props when the

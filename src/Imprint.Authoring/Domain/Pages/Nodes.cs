@@ -78,6 +78,12 @@ public enum SectionAppearance
     Contact,
     C4Heat,
     Findings,
+    // Long-form marketing prose (canine's manifesto/doctrine sections): a measure-width
+    // reading column with kicker-eyebrow, hairline-list and pull-quote chrome.
+    Prose,
+    // Date/body rows (canine's "How we got here"): a mono accent date column beside each
+    // item's body, hairline-separated.
+    Timeline,
     // Long-form legal / prose document (canine's .mk-doc): a measure-width, centered
     // reading column. Not a CMS block template — it's the marketing look for a whole
     // markdown page — but part of the same appearance vocabulary so any page reproduces.
@@ -105,6 +111,15 @@ public sealed record SectionNode : Node, IContainerNode
     /// back as Plain, so older streams stay renderable.
     /// </summary>
     public SectionAppearance Appearance { get; init; } = SectionAppearance.Plain;
+
+    /// <summary>
+    /// Optional in-page anchor: the <c>id</c> the published section carries so header
+    /// links like <c>/#products</c> land on it. Additive on the node contract — absent
+    /// in persisted JSON reads back as null (no id emitted). The renderer sanitizes via
+    /// <see cref="SectionAnchor"/> before emitting, so a stored value can never produce
+    /// a broken or unsafe attribute.
+    /// </summary>
+    public string? Anchor { get; init; }
 
     public NodeList Children { get; init; } = NodeList.Empty;
     public override string DisplayName => "Section";

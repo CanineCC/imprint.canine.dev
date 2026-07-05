@@ -28,6 +28,7 @@ public sealed class NodeSerializationTests
             Id = NodeId.New(),
             Width = SectionWidth.Wide,
             Background = SectionBackground.Surface,
+            Anchor = "products",
             Children = NodeList.Of(
                 new ColumnsNode
                 {
@@ -114,6 +115,33 @@ public sealed class NodeSerializationTests
 
         var back = (SectionNode)JsonSerializer.Deserialize<Node>(legacyJson, Options)!;
         Assert.Equal(SectionAppearance.Plain, back.Appearance);
+    }
+
+    [Fact]
+    public void Section_anchor_round_trips_and_legacy_json_reads_back_null()
+    {
+        var section = new SectionNode { Id = NodeId.New(), Anchor = "team" };
+
+        var json = JsonSerializer.Serialize<Node>(section, Options);
+        Assert.Contains("\"Anchor\":\"team\"", json, StringComparison.Ordinal);
+        Assert.Equal("team", ((SectionNode)JsonSerializer.Deserialize<Node>(json, Options)!).Anchor);
+
+        // Back-compat: a stream written before the field existed carries no "Anchor".
+        var legacyJson = json.Replace(",\"Anchor\":\"team\"", "", StringComparison.Ordinal);
+        Assert.DoesNotContain("\"Anchor\"", legacyJson, StringComparison.Ordinal);
+        Assert.Null(((SectionNode)JsonSerializer.Deserialize<Node>(legacyJson, Options)!).Anchor);
+    }
+
+    [Fact]
+    public void Section_anchor_sanitizer_slugifies_and_rejects_unusable_values()
+    {
+        Assert.Equal("what-we-do", SectionAnchor.Sanitize("  What we DO! "));
+        Assert.Equal("products", SectionAnchor.Sanitize("products"));
+        Assert.Equal("c4-heat", SectionAnchor.Sanitize("C4 §heat"));
+        Assert.Null(SectionAnchor.Sanitize(null));
+        Assert.Null(SectionAnchor.Sanitize("   "));
+        Assert.Null(SectionAnchor.Sanitize("42"));   // must start with a letter
+        Assert.Null(SectionAnchor.Sanitize("—§—"));  // nothing valid remains
     }
 
     [Fact]

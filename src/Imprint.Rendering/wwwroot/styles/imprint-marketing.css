@@ -242,7 +242,8 @@
 @media (max-width: 900px) {
   .ip-nav, .ip-header-quiet { display: none; }
 }
-@media (max-width: 620px) { .ip-header-cta { display: none; } }
+/* The header CTA stays visible on small screens — with the nav collapsed it is the
+   only header action left, so hiding it would leave the brand mark alone. */
 
 /* Footer */
 .ip-site-footer {
@@ -310,6 +311,15 @@
    prose) and then the block body. Style the head generically; each appearance
    refines the body below.
    ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Marketing sections breathe with the clamp, not the base 24px. :where() keeps the
+   specificity at a single class so ip-pad-* stays excluded and every later
+   per-appearance padding (e.g. the hero's) still wins. */
+.ip-section:where(:not(.ip-pad-none):not(.ip-pad-large)) { padding-block: var(--mk-section); }
+/* A hairline seam between adjacent bands — the alternating surface backgrounds read
+   as deliberate strata, not an accident of content. (Adjacent-only, so the footer's
+   own border-top never doubles up.) */
+.ip-section + .ip-section { border-top: 1px solid var(--hairline); }
 
 /* A kicker is a prose paragraph whose only content is a single <strong> — the
    seeder authors `<p><strong>…</strong></p>` for every block kicker/tag. Render it
@@ -432,7 +442,13 @@
   }
 }
 
-/* CTA rows: consecutive .ip-btn siblings sit on one wrapping row. */
+/* CTA rows: the seeder wraps a block's consecutive CTA buttons in ONE Stack whose
+   first child is a button — lay that stack as a horizontal wrapping row so the hero
+   and closing-band buttons sit side by side, shrink-wrapped, instead of stacking
+   full-width. */
+[class*="ip-ap-"] .ip-stack:has(> .ip-btn:first-child) {
+  flex-direction: row; flex-wrap: wrap; gap: 12px; align-items: center;
+}
 [class*="ip-ap-"] .ip-btn + .ip-btn { margin-left: 0; }
 .ip-ap-hero > .ip-stack,
 .ip-ap-cta > .ip-stack { row-gap: 1.1rem; }
@@ -459,14 +475,32 @@
   gap: 0.35rem;
 }
 .ip-ap-personas .ip-grid > .ip-stack:hover { border-color: var(--accent); background: var(--surface); }
-.ip-ap-feature-grid .ip-grid h3,
-.ip-ap-personas .ip-grid h3 { font-size: var(--fs-md); margin: 0; }
+.ip-ap-feature-grid .ip-grid h3 { font-size: 1.2rem; font-weight: 700; margin: 0; }
+.ip-ap-personas .ip-grid h3 { font-size: 1.1rem; font-weight: 700; margin: 0; }
 .ip-ap-feature-grid .ip-grid .ip-prose,
 .ip-ap-personas .ip-grid .ip-prose { color: var(--muted); font-size: var(--fs-sm); line-height: 1.55; }
 /* the per-card tag (bold-only prose) → mono accent eyebrow */
 .ip-ap-feature-grid .ip-grid .ip-prose:has(> p > strong:only-child) > p > strong {
   font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: 0.05em;
   text-transform: uppercase; color: var(--accent-ink); font-weight: 600;
+}
+/* the per-card status badge (a bold-only prose AFTER the tag, right before the h3)
+   → the pricing accent-wash pill (Live / Preview / Open standard) */
+.ip-ap-feature-grid .ip-grid .ip-prose:has(> p > strong:only-child):not(:first-child):has(+ h3) > p > strong {
+  display: inline-block; font-family: var(--font-ui); font-size: var(--fs-2xs); font-weight: 600;
+  color: var(--accent-ink); background: var(--accent-wash); padding: 2px 8px;
+  border-radius: var(--r-sm); text-transform: none; letter-spacing: 0;
+}
+/* the per-card avatar (the bold-only initials prose FIRST in a persona card) →
+   a circular accent-wash badge above the name */
+.ip-ap-personas .ip-grid > .ip-stack > .ip-prose:has(> p > strong:only-child):first-child > p > strong {
+  display: inline-grid; place-items: center; width: 46px; height: 46px; border-radius: 50%;
+  background: var(--accent-wash); color: var(--accent-ink);
+  font-family: var(--font-mono); font-size: var(--fs-sm); font-weight: 700;
+  letter-spacing: 0.02em; text-transform: none; margin-bottom: 0.3rem;
+}
+.ip-ap-personas .ip-grid > .ip-stack > .ip-prose:has(> p > strong:only-child):first-child > p > strong::before {
+  content: none;
 }
 /* footnote / note under the grid → centered small muted */
 .ip-ap-feature-grid > .ip-stack > .ip-prose:last-child:not(:has(> p > strong:only-child)),
@@ -590,11 +624,73 @@
 .ip-ap-note.ip-bg-primary { background: transparent; color: var(--ink); }
 .ip-ap-note.ip-bg-primary > .ip-stack { border-left-color: var(--band-fair); }
 
+/* ── PROSE (long-form marketing prose: manifesto / doctrine / why-we-exist) ──── */
+.ip-ap-prose > .ip-stack > :is(.ip-prose, h1, h2, h3) { max-width: 68ch; }
+.ip-ap-prose > .ip-stack > .ip-prose:not(:has(> p > strong:only-child)) {
+  color: var(--ink); font-size: var(--fs-lg); line-height: 1.65; max-width: 68ch;
+}
+/* the doctrine list: unbulleted, hairline-separated rows */
+.ip-ap-prose .ip-prose ul { list-style: none; padding: 0; }
+.ip-ap-prose .ip-prose ul li {
+  padding-block: 0.75rem; color: var(--muted); font-size: var(--fs-md); line-height: 1.6;
+}
+.ip-ap-prose .ip-prose ul li + li { margin-block-start: 0; border-top: 1px solid var(--hairline); }
+.ip-ap-prose .ip-prose ul li strong { color: var(--heading); }
+/* pull-quote: a bold-only paragraph that is NOT the kicker (not first) → an accent-
+   barred, surface-backed statement set larger than body copy */
+.ip-ap-prose > .ip-stack > .ip-prose:has(> p > strong:only-child):not(:first-child) {
+  border-left: 3px solid var(--accent); background: var(--surface);
+  padding: 1rem 1.25rem; border-radius: 0 var(--r-md) var(--r-md) 0; max-width: 68ch;
+}
+.ip-ap-prose > .ip-stack > .ip-prose:has(> p > strong:only-child):not(:first-child) > p > strong {
+  font-size: var(--fs-xl); line-height: 1.45; color: var(--heading); font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* ── TIMELINE (history: mono date column + body per row, hairline-separated) ──── */
+.ip-ap-timeline > .ip-stack > :is(.ip-prose, h1, h2, h3) { max-width: 68ch; }
+.ip-ap-timeline .ip-prose ul { list-style: none; padding: 0; max-width: 46rem; }
+.ip-ap-timeline .ip-prose ul li {
+  position: relative; padding: 0.85rem 0 0.85rem 190px;
+  color: var(--ink); font-size: var(--fs-md); line-height: 1.55;
+}
+.ip-ap-timeline .ip-prose ul li + li { margin-block-start: 0; border-top: 1px solid var(--hairline); }
+.ip-ap-timeline .ip-prose ul li > strong:first-child {
+  position: absolute; left: 0; width: 170px;
+  font-family: var(--font-mono); font-size: var(--fs-sm); font-weight: 600;
+  color: var(--accent-ink); letter-spacing: 0.02em;
+}
+@container (max-width: 520px) {
+  .ip-ap-timeline .ip-prose ul li { padding-left: 0; }
+  .ip-ap-timeline .ip-prose ul li > strong:first-child {
+    position: static; display: block; width: auto; margin-bottom: 0.15rem;
+  }
+}
+
 /* ── CTA (the closing full-width call) ──────────────────────────────────────── */
 .ip-ap-cta > .ip-stack { align-items: center; text-align: center; }
 .ip-ap-cta h2 { font-size: clamp(1.9rem, 1.3rem + 2vw, 2.6rem); letter-spacing: -0.02em; max-width: 30ch; }
 .ip-ap-cta .ip-prose { max-width: var(--mk-measure); text-align: center; }
 .ip-ap-cta > .ip-stack > .ip-prose:first-of-type { font-size: var(--fs-xl); color: var(--ink); }
+/* The closing band rides the Primary background (ip-bg-primary): on-primary ink and
+   inverted buttons so the calls stay readable on the accent fill. */
+.ip-ap-cta.ip-bg-primary h2 { color: var(--on-accent); }
+.ip-ap-cta.ip-bg-primary > .ip-stack > .ip-prose:not(:has(> p > strong:only-child)) {
+  color: color-mix(in srgb, var(--on-accent) 88%, transparent);
+}
+.ip-ap-cta.ip-bg-primary .ip-prose p strong { color: var(--on-accent); }
+.ip-ap-cta.ip-bg-primary .ip-prose a { color: var(--on-accent); text-decoration: underline; }
+.ip-ap-cta.ip-bg-primary .ip-btn-primary {
+  background: var(--on-accent); border-color: var(--on-accent); color: var(--accent-strong);
+}
+.ip-ap-cta.ip-bg-primary .ip-btn-primary:hover { background: var(--on-accent); opacity: 0.9; }
+.ip-ap-cta.ip-bg-primary .ip-btn-secondary {
+  border-color: color-mix(in srgb, var(--on-accent) 55%, transparent); color: var(--on-accent);
+}
+.ip-ap-cta.ip-bg-primary .ip-btn-secondary:hover {
+  background: color-mix(in srgb, var(--on-accent) 12%, transparent);
+  border-color: var(--on-accent);
+}
 
 /* ── DOC (long-form legal / prose — canine .mk-doc reading column) ──────────── */
 .ip-ap-doc > .ip-stack {

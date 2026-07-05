@@ -15,6 +15,7 @@
     },
     {
       "_template": "prose",
+      "background": "surface",
       "kicker": "Our conviction",
       "heading": "The source of truth isn't the code.",
       "paragraphs": [
@@ -25,6 +26,7 @@
     },
     {
       "_template": "features",
+      "anchor": "what",
       "kicker": "What we do",
       "heading": "We work the full arc of software trust.",
       "lede": "From the moment code is written to the moment someone has to stake the business on it.",
@@ -52,11 +54,14 @@
     },
     {
       "_template": "features",
+      "anchor": "products",
+      "background": "surface",
       "kicker": "The work",
       "heading": "Four products, one standard of quality.",
       "items": [
         {
           "tag": "Preview · Born summer 2025",
+          "badge": "Preview",
           "title": "Unfold",
           "body": "Describe your business in plain language; get a maintainable, domain-driven .NET codebase that's correct by construction — it compiles, obeys your rules, and passes your scenarios. For the person who knows the business, not the framework.",
           "linkLabel": "unfold.canine.dev →",
@@ -64,6 +69,7 @@
         },
         {
           "tag": "Live · Born December 2025",
+          "badge": "Live",
           "title": "Watchdog",
           "body": "The independent surveyor for C#/.NET. A reproducible 0–100 Codebase Assurance Index across ten lenses, with commit-pinned reports in PDF + JSON. Get the software surveyed before you trust it with the business — you'd never buy a house on the seller's word.",
           "linkLabel": "watchdog.canine.dev →",
@@ -71,6 +77,7 @@
         },
         {
           "tag": "Open standard · Standard since June 2026",
+          "badge": "Open standard",
           "title": "CAI",
           "body": "The Codebase Assurance Index — the open, reproducible scoring standard we extracted from Watchdog and gave to everyone. 0–100, 124 public dimensions, ten versioned lenses. Same code in, same score out — verifiable by anyone, with no vendor lock-in.",
           "linkLabel": "cai.canine.dev →",
@@ -78,6 +85,7 @@
         },
         {
           "tag": "Live · By the makers of Watchdog",
+          "badge": "Live",
           "title": "Assay",
           "body": "Independent software due diligence and appraisal for code you can't read. Assay turns a reproducible Codebase Assurance survey into a decision you can defend — to a board, a committee, or a court. Know what the software is worth before you sign.",
           "linkLabel": "assay.canine.dev →",
@@ -104,6 +112,8 @@
     },
     {
       "_template": "prose",
+      "anchor": "doctrine",
+      "background": "surface",
       "kicker": "How we work",
       "heading": "We don't have opinions about your code. We have a discipline.",
       "lede": "Everything we build and measure rests on the same engineering doctrine.",
@@ -124,7 +134,8 @@
       ]
     },
     {
-      "_template": "prose",
+      "_template": "timeline",
+      "background": "surface",
       "kicker": "How we got here",
       "heading": "From consultancy to assurance.",
       "items": [
@@ -137,18 +148,20 @@
     },
     {
       "_template": "personas",
+      "anchor": "team",
       "kicker": "Who we are",
       "heading": "Assurance isn't a feature we added. It's who we are.",
       "lede": "We're a small Danish team — and half of us do QA. That's not an accident; it's the entire point.",
       "cards": [
-        { "title": "Jimmy Borch", "body": "CEO" },
-        { "title": "Lasse", "body": "Customer Success" },
-        { "title": "Glenn", "body": "Marketing & QA" },
-        { "title": "Alina", "body": "Quality Assurance" }
+        { "initials": "JB", "title": "Jimmy Borch", "body": "CEO" },
+        { "initials": "L", "title": "Lasse", "body": "Customer Success" },
+        { "initials": "G", "title": "Glenn", "body": "Marketing & QA" },
+        { "initials": "A", "title": "Alina", "body": "Quality Assurance" }
       ]
     },
     {
       "_template": "features",
+      "background": "surface",
       "kicker": "What we hold to",
       "heading": "Four commitments.",
       "items": [

@@ -69,6 +69,25 @@
   gap: var(--ip-space-4);
 }
 
+/* Exactly two items sit as a fixed pair (lens columns, is/is-not…): auto-fill would
+   leave a dangling empty third track on wide sections. Collapse to one column when
+   the section is too narrow for the pair. */
+.ip-grid:has(> :nth-child(2):last-child) { grid-template-columns: repeat(2, 1fr); }
+@container (max-width: 30rem) {
+  .ip-grid:has(> :nth-child(2):last-child) { grid-template-columns: 1fr; }
+}
+
+/* Exactly four items must never wrap 3+1 (products, team, commitments…): pair them
+   2×2, and only go 4-across when the section is wide enough for all four. Other
+   counts keep the auto-fill flow. */
+.ip-grid:has(> :nth-child(4):last-child) { grid-template-columns: repeat(2, 1fr); }
+@container (min-width: 72rem) {
+  .ip-grid:has(> :nth-child(4):last-child) { grid-template-columns: repeat(4, 1fr); }
+}
+@container (max-width: 30rem) {
+  .ip-grid:has(> :nth-child(4):last-child) { grid-template-columns: 1fr; }
+}
+
 /* ---- prose (richtext) ---- */
 .ip-prose > * + * { margin-block-start: var(--ip-space-3); }
 .ip-prose :is(ul, ol) { padding-inline-start: 1.5em; }

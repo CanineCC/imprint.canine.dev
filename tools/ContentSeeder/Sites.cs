@@ -92,7 +92,8 @@ public static class Sites
             CaiSite, CaiHome,
             CaiNav, CaiCta, CaiQuiet, CaiFooter, CaiCopy,
             Themes.Cai, Themes.Neutrals, Themes.Marketing),
-        new SiteDef("canine", "Canine", "https://www.canine.dev",
+        // Apex origin: www.canine.dev 301s to the apex, so canonical links say canine.dev.
+        new SiteDef("canine", "Canine", "https://canine.dev",
             Path.Combine(repoRoot, "tools", "ContentSeeder", "canine", "content"),
             CanineSite, CanineHome,
             CanineNav, CanineCta, CanineQuiet, CanineFooter, CanineCopy,
@@ -304,8 +305,9 @@ public static class Sites
     // Components/Layout/MainLayout.razor), the same way the others mirror site.ts.
     // Transcription notes (the source is hand-written Razor, not CMS content):
     //  • The header/footer "/#what"-style in-page anchors keep their real deployed
-    //    hrefs (origin + fragment); published sections carry no named anchors, so the
-    //    fragment lands at the top of home — labels and destinations stay truthful.
+    //    hrefs (origin + fragment); the matching home sections carry the anchors
+    //    (home.json "anchor" → SectionNode.Anchor → the published id), so the
+    //    fragments land on their sections exactly as on the Blazor site.
     //  • The header "Contact" nav-cta pill is the header CTA; there is no quiet link.
     //  • The footer-about blurb ("Independent software-assurance studio · Denmark,
     //    since 2021.") has no slot in Imprint's footer model — the same line appears
@@ -330,6 +332,7 @@ public static class Sites
             new("Watchdog", "https://watchdog.canine.dev"),
             new("CAI standard", "https://cai.canine.dev"),
             new("Unfold", "https://unfold.canine.dev"),
+            new("Assay", "https://assay.canine.dev"),
         ]),
         new("Studio",
         [

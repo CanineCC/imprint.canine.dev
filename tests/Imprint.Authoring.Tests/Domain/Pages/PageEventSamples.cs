@@ -56,6 +56,8 @@ public sealed class PageEventSamples : IEventSampleProvider
         Width = SectionWidth.Wide,
         Background = SectionBackground.SurfaceAlt,
         Padding = SectionPadding.Large,
+        Appearance = SectionAppearance.FeatureGrid,
+        Anchor = "what-we-do",
         Children = NodeList.Of(
             new ColumnsNode
             {

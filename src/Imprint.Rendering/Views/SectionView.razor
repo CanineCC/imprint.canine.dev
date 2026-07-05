@@ -1,6 +1,6 @@
 @namespace Imprint.Rendering
 @inherits NodeViewBase<SectionNode>
-<section class="@CssClass" @attributes="NodeAttributes">
+<section class="@CssClass" id="@AnchorId" @attributes="NodeAttributes">
   <CascadingValue Value="CurrentHints.InSection(Node.Width)">
     @foreach (var child in Node.Children)
     {
@@ -25,4 +25,8 @@
     // The named appearance: Plain is the structural default and emits nothing; every
     // other value becomes ip-ap-{kebab}, the hook the marketing theme styles against.
     SectionAppearanceClass.For(Node.Appearance));
+
+  // The in-page anchor, sanitized at render time so a stored value can never emit a
+  // broken or unsafe id; null renders no attribute at all (Blazor omits it).
+  private string? AnchorId => SectionAnchor.Sanitize(Node.Anchor);
 }
