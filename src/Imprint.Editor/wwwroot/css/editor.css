@@ -88,6 +88,7 @@ button { font: inherit; color: inherit; }
 .ed-panel {
   grid-area: panel;
   width: var(--ed-panel-w);
+  min-height: 0; /* grid items default to min-height:auto — without this the 1fr row grows to the content and overflow-y never engages */
   overflow-y: auto;
   background: var(--ed-surface);
   border-right: 1px solid var(--ed-border);
@@ -101,11 +102,13 @@ button { font: inherit; color: inherit; }
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0; /* same reason as min-width: the row must clamp to the viewport so .ed-canvas-scroll overflows and scrolls */
 }
 
 .ed-inspector {
   grid-area: inspector;
   width: var(--ed-inspector-w);
+  min-height: 0;
   overflow-y: auto;
   background: var(--ed-surface);
   border-left: 1px solid var(--ed-border);
@@ -745,6 +748,22 @@ button { font: inherit; color: inherit; }
 
 .settings-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .settings-dirty { color: var(--ed-warn); font-size: .82rem; }
+
+/* Header & footer chrome editing on the settings page. */
+.chrome-heading { margin: 18px 0 8px; font-size: .95rem; }
+.chrome-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.chrome-kind { flex: 0 0 110px; color: var(--ed-text-muted); font-size: .85rem; }
+.chrome-label { flex: 0 0 220px; }
+.chrome-url { flex: 1; }
+.chrome-copy { flex: 1; }
+.chrome-group {
+  border: 1px solid var(--ed-border);
+  border-radius: var(--ed-radius);
+  padding: 10px;
+  margin-bottom: 10px;
+}
+.chrome-link { margin-left: 16px; }
+.chrome-add-link { margin-left: 16px; }
 
 /* People: the owner + collaborator rows on the settings page. */
 .people-list { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 6px; }

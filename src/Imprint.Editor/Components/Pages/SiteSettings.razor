@@ -2,11 +2,15 @@
 @using Imprint.Authoring.Domain
 @using Imprint.Authoring.Domain.Sites
 @using Imprint.Authoring.Projections
+@using Imprint.Authoring.Domain.Pages
 @using Imprint.Authoring.Features.Sites.RenameSite
 @using Imprint.Authoring.Features.Sites.ConfigureEnvironments
 @using Imprint.Authoring.Features.Sites.AddCollaborator
 @using Imprint.Authoring.Features.Sites.ClaimSite
 @using Imprint.Authoring.Features.Sites.RemoveCollaborator
+@using Imprint.Authoring.Features.Sites.SetCopyLine
+@using Imprint.Authoring.Features.Sites.SetFooter
+@using Imprint.Authoring.Features.Sites.SetHeaderActions
 @using Imprint.Editor.Auth
 @using Imprint.Editor.Services
 @using Imprint.Publishing
@@ -48,6 +52,86 @@
                 <button type="button" class="ed-btn ed-btn-primary"
                         disabled="@(!_interactive || _name.Trim().Length == 0 || _name.Trim() == site.Name)"
                         @onclick="SaveName">Save name</button>
+            </div>
+        </section>
+
+        @* ---- Header & footer (marketing chrome) ---- *@
+        <section class="settings-card" aria-labelledby="set-chrome">
+            <h2 id="set-chrome">Header &amp; footer</h2>
+            <p class="settings-hint">
+                The navigation menu itself is managed in the editor's <strong>Pages</strong> panel
+                (drag pages into or out of the navigation; the first is the home page). Here you
+                maintain the rest of the chrome: the header's action buttons, the footer's link
+                columns, and the fine-print copy line. A link is a full URL
+                (<code>https://…</code>) or a same-site page as <code>page://slug</code>.
+            </p>
+
+            <h3 class="chrome-heading">Header actions</h3>
+            <div class="chrome-row">
+                <span class="chrome-kind">Primary button</span>
+                <input class="ed-input chrome-label" placeholder="Label (empty = none)" aria-label="Primary button label"
+                       disabled="@(!_interactive)" @bind="_cta.Label" @bind:event="oninput" />
+                <input class="ed-input chrome-url" placeholder="https://… or page://slug" aria-label="Primary button link"
+                       disabled="@(!_interactive)" @bind="_cta.Url" @bind:event="oninput" />
+            </div>
+            <div class="chrome-row">
+                <span class="chrome-kind">Quiet link</span>
+                <input class="ed-input chrome-label" placeholder="Label (empty = none)" aria-label="Quiet link label"
+                       disabled="@(!_interactive)" @bind="_quiet.Label" @bind:event="oninput" />
+                <input class="ed-input chrome-url" placeholder="https://… or page://slug" aria-label="Quiet link target"
+                       disabled="@(!_interactive)" @bind="_quiet.Url" @bind:event="oninput" />
+            </div>
+            <div class="settings-row">
+                <button type="button" class="ed-btn ed-btn-primary" disabled="@(!_interactive || _busy)"
+                        @onclick="SaveHeader">Save header</button>
+            </div>
+
+            <h3 class="chrome-heading">Footer link columns</h3>
+            @if (_footerGroups.Count == 0)
+            {
+                <p class="panel-empty">No footer columns yet. Add one below.</p>
+            }
+            @foreach (var group in _footerGroups)
+            {
+                <div class="chrome-group" @key="group">
+                    <div class="chrome-row">
+                        <input class="ed-input chrome-label" placeholder="Column heading" aria-label="Footer column heading"
+                               disabled="@(!_interactive)" @bind="group.Heading" @bind:event="oninput" />
+                        <button type="button" class="ed-btn ed-btn-ghost ed-btn-danger" title="Remove column"
+                                aria-label="Remove footer column" disabled="@(!_interactive)"
+                                @onclick="() => _footerGroups.Remove(group)">✕</button>
+                    </div>
+                    @foreach (var link in group.Links)
+                    {
+                        <div class="chrome-row chrome-link" @key="link">
+                            <input class="ed-input chrome-label" placeholder="Label (empty = page title)" aria-label="Footer link label"
+                                   disabled="@(!_interactive)" @bind="link.Label" @bind:event="oninput" />
+                            <input class="ed-input chrome-url" placeholder="https://… or page://slug" aria-label="Footer link target"
+                                   disabled="@(!_interactive)" @bind="link.Url" @bind:event="oninput" />
+                            <button type="button" class="ed-btn ed-btn-ghost ed-btn-danger" title="Remove link"
+                                    aria-label="Remove footer link" disabled="@(!_interactive)"
+                                    @onclick="() => group.Links.Remove(link)">✕</button>
+                        </div>
+                    }
+                    <button type="button" class="ed-btn ed-btn-ghost chrome-add-link"
+                            disabled="@(!_interactive || group.Links.Count >= Site.MaxFooterLinksPerGroup)"
+                            @onclick="() => group.Links.Add(new FooterLinkEdit())">＋ Add link</button>
+                </div>
+            }
+            <div class="settings-row">
+                <button type="button" class="ed-btn"
+                        disabled="@(!_interactive || _footerGroups.Count >= Site.MaxFooterGroups)"
+                        @onclick="() => _footerGroups.Add(new FooterGroupEdit())">＋ Add column</button>
+                <button type="button" class="ed-btn ed-btn-primary" disabled="@(!_interactive || _busy)"
+                        @onclick="SaveFooter">Save footer</button>
+            </div>
+
+            <h3 class="chrome-heading">Copy line</h3>
+            <div class="settings-row">
+                <input class="ed-input chrome-copy" placeholder="© 2026 · Your fine print (empty = none)"
+                       aria-label="Footer copy line" disabled="@(!_interactive)" @bind="_copyLine" @bind:event="oninput" />
+                <button type="button" class="ed-btn ed-btn-primary" disabled="@(!_interactive || _busy)"
+                        @onclick="SaveCopyLine">Save copy line</button>
             </div>
         </section>
 
@@ -109,10 +193,6 @@
                             disabled="@(!_interactive || _busy || _newPerson.Trim().Length == 0)"
                             @onclick="AddPerson">Add editor</button>
                 </div>
-            }
-            else
-            {
-                <p class="settings-hint">Only the site's owner can add or remove people.</p>
             }
         </section>
 
@@ -234,6 +314,34 @@
         public string BaseUrl { get; set; } = "";
     }
 
+    // Chrome edit rows. Originals are kept so an untouched value round-trips unchanged:
+    // other-locale label texts survive via LocalizedText.With, and an untouched link
+    // keeps its exact Link (a PageLink is not silently rewritten as an external URL).
+    private sealed class ActionEdit
+    {
+        public string Label { get; set; } = "";
+        public string Url { get; set; } = "";
+        public LocalizedText? OriginalLabel;
+        public Link? OriginalLink;
+        public string OriginalUrl = "";
+    }
+
+    private sealed class FooterLinkEdit
+    {
+        public string Label { get; set; } = "";
+        public string Url { get; set; } = "";
+        public LocalizedText? OriginalLabel;
+        public Link? OriginalLink;
+        public string OriginalUrl = "";
+    }
+
+    private sealed class FooterGroupEdit
+    {
+        public string Heading { get; set; } = "";
+        public LocalizedText? OriginalHeading;
+        public List<FooterLinkEdit> Links { get; } = [];
+    }
+
     private Site? _site;
     private SiteId? _loadedId;
     private string _name = "";
@@ -253,13 +361,15 @@
         await ResolveAccess();
     }
 
-    // The settings URL is guessable, so loading it is an access check: a site this user
-    // may not touch renders the same "could not be found" card as an unknown id.
+    // The settings URL is guessable, so loading it is an access check. Settings are the
+    // OWNER's surface (rename, publish folders, deploy, people) — a collaborator edits
+    // and publishes content but never configures the site, so anyone who isn't the
+    // owner gets the same "could not be found" card as an unknown id.
     private async Task ResolveAccess()
     {
         _user = await Access.UserAsync();
-        _canAccess = _loadedId is { } id && await Access.CanAccessAsync(id);
-        _isOwner = _canAccess && _loadedId is { } ownedId && await Access.IsOwnerAsync(ownedId);
+        _canAccess = _loadedId is { } id && await Access.IsOwnerAsync(id);
+        _isOwner = _canAccess;
     }
 
     protected override void OnAfterRender(bool firstRender)
@@ -298,6 +408,7 @@
         _loadedId = id;
         _name = _site?.Name ?? "";
         SeedEnvs();
+        SeedChrome();
     }
 
     private void SeedEnvs()
@@ -351,6 +462,211 @@
         }
 
         await Commands.Run(new RenameSite(site.Id, _name.Trim()));
+    }
+
+    // ---- Header & footer (marketing chrome) ----
+
+    private readonly ActionEdit _cta = new();
+    private readonly ActionEdit _quiet = new();
+    private readonly List<FooterGroupEdit> _footerGroups = [];
+    private string _copyLine = "";
+    private LocalizedText? _copyOriginal;
+
+    private Locale ChromeLocale => _site?.DefaultLocale ?? new Locale("en");
+
+    private void SeedChrome()
+    {
+        SeedAction(_cta, _site?.HeaderCta);
+        SeedAction(_quiet, _site?.HeaderQuiet);
+
+        _footerGroups.Clear();
+        foreach (var group in _site?.FooterGroups ?? [])
+        {
+            var edit = new FooterGroupEdit
+            {
+                Heading = group.Heading.Resolve(ChromeLocale, ChromeLocale),
+                OriginalHeading = group.Heading,
+            };
+            foreach (var link in group.Links)
+            {
+                edit.Links.Add(new FooterLinkEdit
+                {
+                    Label = link.Label?.Resolve(ChromeLocale, ChromeLocale) ?? "",
+                    Url = UrlOf(link.Link),
+                    OriginalLabel = link.Label,
+                    OriginalLink = link.Link,
+                    OriginalUrl = UrlOf(link.Link),
+                });
+            }
+
+            _footerGroups.Add(edit);
+        }
+
+        _copyOriginal = _site?.CopyLine?.Text;
+        _copyLine = _copyOriginal?.Resolve(ChromeLocale, ChromeLocale) ?? "";
+    }
+
+    private void SeedAction(ActionEdit edit, HeaderAction? action)
+    {
+        edit.Label = action?.Label.Resolve(ChromeLocale, ChromeLocale) ?? "";
+        edit.Url = action is not null ? UrlOf(action.Link) : "";
+        edit.OriginalLabel = action?.Label;
+        edit.OriginalLink = action?.Link;
+        edit.OriginalUrl = edit.Url;
+    }
+
+    private string UrlOf(Link link) => link switch
+    {
+        ExternalLink external => external.Url,
+        PageLink page => $"page://{Pages.Get(page.PageId)?.Slug.Value ?? page.PageId.Compact}",
+        _ => "",
+    };
+
+    // An untouched URL keeps the original Link exactly; an edited one is page://slug
+    // (same-site page, resolved against this site's pages) or an absolute URL.
+    private Link? ParseLink(string url, string originalUrl, Link? originalLink, out string? error)
+    {
+        error = null;
+        var trimmed = url.Trim();
+        if (trimmed.Length == 0)
+        {
+            return null;
+        }
+
+        if (originalLink is not null && trimmed == originalUrl)
+        {
+            return originalLink;
+        }
+
+        if (trimmed.StartsWith("page://", StringComparison.OrdinalIgnoreCase))
+        {
+            var slug = trimmed["page://".Length..].Trim('/');
+            if (_site is { } site &&
+                Pages.All(site.Id).FirstOrDefault(p => string.Equals(p.Slug.Value, slug, StringComparison.OrdinalIgnoreCase)) is { } match)
+            {
+                return new PageLink(match.Id);
+            }
+
+            error = $"No page with slug '{slug}' on this site.";
+            return null;
+        }
+
+        if (Uri.TryCreate(trimmed, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https")
+        {
+            return new ExternalLink(trimmed);
+        }
+
+        error = $"'{trimmed}' is not an absolute URL (https://…) or a page://slug link.";
+        return null;
+    }
+
+    private LocalizedText? Localized(string text, LocalizedText? original) =>
+        text.Trim().Length == 0 ? null : (original ?? LocalizedText.Of(ChromeLocale, "")).With(ChromeLocale, text.Trim());
+
+    private bool BuildAction(ActionEdit edit, string what, out HeaderAction? action)
+    {
+        action = null;
+        var hasLabel = edit.Label.Trim().Length > 0;
+        var hasUrl = edit.Url.Trim().Length > 0;
+        if (!hasLabel && !hasUrl)
+        {
+            return true; // cleared
+        }
+
+        if (!hasLabel || !hasUrl)
+        {
+            Toasts.Error($"The {what} needs both a label and a link (clear both to remove it).");
+            return false;
+        }
+
+        var link = ParseLink(edit.Url, edit.OriginalUrl, edit.OriginalLink, out var error);
+        if (link is null)
+        {
+            Toasts.Error($"{what}: {error}");
+            return false;
+        }
+
+        action = new HeaderAction(Localized(edit.Label, edit.OriginalLabel)!, link);
+        return true;
+    }
+
+    private async Task SaveHeader()
+    {
+        if (_site is not { } site ||
+            !BuildAction(_cta, "primary button", out var cta) ||
+            !BuildAction(_quiet, "quiet link", out var quiet))
+        {
+            return;
+        }
+
+        if (await Commands.Run(new SetHeaderActions(site.Id, cta, quiet)))
+        {
+            _site = Sites.Get(site.Id);
+            SeedChrome();
+            Toasts.Show("Header saved.");
+        }
+    }
+
+    private async Task SaveFooter()
+    {
+        if (_site is not { } site)
+        {
+            return;
+        }
+
+        var groups = new List<FooterLinkGroup>();
+        foreach (var edit in _footerGroups)
+        {
+            var links = new List<FooterLink>();
+            foreach (var linkEdit in edit.Links)
+            {
+                if (linkEdit.Label.Trim().Length == 0 && linkEdit.Url.Trim().Length == 0)
+                {
+                    continue; // an empty row is just an abandoned add
+                }
+
+                var link = ParseLink(linkEdit.Url, linkEdit.OriginalUrl, linkEdit.OriginalLink, out var error);
+                if (link is null)
+                {
+                    Toasts.Error($"Footer: {error ?? "a link needs a target."}");
+                    return;
+                }
+
+                links.Add(new FooterLink(Localized(linkEdit.Label, linkEdit.OriginalLabel), link));
+            }
+
+            if (edit.Heading.Trim().Length == 0 && links.Count == 0)
+            {
+                continue; // an empty column is just an abandoned add
+            }
+
+            groups.Add(new FooterLinkGroup(
+                Localized(edit.Heading, edit.OriginalHeading) ?? LocalizedText.Of(ChromeLocale, ""),
+                links));
+        }
+
+        if (await Commands.Run(new SetFooter(site.Id, groups)))
+        {
+            _site = Sites.Get(site.Id);
+            SeedChrome();
+            Toasts.Show("Footer saved.");
+        }
+    }
+
+    private async Task SaveCopyLine()
+    {
+        if (_site is not { } site)
+        {
+            return;
+        }
+
+        var copyLine = Localized(_copyLine, _copyOriginal) is { } text ? new CopyLine(text) : null;
+        if (await Commands.Run(new SetCopyLine(site.Id, copyLine)))
+        {
+            _site = Sites.Get(site.Id);
+            SeedChrome();
+            Toasts.Show("Copy line saved.");
+        }
     }
 
     private async Task TakeOwnership()

@@ -2,6 +2,10 @@
 
 @Body
 
+@* Toasts render on EVERY page — the settings/dashboard pages dispatch commands too,
+   and a toast fired with no host on the page vanished silently. *@
+<ToastHost />
+
 @* Rendered only once the interactive circuit is live (prerendering never reaches
    OnAfterRender): the deterministic "you may click now" signal for E2E drivers and
    a truthful readiness beacon in general. *@
