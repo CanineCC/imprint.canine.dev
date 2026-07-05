@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Pages;
 
 namespace ContentSeeder;
@@ -19,11 +20,18 @@ namespace ContentSeeder;
 /// With no api-base the widgets carry the sample alone (the faithful offline default).
 /// Nothing is invented; an unknown template is flagged.
 /// </summary>
-public sealed class BlockMapper(string origin, string? apiBase = null)
+public sealed class BlockMapper(
+    string origin,
+    string? apiBase = null,
+    IReadOnlyDictionary<string, AssetId>? svgAssets = null)
 {
     public sealed record Flag(string Rel, string Note);
 
     public readonly List<Flag> Flags = [];
+
+    // src path → uploaded AssetId, ingested by the Migrator before mapping.
+    private readonly IReadOnlyDictionary<string, AssetId> _svgAssets =
+        svgAssets ?? new Dictionary<string, AssetId>(StringComparer.Ordinal);
 
     /// <summary>Map one CMS block object to a single root Section node, or null to skip (never invent).</summary>
     public SectionNode? Map(JsonNode block, string rel)
@@ -51,6 +59,7 @@ public sealed class BlockMapper(string origin, string? apiBase = null)
             "findings" => Findings(block),
             "flow" => Flow(block),
             "contactForm" => ContactForm(block),
+            "svgFigure" => SvgFigure(block, rel),
             _ => FlagUnknown(template, rel),
         };
 
@@ -694,6 +703,65 @@ public sealed class BlockMapper(string origin, string? apiBase = null)
         }
 
         return Nodes.Section(SectionBackground.SurfaceAlt, Nodes.Stack([.. stack]));
+    }
+
+    /// <summary>
+    /// An old-site infographic: a Section holding an optional head (the heading maps to
+    /// an H3 — these figures titled sub-sections, e.g. "SonarQube + Watchdog"), the
+    /// SvgNode referencing the pre-ingested asset (light + optional dark variant, both
+    /// inlined by the publisher and revealed by theme), and an optional caption. The
+    /// figure's design width rides along as MaxWidthPx so it never upscales.
+    /// </summary>
+    private SectionNode? SvgFigure(JsonNode block, string rel)
+    {
+        var src = block.Str("src");
+        if (string.IsNullOrWhiteSpace(src) || !_svgAssets.TryGetValue(src!, out var assetId))
+        {
+            Flags.Add(new Flag(rel, $"svgFigure '{src}' has no ingested asset — skipped (never invented)."));
+            return null;
+        }
+
+        var stack = new List<Node>();
+        var kicker = block.Str("kicker");
+        if (!string.IsNullOrWhiteSpace(kicker))
+        {
+            stack.Add(Nodes.RichHtml($"<p><strong>{Inline.Escape(kicker!)}</strong></p>"));
+        }
+
+        var heading = block.Str("heading");
+        if (!string.IsNullOrWhiteSpace(heading))
+        {
+            stack.Add(Nodes.Heading(3, PlainHeading(heading!)));
+        }
+
+        var lede = block.Str("lede");
+        if (!string.IsNullOrWhiteSpace(lede))
+        {
+            stack.Add(Nodes.Paragraph(lede, origin));
+        }
+
+        int? maxWidth = null;
+        var maxWidthRaw = block.Str("maxWidth");
+        if (int.TryParse(maxWidthRaw, out var parsed) && parsed > 0)
+        {
+            maxWidth = parsed;
+        }
+
+        stack.Add(new SvgNode
+        {
+            Id = NodeId.New(),
+            AssetId = assetId,
+            MaxWidthPx = maxWidth,
+            Alt = Nodes.Text(Nodes.Clamp(block.Str("alt") ?? "", 500)),
+        });
+
+        var caption = block.Str("caption");
+        if (!string.IsNullOrWhiteSpace(caption))
+        {
+            stack.Add(Nodes.Paragraph(caption, origin));
+        }
+
+        return Nodes.Section(Nodes.Stack([.. stack]));
     }
 
     // ─────────────────────────────────────────────────────── WIDGET blocks ─────

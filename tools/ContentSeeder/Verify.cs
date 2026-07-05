@@ -141,6 +141,15 @@ public static class Verify
         Check(HasCopy(published, pageList, Sites.WatchdogSite, "security", "Subprocessor"),
             "WD security doc table content preserved (header row copy)");
 
+        // ── 2b. the old site's infographics (svgFigure blocks → SvgNodes w/ ingested assets) ──
+        Check(SvgNodeCount(published, pageList, Sites.WatchdogSite, "where-watchdog-fits") == 9,
+            "WD where-watchdog-fits carries all 9 positioning figures as SvgNodes " +
+            $"(found {SvgNodeCount(published, pageList, Sites.WatchdogSite, "where-watchdog-fits")})");
+        Check(SvgNodeCount(published, pageList, Sites.WatchdogSite, "for-consultancies") == 1,
+            "WD for-consultancies carries the scan→fix→prove loop figure");
+        Check(SvgNodeCount(published, pageList, Sites.AssaySite, "for-acquirers") == 1,
+            "Assay for-acquirers carries the LOI→close deal-gates figure");
+
         // ── 3. no non-canonical RichText anywhere (would have been rejected at AddNode,
         //       but assert defensively that every RichText validates) ──
         var badHtml = 0;
@@ -183,6 +192,23 @@ public static class Verify
                     Check(home.Contains("cai-", StringComparison.Ordinal) || islands > 0,
                         $"{site.Key} home HTML references a CAI widget element");
                 }
+            }
+
+            // The figures render INLINE (sanitized svg, light + dark revealed by theme) —
+            // prove the static output actually carries them, not just the authored nodes.
+            var wwfHtml = Path.Combine(publishRoot, "watchdog", "where-watchdog-fits", "index.html");
+            if (File.Exists(wwfHtml))
+            {
+                var html = await File.ReadAllTextAsync(wwfHtml);
+                var inlineSvgs = html.Split("<svg", StringSplitOptions.None).Length - 1;
+                Check(inlineSvgs >= 18,
+                    $"WD where-watchdog-fits static HTML inlines the figures (light+dark, found {inlineSvgs} <svg>)");
+                Check(html.Contains("ip-img-dark", StringComparison.Ordinal),
+                    "WD where-watchdog-fits static HTML carries the dark-variant reveal wrappers");
+            }
+            else
+            {
+                Check(false, "WD where-watchdog-fits static HTML rendered");
             }
         }
 
@@ -255,6 +281,13 @@ public static class Verify
     {
         var page = Page(published, list, site, slug);
         return page is not null && page.Tree.All().OfType<WidgetNode>().Any(w => w.Tag == tag);
+    }
+
+    private static int SvgNodeCount(
+        PublishedContent published, PageList list, SiteId site, string slug)
+    {
+        var page = Page(published, list, site, slug);
+        return page is null ? 0 : page.Tree.All().OfType<SvgNode>().Count(s => s.AssetId is not null);
     }
 
     private static bool HasWidgetAnywhere(
