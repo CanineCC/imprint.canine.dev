@@ -1,6 +1,7 @@
 @* The Pages panel (docs/editor-ux.md §7): site name, the page list (navigation pages
-   first, reorderable with arrows), a create form with live slug suggestions, and the
-   site's languages. Every mutation is a command; guard messages arrive as toasts. *@
+   first, reorderable with arrows) and a create form with live slug suggestions. Every
+   mutation is a command; guard messages arrive as toasts. The site's languages moved
+   to the settings page — they are site configuration, not day-to-day page work. *@
 @using Imprint.Authoring.Projections
 @using Imprint.Editor.Components.Panels.Pages
 @using Imprint.Editor.Services
@@ -70,8 +71,6 @@
                 }
             </ul>
         }
-
-        <LocaleManager />
     }
 </div>
 

@@ -156,12 +156,13 @@
   {
     "tag": "contact-form",
     "name": "Contact form",
-    "description": "A contact form with a topic selector (?topic= prefill), name / email / organisation / message fields and a spam honeypot. Submits via fetch() to the `action` endpoint (default: the imprint editor's anonymous /api/contact) and reports success/failure inline. The inbox recipients live in the endpoint's server config — never in the page.",
+    "description": "A contact form with a topic selector (?topic= prefill), name / email / organisation / message fields and a spam honeypot. Submits via fetch() to the `action` endpoint (default: the imprint editor's anonymous /api/contact) and reports success/failure inline. The inbox recipients live in the private `recipients` prop (falling back to the endpoint's server config) — never in the page.",
     "bundle": "contact-form.js",
     "placeholder": "Contact form",
     "props": [
       { "name": "topics", "label": "Topic options (JSON array of strings)", "type": "text", "default": "[]" },
       { "name": "action", "label": "Form endpoint (where submissions are posted)", "type": "url", "default": "https://app.imprint.canine.dev/api/contact" },
+      { "name": "recipients", "label": "Send submissions to (email, comma-separate for several — never published)", "type": "text", "default": "", "private": true },
       { "name": "kicker", "label": "Kicker (small uppercase intro)", "type": "text", "default": "" },
       { "name": "heading", "label": "Heading", "type": "text", "default": "" },
       { "name": "lede", "label": "Lede / intro paragraph", "type": "text", "default": "" },

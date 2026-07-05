@@ -182,6 +182,29 @@ public sealed class BlockMapper(
         }
     }
 
+    // A mailto microcopy line is the legacy "fallback inbox" idiom — the exact scrapable
+    // address the /api/contact endpoint (and the contact-form's private `recipients`
+    // prop) exists to keep OUT of published markup — so it is dropped and flagged, never
+    // republished. All other microcopy is transcribed verbatim, as always.
+    private void AddMicrocopy(List<Node> stack, JsonNode block, string rel)
+    {
+        var microcopy = block.Str("microcopy");
+        if (string.IsNullOrWhiteSpace(microcopy))
+        {
+            return;
+        }
+
+        if (microcopy!.Contains("mailto:", StringComparison.OrdinalIgnoreCase))
+        {
+            Flags.Add(new Flag(rel,
+                "microcopy carries a mailto fallback inbox — dropped (the address must never " +
+                "be published; submissions reach it via the contact-form's private recipients prop)."));
+            return;
+        }
+
+        stack.Add(Nodes.Paragraph(microcopy, origin));
+    }
+
     // ────────────────────────────────────────────────────────── COPY blocks ────
 
     private SectionNode Hero(JsonNode block)
@@ -201,11 +224,7 @@ public sealed class BlockMapper(
         }
 
         items.AddRange(CtaRow(block));
-        var microcopy = block.Str("microcopy");
-        if (!string.IsNullOrWhiteSpace(microcopy))
-        {
-            items.Add(Nodes.Paragraph(microcopy, origin));
-        }
+        AddMicrocopy(items, block, "(hero block)");
 
         // The hero proof object: the CAI score card. Live from the corpus when an
         // api-base is configured (the curated hero repo), else the labelled sample.
@@ -863,11 +882,7 @@ public sealed class BlockMapper(
         }
 
         stack.AddRange(CtaRow(block));
-        var microcopy = block.Str("microcopy");
-        if (!string.IsNullOrWhiteSpace(microcopy))
-        {
-            stack.Add(Nodes.Paragraph(microcopy, origin));
-        }
+        AddMicrocopy(stack, block, "(cta block)");
 
         // The closing band rides the accent (Primary) fill — the theme inverts the
         // buttons and lifts the copy to on-primary ink under .ip-ap-cta.ip-bg-primary.
@@ -1115,11 +1130,14 @@ public sealed class BlockMapper(
         {
             props["topics"] = block.Arr("topics").ToJsonString();
             // Every site's form posts to the imprint editor's anonymous /api/contact —
-            // the inbox address lives in that app's server config, NEVER in page markup,
-            // so the block's legacy fallbackEmail is deliberately not stamped (it would
-            // put a scrapable address back into the published HTML).
+            // the inbox address is NEVER in page markup, so the block's legacy
+            // fallbackEmail is deliberately not stamped (it would put a scrapable address
+            // back into the published HTML). The inbox rides `recipients` instead: a
+            // manifest-private prop the endpoint reads live from the draft read models —
+            // WidgetView refuses to emit it, so it can safely carry the real address.
             var action = block.Str("action");
             props["action"] = string.IsNullOrWhiteSpace(action) ? "https://app.imprint.canine.dev/api/contact" : action!;
+            props["recipients"] = "sales@canine.dev";
             Copy(block, "kicker", props, "kicker");
             Copy(block, "heading", props, "heading");
             Copy(block, "lede", props, "lede");

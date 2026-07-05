@@ -13,6 +13,7 @@
 @using Imprint.Authoring.Features.Sites.SetFooter
 @using Imprint.Authoring.Features.Sites.SetHeaderActions
 @using Imprint.Editor.Auth
+@using Imprint.Editor.Components.Panels.Pages
 @using Imprint.Editor.Services
 @using Imprint.Publishing
 @implements IDisposable
@@ -194,6 +195,17 @@
                 <button type="button" class="ed-btn ed-btn-primary" disabled="@(!_interactive || _busy)"
                         @onclick="SaveCopyLine">Save copy line</button>
             </div>
+        </section>
+
+        @* ---- Languages (content locales — localization is editing work, so every
+              collaborator manages them, not just the owner) ---- *@
+        <section class="settings-card" aria-labelledby="set-languages">
+            <h2 id="set-languages">Languages</h2>
+            <p class="settings-hint">
+                The locales this site's content can be written in. The default is the
+                language pages fall back to when a translation is missing.
+            </p>
+            <LocaleManager Site="site" />
         </section>
 
         @* ---- People (owner + collaborators) ---- *@

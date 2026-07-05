@@ -1,16 +1,18 @@
 @* The site's languages: list, add (validated live), remove and change the default.
-   Domain guards (default removal, duplicates, the 10-locale cap) speak via toasts. *@
+   Domain guards (default removal, duplicates, the 10-locale cap) speak via toasts.
+   The host passes the Site to manage (the settings page's site); without one it falls
+   back to the session's active site — never silently the FIRST site, which on a
+   multi-site install would edit someone else's locales. *@
 @using Imprint.Authoring.Projections
 @using Imprint.Editor.Services
 @implements IDisposable
-@inject SiteOverview Site
+@inject SiteOverview Overview
 @inject EditorSession Session
 @inject CommandRunner Commands
 
-@if (Session.ActiveSite is { } site)
+@if (Target is { } site)
 {
     <section class="locale-manager">
-        <h3 class="group-label">Languages</h3>
         <ul class="locale-list">
             @foreach (var locale in site.Locales)
             {
@@ -47,16 +49,22 @@
 }
 
 @code {
+    /// <summary>The site whose languages are managed. Optional: an editor-chrome host may
+    /// omit it, in which case the session's active site (the open page's site) is used.</summary>
+    [Parameter] public Site? Site { get; set; }
+
     private string _input = "";
     private string? _hint;
 
-    protected override void OnInitialized() => Site.Changed += Refresh;
+    private Site? Target => Site ?? Session.ActiveSite;
+
+    protected override void OnInitialized() => Overview.Changed += Refresh;
 
     private void Refresh() => _ = InvokeAsync(StateHasChanged);
 
     private async Task Add()
     {
-        if (Session.ActiveSite is not { } site)
+        if (Target is not { } site)
         {
             return;
         }
@@ -93,7 +101,7 @@
 
     private async Task MakeDefault(string value)
     {
-        if (Session.ActiveSite is not { } site)
+        if (Target is not { } site)
         {
             return;
         }
@@ -106,7 +114,7 @@
 
     private async Task Remove(string value)
     {
-        if (Session.ActiveSite is not { } site)
+        if (Target is not { } site)
         {
             return;
         }
@@ -117,5 +125,5 @@
             "language removal");
     }
 
-    public void Dispose() => Site.Changed -= Refresh;
+    public void Dispose() => Overview.Changed -= Refresh;
 }

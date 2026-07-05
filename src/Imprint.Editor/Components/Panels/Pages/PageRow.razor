@@ -13,7 +13,12 @@
         <span class="page-title">@Title</span>
         <span class="page-slug">@PathText</span>
     </button>
-    <span class="ed-badge @BadgeClass">@Entry.Status</span>
+    @* Published is the resting state — a badge on every row would be noise. Only the
+       exceptions (never published, or drafted past the published version) get flagged. *@
+    @if (Entry.Status is not PageStatus.Published)
+    {
+        <span class="ed-badge @BadgeClass">@Entry.Status</span>
+    }
 </li>
 
 @code {
@@ -34,8 +39,7 @@
     private string BadgeClass => Entry.Status switch
     {
         PageStatus.Draft => "ed-badge-warn",
-        PageStatus.Modified => "ed-badge-accent",
-        _ => "ed-badge-ok",
+        _ => "ed-badge-accent", // Modified — Published renders no badge at all
     };
 
     private void Open() => Navigation.NavigateTo($"/edit/{Entry.Id.Compact}");

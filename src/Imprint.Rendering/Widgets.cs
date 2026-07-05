@@ -39,6 +39,14 @@ public sealed record WidgetProp
 
     /// <summary>For <see cref="WidgetPropType.Choice"/>.</summary>
     public IReadOnlyList<string> Options { get; init; } = [];
+
+    /// <summary>
+    /// Server-side only: the editor shows the prop and the value lives in the node's
+    /// prop bag, but <c>WidgetView</c> never emits it as an attribute — in any render
+    /// mode — so it can carry data the published page must not reveal (e.g. the
+    /// contact-form's inbox addresses, read live by the /api/contact endpoint).
+    /// </summary>
+    public bool Private { get; init; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

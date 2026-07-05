@@ -9,15 +9,24 @@ namespace Imprint.Editor.Contact;
 /// then delivery. Delivery mirrors the estate's existing contact idiom (watchdog's
 /// <c>SmtpContactNotifier</c>): the BCL <see cref="SmtpClient"/> against the
 /// <c>Contact:Smtp:*</c> relay config, a plain-text body, Reply-To the submitter — no
-/// third-party mail SaaS. Recipients come from <c>Contact:Recipients</c> (comma-separated)
-/// and live ONLY in server config: the whole point of the endpoint is that no inbox
-/// address ever appears in published page markup. Where watchdog merely logs a lead when
-/// no relay is configured, imprint also appends it to
-/// <c>&lt;ImprintData&gt;/contact-submissions.jsonl</c> — an unconfigured or failing relay
-/// stores the lead instead of losing it, and the visitor still gets a thank-you.
+/// third-party mail SaaS. Recipients are resolved per submission by
+/// <see cref="ContactRecipientResolver"/> — the submitting site's private contact-form
+/// widget prop first, the <c>Contact:Recipients</c> config as fallback — and live ONLY
+/// server-side: the whole point of the endpoint is that no inbox address ever appears in
+/// published page markup. Where watchdog merely logs a lead when no relay is configured,
+/// imprint also appends it to <c>&lt;ImprintData&gt;/contact-submissions.jsonl</c> — an
+/// unconfigured or failing relay stores the lead instead of losing it, and the visitor
+/// still gets a thank-you.
 /// </summary>
-public sealed class ContactIntake(IConfiguration configuration, string dataDirectory, ILogger<ContactIntake> logger)
+public sealed class ContactIntake(
+    IConfiguration configuration,
+    string dataDirectory,
+    ILogger<ContactIntake> logger,
+    ContactRecipientResolver? recipientResolver = null)
 {
+    // Config-only resolution when no widget-prop lookup is wired (tests, minimal hosts).
+    private readonly ContactRecipientResolver _recipients = recipientResolver ?? new(configuration);
+
     // Serializes appends from concurrent submissions; a JSONL line must land whole.
     private readonly Lock _storeGate = new();
 
@@ -39,7 +48,20 @@ public sealed class ContactIntake(IConfiguration configuration, string dataDirec
         }
 
         var submission = fields.Normalize();
-        if (!await TrySend(submission, ct))
+        var (recipients, source) = _recipients.Resolve(submission.Site);
+        if (source != ContactRecipientResolver.Source.None)
+        {
+            // Deliberately the addresses' COUNT, not the addresses: the resolution source
+            // is the operational fact worth logging; the inboxes stay out of the logs.
+            logger.LogInformation(
+                "Contact recipients resolved from {Source} for site={Site} ({Count} recipient(s)).",
+                source == ContactRecipientResolver.Source.WidgetProp
+                    ? "the contact-form widget prop"
+                    : "Contact:Recipients config",
+                submission.Site ?? "—", recipients.Count);
+        }
+
+        if (!await TrySend(submission, recipients, ct))
         {
             Store(submission);
         }
@@ -49,15 +71,13 @@ public sealed class ContactIntake(IConfiguration configuration, string dataDirec
 
     /// <summary>Attempts SMTP delivery. False means "not emailed" — unconfigured relay or
     /// an active failure — and the caller stores the lead locally instead.</summary>
-    private async Task<bool> TrySend(ContactSubmission submission, CancellationToken ct)
+    private async Task<bool> TrySend(ContactSubmission submission, IReadOnlyList<string> recipients, CancellationToken ct)
     {
         var host = configuration["Contact:Smtp:Host"];
-        var recipients = (configuration["Contact:Recipients"] ?? string.Empty)
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (string.IsNullOrWhiteSpace(host) || recipients.Length == 0)
+        if (string.IsNullOrWhiteSpace(host) || recipients.Count == 0)
         {
             logger.LogWarning(
-                "Contact submission stored, not emailed — Contact:Smtp:Host / Contact:Recipients not configured. site={Site} topic={Topic} email={Email}",
+                "Contact submission stored, not emailed — no Contact:Smtp:Host, or no recipients (widget prop / Contact:Recipients). site={Site} topic={Topic} email={Email}",
                 submission.Site ?? "—", submission.Topic, submission.Email);
             return false;
         }

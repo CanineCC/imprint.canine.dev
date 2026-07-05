@@ -60,6 +60,15 @@ else if (descriptor is not null)
         continue;
       }
 
+      // A Private prop is server-side data (e.g. the contact-form's inbox addresses):
+      // the value stays in the prop bag for the endpoint to read, but never becomes an
+      // attribute — in ANY mode, because the editor canvas is HTML too and publishing
+      // the address is exactly what the prop exists to avoid.
+      if (prop.Private)
+      {
+        continue;
+      }
+
       if (Node.Props.Get(prop.Name) is { } value)
       {
         builder.AddAttribute(1, prop.Name, value);

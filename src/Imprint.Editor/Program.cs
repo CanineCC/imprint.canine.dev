@@ -88,7 +88,15 @@ builder.Services.AddRateLimiter(limiter =>
 builder.Services.AddSingleton(provider => new ContactIntake(
     provider.GetRequiredService<IConfiguration>(),
     dataDirectory,
-    provider.GetRequiredService<ILogger<ContactIntake>>()));
+    provider.GetRequiredService<ILogger<ContactIntake>>(),
+    // Recipients resolve per submission: the submitting site's private contact-form
+    // widget prop (live from the read models — an editor change needs no republish),
+    // then Contact:Recipients config, then journal-only. See ContactRecipientResolver.
+    new ContactRecipientResolver(
+        builder.Configuration,
+        new SiteContactRecipients(
+            provider.GetRequiredService<SiteOverview>(),
+            provider.GetRequiredService<PageDrafts>()).Find)));
 
 // Optional in-app Keycloak/OIDC protection. Off until Keycloak:Authority is configured;
 // refuses to run unauthenticated in Production (see ImprintAuthExtensions).
@@ -210,8 +218,9 @@ if (authOptions.Enabled)
 // Public contact intake: the published marketing sites' <contact-form> islands POST here
 // (fetch, form-encoded; JSON works too for API callers). Fully anonymous BY DESIGN, like
 // /healthz — a visitor sending a sales note has no Keycloak login, and RequireAuthorization
-// above is per-endpoint, so it never covers this route. The recipient inbox lives in
-// server config (ContactIntake) — no email address ever appears in page markup.
+// above is per-endpoint, so it never covers this route. The recipient inbox lives
+// server-side only — the site's private contact-form widget prop, or Contact:Recipients
+// config (ContactIntake) — no email address ever appears in page markup.
 app.MapPost("/api/contact", async (HttpContext http, ContactIntake intake, CancellationToken ct) =>
 {
     var fields = await ReadContactFields(http, ct);

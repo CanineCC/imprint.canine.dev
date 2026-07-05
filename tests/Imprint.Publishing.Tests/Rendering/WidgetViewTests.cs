@@ -106,6 +106,51 @@ public sealed class WidgetViewTests
         Assert.Equal(1, Occurrences(html, "data-island="));
     }
 
+    [Fact]
+    public async Task A_private_prop_value_never_appears_in_static_output()
+    {
+        // The whole point of Private (the contact-form's `recipients`): the editor stores
+        // the address in the prop bag, but publishing it would put the inbox we are hiding
+        // straight back into scrapable markup.
+        var widget = SampleNodes.Widget(
+            new KeyValuePair<string, string>("until", "2027-01-01"),
+            new KeyValuePair<string, string>("recipients", "sales@canine.dev, ceo@canine.dev"));
+
+        var html = await RenderHarness.RenderNode(WithWidget(RenderMode.Static, PrivateRecipientsDescriptor()), widget);
+
+        Assert.Contains("until=\"2027-01-01\"", html); // the public prop still emits
+        Assert.DoesNotContain("recipients", html);     // the private prop name is absent
+        Assert.DoesNotContain("sales@canine.dev", html);
+        Assert.DoesNotContain("canine.dev", html);     // no fragment of the address survives
+    }
+
+    [Fact]
+    public async Task A_private_prop_value_never_appears_in_editor_output_either()
+    {
+        // The editor canvas is rendered HTML too; the address must not ride the island
+        // host element there any more than it may in the published page.
+        var widget = SampleNodes.Widget(new KeyValuePair<string, string>("recipients", "sales@canine.dev"));
+
+        var html = await RenderHarness.RenderNode(WithWidget(RenderMode.Editor, PrivateRecipientsDescriptor()), widget);
+
+        Assert.Contains("<x-countdown", html);
+        Assert.DoesNotContain("recipients", html);
+        Assert.DoesNotContain("sales@canine.dev", html);
+    }
+
+    private static WidgetDescriptor PrivateRecipientsDescriptor() => new()
+    {
+        Tag = "x-countdown",
+        Name = "Countdown",
+        Bundle = "x-countdown.js",
+        Placeholder = "Counting down…",
+        Props =
+        [
+            new WidgetProp { Name = "until", Label = "Until" },
+            new WidgetProp { Name = "recipients", Label = "Send submissions to", Private = true },
+        ],
+    };
+
     private static int Occurrences(string haystack, string needle)
     {
         var count = 0;
