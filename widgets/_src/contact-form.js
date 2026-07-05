@@ -1,15 +1,15 @@
 // <contact-form topics='["Book an appraisal","Sales & pricing",…]'
-//               action="https://app.imprint.canine.dev/api/contact" fallback-email=""
+//               action="https://app.imprint.canine.dev/api/contact"
 //               kicker="…" heading="…" lede="…" privacy-note="…"
 //               brand="watchdog|assay|cai">
 //
 // Port of packages/ui/src/ContactForm.tsx markup: the topic <select> (with the
 // ?topic= prefill and the same TOPIC_KEY_MATCHERS), name / email / org /
 // message fields, and the hidden `website` honeypot. With an `action` set the
-// island fetch()es a form-encoded POST to that endpoint (the imprint editor's
-// anonymous /api/contact) and reports the result inline in .mk-form-status —
-// no inbox address anywhere in the page. The mailto: path to `fallback-email`
-// survives ONLY as the legacy no-action mode.
+// island fetch()es a form-encoded POST to its endpoint (the imprint editor's
+// anonymous /api/contact — the default when the attribute is absent) and reports
+// the result inline in .mk-form-status. No inbox address exists anywhere in the
+// page; recipients are the endpoint's server-side config.
 
 import {
   CaiIsland,
@@ -78,8 +78,9 @@ customElements.define(
   class extends CaiIsland {
     render(root) {
       const topics = (this.json("topics", []) || []).map(String);
-      const fallback = this.getAttribute("fallback-email") || "";
-      const action = (this.getAttribute("action") || "").trim();
+      const action =
+        (this.getAttribute("action") || "").trim() ||
+        "https://app.imprint.canine.dev/api/contact";
       const privacyNote = this.getAttribute("privacy-note");
 
       // Prefill from ?topic= after hydration (static pages carry no query at build).
@@ -92,10 +93,6 @@ customElements.define(
         /* no window/URL — keep the first option */
       }
 
-      // Post to the configured endpoint; the mailto: fallback is legacy-only and
-      // needs an explicit fallback-email (never a baked-in default address).
-      const formAction = action || (fallback ? `mailto:${fallback}` : "");
-      const isMailto = !action;
 
       const topicSelect =
         topics.length > 0
@@ -111,12 +108,7 @@ customElements.define(
 
       let html = `<style>${CSS}</style>`;
       html += sectionHeadHtml(this);
-      // enctype text/plain keeps a mailto: body human-readable; a real endpoint
-      // can override `action` and receive standard form-encoded fields.
-      html +=
-        `<form class="mk-form" method="post" action="${escapeHtml(formAction)}"` +
-        (isMailto ? ` enctype="text/plain"` : "") +
-        `>`;
+      html += `<form class="mk-form" method="post" action="${escapeHtml(action)}">`;
       html += topicSelect;
       html += `<label>Your name<input name="name" autocomplete="name" required></label>`;
       html += `<label>Work email<input name="email" type="email" autocomplete="email" required></label>`;
@@ -124,7 +116,7 @@ customElements.define(
       html += `<label>How can we help?<textarea name="message" required></textarea></label>`;
       // Honeypot — humans never see it; bots fill it.
       html += `<label class="mk-form-hp" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>`;
-      if (action) {
+      {
         // The submitting site's hostname, so one endpoint triages all brands.
         let site = "";
         try {
@@ -135,13 +127,8 @@ customElements.define(
         html += `<input type="hidden" name="site" value="${escapeHtml(site)}">`;
       }
       html += `<div class="mk-cta-row"><button class="btn btn-primary btn-lg" type="submit">Send message</button></div>`;
-      if (action) {
-        // Endpoint mode: the status line is the inline send-result — and it NEVER
-        // mentions an email address.
-        html += `<p class="mk-form-status" aria-live="polite"></p>`;
-      } else if (fallback) {
-        html += `<p class="mk-form-status">This form opens your mail app addressed to <a href="mailto:${escapeHtml(fallback)}">${escapeHtml(fallback)}</a>.</p>`;
-      }
+      // The status line is the inline send-result — it NEVER mentions an address.
+      html += `<p class="mk-form-status" aria-live="polite"></p>`;
       if (privacyNote)
         html += `<p class="mk-form-status">${renderInline(privacyNote)}</p>`;
       html += `</form>`;
@@ -149,7 +136,7 @@ customElements.define(
 
       const form = root.querySelector("form");
       if (!form) return;
-      const status = action ? form.querySelector(".mk-form-status") : null;
+      const status = form.querySelector(".mk-form-status");
       const button = form.querySelector('button[type="submit"]');
       const showStatus = (text, ok) => {
         if (!status) return;
@@ -161,10 +148,9 @@ customElements.define(
       form.addEventListener("submit", async (e) => {
         const hp = form.querySelector('input[name="website"]');
 
-        if (action) {
-          // Endpoint mode: fetch() the form-encoded fields (a preflight-free simple
-          // request) and answer inline — the page never navigates.
-          e.preventDefault();
+        // fetch() the form-encoded fields (a preflight-free simple request) and
+        // answer inline — the page never navigates.
+        e.preventDefault();
           if (hp && hp.value.trim() !== "") {
             // A filled honeypot is a bot — pretend success, send nothing.
             showStatus("Thanks — we'll get back to you.", true);
@@ -189,16 +175,6 @@ customElements.define(
           } finally {
             if (button) button.disabled = false;
           }
-          return;
-        }
-
-        // Legacy mailto: drop the honeypot from the serialized body (a filled one is
-        // a bot; even empty it needn't clutter the mail). Native submit otherwise.
-        if (hp && hp.value.trim() !== "") {
-          e.preventDefault();
-          return;
-        }
-        if (hp) hp.disabled = true;
       });
     }
   }
