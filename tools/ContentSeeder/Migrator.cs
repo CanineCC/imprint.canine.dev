@@ -230,6 +230,24 @@ public sealed class Migrator(ICommandDispatcher dispatcher, string? apiBase = nu
         return new SiteResult(site.Key, authoredPages, authoredDocs, published, slugs, [.. _flags.Where(f => f.Contains($"[{site.Key}"))]);
     }
 
+    /// <summary>
+    /// Re-applies ONLY a site's brand layer — its neutral+accent theme tokens and its
+    /// typography — to an already-seeded aggregate, creating no pages. This is the safe
+    /// path to change the look of a LIVE store (e.g. rolling out Assay's Dal) without a
+    /// destructive fresh reseed: the page/content/locale history (incl. editor-authored
+    /// translations) is untouched, and every command is idempotent — an unchanged token
+    /// or typography no-ops, so re-running is safe and only the changed values raise events.
+    /// </summary>
+    public async Task RebrandSite(SiteDef site)
+    {
+        foreach (var (token, light, dark) in Themes.TokensFor(site.Neutrals, site.Accent))
+        {
+            await Ok(new ChangeThemeToken(site.SiteId, token, light, dark), $"ChangeThemeToken {site.Key}/{token}");
+        }
+
+        await Ok(new ChangeTypography(site.SiteId, site.Typography), $"ChangeTypography {site.Key}");
+    }
+
     public IReadOnlyList<string> AllFlags => _flags;
 
     /// <summary>

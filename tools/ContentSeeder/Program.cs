@@ -75,10 +75,15 @@ if (opts.Only is { Count: > 0 } only)
     Console.WriteLine($"  Only       : {string.Join(", ", sites.Select(s => s.Key))}");
 }
 
+// Authoring (steps 1-2) is skipped for an already-seeded store by two cutover modes:
+//   --publish-only : touch nothing but environments + the static render (§2b/§3).
+//   --rebrand      : re-apply ONLY the brand layer (theme tokens + typography) to the
+//                    existing aggregates — no page creation, so a live store's content
+//                    and locale history (incl. editor-authored translations) survive.
+var skipAuthoring = opts.PublishOnly || opts.Rebrand;
+
 // ── 1. ensure the four sites + their empty home pages exist (mirror prod ids) ──
-// --publish-only skips authoring (steps 1-2) for an already-seeded store: the
-// cutover mode — configure environments and/or render static output, nothing else.
-foreach (var site in opts.PublishOnly ? [] : sites)
+foreach (var site in skipAuthoring ? [] : sites)
 {
     if (siteOverview.Get(site.SiteId) is null)
     {
@@ -94,14 +99,25 @@ foreach (var site in opts.PublishOnly ? [] : sites)
     }
 }
 
-// ── 2. migrate ──
+// ── 2. migrate (full authoring) OR rebrand (brand layer only) ──
 var migrator = new Migrator(dispatcher, opts.ApiBase);
 var results = new List<Migrator.SiteResult>();
-foreach (var site in opts.PublishOnly ? [] : sites)
+if (opts.Rebrand)
 {
-    var r = await migrator.MigrateSite(site);
-    results.Add(r);
-    Console.WriteLine($"  {site.Key,-9} authored {r.PagesAuthored} pages + {r.DocsAuthored} docs, published {r.Published}");
+    foreach (var site in sites)
+    {
+        await migrator.RebrandSite(site);
+        Console.WriteLine($"  {site.Key,-9} rebranded (theme tokens + typography re-applied; pages untouched)");
+    }
+}
+else
+{
+    foreach (var site in skipAuthoring ? [] : sites)
+    {
+        var r = await migrator.MigrateSite(site);
+        results.Add(r);
+        Console.WriteLine($"  {site.Key,-9} authored {r.PagesAuthored} pages + {r.DocsAuthored} docs, published {r.Published}");
+    }
 }
 
 Console.WriteLine();
@@ -191,7 +207,7 @@ static string? FindRepoRoot()
 
 internal sealed record Options(
     string? Db, string? Cms, string? Widgets, string? Publish, string? Media, string? ApiBase, bool NoPublish,
-    IReadOnlyList<string>? Only, bool PublishOnly, string? ProdEnvRoot);
+    IReadOnlyList<string>? Only, bool PublishOnly, string? ProdEnvRoot, bool Rebrand);
 
 internal static class Args
 {
@@ -200,6 +216,7 @@ internal static class Args
         string? db = null, cms = null, widgets = null, publish = null, media = null, apiBase = null;
         var noPublish = false;
         var publishOnly = false;
+        var rebrand = false;
         string? prodEnvRoot = null;
         List<string>? only = null;
         for (var i = 0; i < args.Length; i++)
@@ -215,6 +232,7 @@ internal static class Args
                 case "--no-publish": noPublish = true; break;
                 case "--only": only = [.. args[++i].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)]; break;
                 case "--publish-only": publishOnly = true; break;
+                case "--rebrand": rebrand = true; break;
                 case "--prod-env-root": prodEnvRoot = args[++i]; break;
                 default:
                     Console.Error.WriteLine($"Unknown argument: {args[i]}");
@@ -222,6 +240,6 @@ internal static class Args
             }
         }
 
-        return new Options(db, cms, widgets, publish, media, apiBase, noPublish, only, publishOnly, prodEnvRoot);
+        return new Options(db, cms, widgets, publish, media, apiBase, noPublish, only, publishOnly, prodEnvRoot, rebrand);
     }
 }
