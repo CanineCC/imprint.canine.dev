@@ -72,11 +72,13 @@ public sealed class SiteEventSamples : IEventSampleProvider
             yield return new SiteCollaboratorRemoved("colleague@example.com");
 
             // A promotion pipeline: several ordered deploy targets, exercising the list
-            // payload's sequence value-equality on round trip.
+            // payload's sequence value-equality on round trip — with and without the
+            // optional public origin (BaseUrl), so both shapes of the additive property
+            // round-trip.
             yield return new SiteEnvironmentsChanged([
                 new DeployEnvironment("Test", "/srv/www/acme/test"),
                 new DeployEnvironment("Staging", "staging"),
-                new DeployEnvironment("Production", "/srv/www/acme"),
+                new DeployEnvironment("Production", "/srv/www/acme", "https://acme.example"),
             ]);
         }
     }

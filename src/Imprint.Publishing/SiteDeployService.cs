@@ -41,18 +41,21 @@ public sealed class SiteDeployService(
         var folder = paths.Resolve(environment.Path);
         logger.LogInformation(
             "Publishing site {SiteId} to environment '{Environment}' at {Folder}.", siteId, environment.Name, folder);
-        // Environment output is addressed root-relative (BaseUrl null) so it is portable
-        // across origins — which is also what makes a byte-copy promotion valid across
-        // domains. Per-environment canonical origins are a documented follow-up, not a
-        // global BaseUrl that would be wrong for every site but one.
-        return await publisher.Synchronize(new PublishTarget(site, folder, BaseUrl: null), ct);
+        // The environment's own BaseUrl (when the operator set one) makes canonicals,
+        // hreflang, sitemap locations and the robots sitemap pointer absolute against
+        // THAT environment's public origin. Without one, output stays root-relative —
+        // origin-portable, the long-standing default. Never a global BaseUrl, which
+        // would be wrong for every site but one.
+        return await publisher.Synchronize(new PublishTarget(site, folder, environment.BaseUrl), ct);
     }
 
     /// <summary>
     /// Copy the exact rendered bytes of <paramref name="fromEnvironment"/> onto
     /// <paramref name="toEnvironment"/> — the promotion. The target becomes a mirror of
     /// the source (extraneous files removed), so what was verified on Test is precisely
-    /// what goes to Staging or Production.
+    /// what goes to Staging or Production. Byte-copy means the source's canonical origin
+    /// travels with it: environments in one promotion pipeline should either share a
+    /// site address or leave it unset (root-relative output is origin-portable).
     /// </summary>
     public async Task Promote(
         SiteId siteId, string fromEnvironment, string toEnvironment, CancellationToken ct = default)

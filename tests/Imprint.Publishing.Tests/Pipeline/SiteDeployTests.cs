@@ -49,6 +49,49 @@ public sealed class SiteDeployTests
     }
 
     [Fact]
+    public async Task PublishToEnvironment_with_a_site_address_renders_absolute_canonical_hreflang_sitemap_and_robots()
+    {
+        await using var host = new PublishingTestHost();
+        var (siteId, _) = await OneSite(host);
+        await host.AddLocale(siteId, "da");
+        var prodFolder = Path.Combine(host.Root, "prod-env");
+        await host.SetEnvironments(siteId, ("Production", prodFolder, "https://acme.example"));
+
+        await host.Deploy.PublishToEnvironment(siteId, "Production");
+
+        var html = await File.ReadAllTextAsync(Path.Combine(prodFolder, "index.html"));
+        Assert.Contains("<link rel=\"canonical\" href=\"https://acme.example/\" />", html);
+        Assert.Contains("<link rel=\"alternate\" hreflang=\"da\" href=\"https://acme.example/da/\" />", html);
+
+        var sitemap = await File.ReadAllTextAsync(Path.Combine(prodFolder, "sitemap.xml"));
+        Assert.Contains("<loc>https://acme.example/</loc>", sitemap);
+        Assert.Contains("<loc>https://acme.example/da/</loc>", sitemap);
+        Assert.DoesNotContain("<loc>/", sitemap);
+
+        var robots = await File.ReadAllTextAsync(Path.Combine(prodFolder, "robots.txt"));
+        Assert.Contains("Sitemap: https://acme.example/sitemap.xml", robots);
+
+        // Content stays origin-agnostic: only the SEO surfaces go absolute.
+        Assert.Contains("<a href=\"/\"", html);
+    }
+
+    [Fact]
+    public async Task PublishToEnvironment_without_a_site_address_stays_root_relative()
+    {
+        await using var host = new PublishingTestHost();
+        var (siteId, _) = await OneSite(host);
+        var testFolder = Path.Combine(host.Root, "test-env");
+        await host.SetEnvironments(siteId, ("Test", testFolder));
+
+        await host.Deploy.PublishToEnvironment(siteId, "Test");
+
+        var html = await File.ReadAllTextAsync(Path.Combine(testFolder, "index.html"));
+        Assert.Contains("<link rel=\"canonical\" href=\"/\" />", html);
+        Assert.Contains("<loc>/</loc>", await File.ReadAllTextAsync(Path.Combine(testFolder, "sitemap.xml")));
+        Assert.Contains("Sitemap: /sitemap.xml", await File.ReadAllTextAsync(Path.Combine(testFolder, "robots.txt")));
+    }
+
+    [Fact]
     public async Task PublishToEnvironment_is_case_insensitive_on_the_environment_name()
     {
         await using var host = new PublishingTestHost();

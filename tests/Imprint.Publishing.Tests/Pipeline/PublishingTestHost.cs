@@ -77,10 +77,14 @@ internal sealed class PublishingTestHost : IAsyncDisposable
     // -------------------------------------------------------- deploy environments
 
     /// <summary>Configure a site's ordered deploy environments through the real aggregate + projection path.</summary>
-    public async Task SetEnvironments(SiteId siteId, params (string Name, string Path)[] environments)
+    public Task SetEnvironments(SiteId siteId, params (string Name, string Path)[] environments) =>
+        SetEnvironments(siteId, [.. environments.Select(e => (e.Name, e.Path, (string?)null))]);
+
+    /// <summary>Same, with each environment's optional public origin (BaseUrl).</summary>
+    public async Task SetEnvironments(SiteId siteId, params (string Name, string Path, string? BaseUrl)[] environments)
     {
         var site = await Store.Load<Site>(siteId.Stream);
-        site.SetEnvironments([.. environments.Select(e => new DeployEnvironment(e.Name, e.Path))]);
+        site.SetEnvironments([.. environments.Select(e => new DeployEnvironment(e.Name, e.Path, e.BaseUrl))]);
         await Commit(site);
     }
 

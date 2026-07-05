@@ -123,6 +123,9 @@
                 Each environment is a folder Imprint writes the finished static site into.
                 The <strong>first</strong> is where your published pages go automatically; the rest you
                 <em>promote</em> to, in order — so you can verify on Test before it reaches Production.
+                The optional <em>site address</em> is the environment's public origin (like
+                <code>https://example.com</code>): when set, canonical links, the sitemap and robots.txt
+                are written as absolute URLs against it; left blank, they stay root-relative.
             </p>
 
             @if (_envs.Count == 0)
@@ -144,6 +147,8 @@
                                    disabled="@(!_interactive)" @bind="_envs[idx].Name" @bind:event="oninput" />
                             <input class="ed-input env-path" placeholder="/var/www/my-site/test" aria-label="Publish folder"
                                    disabled="@(!_interactive)" @bind="_envs[idx].Path" @bind:event="oninput" />
+                            <input class="ed-input env-baseurl" placeholder="https://example.com (optional)" aria-label="Site address"
+                                   disabled="@(!_interactive)" @bind="_envs[idx].BaseUrl" @bind:event="oninput" />
                             <button type="button" class="ed-btn ed-btn-ghost" title="Move up" aria-label="Move up"
                                     disabled="@(!_interactive || idx == 0)" @onclick="() => MoveEnv(idx, -1)">↑</button>
                             <button type="button" class="ed-btn ed-btn-ghost" title="Move down" aria-label="Move down"
@@ -226,6 +231,7 @@
     {
         public string Name { get; set; } = "";
         public string Path { get; set; } = "";
+        public string BaseUrl { get; set; } = "";
     }
 
     private Site? _site;
@@ -299,7 +305,7 @@
         _envs.Clear();
         if (_site is { } site)
         {
-            _envs.AddRange(site.Environments.Select(e => new EnvRow { Name = e.Name, Path = e.Path }));
+            _envs.AddRange(site.Environments.Select(e => new EnvRow { Name = e.Name, Path = e.Path, BaseUrl = e.BaseUrl ?? "" }));
         }
     }
 
@@ -307,8 +313,8 @@
 
     private bool EnvsDirty =>
         _site is { } site &&
-        !_envs.Select(e => (e.Name.Trim(), e.Path.Trim()))
-            .SequenceEqual(site.Environments.Select(e => (e.Name, e.Path)));
+        !_envs.Select(e => (e.Name.Trim(), e.Path.Trim(), e.BaseUrl.Trim()))
+            .SequenceEqual(site.Environments.Select(e => (e.Name, e.Path, e.BaseUrl ?? "")));
 
     private string OpenHref(SiteId id)
     {
@@ -395,7 +401,10 @@
         }
 
         var environments = _envs
-            .Select(e => new DeployEnvironment(e.Name.Trim(), e.Path.Trim()))
+            .Select(e => new DeployEnvironment(
+                e.Name.Trim(),
+                e.Path.Trim(),
+                e.BaseUrl.Trim() is { Length: > 0 } baseUrl ? baseUrl : null))
             .ToList();
 
         if (await Commands.Run(new ConfigureEnvironments(site.Id, environments)))

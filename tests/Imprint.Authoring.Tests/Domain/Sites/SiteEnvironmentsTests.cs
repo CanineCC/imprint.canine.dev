@@ -144,4 +144,57 @@ public sealed class SiteEnvironmentsTests
             .Given(Created)
             .When(s => s.SetEnvironments([]))
             .ThenNothing();
+
+    // ------------------------------------------------- the optional site address (BaseUrl)
+
+    [Fact]
+    public void SetEnvironments_valid_base_url_raises_environments_changed_with_it() =>
+        AggregateSpec.For<Site>()
+            .Given(Created)
+            .When(s => s.SetEnvironments(
+                [new DeployEnvironment("Production", "/var/www/prod", "https://acme.example")]))
+            .ThenRaised(new SiteEnvironmentsChanged(
+                [new DeployEnvironment("Production", "/var/www/prod", "https://acme.example")]));
+
+    [Fact]
+    public void SetEnvironments_base_url_trailing_slash_is_normalized_off() =>
+        // The origin is prepended to rooted paths ("/about/"), so a kept trailing slash
+        // would double it in every canonical/sitemap URL.
+        AggregateSpec.For<Site>()
+            .Given(Created)
+            .When(s => s.SetEnvironments(
+                [new DeployEnvironment("Production", "/var/www/prod", "  https://acme.example/  ")]))
+            .ThenRaised(new SiteEnvironmentsChanged(
+                [new DeployEnvironment("Production", "/var/www/prod", "https://acme.example")]));
+
+    [Fact]
+    public void SetEnvironments_blank_base_url_is_stored_as_null() =>
+        // The editor round-trips null as "": blank means "not set", never an empty string.
+        AggregateSpec.For<Site>()
+            .Given(Created)
+            .When(s => s.SetEnvironments([new DeployEnvironment("Test", "/var/www/test", "   ")]))
+            .ThenRaised(new SiteEnvironmentsChanged([new DeployEnvironment("Test", "/var/www/test", null)]));
+
+    [Fact]
+    public void SetEnvironments_relative_base_url_is_rejected() =>
+        AggregateSpec.For<Site>()
+            .Given(Created)
+            .When(s => s.SetEnvironments([new DeployEnvironment("Test", "/var/www/test", "example.com")]))
+            .ThenFails("absolute http(s) URL");
+
+    [Fact]
+    public void SetEnvironments_non_http_scheme_base_url_is_rejected() =>
+        AggregateSpec.For<Site>()
+            .Given(Created)
+            .When(s => s.SetEnvironments([new DeployEnvironment("Test", "/var/www/test", "ftp://acme.example")]))
+            .ThenFails("absolute http(s) URL");
+
+    [Fact]
+    public void SetEnvironments_unchanged_base_url_after_normalization_raises_nothing() =>
+        AggregateSpec.For<Site>()
+            .Given(Created, new SiteEnvironmentsChanged(
+                [new DeployEnvironment("Production", "/var/www/prod", "https://acme.example")]))
+            .When(s => s.SetEnvironments(
+                [new DeployEnvironment("Production", "/var/www/prod", "https://acme.example/")]))
+            .ThenNothing();
 }

@@ -225,12 +225,25 @@ public sealed class SiteSettingsSliceTests
         var environments = new DeployEnvironment[]
         {
             new("Test", "/var/www/test"),
-            new("Production", "/var/www/prod"),
+            new("Production", "/var/www/prod", "https://acme.example"),
         };
 
         await host.Ok(new ConfigureEnvironments(siteId, environments));
 
         Assert.Equal(environments, host.Get<SiteOverview>().Get(siteId)!.Environments);
+    }
+
+    [Fact]
+    public async Task ConfigureEnvironments_with_an_invalid_site_address_is_rejected()
+    {
+        await using var host = new AuthoringTestHost();
+        var siteId = await host.CreateTestSite();
+
+        var error = await host.Fails(new ConfigureEnvironments(
+            siteId, [new DeployEnvironment("Test", "/var/www/test", "not a url")]));
+
+        Assert.Contains("absolute http(s) URL", error);
+        Assert.Empty(host.Get<SiteOverview>().Get(siteId)!.Environments);
     }
 
     [Fact]

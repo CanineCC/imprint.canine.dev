@@ -114,10 +114,12 @@ public sealed class PublisherHostedService(
                 var environment = environments[0];
                 try
                 {
-                    // Environment output is portable (root-relative, BaseUrl null): a single
-                    // global BaseUrl would be wrong for every site but one (see
+                    // The environment's own BaseUrl, when set, makes canonicals/hreflang/
+                    // sitemap/robots absolute against that environment's public origin;
+                    // unset keeps output root-relative and origin-portable. Never a single
+                    // global BaseUrl, which would be wrong for every site but one (see
                     // SiteDeployService and multi-site-saas.md).
-                    targets.Add(new PublishTarget(site, paths.Resolve(environment.Path), BaseUrl: null));
+                    targets.Add(new PublishTarget(site, paths.Resolve(environment.Path), environment.BaseUrl));
                 }
                 catch (Exception e) when (e is InvalidOperationException or ArgumentException)
                 {

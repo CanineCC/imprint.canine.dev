@@ -333,6 +333,8 @@ public sealed class Site : AggregateRoot
     /// the path is where static output is written. Whether the path is a <em>safe</em>
     /// place to write (sandbox root, traversal) is a filesystem-policy question the deploy
     /// infrastructure answers — the aggregate only guarantees the config is well-formed.
+    /// The optional site address (<see cref="DeployEnvironment.BaseUrl"/>) must be an
+    /// absolute http(s) URL when given — see <see cref="ValidBaseUrl"/>.
     /// </summary>
     public void SetEnvironments(IReadOnlyList<DeployEnvironment> environments)
     {
@@ -362,7 +364,7 @@ public sealed class Site : AggregateRoot
                 throw new DomainException($"The '{name}' environment must have a publish folder.");
             }
 
-            normalized.Add(new DeployEnvironment(name, path));
+            normalized.Add(new DeployEnvironment(name, path, ValidBaseUrl(name, environment.BaseUrl)));
         }
 
         if (normalized.Select(e => e.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() != normalized.Count)
@@ -376,6 +378,34 @@ public sealed class Site : AggregateRoot
         }
 
         Raise(new SiteEnvironmentsChanged(normalized));
+    }
+
+    /// <summary>
+    /// The environment's optional public origin, normalized. Blank means "not set" (the
+    /// publish stays root-relative). When present it is prepended verbatim to every
+    /// canonical/hreflang/sitemap URL the publish renders, so it must be an absolute
+    /// http(s) URL; trailing slashes are trimmed so origin + rooted path never doubles
+    /// the slash. Whether the origin actually serves the folder is the operator's
+    /// concern — like folder collisions, the aggregate only guarantees well-formedness.
+    /// </summary>
+    private static string? ValidBaseUrl(string environmentName, string? baseUrl)
+    {
+        var trimmed = baseUrl?.Trim() ?? string.Empty;
+        if (trimmed.Length == 0)
+        {
+            return null;
+        }
+
+        trimmed = trimmed.TrimEnd('/');
+        if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            throw new DomainException(
+                $"The '{environmentName}' environment's site address must be an absolute http(s) URL, " +
+                "like https://example.com.");
+        }
+
+        return trimmed;
     }
 
     /// <summary>

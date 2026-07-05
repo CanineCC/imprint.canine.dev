@@ -24,10 +24,15 @@ public sealed class WalkingSkeletonTests(EditorFixture fixture)
         await page.ClickAsync("button:has-text('Publish')");
         await page.WaitForSelectorAsync("text=Published", new PageWaitForSelectorOptions { Timeout = 15_000 });
 
-        // ---- the file-system projection materializes (publisher debounce ≈ 2s)
+        // ---- the file-system projection materializes (publisher debounce ≈ 2s).
+        // Wait for the precompressed sibling, not just index.html: the pass writes the
+        // page first and its .br ~100ms later (404 + css are brotli'd in between), so a
+        // poll that stops at index.html can catch the pass mid-window and flake on the
+        // sibling asserts below. The .br is written after its page, so once it exists
+        // the html next to it is the fresh render.
         var indexPath = Path.Combine(fixture.PublishDirectory, "index.html");
         var deadline = DateTime.UtcNow.AddSeconds(30);
-        while (!File.Exists(indexPath) && DateTime.UtcNow < deadline)
+        while (!(File.Exists(indexPath) && File.Exists(indexPath + ".br")) && DateTime.UtcNow < deadline)
         {
             await Task.Delay(500);
         }

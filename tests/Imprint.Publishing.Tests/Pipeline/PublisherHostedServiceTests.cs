@@ -37,6 +37,35 @@ public sealed class PublisherHostedServiceTests
         }
     }
 
+    [Fact]
+    public async Task Auto_sync_renders_the_first_environment_against_its_own_site_address()
+    {
+        await using var host = new PublishingTestHost();
+        var siteId = await host.CreateSite();
+        var pageId = await host.CreatePage(siteId, "home", "Home");
+        await host.SetNavigation(siteId, pageId);
+        await host.Publish(pageId);
+        var envFolder = Path.Combine(host.Root, "auto-env");
+        await host.SetEnvironments(siteId, ("Production", envFolder, "https://acme.example"));
+
+        var service = host.Services.GetServices<IHostedService>().OfType<PublisherHostedService>().Single();
+        await service.StartAsync(CancellationToken.None);
+        try
+        {
+            var index = Path.Combine(envFolder, "index.html");
+            await WaitFor(() => File.Exists(index), "auto-sync publish of the environment");
+
+            Assert.Contains("<link rel=\"canonical\" href=\"https://acme.example/\" />", await File.ReadAllTextAsync(index));
+            Assert.Contains(
+                "Sitemap: https://acme.example/sitemap.xml",
+                await File.ReadAllTextAsync(Path.Combine(envFolder, "robots.txt")));
+        }
+        finally
+        {
+            await service.StopAsync(CancellationToken.None);
+        }
+    }
+
     private static async Task WaitFor(Func<bool> condition, string what)
     {
         for (var attempt = 0; attempt < 200; attempt++)
