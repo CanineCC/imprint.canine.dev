@@ -60,7 +60,12 @@ public static class Verify
             }
         }
 
-        Check(expected == 46, $"expected 46 surfaces across 4 sites — found {expected}");
+        // The grand total only holds for a full four-site run; an --only run has already
+        // verified each of its own surfaces individually above.
+        if (sites.Count == 4)
+        {
+            Check(expected == 46, $"expected 46 surfaces across 4 sites — found {expected}");
+        }
         Check(publishedCount == expected, $"all {expected} surfaces published — {publishedCount} confirmed");
 
         // ── 1b. no page block silently dropped: each PAGE (not doc) authors exactly one

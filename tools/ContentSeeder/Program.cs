@@ -66,7 +66,14 @@ var pageList = provider.GetRequiredService<PageList>();
 
 // The four target sites: watchdog/assay/cai read the CMS checkout; canine's transcribed
 // content ships inside this repo (tools/ContentSeeder/canine), resolved via repoRoot.
+// --only narrows the run to named site keys — the way to add ONE new site to a store
+// that already carries the others (MigrateSite assumes its pages don't exist yet).
 var sites = Sites.All(cmsRoot, repoRoot);
+if (opts.Only is { Count: > 0 } only)
+{
+    sites = [.. sites.Where(site => only.Contains(site.Key, StringComparer.OrdinalIgnoreCase))];
+    Console.WriteLine($"  Only       : {string.Join(", ", sites.Select(s => s.Key))}");
+}
 
 // ── 1. ensure the four sites + their empty home pages exist (mirror prod ids) ──
 foreach (var site in sites)
@@ -165,7 +172,8 @@ static string? FindRepoRoot()
 }
 
 internal sealed record Options(
-    string? Db, string? Cms, string? Widgets, string? Publish, string? Media, string? ApiBase, bool NoPublish);
+    string? Db, string? Cms, string? Widgets, string? Publish, string? Media, string? ApiBase, bool NoPublish,
+    IReadOnlyList<string>? Only);
 
 internal static class Args
 {
@@ -173,6 +181,7 @@ internal static class Args
     {
         string? db = null, cms = null, widgets = null, publish = null, media = null, apiBase = null;
         var noPublish = false;
+        List<string>? only = null;
         for (var i = 0; i < args.Length; i++)
         {
             switch (args[i])
@@ -184,12 +193,13 @@ internal static class Args
                 case "--media": media = args[++i]; break;
                 case "--api-base": apiBase = args[++i]; break;
                 case "--no-publish": noPublish = true; break;
+                case "--only": only = [.. args[++i].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)]; break;
                 default:
                     Console.Error.WriteLine($"Unknown argument: {args[i]}");
                     break;
             }
         }
 
-        return new Options(db, cms, widgets, publish, media, apiBase, noPublish);
+        return new Options(db, cms, widgets, publish, media, apiBase, noPublish, only);
     }
 }
