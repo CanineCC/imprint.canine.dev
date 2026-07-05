@@ -104,8 +104,9 @@ public static class Sites
         new("Pricing", "/pricing"),
     ];
 
-    private static readonly HeaderAct WatchdogCta = new("Survey a repo — free", "https://app.watchdog.canine.dev/");
-    private static readonly HeaderAct? WatchdogQuiet = new("Sign in", "https://app.watchdog.canine.dev/");
+    // INTERIM until kennel /ui is public — revert to app.watchdog then
+    private static readonly HeaderAct WatchdogCta = new("Survey a repo — free", "https://watchdog.canine.dev/ui");
+    private static readonly HeaderAct? WatchdogQuiet = new("Sign in", "https://watchdog.canine.dev/ui");
     private const string WatchdogCopy = "© 2025–2026 · The independent surveyor for C#/.NET software.";
 
     private static readonly IReadOnlyList<FooterCol> WatchdogFooter =
