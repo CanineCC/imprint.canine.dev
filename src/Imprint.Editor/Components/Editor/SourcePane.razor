@@ -1,0 +1,58 @@
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Services
+@using Imprint.Rendering
+@implements IDisposable
+@inject EditorSession Session
+@inject PageDrafts Drafts
+@inject SiteOverview Site
+@inject EditorRenderContextFactory ContextFactory
+
+@* The read-only reference pane of side-by-side translation: the SAME page rendered in
+   the site's default locale. `inert` kills all interaction (no selection, no inline
+   edit, no widget input); canvas-interop never sees it — its queries are scoped to the
+   editable canvas element. *@
+
+<div class="ed-canvas-scroll ed-source-scroll" tabindex="-1">
+    <div class="ed-canvas-frame" style="--ed-canvas-width: @Session.ViewportWidth">
+        @if (Session.ActiveSite is { } site && Session.CurrentPage is { } page)
+        {
+            <div class="ed-canvas" data-theme="@(Session.CanvasDark ? "dark" : "light")" inert>
+                <CascadingValue Value="Context">
+                    <PageView Roots="page.Tree.Roots" />
+                </CascadingValue>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private RenderContext Context =>
+        ContextFactory.For(
+            Session.ActiveSite?.DefaultLocale ?? Session.EditLocale,
+            Session.ActiveSite?.DefaultLocale);
+
+    protected override void OnInitialized()
+    {
+        Session.Changed += OnStateChanged;
+        Drafts.Changed += OnStateChanged;
+        Site.Changed += OnStateChanged;
+    }
+
+    // Mirrors Canvas: never repaint under a live contenteditable in the other pane.
+    private void OnStateChanged() => _ = InvokeAsync(() =>
+    {
+        if (Session.EditingNodeId is null)
+        {
+            StateHasChanged();
+        }
+    });
+
+    protected override bool ShouldRender() => Session.EditingNodeId is null;
+
+    public void Dispose()
+    {
+        Session.Changed -= OnStateChanged;
+        Drafts.Changed -= OnStateChanged;
+        Site.Changed -= OnStateChanged;
+    }
+}

@@ -56,40 +56,24 @@
         }
 
         var summaries = Pages.All(site.Id);
-        var navEntries = summaries.Where(summary => summary.IsInNavigation).ToList();
-        var otherEntries = summaries.Where(summary => !summary.IsInNavigation).ToList();
 
         @if (summaries.Count == 0)
         {
             <p class="panel-empty">No pages yet. Create your first one above.</p>
         }
-
-        @if (navEntries.Count > 0)
+        else
         {
-            <h3 class="group-label">In navigation</h3>
-            <ul class="page-list" aria-label="Pages in navigation">
-                @for (var index = 0; index < navEntries.Count; index++)
+            <ul class="page-list" aria-label="Pages">
+                @foreach (var entry in summaries)
                 {
-                    var entry = navEntries[index];
-                    var at = index;
-                    <PageRow @key="entry.Id" Entry="entry" ShowReorder="true"
-                             CanMoveUp="@(at > 0)" CanMoveDown="@(at < navEntries.Count - 1)"
-                             OnMove="delta => MoveNav(entry.Id, delta)"
-                             OnNavToggle="include => ToggleNav(entry.Id, include)" />
+                    <PageRow @key="entry.Id" Entry="entry" />
                 }
             </ul>
-        }
-
-        @if (otherEntries.Count > 0)
-        {
-            <h3 class="group-label">Other pages</h3>
-            <ul class="page-list" aria-label="Pages not in navigation">
-                @foreach (var entry in otherEntries)
-                {
-                    <PageRow @key="entry.Id" Entry="entry"
-                             OnNavToggle="include => ToggleNav(entry.Id, include)" />
-                }
-            </ul>
+            <p class="field-hint">
+                The menu (which pages appear in the header, their order and dropdown groups —
+                and thereby the home page) is managed in
+                <a href="@($"/sites/{site.Id.Compact}/settings")">Site settings → Header &amp; footer</a>.
+            </p>
         }
 
         <LocaleManager />
@@ -217,52 +201,8 @@
         }
     }
 
-    // ------------------------------------------------------------ navigation
-
-    private async Task MoveNav(PageId id, int delta)
-    {
-        if (Session.ActiveSite is not { } site)
-        {
-            return;
-        }
-
-        var current = site.Navigation.ToList();
-        var at = current.FindIndex(item => item.PageId == id);
-        var to = at + delta;
-        if (at < 0 || to < 0 || to >= current.Count)
-        {
-            return;
-        }
-
-        var reordered = current.ToList();
-        (reordered[at], reordered[to]) = (reordered[to], reordered[at]);
-        await Commands.Run(
-            new Authoring.Features.Sites.ChangeNavigation.ChangeNavigation(site.Id, reordered),
-            new Authoring.Features.Sites.ChangeNavigation.ChangeNavigation(site.Id, current),
-            "navigation reorder");
-    }
-
-    private async Task ToggleNav(PageId id, bool include)
-    {
-        if (Session.ActiveSite is not { } site)
-        {
-            return;
-        }
-
-        var current = site.Navigation.ToList();
-        if (include == current.Any(item => item.PageId == id))
-        {
-            return;
-        }
-
-        List<NavigationItem> changed = include
-            ? [.. current, NavigationItem.Page(id)]
-            : [.. current.Where(item => item.PageId != id)];
-        await Commands.Run(
-            new Authoring.Features.Sites.ChangeNavigation.ChangeNavigation(site.Id, changed),
-            new Authoring.Features.Sites.ChangeNavigation.ChangeNavigation(site.Id, current),
-            "navigation change");
-    }
+    // Navigation membership/order/groups moved to the settings page's "Header & footer"
+    // card (an explicit menu editor) — this panel is pure page management.
 
     public void Dispose()
     {

@@ -208,15 +208,16 @@ public sealed class Migrator(ICommandDispatcher dispatcher, string? apiBase = nu
             $"SetHeaderActions {site.Key}");
         await Ok(new SetCopyLine(site.SiteId, new CopyLine(Nodes.Text(site.CopyLine))), $"SetCopyLine {site.Key}");
 
-        // ── design theme: the shared canine neutral family + this brand's accent ramp,
-        //    then the marketing typography (Schibsted Grotesk / system / JetBrains Mono).
-        //    Each token flows through the aggregate's own colour + range validation. ──
-        foreach (var (token, light, dark) in Themes.TokensFor(site.Accent))
+        // ── design theme: this brand's neutral family + accent ramp, then its typography
+        //    (watchdog/cai wear the shared canine look; assay wears "Dal" — warm paper,
+        //    copper, editorial serif). Each token flows through the aggregate's own colour
+        //    + range validation. ──
+        foreach (var (token, light, dark) in Themes.TokensFor(site.Neutrals, site.Accent))
         {
             await Ok(new ChangeThemeToken(site.SiteId, token, light, dark), $"ChangeThemeToken {site.Key}/{token}");
         }
 
-        await Ok(new ChangeTypography(site.SiteId, Themes.Marketing), $"ChangeTypography {site.Key}");
+        await Ok(new ChangeTypography(site.SiteId, site.Typography), $"ChangeTypography {site.Key}");
 
         // ── 3. publish every page ──
         var published = 0;

@@ -155,6 +155,25 @@ if (authOptions.Enabled)
     media.RequireAuthorization();
 }
 
+// Canvas widget bundles: each catalog widget's ES module at /widgets/{tag}.js so
+// islands hydrate INSIDE the editor canvas (see EditorRenderContextFactory). no-store:
+// approved bundles are live read-model state and built-ins may change under dev.
+var widgetBundles = app.MapGet("/widgets/{tag}.js", (string tag, EditorWidgetCatalog catalog, HttpContext http) =>
+{
+    if (catalog.BundleBytesOf(tag) is not { } bytes)
+    {
+        return Results.NotFound();
+    }
+
+    http.Response.Headers.CacheControl = "no-store";
+    http.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    return Results.Bytes(bytes, "text/javascript; charset=utf-8");
+});
+if (authOptions.Enabled)
+{
+    widgetBundles.RequireAuthorization();
+}
+
 // Public preview: the founder reviews the real published page (chrome + marketing CSS +
 // hydrated live islands) at /preview/{site} and /preview/{site}/{slug}. Anonymous by
 // design — this is public marketing content, not the editor. /preview (no site) lists the

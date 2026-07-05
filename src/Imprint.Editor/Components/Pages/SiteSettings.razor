@@ -6,6 +6,7 @@
 @using Imprint.Authoring.Features.Sites.RenameSite
 @using Imprint.Authoring.Features.Sites.ConfigureEnvironments
 @using Imprint.Authoring.Features.Sites.AddCollaborator
+@using Imprint.Authoring.Features.Sites.ChangeNavigation
 @using Imprint.Authoring.Features.Sites.ClaimSite
 @using Imprint.Authoring.Features.Sites.RemoveCollaborator
 @using Imprint.Authoring.Features.Sites.SetCopyLine
@@ -68,6 +69,63 @@
                 columns, and the fine-print copy line. A link is a full URL
                 (<code>https://…</code>) or a same-site page as <code>page://slug</code>.
             </p>
+
+            <h3 class="chrome-heading">Navigation menu</h3>
+            <p class="settings-hint">
+                Top-to-bottom here is left-to-right in the header. The <strong>first page
+                entry is the home page</strong> (it renders at <code>/</code>). Leave the
+                target empty and add sub-links to make a dropdown group.
+            </p>
+            <datalist id="nav-page-options">
+                @foreach (var pageOption in Pages.All(site.Id))
+                {
+                    <option value="@($"page://{pageOption.Slug.Value}")">@pageOption.Title.Resolve(ChromeLocale, ChromeLocale)</option>
+                }
+            </datalist>
+            @foreach (var item in _navItems)
+            {
+                var idx = _navItems.IndexOf(item);
+                <div class="chrome-group" @key="item">
+                    <div class="chrome-row">
+                        <input class="ed-input chrome-label" placeholder="Label (empty = page title)" aria-label="Menu entry label"
+                               disabled="@(!_interactive)" @bind="item.Label" @bind:event="oninput" />
+                        <input class="ed-input chrome-url" list="nav-page-options"
+                               placeholder="page://slug or https://… (empty = dropdown group)" aria-label="Menu entry target"
+                               disabled="@(!_interactive || item.Children.Count > 0)" @bind="item.Url" @bind:event="oninput" />
+                        <button type="button" class="ed-btn ed-btn-ghost" title="Move up" aria-label="Move menu entry up"
+                                disabled="@(!_interactive || idx == 0)" @onclick="() => MoveNavItem(idx, -1)">↑</button>
+                        <button type="button" class="ed-btn ed-btn-ghost" title="Move down" aria-label="Move menu entry down"
+                                disabled="@(!_interactive || idx == _navItems.Count - 1)" @onclick="() => MoveNavItem(idx, 1)">↓</button>
+                        <button type="button" class="ed-btn ed-btn-ghost ed-btn-danger" title="Remove entry"
+                                aria-label="Remove menu entry" disabled="@(!_interactive)"
+                                @onclick="() => _navItems.Remove(item)">✕</button>
+                    </div>
+                    @foreach (var child in item.Children)
+                    {
+                        <div class="chrome-row chrome-link" @key="child">
+                            <input class="ed-input chrome-label" placeholder="Label (empty = page title)" aria-label="Sub-link label"
+                                   disabled="@(!_interactive)" @bind="child.Label" @bind:event="oninput" />
+                            <input class="ed-input chrome-url" list="nav-page-options" placeholder="page://slug or https://…"
+                                   aria-label="Sub-link target" disabled="@(!_interactive)" @bind="child.Url" @bind:event="oninput" />
+                            <input class="ed-input chrome-label" placeholder="Description (optional)" aria-label="Sub-link description"
+                                   disabled="@(!_interactive)" @bind="child.Description" @bind:event="oninput" />
+                            <button type="button" class="ed-btn ed-btn-ghost ed-btn-danger" title="Remove sub-link"
+                                    aria-label="Remove sub-link" disabled="@(!_interactive)"
+                                    @onclick="() => item.Children.Remove(child)">✕</button>
+                        </div>
+                    }
+                    <button type="button" class="ed-btn ed-btn-ghost chrome-add-link"
+                            disabled="@(!_interactive || item.Children.Count >= Site.MaxNavigationChildren)"
+                            @onclick="() => item.Children.Add(new NavChildEdit())">＋ Add sub-link (makes this a dropdown)</button>
+                </div>
+            }
+            <div class="settings-row">
+                <button type="button" class="ed-btn"
+                        disabled="@(!_interactive || _navItems.Count >= Site.MaxNavigationItems)"
+                        @onclick="() => _navItems.Add(new NavItemEdit())">＋ Add menu entry</button>
+                <button type="button" class="ed-btn ed-btn-primary" disabled="@(!_interactive || _busy)"
+                        @onclick="SaveNavigation">Save navigation</button>
+            </div>
 
             <h3 class="chrome-heading">Header actions</h3>
             <div class="chrome-row">
@@ -325,6 +383,27 @@
         public string BaseUrl { get; set; } = "";
     }
 
+    private sealed class NavChildEdit
+    {
+        public string Label { get; set; } = "";
+        public string Url { get; set; } = "";
+        public string Description { get; set; } = "";
+        public LocalizedText? OriginalLabel;
+        public LocalizedText? OriginalDescription;
+        public Link? OriginalLink;
+        public string OriginalUrl = "";
+    }
+
+    private sealed class NavItemEdit
+    {
+        public string Label { get; set; } = "";
+        public string Url { get; set; } = "";
+        public LocalizedText? OriginalLabel;
+        public Link? OriginalLink;
+        public string OriginalUrl = "";
+        public List<NavChildEdit> Children { get; } = [];
+    }
+
     // Chrome edit rows. Originals are kept so an untouched value round-trips unchanged:
     // other-locale label texts survive via LocalizedText.With, and an untouched link
     // keeps its exact Link (a PageLink is not silently rewritten as an external URL).
@@ -480,6 +559,7 @@
 
     private readonly ActionEdit _cta = new();
     private readonly ActionEdit _quiet = new();
+    private readonly List<NavItemEdit> _navItems = [];
     private readonly List<FooterGroupEdit> _footerGroups = [];
     private string _copyLine = "";
     private LocalizedText? _copyOriginal;
@@ -490,6 +570,34 @@
     {
         SeedAction(_cta, _site?.HeaderCta);
         SeedAction(_quiet, _site?.HeaderQuiet);
+
+        _navItems.Clear();
+        foreach (var item in _site?.Navigation ?? [])
+        {
+            var edit = new NavItemEdit
+            {
+                Label = item.Label?.Resolve(ChromeLocale, ChromeLocale) ?? "",
+                Url = item.Link is { } link ? UrlOf(link) : "",
+                OriginalLabel = item.Label,
+                OriginalLink = item.Link,
+            };
+            edit.OriginalUrl = edit.Url;
+            foreach (var child in item.Children)
+            {
+                edit.Children.Add(new NavChildEdit
+                {
+                    Label = child.Label?.Resolve(ChromeLocale, ChromeLocale) ?? "",
+                    Url = UrlOf(child.Link),
+                    Description = child.Description?.Resolve(ChromeLocale, ChromeLocale) ?? "",
+                    OriginalLabel = child.Label,
+                    OriginalDescription = child.Description,
+                    OriginalLink = child.Link,
+                    OriginalUrl = UrlOf(child.Link),
+                });
+            }
+
+            _navItems.Add(edit);
+        }
 
         _footerGroups.Clear();
         foreach (var group in _site?.FooterGroups ?? [])
@@ -574,6 +682,90 @@
 
     private LocalizedText? Localized(string text, LocalizedText? original) =>
         text.Trim().Length == 0 ? null : (original ?? LocalizedText.Of(ChromeLocale, "")).With(ChromeLocale, text.Trim());
+
+    private void MoveNavItem(int index, int delta)
+    {
+        var target = index + delta;
+        if (target < 0 || target >= _navItems.Count)
+        {
+            return;
+        }
+
+        (_navItems[index], _navItems[target]) = (_navItems[target], _navItems[index]);
+    }
+
+    private async Task SaveNavigation()
+    {
+        if (_site is not { } site)
+        {
+            return;
+        }
+
+        var items = new List<NavigationItem>();
+        foreach (var edit in _navItems)
+        {
+            var label = Localized(edit.Label, edit.OriginalLabel);
+            if (edit.Children.Count > 0)
+            {
+                if (label is null)
+                {
+                    Toasts.Error("A dropdown group needs a label.");
+                    return;
+                }
+
+                var children = new List<NavigationChild>();
+                foreach (var childEdit in edit.Children)
+                {
+                    if (childEdit.Label.Trim().Length == 0 && childEdit.Url.Trim().Length == 0)
+                    {
+                        continue; // an empty row is just an abandoned add
+                    }
+
+                    var childLink = ParseLink(childEdit.Url, childEdit.OriginalUrl, childEdit.OriginalLink, out var childError);
+                    if (childLink is null)
+                    {
+                        Toasts.Error($"Menu group '{edit.Label}': {childError ?? "a sub-link needs a target."}");
+                        return;
+                    }
+
+                    children.Add(new NavigationChild(
+                        Localized(childEdit.Label, childEdit.OriginalLabel),
+                        childLink,
+                        Localized(childEdit.Description, childEdit.OriginalDescription)));
+                }
+
+                if (children.Count == 0)
+                {
+                    Toasts.Error($"The dropdown group '{edit.Label}' needs at least one sub-link.");
+                    return;
+                }
+
+                items.Add(NavigationItem.Group(label, children));
+                continue;
+            }
+
+            if (edit.Label.Trim().Length == 0 && edit.Url.Trim().Length == 0)
+            {
+                continue; // an empty row is just an abandoned add
+            }
+
+            var link = ParseLink(edit.Url, edit.OriginalUrl, edit.OriginalLink, out var error);
+            if (link is null)
+            {
+                Toasts.Error($"Menu: {error ?? $"'{edit.Label}' needs a target (or sub-links to become a dropdown)."}");
+                return;
+            }
+
+            items.Add(new NavigationItem { Label = label, Link = link });
+        }
+
+        if (await Commands.Run(new ChangeNavigation(site.Id, items)))
+        {
+            _site = Sites.Get(site.Id);
+            SeedChrome();
+            Toasts.Show("Navigation saved.");
+        }
+    }
 
     private bool BuildAction(ActionEdit edit, string what, out HeaderAction? action)
     {

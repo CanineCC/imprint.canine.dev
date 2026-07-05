@@ -72,12 +72,8 @@
             <p class="ed-insp-hint">A short summary search engines can show under the title.</p>
         </div>
 
-        <div class="ed-field">
-            <label class="ed-insp-toggle">
-                <input type="checkbox" checked="@summary.IsInNavigation" @onchange="ToggleNavigation" />
-                <span>Show in site navigation</span>
-            </label>
-        </div>
+        @* Navigation membership/order is the settings page's menu editor — one place
+           to reason about the header (and the home page), not a scattered toggle. *@
 
         <div class="ed-insp-actions">
             @if (summary.PublishedVersion is not null)
@@ -183,30 +179,6 @@
                 new ChangePageMeta(pageId, locale, newTitle, newDescription),
                 new ChangePageMeta(pageId, locale, oldTitle, oldDescription),
                 "search info change");
-    }
-
-    private async Task ToggleNavigation(ChangeEventArgs args)
-    {
-        if (Session.CurrentPageId is not { } pageId || Session.ActiveSite is not { } site)
-        {
-            return;
-        }
-
-        var include = args.Value is bool on && on;
-        var current = site.Navigation;
-        if (include == current.Any(item => item.PageId == pageId))
-        {
-            return;
-        }
-
-        // Append at the end / drop this page; everything else keeps its order.
-        IReadOnlyList<NavigationItem> updated = include
-            ? [.. current, NavigationItem.Page(pageId)]
-            : [.. current.Where(item => item.PageId != pageId)];
-        await Commands.Run(
-            new ChangeNavigation(site.Id, updated),
-            new ChangeNavigation(site.Id, [.. current]),
-            "navigation change");
     }
 
     private async Task Unpublish()

@@ -190,11 +190,26 @@ public sealed class WidgetViewTests
     }
 
     [Fact]
-    public async Task Editor_mode_renders_named_placeholder_instead_of_the_element()
+    public async Task Editor_mode_renders_the_real_island_with_selection_attributes()
     {
+        // The canvas hydrates real widgets when the editor can serve the bundle; the
+        // host element must still carry the selection contract (data-node-id).
         var widget = SampleNodes.Widget();
 
         var html = await RenderHarness.RenderNode(WithWidget(RenderMode.Editor), widget);
+
+        Assert.Contains("<x-countdown", html);
+        Assert.Contains("data-island", html);
+        Assert.Contains("data-node-id", html);
+        Assert.DoesNotContain("ip-widget-placeholder", html);
+    }
+
+    [Fact]
+    public async Task Editor_mode_without_a_servable_bundle_falls_back_to_the_named_placeholder()
+    {
+        var widget = SampleNodes.Widget();
+
+        var html = await RenderHarness.RenderNode(WithWidget(RenderMode.Editor, withBundle: false), widget);
 
         Assert.Contains("ip-widget-placeholder", html);
         Assert.Contains("Countdown", html);

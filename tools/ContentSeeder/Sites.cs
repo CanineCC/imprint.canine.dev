@@ -1,4 +1,5 @@
 using Imprint.Authoring.Domain;
+using Imprint.Authoring.Domain.Sites;
 
 namespace ContentSeeder;
 
@@ -45,7 +46,12 @@ public sealed record SiteDef(
     HeaderAct? HeaderQuiet,
     IReadOnlyList<FooterCol> FooterGroups,
     string CopyLine,
-    Themes.AccentRamp Accent);
+    Themes.AccentRamp Accent,
+    // The rest of the per-site brand layer: its neutral family and its typography. Split
+    // out so a site can wear its own palette + type voice without any other site's
+    // generated tokens changing (assay wears "Dal"; watchdog + cai keep the shared look).
+    IReadOnlyDictionary<string, Themes.Tok> Neutrals,
+    Typography Typography);
 
 public static class Sites
 {
@@ -64,15 +70,19 @@ public static class Sites
         new SiteDef("watchdog", "Watchdog", "https://watchdog.canine.dev",
             Path.Combine(cmsRoot, "sites", "watchdog", "content"),
             WatchdogSite, WatchdogHome,
-            WatchdogNav, WatchdogCta, WatchdogQuiet, WatchdogFooter, WatchdogCopy, Themes.Watchdog),
+            WatchdogNav, WatchdogCta, WatchdogQuiet, WatchdogFooter, WatchdogCopy,
+            Themes.Watchdog, Themes.Neutrals, Themes.Marketing),
         new SiteDef("assay", "Assay", "https://assay.canine.dev",
             Path.Combine(cmsRoot, "sites", "assay", "content"),
             AssaySite, AssayHome,
-            AssayNav, AssayCta, AssayQuiet, AssayFooter, AssayCopy, Themes.Assay),
+            AssayNav, AssayCta, AssayQuiet, AssayFooter, AssayCopy,
+            // "Dal": the warm-paper neutrals + copper accent + editorial serif voice.
+            Themes.Assay, Themes.AssayPaper, Themes.Editorial),
         new SiteDef("cai", "CAI", "https://cai.canine.dev",
             Path.Combine(cmsRoot, "sites", "cai", "content"),
             CaiSite, CaiHome,
-            CaiNav, CaiCta, CaiQuiet, CaiFooter, CaiCopy, Themes.Cai),
+            CaiNav, CaiCta, CaiQuiet, CaiFooter, CaiCopy,
+            Themes.Cai, Themes.Neutrals, Themes.Marketing),
     ];
 
     // ── Chrome, lifted verbatim from sites/*/lib/site.ts. The header nav preserves the

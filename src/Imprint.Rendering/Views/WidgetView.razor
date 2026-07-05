@@ -6,9 +6,15 @@
 }
 @if (IsEditor)
 {
-  @* Widgets never hydrate in the canvas: the editor is Blazor Server, islands are
-     visitor-plane ES modules. A placeholder keeps the canvas honest and selectable. *@
-  if (descriptor is not null)
+  @* The canvas renders the REAL island when the editor can serve its bundle (all
+     shipped widgets are shadow-DOM components, so a hydrated one never mutates the
+     light DOM Blazor owns). NodeAttributes on the host keep it selectable. The
+     placeholder remains the honest fallback: unknown tag, or no bundle to serve. *@
+  if (descriptor is not null && Ctx.ResolveWidgetBundle?.Invoke(descriptor.Tag) is not null)
+  {
+    RenderIsland(__builder, descriptor, editorAttributes: true);
+  }
+  else if (descriptor is not null)
   {
     <div class="ip-widget-placeholder" @attributes="NodeAttributes">@descriptor.Name</div>
   }
@@ -26,11 +32,18 @@ else if (descriptor is not null)
    problem gets surfaced and fixed. *@
 
 @code {
-  private void RenderIsland(RenderTreeBuilder builder, WidgetDescriptor descriptor)
+  private void RenderIsland(RenderTreeBuilder builder, WidgetDescriptor descriptor, bool editorAttributes = false)
   {
     // Tag came from the manifest loader, which enforces lower-case-ASCII-with-hyphen —
     // that validation is what makes emitting it as an element name safe.
     builder.OpenElement(0, descriptor.Tag);
+
+    // Editor canvas only: the selection contract (data-node-id/type) rides the host
+    // element, exactly like every other node's root.
+    if (editorAttributes)
+    {
+      builder.AddMultipleAttributes(6, NodeAttributes);
+    }
 
     // Attribute allowlist: only props the manifest declares cross into markup, so a
     // stale PropBag entry (or a malicious one) never becomes an attribute.

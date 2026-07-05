@@ -165,6 +165,33 @@ public sealed class EditorSession(PageDrafts drafts, SiteOverview site) : IDispo
         Notify();
     }
 
+    /// <summary>
+    /// Side-by-side translation: the canvas splits into a read-only source pane (the
+    /// site's default locale) next to the editable canvas (the edit locale). Toggling it
+    /// on while editing the default locale first flips to another locale — a split with
+    /// the same language on both sides would be meaningless.
+    /// </summary>
+    public bool TranslateSideBySide { get; private set; }
+
+    public void ToggleTranslateSideBySide()
+    {
+        TranslateSideBySide = !TranslateSideBySide;
+        if (TranslateSideBySide && ActiveSite is { } activeSite && EditLocale == activeSite.DefaultLocale)
+        {
+            var target = activeSite.Locales.FirstOrDefault(l => l != activeSite.DefaultLocale);
+            if (target != default)
+            {
+                _editLocale = target;
+            }
+            else
+            {
+                TranslateSideBySide = false; // single-locale site: nothing to translate
+            }
+        }
+
+        Notify();
+    }
+
     private void Notify() => Changed?.Invoke();
 
     public void Dispose() => Changed = null;

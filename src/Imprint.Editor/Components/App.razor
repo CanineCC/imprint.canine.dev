@@ -15,6 +15,9 @@
 <body>
     <Routes @rendermode="InteractiveServer" />
     <script src="_framework/blazor.web.js"></script>
+    @* Canvas island hydrator: imports widget modules as island elements appear (Blazor
+       re-renders insert them at any time) so widgets run for real in the editor. *@
+    <script type="module" src="js/editor-islands.js"></script>
 </body>
 
 </html>

@@ -126,6 +126,33 @@ button { font: inherit; color: inherit; }
   border-top: 1px solid var(--ed-border);
 }
 
+/* Side-by-side translation: source pane (read-only, default locale) | editable canvas.
+   Each pane scrolls independently; min-height/width 0 for the same clamping reason as
+   the grid row above. */
+.ed-translate-split {
+  flex: 1;
+  display: flex;
+  gap: 1px;
+  min-height: 0;
+  background: var(--ed-border);
+}
+.ed-translate-pane {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--ed-bg);
+}
+.ed-translate-caption {
+  padding: 4px 12px;
+  font-size: .78rem;
+  color: var(--ed-text-muted);
+  background: var(--ed-surface);
+  border-bottom: 1px solid var(--ed-border);
+}
+.ed-source-scroll { opacity: .96; }
+
 /* The scrollable canvas viewport: the page preview floats in it, width-constrained
    by the device toggle. Container queries inside behave exactly as published. */
 .ed-canvas-scroll {

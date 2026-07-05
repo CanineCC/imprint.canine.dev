@@ -27,6 +27,14 @@
         <span style="flex:1"></span>
         <ViewportToggle />
         <LocaleSwitcher />
+        @if ((Session.ActiveSite?.Locales.Count ?? 0) > 1)
+        {
+            <button type="button" class="ed-btn ed-btn-ghost"
+                    title="Side-by-side translation: source language next to the language you're editing"
+                    aria-label="Toggle side-by-side translation"
+                    aria-pressed="@Session.TranslateSideBySide"
+                    @onclick="Session.ToggleTranslateSideBySide">⇄</button>
+        }
         <button type="button" class="ed-btn ed-btn-ghost" title="Preview site dark mode"
                 aria-label="Toggle canvas dark mode" @onclick="Session.ToggleCanvasDark">
             @(Session.CanvasDark ? "☾" : "☀")
@@ -72,7 +80,24 @@
 
     <section class="ed-canvas-area">
         <BreadcrumbBar />
-        <Canvas />
+        @if (Session.TranslateSideBySide && Session.ActiveSite is { } translateSite
+             && Session.EditLocale != translateSite.DefaultLocale)
+        {
+            <div class="ed-translate-split">
+                <div class="ed-translate-pane">
+                    <div class="ed-translate-caption">@translateSite.DefaultLocale.Value · source</div>
+                    <SourcePane />
+                </div>
+                <div class="ed-translate-pane">
+                    <div class="ed-translate-caption">@Session.EditLocale.Value · you are editing this side</div>
+                    <Canvas />
+                </div>
+            </div>
+        }
+        else
+        {
+            <Canvas />
+        }
         <NodeToolbar />
         <InsertPicker />
     </section>

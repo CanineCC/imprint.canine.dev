@@ -23,12 +23,30 @@ public sealed class EditorWidgetCatalog : IWidgetCatalog
 {
     private readonly Dictionary<string, WidgetDescriptor> _builtInByTag;
     private readonly WidgetRegistry _registry;
+    private readonly string _widgetsDirectory;
 
     public EditorWidgetCatalog(string widgetsDirectory, WidgetRegistry registry)
     {
         _registry = registry;
+        _widgetsDirectory = widgetsDirectory;
         BuiltIn = WidgetManifest.Load(Path.Combine(widgetsDirectory, "manifest.json"));
         _builtInByTag = BuiltIn.ToDictionary(descriptor => descriptor.Tag, StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// The ES-module source for a tag — a built-in's bundle file from disk, or an
+    /// approved submission's event-log source. Null when the tag (or its bundle file)
+    /// is unknown, in which case the canvas keeps its placeholder.
+    /// </summary>
+    public byte[]? BundleBytesOf(string tag)
+    {
+        if (_builtInByTag.TryGetValue(tag, out var builtIn))
+        {
+            var path = Path.Combine(_widgetsDirectory, builtIn.Bundle);
+            return File.Exists(path) ? File.ReadAllBytes(path) : null;
+        }
+
+        return _registry.BundleOf(tag) is { } source ? System.Text.Encoding.UTF8.GetBytes(source) : null;
     }
 
     /// <summary>The filesystem widgets, exactly as the manifest declares them.</summary>
@@ -88,7 +106,11 @@ public sealed class EditorRenderContextFactory(
                 : null,
             ResolveBlock = blockId => blocks.Get(blockId)?.Spec,
             ResolveWidget = widgets.Find,
-            ResolveWidgetBundle = _ => null, // islands never hydrate inside the canvas
+            // Islands hydrate inside the canvas too: the editor serves each catalog
+            // widget's ES module at /widgets/{tag}.js (see Program.cs), and the shipped
+            // widgets are shadow-DOM components, so a live one never mutates the light
+            // DOM Blazor owns. Unknown tags resolve null → placeholder.
+            ResolveWidgetBundle = tag => widgets.Exists(tag) ? $"/widgets/{tag}.js" : null,
         };
     }
 

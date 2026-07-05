@@ -1,5 +1,5 @@
 @* One page in the panel list: title + address open the editor, the badge tells the
-   publish story, and the tools row handles navigation membership and order. *@
+   publish story. Navigation membership lives in the settings menu editor, not here. *@
 @using Imprint.Authoring.Projections
 @using Imprint.Editor.Services
 @inject EditorSession Session
@@ -14,31 +14,10 @@
         <span class="page-slug">@PathText</span>
     </button>
     <span class="ed-badge @BadgeClass">@Entry.Status</span>
-    <div class="page-tools">
-        @if (ShowReorder)
-        {
-            <button type="button" class="ed-btn ed-btn-ghost row-move" disabled="@(!CanMoveUp)"
-                    title="Move up in navigation" aria-label="Move @Title up in navigation"
-                    @onclick="() => OnMove.InvokeAsync(-1)">↑</button>
-            <button type="button" class="ed-btn ed-btn-ghost row-move" disabled="@(!CanMoveDown)"
-                    title="Move down in navigation" aria-label="Move @Title down in navigation"
-                    @onclick="() => OnMove.InvokeAsync(+1)">↓</button>
-        }
-        <label class="nav-toggle">
-            <input type="checkbox" checked="@Entry.IsInNavigation"
-                   @onchange="args => OnNavToggle.InvokeAsync(args.Value is true)" />
-            In navigation
-        </label>
-    </div>
 </li>
 
 @code {
     [Parameter, EditorRequired] public PageSummary Entry { get; set; } = null!;
-    [Parameter] public bool ShowReorder { get; set; }
-    [Parameter] public bool CanMoveUp { get; set; }
-    [Parameter] public bool CanMoveDown { get; set; }
-    [Parameter] public EventCallback<int> OnMove { get; set; }
-    [Parameter] public EventCallback<bool> OnNavToggle { get; set; }
 
     private string Title
     {
