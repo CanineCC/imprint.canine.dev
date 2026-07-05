@@ -141,10 +141,11 @@ public sealed class CommandRunner(ICommandDispatcher dispatcher, ToastService to
     /// <summary>Dispatch + surface domain errors as toasts. Does not touch the undo/redo stacks.</summary>
     private async Task<bool> Dispatch(ICommand command)
     {
-        // Stamp the events this command appends with the signed-in editor. The ambient actor
-        // set here flows into the dispatcher's command scope; disabled/absent auth is a no-op
-        // (the OS user remains the actor). See EditorActor.
-        var actorScope = actor is not null ? await actor.BeginScopeAsync() : null;
+        // Stamp the events this command appends with the signed-in editor. Resolve first,
+        // then push from THIS method's context so the AsyncLocal flows into the awaited
+        // dispatch (a push inside an awaited helper would be lost — see EditorActor).
+        // Disabled/absent auth is a no-op: the OS user remains the actor.
+        var actorScope = actor is not null ? EditorActor.BeginScope(await actor.IdentityAsync()) : null;
         try
         {
             var result = await dispatcher.Dispatch(command);

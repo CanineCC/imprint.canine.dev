@@ -1,6 +1,7 @@
 @page "/admin/widgets"
 @using Imprint.Authoring.Domain.Widgets
 @using Imprint.Authoring.Projections
+@using Imprint.Editor.Auth
 @using Imprint.EventSourcing
 @using Microsoft.Extensions.Configuration
 @implements IDisposable
@@ -174,7 +175,8 @@ else
     private async Task Approve(WidgetSubmissionId id)
     {
         // Attribute the approval (and its events) to the signed-in reviewer, not the OS user.
-        using var actorScope = await Actor.BeginScopeAsync();
+        // Resolve first, push from this context — see EditorActor.BeginScope.
+        using var actorScope = EditorActor.BeginScope(await Actor.IdentityAsync());
         var result = await Dispatcher.Dispatch(
             new Authoring.Features.Widgets.ApproveWidget.ApproveWidget(id, Metadata.ActorSource()));
         _message = result.Succeeded
@@ -191,7 +193,7 @@ else
             return;
         }
 
-        using var actorScope = await Actor.BeginScopeAsync();
+        using var actorScope = EditorActor.BeginScope(await Actor.IdentityAsync());
         var result = await Dispatcher.Dispatch(
             new Authoring.Features.Widgets.RejectWidget.RejectWidget(id, Metadata.ActorSource(), reason));
         if (result.Succeeded)

@@ -36,12 +36,16 @@ public sealed class EditorActor(AuthenticationStateProvider? authState = null)
     public ValueTask<string?> IdentityAsync() => ResolveAsync();
 
     /// <summary>
-    /// Pushes the signed-in user's email as the ambient actor until the returned scope is
-    /// disposed. Resolve the identity once per circuit and cache it — a circuit is one user.
+    /// Pushes <paramref name="actor"/> as the ambient actor until the returned scope is
+    /// disposed. This method is deliberately synchronous: an AsyncLocal set <em>inside an
+    /// async method</em> is confined to that method's own execution context and silently
+    /// vanishes when it returns — exactly the bug that stamped every production event with
+    /// the OS user instead of the signed-in email. Resolve the identity first (await
+    /// <see cref="IdentityAsync"/>), then push it from the dispatching method's own context
+    /// so it flows into the awaited dispatch.
     /// </summary>
-    public async ValueTask<IDisposable> BeginScopeAsync()
+    public static IDisposable BeginScope(string? actor)
     {
-        var actor = await ResolveAsync();
         var previous = CurrentActor.Value;
         CurrentActor.Value = actor;
         return new Restore(previous);
