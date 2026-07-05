@@ -2,6 +2,10 @@ using System.Text.Json.Nodes;
 using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Pages;
 using Imprint.Authoring.Domain.Sites;
+using Imprint.Authoring.Features.Assets.ProcessAssetDarkVariant;
+using Imprint.Authoring.Features.Assets.ProcessUploadedAsset;
+using Imprint.Authoring.Features.Assets.UploadAsset;
+using Imprint.Authoring.Features.Assets.UploadAssetDarkVariant;
 using Imprint.Authoring.Features.Pages.AddNode;
 using Imprint.Authoring.Features.Pages.CreatePage;
 using Imprint.Authoring.Features.Pages.PublishPage;
@@ -36,7 +40,8 @@ public sealed class Migrator(ICommandDispatcher dispatcher, string? apiBase = nu
     public async Task<SiteResult> MigrateSite(SiteDef site)
     {
         var surfaces = CmsReader.Read(site.CmsDir);
-        var mapper = new BlockMapper(site.Origin, apiBase);
+        var assets = await IngestSvgFigures(site, surfaces);
+        var mapper = new BlockMapper(site.Origin, apiBase, assets);
         var relToPageId = new Dictionary<string, PageId>(StringComparer.Ordinal);
         var slugs = new List<string>();
         var authoredPages = 0;
@@ -225,6 +230,82 @@ public sealed class Migrator(ICommandDispatcher dispatcher, string? apiBase = nu
     }
 
     public IReadOnlyList<string> AllFlags => _flags;
+
+    /// <summary>
+    /// Uploads every SVG file referenced by an <c>svgFigure</c> block through the real
+    /// asset pipeline BEFORE the pages are authored: <c>UploadAsset</c> (base) +
+    /// <c>UploadAssetDarkVariant</c>, then the processing commands the editor's
+    /// background worker would dispatch (<c>ProcessUploadedAsset</c> /
+    /// <c>ProcessAssetDarkVariant</c>) run inline so every asset is Ready — sanitized
+    /// and inlinable — by publish time. Site-relative paths (<c>/figures/x.svg</c>)
+    /// resolve against the CMS site's <c>public/</c> dir (exactly what Next served).
+    /// Returns the src → AssetId map the block mapper embeds into SvgNodes.
+    /// </summary>
+    private async Task<IReadOnlyDictionary<string, AssetId>> IngestSvgFigures(
+        SiteDef site, IReadOnlyList<CmsSurface> surfaces)
+    {
+        var map = new Dictionary<string, AssetId>(StringComparer.Ordinal);
+        var publicRoot = Path.GetFullPath(Path.Combine(site.CmsDir, "..", "public"));
+
+        foreach (var surface in surfaces)
+        {
+            foreach (var block in surface.Blocks)
+            {
+                if (block is null || block.Template() != "svgFigure")
+                {
+                    continue;
+                }
+
+                var src = block.Str("src");
+                if (string.IsNullOrWhiteSpace(src) || map.ContainsKey(src!))
+                {
+                    continue;
+                }
+
+                var lightPath = Path.Combine(publicRoot, src!.TrimStart('/'));
+                if (!File.Exists(lightPath))
+                {
+                    _flags.Add($"[{site.Key}/{surface.Rel}] svgFigure src '{src}' not found under {publicRoot} — block will be skipped.");
+                    continue;
+                }
+
+                var assetId = AssetId.New();
+                await using (var light = File.OpenRead(lightPath))
+                {
+                    await Ok(new UploadAsset(
+                            assetId, Path.GetFileName(lightPath), "image/svg+xml", light.Length, light),
+                        $"UploadAsset {site.Key}{src}");
+                }
+
+                await Ok(new ProcessUploadedAsset(assetId), $"ProcessUploadedAsset {site.Key}{src}");
+
+                var darkSrc = block.Str("darkSrc");
+                if (!string.IsNullOrWhiteSpace(darkSrc))
+                {
+                    var darkPath = Path.Combine(publicRoot, darkSrc!.TrimStart('/'));
+                    if (!File.Exists(darkPath))
+                    {
+                        _flags.Add($"[{site.Key}/{surface.Rel}] svgFigure darkSrc '{darkSrc}' not found — figure ships light-only.");
+                    }
+                    else
+                    {
+                        await using (var dark = File.OpenRead(darkPath))
+                        {
+                            await Ok(new UploadAssetDarkVariant(
+                                    assetId, Path.GetFileName(darkPath), "image/svg+xml", dark.Length, dark),
+                                $"UploadAssetDarkVariant {site.Key}{darkSrc}");
+                        }
+
+                        await Ok(new ProcessAssetDarkVariant(assetId), $"ProcessAssetDarkVariant {site.Key}{darkSrc}");
+                    }
+                }
+
+                map[src!] = assetId;
+            }
+        }
+
+        return map;
+    }
 
     private IReadOnlyList<Node> PageRoots(JsonArray blocks, BlockMapper mapper, string rel)
     {
