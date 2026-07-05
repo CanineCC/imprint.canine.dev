@@ -76,7 +76,9 @@ if (opts.Only is { Count: > 0 } only)
 }
 
 // ── 1. ensure the four sites + their empty home pages exist (mirror prod ids) ──
-foreach (var site in sites)
+// --publish-only skips authoring (steps 1-2) for an already-seeded store: the
+// cutover mode — configure environments and/or render static output, nothing else.
+foreach (var site in opts.PublishOnly ? [] : sites)
 {
     if (siteOverview.Get(site.SiteId) is null)
     {
@@ -95,7 +97,7 @@ foreach (var site in sites)
 // ── 2. migrate ──
 var migrator = new Migrator(dispatcher, opts.ApiBase);
 var results = new List<Migrator.SiteResult>();
-foreach (var site in sites)
+foreach (var site in opts.PublishOnly ? [] : sites)
 {
     var r = await migrator.MigrateSite(site);
     results.Add(r);
@@ -103,6 +105,22 @@ foreach (var site in sites)
 }
 
 Console.WriteLine();
+
+// ── 2b. production environment config (cutover): one "Production" deploy target per
+// site in the run — the estate's convention ({root}/{key}, BaseUrl = the site's
+// public origin). The aggregate no-ops when unchanged, so this is re-runnable.
+if (opts.ProdEnvRoot is { Length: > 0 } envRoot)
+{
+    foreach (var site in sites)
+    {
+        await Dispatch(
+            new Imprint.Authoring.Features.Sites.ConfigureEnvironments.ConfigureEnvironments(
+                site.SiteId,
+                [new DeployEnvironment("Production", $"{envRoot}/{site.Key}", site.Origin)]),
+            $"ConfigureEnvironments {site.Key}");
+        Console.WriteLine($"  env {site.Key}: Production → {envRoot}/{site.Key} ({site.Origin})");
+    }
+}
 
 // ── 3. publish static output (unless suppressed) ──
 if (!opts.NoPublish)
@@ -173,7 +191,7 @@ static string? FindRepoRoot()
 
 internal sealed record Options(
     string? Db, string? Cms, string? Widgets, string? Publish, string? Media, string? ApiBase, bool NoPublish,
-    IReadOnlyList<string>? Only);
+    IReadOnlyList<string>? Only, bool PublishOnly, string? ProdEnvRoot);
 
 internal static class Args
 {
@@ -181,6 +199,8 @@ internal static class Args
     {
         string? db = null, cms = null, widgets = null, publish = null, media = null, apiBase = null;
         var noPublish = false;
+        var publishOnly = false;
+        string? prodEnvRoot = null;
         List<string>? only = null;
         for (var i = 0; i < args.Length; i++)
         {
@@ -194,12 +214,14 @@ internal static class Args
                 case "--api-base": apiBase = args[++i]; break;
                 case "--no-publish": noPublish = true; break;
                 case "--only": only = [.. args[++i].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)]; break;
+                case "--publish-only": publishOnly = true; break;
+                case "--prod-env-root": prodEnvRoot = args[++i]; break;
                 default:
                     Console.Error.WriteLine($"Unknown argument: {args[i]}");
                     break;
             }
         }
 
-        return new Options(db, cms, widgets, publish, media, apiBase, noPublish, only);
+        return new Options(db, cms, widgets, publish, media, apiBase, noPublish, only, publishOnly, prodEnvRoot);
     }
 }

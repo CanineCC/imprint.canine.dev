@@ -88,8 +88,11 @@
   --r-full: 999px;
   --shadow-overlay: light-dark(0 4px 16px rgb(20 25 30 / 0.1), 0 4px 16px rgb(0 0 0 / 0.35));
 
-  /* type — Schibsted Grotesk UI / JetBrains Mono code, from the theme fonts */
-  --font-ui: var(--ip-font-heading);
+  /* type — body/controls ride the theme's BODY font (Schibsted Grotesk on the shared sites),
+     headings ride --ip-font-heading (serif on Assay's Dal). On sites whose heading == body
+     (watchdog/cai) both resolve to Schibsted Grotesk, so the split is invisible there. */
+  --font-ui: var(--ip-font-body);
+  --font-display: var(--ip-font-heading);
   --font-mono: var(--ip-font-mono);
   --fs-2xs: 11px;
   --fs-xs: 12px;
@@ -109,10 +112,16 @@
   --mk-section: clamp(2.5rem, 1.5rem + 2.8vw, 4rem);
 }
 
-/* Body baseline lifted to the marketing look (Schibsted Grotesk, antialiased). */
+/* Body baseline lifted to the marketing look (body font, antialiased). */
 .ip-page {
   font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
+}
+/* Headings ride the display (heading) font — serif on Assay's Dal, Schibsted Grotesk on the
+   shared sites where heading == body. Headings otherwise only set size/colour and inherit the
+   body font; this is the single place the heading stack is applied. */
+.ip-page :is(h1, h2, h3, h4) {
+  font-family: var(--font-display);
 }
 .ip-page code {
   background: var(--surface-2);

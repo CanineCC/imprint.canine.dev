@@ -80,22 +80,27 @@ public static class Themes
 
     // ── Typography — canine's UI/mono choices + scale. Schibsted Grotesk headings,
     //    system-sans body, 14px base × 1.25 scale, 10px radius (canine --r-md). ──────────
+    // Body is Grotesk (Schibsted), NOT the system Sans stack: the marketing layer now drives
+    // body/controls off --ip-font-body (headings off --ip-font-heading), so Body must carry the
+    // self-hosted Schibsted stack to keep the shared marketing sites in Schibsted Grotesk end to
+    // end — heading == body here, so the render is unchanged from when body rode --ip-font-heading.
     public static readonly Typography Marketing = new(
         Heading: FontStack.Grotesk,
-        Body: FontStack.Sans,
+        Body: FontStack.Grotesk,
         BaseSizePx: 14,
         ScaleRatio: 1.25,
         RadiusPx: 10,
         Spacing: SpacingScale.Comfortable);
 
-    // ── Assay "Dal" typography — the editorial serif voice (dal-assay.md §4). The
-    //    marketing layer drives every surface off --ip-font-heading, so choosing the Serif
-    //    stack gives Assay its "a memo, not a dashboard" register (Charter → … → Georgia
-    //    serif; no Spectral binary ships, and §4/§12 sanction the Georgia serif fallback).
+    // ── Assay "Dal" typography — the editorial serif voice (dal-assay.md §4). Serif (Charter →
+    //    … → Georgia; no Spectral binary ships, §4/§12 sanction the Georgia fallback) drives the
+    //    HEADINGS for the "a memo, not a dashboard" register, while Body is Schibsted Grotesk so
+    //    the running copy + controls stay the crisp UI stack (§4.1: grotesk for body/controls).
+    //    The marketing layer routes headings off --ip-font-heading and body off --ip-font-body.
     //    Squarer radius (§5: 8px, the --r-md ledger feel) vs. the shared 10px. ────────────
     public static readonly Typography Editorial = new(
         Heading: FontStack.Serif,
-        Body: FontStack.Sans,
+        Body: FontStack.Grotesk,
         BaseSizePx: 14,
         ScaleRatio: 1.25,
         RadiusPx: 8,
