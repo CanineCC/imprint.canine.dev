@@ -63,6 +63,22 @@
       </ul>
     </nav>
     <div class="ip-header-actions">
+      @{
+        // Real locales only (drop the x-default SEO alias). A switcher appears solely on
+        // multilingual sites — one locale means nothing to switch to, so it stays hidden.
+        var localeLinks = Chrome.Alternates.Where(a => a.Hreflang != "x-default").ToList();
+      }
+      @if (localeLinks.Count > 1)
+      {
+        <nav class="ip-lang" aria-label="Language">
+          @foreach (var loc in localeLinks)
+          {
+            var isCurrent = string.Equals(loc.Hreflang, Chrome.Lang, StringComparison.OrdinalIgnoreCase);
+            <a href="@loc.Href" hreflang="@loc.Hreflang" lang="@loc.Hreflang"
+               aria-current="@(isCurrent ? "true" : null)">@loc.Hreflang.ToUpperInvariant()</a>
+          }
+        </nav>
+      }
       @if (Chrome.HeaderQuiet is not null)
       {
         <a class="ip-header-quiet" href="@Chrome.HeaderQuiet.Href">@Chrome.HeaderQuiet.Label</a>
@@ -109,7 +125,6 @@
       {
         <p class="ip-footer-copy">@Chrome.CopyLine</p>
       }
-      <button type="button" data-theme-toggle class="ip-footer-theme" aria-label="Switch color theme">Theme</button>
     </div>
   </footer>
   @if (Chrome.IncludeIslandLoader)

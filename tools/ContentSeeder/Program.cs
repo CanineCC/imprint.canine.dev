@@ -229,6 +229,29 @@ if (opts.SeedDa)
     Console.WriteLine();
 }
 
+// ── 2d. --drop-locale <tag>: retire a registered locale from the scoped sites (never the
+// default). The next synchronize prunes its published subtree, and the language switcher stops
+// offering it — used to remove a dead, untranslated locale scaffold. Composes with --publish-only.
+if (opts.DropLocale is { Length: > 0 } dropTag)
+{
+    var projections = provider.GetRequiredService<ProjectionEngine>();
+    await projections.CatchUp();
+    var loc = new Locale(dropTag);
+    foreach (var site in sites)
+    {
+        if (siteOverview.Get(site.SiteId) is { } s && s.Locales.Contains(loc) && loc != s.DefaultLocale)
+        {
+            await Dispatch(
+                new Imprint.Authoring.Features.Sites.RemoveLocale.RemoveLocale(site.SiteId, dropTag),
+                $"RemoveLocale {site.Key}/{dropTag}");
+            Console.WriteLine($"  dropped locale '{dropTag}' from {site.Key}");
+        }
+    }
+
+    await projections.CatchUp();
+    Console.WriteLine();
+}
+
 // ── 2b. production environment config (cutover): one "Production" deploy target per
 // site in the run — the estate's convention ({root}/{key}, BaseUrl = the site's
 // public origin). The aggregate no-ops when unchanged, so this is re-runnable.
@@ -314,7 +337,8 @@ static string? FindRepoRoot()
 
 internal sealed record Options(
     string? Db, string? Cms, string? Widgets, string? Publish, string? Media, string? ApiBase, bool NoPublish,
-    IReadOnlyList<string>? Only, bool PublishOnly, string? ProdEnvRoot, bool Rebrand, bool Reauthor, bool SeedDa);
+    IReadOnlyList<string>? Only, bool PublishOnly, string? ProdEnvRoot, bool Rebrand, bool Reauthor, bool SeedDa,
+    string? DropLocale);
 
 internal static class Args
 {
@@ -327,6 +351,7 @@ internal static class Args
         var reauthor = false;
         var seedDa = false;
         string? prodEnvRoot = null;
+        string? dropLocale = null;
         List<string>? only = null;
         for (var i = 0; i < args.Length; i++)
         {
@@ -344,6 +369,7 @@ internal static class Args
                 case "--rebrand": rebrand = true; break;
                 case "--reauthor": reauthor = true; break;
                 case "--seed-da": seedDa = true; break;
+                case "--drop-locale": dropLocale = args[++i]; break;
                 case "--prod-env-root": prodEnvRoot = args[++i]; break;
                 default:
                     Console.Error.WriteLine($"Unknown argument: {args[i]}");
@@ -351,6 +377,6 @@ internal static class Args
             }
         }
 
-        return new Options(db, cms, widgets, publish, media, apiBase, noPublish, only, publishOnly, prodEnvRoot, rebrand, reauthor, seedDa);
+        return new Options(db, cms, widgets, publish, media, apiBase, noPublish, only, publishOnly, prodEnvRoot, rebrand, reauthor, seedDa, dropLocale);
     }
 }

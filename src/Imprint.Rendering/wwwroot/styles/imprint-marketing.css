@@ -239,6 +239,17 @@
 }
 .ip-header-actions [data-theme-toggle]:hover { color: var(--heading); background: var(--surface-2); }
 
+/* Language switcher — rendered only on multilingual sites (real locales > 1). The active
+   locale reads as a filled accent pill; the others are quiet, matching the theme toggle. */
+.ip-lang { display: inline-flex; align-items: center; gap: 1px; }
+.ip-lang a {
+  display: inline-grid; place-items: center; min-width: 30px; height: 34px; padding: 0 7px;
+  border-radius: var(--r-full); font-size: var(--fs-xs); font-weight: 600; letter-spacing: 0.03em;
+  color: var(--muted); text-decoration: none;
+}
+.ip-lang a:hover { color: var(--heading); background: var(--surface-2); }
+.ip-lang a[aria-current="true"] { color: var(--on-accent); background: var(--accent-strong); }
+
 @media (max-width: 900px) {
   .ip-nav, .ip-header-quiet { display: none; }
 }
@@ -271,12 +282,6 @@
 .ip-footer-byline a { color: var(--muted); text-decoration: none; }
 .ip-footer-byline a:hover { color: var(--heading); }
 .ip-footer-copy { font-size: var(--fs-xs); color: var(--muted); margin: 0; }
-.ip-footer-theme {
-  display: inline-flex; align-items: center; gap: 0.4rem; margin-left: auto;
-  padding: 0.4rem 0.75rem; border: 1px solid var(--hairline); border-radius: var(--r-full);
-  font: inherit; font-size: var(--fs-xs); color: var(--muted); background: transparent; cursor: pointer;
-}
-.ip-footer-theme:hover { color: var(--heading); background: var(--surface-2); }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    BUTTONS — the marketing button system, applied to imprint's .ip-btn variants.
