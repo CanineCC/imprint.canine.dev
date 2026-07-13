@@ -223,6 +223,18 @@ export function pickHomeGallery(cards, hero) {
   return chosen;
 }
 
+/**
+ * Fetch the language survey-clarity (FIT) matrix from `{apiBase}/api/public/language-support`
+ * — `{ note, languages:[{code,displayName,applicability,supportKind,band,bandLabel,summary,
+ * coveredLenses[],notApplicableLenses[],signedOffOn}], bands:[{band,label,why}] }`, languages
+ * best-first. Resolves to `{ languages:[], bands:[] }` on any failure or empty base (the widget
+ * then shows its labelled sample).
+ */
+export async function fetchLanguageSupport(apiBase) {
+  const d = await fetchJsonCached(apiBase, "/api/public/language-support", { languages: [], bands: [] });
+  return d && Array.isArray(d.languages) ? d : { languages: [], bands: [] };
+}
+
 /** Fetch text (an SVG) from `{apiBase}${path}`, resolving to null on any failure. */
 export async function fetchText(apiBase, path) {
   const base = (apiBase || "").trim().replace(/\/$/, "");

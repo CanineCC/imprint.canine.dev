@@ -3,7 +3,17 @@
 # Uses the esbuild already vendored in the cms.canine.dev workspace.
 set -euo pipefail
 
-ESBUILD="/home/jimmy/RiderProjects/cms.canine.dev/node_modules/.bin/esbuild"
+# esbuild lookup: honour an $ESBUILD override, else try known vendored locations, else PATH.
+ESBUILD="${ESBUILD:-}"
+if [ -z "$ESBUILD" ] || [ ! -x "$ESBUILD" ]; then
+  for candidate in \
+    /home/jimmy/RiderProjects/cms.canine.dev/node_modules/.bin/esbuild \
+    /home/jimmy/RiderProjects/cms/node_modules/.bin/esbuild \
+    "$(command -v esbuild 2>/dev/null || true)"; do
+    if [ -n "$candidate" ] && [ -x "$candidate" ]; then ESBUILD="$candidate"; break; fi
+  done
+fi
+: "${ESBUILD:?esbuild not found — set \$ESBUILD to an esbuild binary}"
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUT="$(dirname "$SRC")"
 
@@ -15,6 +25,7 @@ TAGS=(
   cai-evidence-flow
   cai-c4-heat
   cai-findings
+  cai-language-support
   contact-form
 )
 
