@@ -4,6 +4,7 @@ using Imprint.Authoring;
 using Imprint.Authoring.Features.Assets;
 using Imprint.Authoring.Features.Pages;
 using Imprint.Authoring.Projections;
+using Imprint.Editor.Api;
 using Imprint.Editor.Auth;
 using Imprint.Editor.Components;
 using Imprint.Editor.Contact;
@@ -281,6 +282,10 @@ app.MapGet("/preview/{site}", (string site, SitePreview preview, HttpContext htt
 
 app.MapGet("/preview/{site}/{**path}", (string site, string? path, SitePreview preview, HttpContext http) =>
     ServePreview(site, path ?? "", preview, http)).AllowAnonymous();
+
+// Headless, token-authenticated authoring API (off-network content authoring via the same command
+// path as the editor). Fail-closed: mapped ONLY when Imprint:Authoring:Token is configured.
+app.MapAuthoringApi();
 
 await app.Services.InitializeImprintEventSourcing();
 

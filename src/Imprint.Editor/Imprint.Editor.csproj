@@ -5,6 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Imprint.Editor.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../Imprint.Authoring/Imprint.Authoring.csproj" />
     <ProjectReference Include="../Imprint.Media/Imprint.Media.csproj" />
     <ProjectReference Include="../Imprint.Publishing/Imprint.Publishing.csproj" />
