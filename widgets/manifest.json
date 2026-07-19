@@ -4,7 +4,7 @@
     "name": "Countdown",
     "description": "Counts down to a date and time. Great for launches and events.",
     "bundle": "x-countdown.js",
-    "placeholder": "Counting down\u2026",
+    "placeholder": "Counting down…",
     "props": [
       {
         "name": "until",
@@ -116,7 +116,7 @@
   {
     "tag": "cai-score-card",
     "name": "CAI score card",
-    "description": "The Codebase Assurance Index score card: band chip, band-inked score, the worst\u2192best band ladder with a \u201cyou are here\u201d marker, trend sparkline, lens bars and detail rows. Fetches the published gallery (/api/oss) when an API base is set and renders the HERO \u2014 the highest-scoring published repo; falls back to the labelled sample.",
+    "description": "The Codebase Assurance Index score card: band chip, band-inked score, the worst→best band ladder with a “you are here” marker, trend sparkline, lens bars and detail rows. Fetches the published gallery (/api/oss) when an API base is set and renders the HERO — the highest-scoring published repo; falls back to the labelled sample.",
     "bundle": "cai-score-card.js",
     "placeholder": "CAI score card",
     "props": [
@@ -128,31 +128,31 @@
       },
       {
         "name": "owner",
-        "label": "Owner \u2014 pick a real published repo (with name)",
+        "label": "Owner — pick a real published repo (with name)",
         "type": "text",
         "default": ""
       },
       {
         "name": "name",
-        "label": "Repo name \u2014 pick a real published repo (with owner)",
+        "label": "Repo name — pick a real published repo (with owner)",
         "type": "text",
         "default": ""
       },
       {
         "name": "card",
-        "label": "Sample-card fallback (JSON \u2014 name, owner, score, series, arcFirst, arcBest, lenses, rows)",
+        "label": "Sample-card fallback (JSON — name, owner, score, series, arcFirst, arcBest, lenses, rows)",
         "type": "text",
         "default": ""
       },
       {
         "name": "score",
-        "label": "CAI score 0\u2013100 (overrides card)",
+        "label": "CAI score 0–100 (overrides card)",
         "type": "number",
         "default": ""
       },
       {
         "name": "seal-text",
-        "label": "Seal badge text (e.g. \u2713 Signed by Watchdog)",
+        "label": "Seal badge text (e.g. ✓ Signed by Watchdog)",
         "type": "text",
         "default": ""
       },
@@ -184,7 +184,7 @@
   {
     "tag": "cai-card-gallery",
     "name": "CAI score-card gallery",
-    "description": "A responsive grid of CAI score cards \u2014 the public-record home gallery of real published surveys (quiet-peer cards, not the accent hero artifact). Fetches the published gallery (/api/oss) when an API base is set and shows three distinct cards, hero excluded \u2014 the second-best by score, the most-improved by delta, and a random one; falls back to the labelled sample cards.",
+    "description": "A responsive grid of CAI score cards — the public-record home gallery of real published surveys (quiet-peer cards, not the accent hero artifact). Fetches the published gallery (/api/oss) when an API base is set and shows three distinct cards, hero excluded — the second-best by score, the most-improved by delta, and a random one; falls back to the labelled sample cards.",
     "bundle": "cai-card-gallery.js",
     "placeholder": "CAI score-card gallery",
     "props": [
@@ -246,7 +246,7 @@
   {
     "tag": "cai-band-scale",
     "name": "CAI band scale",
-    "description": "The canonical CAI presentation scale: five bands worst\u2192best, cutlines 25/50/70/90, the display words, and an optional Score pin. Pins at the HERO published card's bestScore (the highest-scoring published repo, from /api/oss) when an API base is set; falls back to the seeded score.",
+    "description": "The canonical CAI presentation scale: five bands worst→best, cutlines 25/50/70/90, the display words, and an optional Score pin. Pins at the HERO published card's bestScore (the highest-scoring published repo, from /api/oss) when an API base is set; falls back to the seeded score.",
     "bundle": "cai-band-scale.js",
     "placeholder": "CAI band scale",
     "props": [
@@ -258,7 +258,7 @@
       },
       {
         "name": "score",
-        "label": "Seeded pin score fallback (optional, 0\u2013100)",
+        "label": "Seeded pin score fallback (optional, 0–100)",
         "type": "number",
         "default": ""
       },
@@ -358,7 +358,7 @@
   {
     "tag": "cai-evidence-flow",
     "name": "CAI evidence flow",
-    "description": "A left\u2192right node strip with arrow connectors and an optional dashed loop-back path \u2014 the produce \u2192 hold \u2192 consume / measure \u2192 fix \u2192 prove diagram. Nodes come from a JSON array of { title, body, tone }.",
+    "description": "A left→right node strip with arrow connectors and an optional dashed loop-back path — the produce → hold → consume / measure → fix → prove diagram. Nodes come from a JSON array of { title, body, tone }.",
     "bundle": "cai-evidence-flow.js",
     "placeholder": "Evidence flow diagram",
     "props": [
@@ -414,13 +414,13 @@
   {
     "tag": "cai-c4-heat",
     "name": "CAI C4 architecture heat-map",
-    "description": "The C4 architecture heat-map carousel \u2014 bounded contexts and how they talk, coloured by health \u2014 the same map watchdog.canine.dev renders in the app's C4 wheel. Live only: fetches the public C4 list (/api/public/c4, richest first) when an API base is set and cycles the repos with prev/next, loading each one's real C4 heat SVG; shows nothing without a live source.",
+    "description": "The C4 architecture heat-map carousel — bounded contexts and how they talk, coloured by health — the same map watchdog.canine.dev renders in the app's C4 wheel. Live only: fetches the public C4 list (/api/public/c4, richest first) when an API base is set and cycles the repos with prev/next, loading each one's real C4 heat SVG; shows nothing without a live source.",
     "bundle": "cai-c4-heat.js",
     "placeholder": "C4 architecture heat-map",
     "props": [
       {
         "name": "api-base",
-        "label": "Live API base URL (required \u2014 this widget is live-only)",
+        "label": "Live API base URL (required — this widget is live-only)",
         "type": "url",
         "default": ""
       },
@@ -464,7 +464,7 @@
   {
     "tag": "cai-findings",
     "name": "CAI findings a scanner can't produce",
-    "description": "The deterministic architecture / domain-model / event findings located to file:line, from real published reports \u2014 a carousel with the honest \u201cshowing X of Y\u201d and a link to the full report. Fetches the public findings feed (/api/public/findings, strongest repo first) when an API base is set and cycles the repos with prev/next; falls back to a small labelled sample.",
+    "description": "The deterministic architecture / domain-model / event findings located to file:line, from real published reports — a carousel with the honest “showing X of Y” and a link to the full report. Fetches the public findings feed (/api/public/findings, strongest repo first) when an API base is set and cycles the repos with prev/next; falls back to a small labelled sample.",
     "bundle": "cai-findings.js",
     "placeholder": "Findings a scanner can't produce",
     "props": [
@@ -514,7 +514,7 @@
   {
     "tag": "cai-language-support",
     "name": "Language survey-clarity (FIT) matrix",
-    "description": "Every language Watchdog supports, grouped by FIT band (survey clarity \u2014 how clearly a language leads to a complete DDD / event-sourcing / event-driven / vertical-slice survey, NOT a grade of the language or code), best-first, with each language's applicability (0\u201310) and the lenses that apply vs are N/A. Fetches the public matrix (/api/public/language-support) when an API base is set and AUTO-UPDATES as new languages are signed off; falls back to a small labelled sample.",
+    "description": "Every language Watchdog supports, grouped by FIT band (survey clarity — how clearly a language leads to a complete DDD / event-sourcing / event-driven / vertical-slice survey, NOT a grade of the language or code), best-first, with each language's applicability (0–10) and the lenses that apply vs are N/A. Fetches the public matrix (/api/public/language-support) when an API base is set and AUTO-UPDATES as new languages are signed off; falls back to a small labelled sample.",
     "bundle": "cai-language-support.js",
     "placeholder": "Language survey-clarity (FIT) matrix",
     "props": [
@@ -564,7 +564,7 @@
   {
     "tag": "contact-form",
     "name": "Contact form",
-    "description": "A contact form with a topic selector (?topic= prefill), name / email / organisation / message fields and a spam honeypot. Submits via fetch() to the `action` endpoint (default: the imprint editor's anonymous /api/contact) and reports success/failure inline. The inbox recipients live in the private `recipients` prop (falling back to the endpoint's server config) \u2014 never in the page.",
+    "description": "A contact form with a topic selector (?topic= prefill), name / email / organisation / message fields and a spam honeypot. Submits via fetch() to the `action` endpoint (default: the imprint editor's anonymous /api/contact) and reports success/failure inline. The inbox recipients live in the private `recipients` prop (falling back to the endpoint's server config) — never in the page.",
     "bundle": "contact-form.js",
     "placeholder": "Contact form",
     "props": [
@@ -582,7 +582,7 @@
       },
       {
         "name": "recipients",
-        "label": "Send submissions to (email, comma-separate for several \u2014 never published)",
+        "label": "Send submissions to (email, comma-separate for several — never published)",
         "type": "text",
         "default": "",
         "private": true
@@ -616,6 +616,138 @@
         "label": "Brand accent",
         "type": "choice",
         "default": "watchdog",
+        "options": [
+          "watchdog",
+          "assay",
+          "cai"
+        ]
+      }
+    ]
+  },
+  {
+    "tag": "cai-verifier",
+    "name": "Verify a signed survey",
+    "description": "Paste a signed CAI delivery package and check it. Reports the two claims SEPARATELY and never lets one vouch for the other: whether the document is authentically ours and unedited (Ed25519 over the canonical payload), and whether the CAI it states actually follows from the evidence it carries. A package that is genuinely signed but states a number its own evidence does not produce is reported as such, never as trustworthy. Calls the open API at {api-base}/api/verify-delivery.",
+    "bundle": "cai-verifier.js",
+    "placeholder": "Verify a signed survey",
+    "props": [
+      {
+        "name": "api-base",
+        "label": "CAI API base URL (required — the verifier calls it)",
+        "type": "url",
+        "default": "https://cai.canine.dev"
+      },
+      {
+        "name": "kicker",
+        "label": "Kicker (small uppercase intro)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "heading",
+        "label": "Heading",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "lede",
+        "label": "Lede / intro paragraph",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "brand",
+        "label": "Brand accent",
+        "type": "choice",
+        "default": "cai",
+        "options": [
+          "watchdog",
+          "assay",
+          "cai"
+        ]
+      }
+    ]
+  },
+  {
+    "tag": "cai-calculator",
+    "name": "Score an evidence bundle",
+    "description": "Paste an evidence bundle and watch the open scorer fold it into the ten lens scores and the 0–100 CAI, in front of the reader. When the bundle also states a published headline, the result is checked against it — so this is the calculator AND the falsifiability demonstration: a mismatch is proof the published number does not follow from the evidence. Folds server-side through the same reference scorer the surveyor uses, so it can never disagree with the standard.",
+    "bundle": "cai-calculator.js",
+    "placeholder": "Score an evidence bundle",
+    "props": [
+      {
+        "name": "api-base",
+        "label": "CAI API base URL (required — the scorer calls it)",
+        "type": "url",
+        "default": "https://cai.canine.dev"
+      },
+      {
+        "name": "kicker",
+        "label": "Kicker (small uppercase intro)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "heading",
+        "label": "Heading",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "lede",
+        "label": "Lede / intro paragraph",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "brand",
+        "label": "Brand accent",
+        "type": "choice",
+        "default": "cai",
+        "options": [
+          "watchdog",
+          "assay",
+          "cai"
+        ]
+      }
+    ]
+  },
+  {
+    "tag": "cai-report-index",
+    "name": "Public surveys — the full browsable record",
+    "description": "Every published survey, with filters for language and for the lenses that fired. The lens filter is the interesting one: a conditional lens only fires when the architecture calls for it, so filtering by Event Sourcing means 'show me the event-sourced codebases'. Complements cai-card-gallery, which shows a curated three for a landing page. Fetches {api-base}/api/oss.",
+    "bundle": "cai-report-index.js",
+    "placeholder": "Public surveys — the full browsable record",
+    "props": [
+      {
+        "name": "api-base",
+        "label": "Watchdog API base URL (empty = nothing to show)",
+        "type": "url",
+        "default": "https://watchdog.canine.dev"
+      },
+      {
+        "name": "kicker",
+        "label": "Kicker (small uppercase intro)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "heading",
+        "label": "Heading",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "lede",
+        "label": "Lede / intro paragraph",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "brand",
+        "label": "Brand accent",
+        "type": "choice",
+        "default": "cai",
         "options": [
           "watchdog",
           "assay",

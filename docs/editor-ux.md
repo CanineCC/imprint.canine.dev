@@ -161,7 +161,8 @@ All drag-and-drop operations are therefore fully keyboard-accessible
 
 ## 7. Panels
 
-- **Inspector** (right, 300 px): typed prop editors per node type — segmented controls
+- **Inspector** (right, 300 px): header with select-parent, the node's name, and a
+  delete button (disabled for managed column cells); typed prop editors per node type — segmented controls
   for enums, steppers for bounded ints, color-role pickers (theme roles, not raw
   colors), asset pickers (opens asset panel in select mode), link editor
   (page picker + external URL tab), the widget prop form (from manifest), block

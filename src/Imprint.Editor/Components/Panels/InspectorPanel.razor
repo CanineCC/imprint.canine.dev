@@ -4,6 +4,7 @@
 @implements IDisposable
 @inject EditorSession Session
 @inject PageDrafts Drafts
+@inject CanvasBridge Bridge
 
 @* The right-hand inspector (docs/editor-ux.md §7): typed prop editors for the
    selected node, page settings when nothing is selected. The @key per node id resets
@@ -21,6 +22,18 @@
             <button type="button" class="ed-btn ed-btn-ghost" title="Select parent"
                     aria-label="Select parent" @onclick="Session.SelectParent">↑</button>
             <h2 class="ed-insp-title">@node.DisplayName</h2>
+            @if (IsManagedCell(node))
+            {
+                <button type="button" class="ed-btn ed-btn-ghost ed-btn-danger ed-insp-delete" disabled
+                        title="Column cells can't be deleted — reduce the number of columns instead"
+                        aria-label="Delete @node.DisplayName">🗑</button>
+            }
+            else
+            {
+                <button type="button" class="ed-btn ed-btn-ghost ed-btn-danger ed-insp-delete"
+                        title="Delete (Del)" aria-label="Delete @node.DisplayName"
+                        @onclick="Bridge.DeleteSelection">🗑</button>
+            }
         </header>
         <div class="ed-insp-body" @key="node.Id">
             @switch (node)
@@ -84,6 +97,9 @@
     }
 
     private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    private bool IsManagedCell(Node node) =>
+        Session.CurrentPage is { } page && Placement.IsManagedCell(page.Tree, node.Id);
 
     public void Dispose()
     {

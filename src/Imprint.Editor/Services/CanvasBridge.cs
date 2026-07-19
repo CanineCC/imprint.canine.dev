@@ -245,7 +245,8 @@ public sealed class CanvasBridge(EditorSession session, CommandRunner commands) 
 
     // ------------------------------------------------------------- mutations
 
-    private async Task DeleteSelection()
+    /// <summary>Also the inspector header's delete button — one removal path for key and click.</summary>
+    public async Task DeleteSelection()
     {
         if (session.Selection is not { } id || session.CurrentPage is not { } page ||
             page.Tree.Find(id) is not { } node)

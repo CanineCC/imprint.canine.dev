@@ -113,6 +113,28 @@ public sealed class CanvasInteractionTests(EditorFixture fixture)
     }
 
     [Fact]
+    public async Task Inspector_delete_button_removes_selection_and_undo_restores_it()
+    {
+        var page = await fixture.OpenEditor();
+        var before = await page.CanvasOrder("section");
+
+        await page.Select(page.Node("section", before.Count - 1));
+        await page.ClickAsync(".ed-insp-delete");
+        await page.WaitForFunctionAsync(
+            "n => document.querySelectorAll('.ed-canvas [data-node-type=section]').length === n - 1",
+            before.Count);
+
+        // The click left focus in the panel; undo listens on the canvas surface, so
+        // reselect a node there before Ctrl+Z.
+        await page.Select(page.Node("section"));
+        await page.Keyboard.PressAsync("Control+z");
+        await page.WaitForFunctionAsync(
+            "n => document.querySelectorAll('.ed-canvas [data-node-type=section]').length === n",
+            before.Count);
+        Assert.Equal(before, await page.CanvasOrder("section"));
+    }
+
+    [Fact]
     public async Task Delete_key_removes_selection_and_undo_restores_it()
     {
         var page = await fixture.OpenEditor();

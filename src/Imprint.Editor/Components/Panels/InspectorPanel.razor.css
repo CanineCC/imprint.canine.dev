@@ -27,6 +27,10 @@
   font-weight: 700;
 }
 
+.ed-insp ::deep .ed-insp-delete {
+  margin-left: auto;
+}
+
 .ed-insp ::deep .ed-insp-body {
   padding: 14px 14px 24px;
 }
