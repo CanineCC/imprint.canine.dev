@@ -787,6 +787,18 @@
         "default": ""
       },
       {
+        "name": "pick",
+        "label": "Wall slot (only when Repository is empty)",
+        "type": "choice",
+        "default": "hero",
+        "options": [
+          "hero",
+          "improved",
+          "second",
+          "random"
+        ]
+      },
+      {
         "name": "theme",
         "label": "Theme",
         "type": "choice",

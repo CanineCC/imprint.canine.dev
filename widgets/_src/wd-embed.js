@@ -21,7 +21,7 @@ const THEME_ATTR = "data-theme";
 
 class WdEmbed extends HTMLElement {
   static get observedAttributes() {
-    return ["base", "view", "repo", "theme", "title-text", "min-height"];
+    return ["base", "view", "repo", "theme", "pick", "title-text", "min-height"];
   }
 
   connectedCallback() {
@@ -85,6 +85,12 @@ class WdEmbed extends HTMLElement {
     const repo = (this.getAttribute("repo") || "").trim();
     if (repo) {
       url.searchParams.set("repo", repo);
+    }
+    // Which slot of the wall this card fills, when no repo is named. The SERVER decides what each slot
+    // resolves to, from one ordered decision — so four independent embeds on one page can never collide.
+    const pick = (this.getAttribute("pick") || "").trim();
+    if (!repo && pick) {
+      url.searchParams.set("pick", pick);
     }
     url.searchParams.set("theme", this._theme());
     return url.toString();
