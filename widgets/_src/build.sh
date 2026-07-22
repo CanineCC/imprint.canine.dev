@@ -29,6 +29,7 @@ TAGS=(
   cai-verifier
   cai-calculator
   cai-report-index
+  wd-embed
   contact-form
 )
 

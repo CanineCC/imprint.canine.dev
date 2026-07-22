@@ -755,5 +755,58 @@
         ]
       }
     ]
+  },
+  {
+    "tag": "wd-embed",
+    "name": "Live Watchdog view (embed)",
+    "description": "Frames a view rendered by the Watchdog app itself — its own components, its own stylesheet, against real published data. Nothing is re-drawn here, so it can never drift from the product. The server refuses any repo that has not published a survey. Leave Repository empty to show the same hero the app's own gallery picks. The frame sizes itself to its content.",
+    "bundle": "wd-embed.js",
+    "placeholder": "Live Watchdog view",
+    "props": [
+      {
+        "name": "base",
+        "label": "Watchdog app origin",
+        "type": "url",
+        "default": "https://app.watchdog.canine.dev"
+      },
+      {
+        "name": "view",
+        "label": "View",
+        "type": "choice",
+        "default": "score-card",
+        "options": [
+          "score-card"
+        ]
+      },
+      {
+        "name": "repo",
+        "label": "Repository (owner/name — empty = the app's hero pick)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "theme",
+        "label": "Theme",
+        "type": "choice",
+        "default": "auto",
+        "options": [
+          "auto",
+          "dark",
+          "light"
+        ]
+      },
+      {
+        "name": "title-text",
+        "label": "Frame title (accessibility)",
+        "type": "text",
+        "default": "Watchdog survey"
+      },
+      {
+        "name": "min-height",
+        "label": "Height before it measures itself (px)",
+        "type": "number",
+        "default": "320"
+      }
+    ]
   }
 ]
