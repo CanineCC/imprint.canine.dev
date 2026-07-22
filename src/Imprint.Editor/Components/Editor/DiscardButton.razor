@@ -1,0 +1,78 @@
+@using Imprint.Authoring.Projections
+@using Imprint.Authoring.Features.Pages.RevertPageToPublished
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject EditorSession Session
+@inject PageList Pages
+@inject CommandRunner Commands
+@inject ToastService Toasts
+
+@* "Discard changes": restore the current page's content to its last PUBLISHED version.
+   Only meaningful when the page is published AND has unpublished edits (Modified). A
+   never-published page (Draft) has no snapshot to restore, so the action is hidden. The
+   revert is undoable — its inverse captures the pre-revert draft, so one Undo brings the
+   discarded work straight back. Guarded by an inline confirm to prevent a stray click
+   throwing away real work. *@
+@if (Session.CurrentPageId is { } pageId && Pages.Get(pageId) is { Status: PageStatus.Modified })
+{
+    <div class="ed-discard">
+        @if (_confirming)
+        {
+            <span class="ed-discard-ask">Discard all unpublished changes to this page and restore the last published version?</span>
+            <button type="button" class="ed-btn ed-btn-danger" disabled="@_busy" @onclick="() => Discard(pageId)">Discard</button>
+            <button type="button" class="ed-btn ed-btn-ghost" disabled="@_busy" @onclick="() => _confirming = false">Cancel</button>
+        }
+        else
+        {
+            <button type="button" class="ed-btn"
+                    title="Discard unpublished changes and restore the last published version of this page"
+                    @onclick="() => _confirming = true">Discard changes</button>
+        }
+    </div>
+}
+
+@code {
+    private bool _confirming;
+    private bool _busy;
+
+    private async Task Discard(Imprint.Authoring.Domain.PageId pageId)
+    {
+        _busy = true;
+        try
+        {
+            // Compute the undo inverse BEFORE dispatch, from the current draft tree — the
+            // only moment the pre-revert content exists. Restoring those exact roots is a
+            // faithful undo of the revert (Redo re-reads the published snapshot).
+            if (Session.CurrentPage is not { } draft)
+            {
+                return;
+            }
+
+            var forward = new RevertPageToPublished(pageId);
+            var inverse = new RestorePageContent(pageId, draft.Tree.Roots);
+            if (await Commands.Run(forward, inverse, "discard changes"))
+            {
+                Toasts.Show("Restored the last published version.");
+            }
+        }
+        finally
+        {
+            _busy = false;
+            _confirming = false;
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        Pages.Changed += Refresh;
+        Session.Changed += Refresh;
+    }
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Pages.Changed -= Refresh;
+        Session.Changed -= Refresh;
+    }
+}

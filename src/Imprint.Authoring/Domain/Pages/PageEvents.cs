@@ -42,6 +42,13 @@ public sealed record NodePropsChanged(Node Node);
 [EventType("page.text-changed")]
 public sealed record TextChanged(NodeId NodeId, string Field, Locale Locale, string Value);
 
+// Replaces the page's ENTIRE content with a given set of section roots — the primitive
+// behind "discard unpublished changes / restore last published". Self-contained: the
+// full target tree travels in the event, so the fold is a mechanical PageTree swap and
+// replay never depends on any other stream (e.g. the published snapshot it came from).
+[EventType("page.content-restored")]
+public sealed record PageContentRestored(NodeList Roots);
+
 // Null Value clears the override.
 [EventType("page.block-override-set")]
 public sealed record BlockOverrideSet(NodeId InstanceId, NodeId DefinitionNodeId, string Field, Locale Locale, string? Value);

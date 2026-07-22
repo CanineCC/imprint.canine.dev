@@ -605,6 +605,13 @@ button { font: inherit; color: inherit; }
 
 .ed-publish { display: flex; align-items: center; gap: 8px; }
 
+.ed-history { display: inline-flex; align-items: center; gap: 2px; }
+.ed-history .ed-btn { font-size: 16px; line-height: 1; }
+.ed-history .ed-btn:disabled { opacity: 0.4; cursor: default; }
+
+.ed-discard { display: inline-flex; align-items: center; gap: 8px; }
+.ed-discard-ask { font-size: 12px; color: var(--ed-text-muted); max-width: 320px; }
+
 .ed-rail-btn { width: 40px; height: 40px; font-size: 17px; }
 .ed-rail-btn[aria-pressed='true'] { background: var(--ed-surface-2); color: var(--ed-accent-strong); }
 

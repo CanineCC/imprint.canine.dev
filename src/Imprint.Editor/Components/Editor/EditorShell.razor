@@ -25,6 +25,21 @@
         }
         <TopBarPageSwitcher />
         <span style="flex:1"></span>
+        @* Undo/Redo work from here regardless of canvas focus — they call the runner
+           directly, not the JS canvas key path, so an accidental delete is always
+           recoverable even when focus sits in a panel or nowhere. *@
+        <div class="ed-history" role="group" aria-label="Undo and redo">
+            <button type="button" class="ed-btn ed-btn-ghost"
+                    disabled="@(!Commands.CanUndo)"
+                    title="@(Commands.CanUndo ? $"Undo {Commands.UndoLabel}" : "Nothing to undo")"
+                    aria-label="@(Commands.CanUndo ? $"Undo {Commands.UndoLabel}" : "Undo")"
+                    @onclick="Commands.Undo">↶</button>
+            <button type="button" class="ed-btn ed-btn-ghost"
+                    disabled="@(!Commands.CanRedo)"
+                    title="@(Commands.CanRedo ? "Redo" : "Nothing to redo")"
+                    aria-label="Redo"
+                    @onclick="Commands.Redo">↷</button>
+        </div>
         <ViewportToggle />
         <LocaleSwitcher />
         @if ((Session.ActiveSite?.Locales.Count ?? 0) > 1)
@@ -45,6 +60,7 @@
                title="Open the published site in a new tab — no editor chrome, fully navigable, not deployed"
                aria-label="Open preview in a new tab">Preview&nbsp;↗</a>
         }
+        <DiscardButton />
         <PublishButton />
         @if (Auth.Enabled)
         {

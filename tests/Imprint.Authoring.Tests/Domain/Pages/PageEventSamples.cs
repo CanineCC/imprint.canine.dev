@@ -42,6 +42,8 @@ public sealed class PageEventSamples : IEventSampleProvider
             yield return new BlockOverrideSet(NodeId.New(), NodeId.New(), "label", Da, "Læs mere");
             yield return new BlockOverrideSet(NodeId.New(), NodeId.New(), "html", En, null);
             yield return new BlockInstanceDetached(NodeId.New(), RichSection());
+            yield return new PageContentRestored(NodeList.Of(RichSection(), RichSection()));
+            yield return new PageContentRestored(NodeList.Empty);
             yield return new PagePublished(7);
             yield return new PageUnpublished();
             yield return new PageDeleted();

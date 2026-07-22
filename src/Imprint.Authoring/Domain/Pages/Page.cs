@@ -228,6 +228,55 @@ public sealed class Page : AggregateRoot
         Raise(new TextChanged(nodeId, field, locale, value));
     }
 
+    /// <summary>
+    /// Replace the page's entire content (its section roots) — the primitive behind
+    /// "discard unpublished changes / restore last published". The caller supplies the
+    /// target roots: the published snapshot for a revert, or the pre-revert draft for its
+    /// undo. Validated exactly like a fresh page of sections — only sections at the root,
+    /// every node content-valid, ids unique within the new tree, within the depth/node
+    /// budget. No-op when the tree already equals the target (nothing to discard).
+    /// </summary>
+    public void RestoreContent(NodeList roots)
+    {
+        EnsureNotDeleted();
+
+        var seen = new HashSet<NodeId>();
+        var total = 0;
+        foreach (var root in roots)
+        {
+            EnsureCanPlace(null, root);          // only sections live directly on the page
+            EnsureSpecInternallyValid(root);     // content + columns invariants, recursively
+            EnsureDepthBudget(0, root);
+            foreach (var node in PageTree.Flatten(root))
+            {
+                total++;
+                if (node.Id.IsRoot)
+                {
+                    throw new DomainException("Restored content uses the reserved root id.");
+                }
+
+                if (!seen.Add(node.Id))
+                {
+                    throw new DomainException("Restored content reuses an element id.");
+                }
+            }
+        }
+
+        if (total > Placement.MaxNodesPerPage)
+        {
+            throw new DomainException($"A page can hold at most {Placement.MaxNodesPerPage} elements.");
+        }
+
+        // Value equality (PageTree → NodeList → element-wise) makes the no-op exact: a
+        // revert with nothing to discard appends no event and marks nothing modified.
+        if (new PageTree(roots).Equals(Tree))
+        {
+            return;
+        }
+
+        Raise(new PageContentRestored(roots));
+    }
+
     public void SetBlockOverride(NodeId instanceId, NodeId definitionNodeId, string field, Locale locale, string? value)
     {
         EnsureNotDeleted();
@@ -344,6 +393,9 @@ public sealed class Page : AggregateRoot
                 break;
             case TextChanged e:
                 Tree = Tree.Replace(e.NodeId, node => WithTextApplied(node, e.Field, e.Locale, e.Value));
+                break;
+            case PageContentRestored e:
+                Tree = new PageTree(e.Roots);
                 break;
             case BlockOverrideSet e:
                 Tree = Tree.Replace(e.InstanceId, node => ((BlockInstanceNode)node) with
