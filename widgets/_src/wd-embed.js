@@ -29,7 +29,10 @@ class WdEmbed extends HTMLElement {
       this._root = this.attachShadow({ mode: "open" });
       this._root.innerHTML =
         '<style>' +
-        ':host{display:block}' +
+        // width:100% because the marketing sections that centre their heads (`align-items: center`)
+        // do NOT stretch a custom element the way they stretch a grid — the frame would size to its
+        // content and render as a narrow column in the middle of a full-width section.
+        ':host{display:block;width:100%}' +
         'iframe{display:block;width:100%;border:0;color-scheme:normal;transition:height .15s ease-out}' +
         '</style>' +
         "<iframe title='' loading='lazy' scrolling='no' referrerpolicy='no-referrer'></iframe>";

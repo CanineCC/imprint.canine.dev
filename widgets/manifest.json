@@ -777,7 +777,8 @@
         "options": [
           "score-card",
           "findings",
-          "composition"
+          "composition",
+          "band-scale"
         ]
       },
       {
