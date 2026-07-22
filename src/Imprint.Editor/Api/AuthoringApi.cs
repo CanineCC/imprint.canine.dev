@@ -1,17 +1,27 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Assets;
 using Imprint.Authoring.Domain.Pages;
+using Imprint.Authoring.Domain.Sites;
 using Imprint.Authoring.Projections;
 using Imprint.Editor.Auth;
 using Imprint.EventSourcing;
 using AddNodeCmd = Imprint.Authoring.Features.Pages.AddNode.AddNode;
+using ChangeNavigationCmd = Imprint.Authoring.Features.Sites.ChangeNavigation.ChangeNavigation;
 using ChangeNodePropsCmd = Imprint.Authoring.Features.Pages.ChangeNodeProps.ChangeNodeProps;
+using ChangePageMetaCmd = Imprint.Authoring.Features.Pages.ChangePageMeta.ChangePageMeta;
+using ChangePageTitleCmd = Imprint.Authoring.Features.Pages.ChangePageTitle.ChangePageTitle;
 using CreatePageCmd = Imprint.Authoring.Features.Pages.CreatePage.CreatePage;
 using CreateSiteCmd = Imprint.Authoring.Features.Sites.CreateSite.CreateSite;
+using DuplicateNodeCmd = Imprint.Authoring.Features.Pages.DuplicateNode.DuplicateNode;
+using EditTextCmd = Imprint.Authoring.Features.Pages.EditText.EditText;
+using MoveNodeCmd = Imprint.Authoring.Features.Pages.MoveNode.MoveNode;
 using PublishAllStaleCmd = Imprint.Authoring.Features.Pages.PublishAllStale.PublishAllStale;
+using PublishPageCmd = Imprint.Authoring.Features.Pages.PublishPage.PublishPage;
 using RemoveNodeCmd = Imprint.Authoring.Features.Pages.RemoveNode.RemoveNode;
+using SetCopyLineCmd = Imprint.Authoring.Features.Sites.SetCopyLine.SetCopyLine;
 using SetFaviconCmd = Imprint.Authoring.Features.Sites.SetFavicon.SetFavicon;
 using SetHeaderLogoCmd = Imprint.Authoring.Features.Sites.SetHeaderLogo.SetHeaderLogo;
 using UploadAssetCmd = Imprint.Authoring.Features.Assets.UploadAsset.UploadAsset;
@@ -90,15 +100,19 @@ public static class AuthoringApi
             }));
         });
 
-        // The node tree, flattened — so a caller can find a section to insert into (and at what index).
-        api.MapGet("/pages/{pageId}/tree", (string pageId, PageDrafts drafts) =>
+        // The node tree, flattened — so a caller can find a section to insert into (and at what
+        // index), AND read the content it is about to change. Every node carries its parent and its
+        // type-specific props (text as locale → value), because an editing agent's first move is
+        // always "show me what is there now".
+        api.MapGet("/pages/{pageId}/tree", (string pageId, PageDrafts drafts, bool? content) =>
         {
             if (!TryPageId(pageId, out var pid)) return Results.BadRequest(new { error = "invalid pageId" });
             var page = drafts.Get(pid);
             if (page is null) return Results.NotFound(new { error = "unknown page" });
 
+            var withContent = content ?? true;
             var flat = new List<object>();
-            void Walk(NodeList nodes, int depth)
+            void Walk(NodeList nodes, NodeId parent, int depth)
             {
                 foreach (var n in nodes)
                 {
@@ -111,12 +125,62 @@ public static class AuthoringApi
                         isSection = n is SectionNode,
                         childCount = n is IContainerNode c ? c.Children.Count : 0,
                         depth,
+                        parentId = parent.IsRoot ? null : parent.Compact,
+                        props = withContent ? AuthoringNodeJson.Describe(n) : null,
                     });
-                    if (isContainer) Walk(((IContainerNode)n).Children, depth + 1);
+                    if (isContainer) Walk(((IContainerNode)n).Children, n.Id, depth + 1);
                 }
             }
-            Walk(page.Tree.Roots, 0);
-            return Results.Ok(new { pageId = pid.Compact, rootCount = page.Tree.Roots.Count, nodes = flat });
+            Walk(page.Tree.Roots, NodeId.Root, 0);
+            return Results.Ok(new
+            {
+                pageId = pid.Compact,
+                slug = page.Slug.Value,
+                title = page.Title.Values.ToDictionary(kv => kv.Key.Value, kv => kv.Value),
+                metaTitle = page.MetaTitle.Values.ToDictionary(kv => kv.Key.Value, kv => kv.Value),
+                metaDescription = page.MetaDescription.Values.ToDictionary(kv => kv.Key.Value, kv => kv.Value),
+                rootCount = page.Tree.Roots.Count,
+                nodes = flat,
+            });
+        });
+
+        // One site's chrome — locales, navigation, footer groups, header actions and the fine-print
+        // copy line. The read a caller needs before reordering navigation or rewriting the footer,
+        // since both of those commands carry the whole list.
+        api.MapGet("/sites/{siteId}", (string siteId, SiteOverview sites, PageList pages) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            var site = sites.Get(sid);
+            if (site is null) return Results.NotFound(new { error = "unknown site" });
+            var slugs = pages.All(sid).ToDictionary(p => p.Id, p => p.Slug.Value);
+            return Results.Ok(new
+            {
+                id = sid.Compact,
+                name = site.Name,
+                defaultLocale = site.DefaultLocale.Value,
+                locales = site.Locales.Select(l => l.Value).ToList(),
+                copyLine = site.CopyLine is null ? null : Localized(site.CopyLine.Text),
+                navigation = site.Navigation.Select(item => (object)new
+                {
+                    label = item.Label is null ? null : Localized(item.Label),
+                    link = LinkView(item.Link, slugs),
+                    children = item.Children.Select(child => (object)new
+                    {
+                        label = child.Label is null ? null : Localized(child.Label),
+                        description = child.Description is null ? null : Localized(child.Description),
+                        link = LinkView(child.Link, slugs),
+                    }).ToList(),
+                }).ToList(),
+                footer = site.FooterGroups.Select(group => (object)new
+                {
+                    heading = Localized(group.Heading),
+                    links = group.Links.Select(link => (object)new
+                    {
+                        label = link.Label is null ? null : Localized(link.Label),
+                        link = LinkView(link.Link, slugs),
+                    }).ToList(),
+                }).ToList(),
+            });
         });
 
         // ── writes ───────────────────────────────────────────────────────────────────────────
@@ -177,21 +241,148 @@ public static class AuthoringApi
                 : Results.BadRequest(new { error = "insert failed", details = result.Errors });
         });
 
-        // Replace a widget's props (same node id + tag; other node types are rejected).
+        // Add any node (and its whole subtree in one call) — the general form of the widget insert
+        // above. parentId omitted ⇒ the page root, which only accepts sections. Every id is minted
+        // server-side by AuthoringNodeJson, so an add can never collide with an existing node.
+        api.MapPost("/pages/{pageId}/nodes", async (
+            string pageId, AddNodeRequest body, ICommandDispatcher dispatcher, PageDrafts drafts,
+            SiteOverview sites, CancellationToken ct) =>
+        {
+            if (!TryPageId(pageId, out var pid)) return Results.BadRequest(new { error = "invalid pageId" });
+            var page = drafts.Get(pid);
+            if (page is null) return Results.NotFound(new { error = "unknown page" });
+            if (body is null || body.Node.ValueKind != JsonValueKind.Object) return Results.BadRequest(new { error = "a 'node' spec object is required" });
+
+            var parentId = NodeId.Root;
+            if (!string.IsNullOrWhiteSpace(body.ParentId) && !NodeId.TryParse(body.ParentId, out parentId))
+            {
+                return Results.BadRequest(new { error = "invalid parentId" });
+            }
+
+            var locale = LocaleFor(sites, page, body.Locale, out var localeError);
+            if (localeError is not null) return Results.BadRequest(new { error = localeError });
+            if (!AuthoringNodeJson.TryParse(body.Node, locale, out var spec, out var specError)) return Results.BadRequest(new { error = specError });
+
+            var siblings = parentId.IsRoot
+                ? page.Tree.Roots.Count
+                : page.Tree.Find(parentId) is IContainerNode container ? container.Children.Count : 0;
+            var result = await DispatchAs(dispatcher, actor, new AddNodeCmd(pid, parentId, body.Index ?? siblings, spec), ct);
+            return result.Succeeded
+                ? Results.Ok(new { nodeId = spec.Id.Compact, parentId = parentId.IsRoot ? null : parentId.Compact })
+                : Results.BadRequest(new { error = "add failed", details = result.Errors });
+        });
+
+        // Change a node's props. Any node type: a partial patch is applied over what is there, so
+        // "make this section Wide" doesn't have to restate its background and padding. A widget's
+        // props stay whole-bag by contract (an absent 'props' clears them), as before.
         api.MapPut("/pages/{pageId}/nodes/{nodeId}/props", async (
-            string pageId, string nodeId, SetPropsRequest body, ICommandDispatcher dispatcher, PageDrafts drafts, CancellationToken ct) =>
+            string pageId, string nodeId, JsonElement body, ICommandDispatcher dispatcher, PageDrafts drafts,
+            SiteOverview sites, CancellationToken ct) =>
         {
             if (!TryPageId(pageId, out var pid)) return Results.BadRequest(new { error = "invalid pageId" });
             if (!NodeId.TryParse(nodeId, out var nid)) return Results.BadRequest(new { error = "invalid nodeId" });
             var page = drafts.Get(pid);
             if (page is null) return Results.NotFound(new { error = "unknown page" });
-            if (page.Tree.Find(nid) is not WidgetNode widget) return Results.BadRequest(new { error = "node is not a widget" });
+            if (page.Tree.Find(nid) is not { } current) return Results.BadRequest(new { error = "unknown nodeId on this page" });
 
-            var replacement = widget with { Props = ToPropBag(body?.Props) };
+            var patch = body.ValueKind == JsonValueKind.Object && body.TryGetProperty("props", out var inner) && inner.ValueKind == JsonValueKind.Object
+                ? inner
+                : body;
+            if (patch.ValueKind != JsonValueKind.Object) return Results.BadRequest(new { error = "props must be a JSON object" });
+
+            var locale = LocaleFor(sites, page, Text(body, "locale"), out var localeError);
+            if (localeError is not null) return Results.BadRequest(new { error = localeError });
+            if (!AuthoringNodeJson.TryApply(current, patch, locale, out var replacement, out var applyError)) return Results.BadRequest(new { error = applyError });
+
             var result = await DispatchAs(dispatcher, actor, new ChangeNodePropsCmd(pid, replacement), ct);
             return result.Succeeded
                 ? Results.Ok(new { nodeId = nid.Compact })
                 : Results.BadRequest(new { error = "update failed", details = result.Errors });
+        });
+
+        // Rewrite one text field on one node, in one locale. THE copy-editing endpoint: field is
+        // 'text' (heading), 'html' (rich text — the canonical inline subset), 'label' (button) or
+        // 'alt' (image/graphic). Locale defaults to the site's default.
+        api.MapPut("/pages/{pageId}/nodes/{nodeId}/text", async (
+            string pageId, string nodeId, EditTextRequest body, ICommandDispatcher dispatcher, PageDrafts drafts,
+            SiteOverview sites, CancellationToken ct) =>
+        {
+            if (!TryPageId(pageId, out var pid)) return Results.BadRequest(new { error = "invalid pageId" });
+            if (!NodeId.TryParse(nodeId, out var nid)) return Results.BadRequest(new { error = "invalid nodeId" });
+            if (string.IsNullOrWhiteSpace(body?.Field)) return Results.BadRequest(new { error = "field is required (text, html, label or alt)" });
+            var page = drafts.Get(pid);
+            if (page is null) return Results.NotFound(new { error = "unknown page" });
+
+            var locale = LocaleFor(sites, page, body.Locale, out var localeError);
+            if (localeError is not null) return Results.BadRequest(new { error = localeError });
+
+            var result = await DispatchAs(dispatcher, actor, new EditTextCmd(pid, nid, body.Field, locale.Value, body.Value ?? string.Empty), ct);
+            return result.Succeeded
+                ? Results.Ok(new { nodeId = nid.Compact, field = body.Field, locale = locale.Value })
+                : Results.BadRequest(new { error = "edit failed", details = result.Errors });
+        });
+
+        // Reorder / re-parent a node. parentId omitted ⇒ the page root (sections only).
+        api.MapPost("/pages/{pageId}/nodes/{nodeId}/move", async (
+            string pageId, string nodeId, MoveNodeRequest body, ICommandDispatcher dispatcher, CancellationToken ct) =>
+        {
+            if (!TryPageId(pageId, out var pid)) return Results.BadRequest(new { error = "invalid pageId" });
+            if (!NodeId.TryParse(nodeId, out var nid)) return Results.BadRequest(new { error = "invalid nodeId" });
+            var parentId = NodeId.Root;
+            if (!string.IsNullOrWhiteSpace(body?.ParentId) && !NodeId.TryParse(body.ParentId, out parentId))
+            {
+                return Results.BadRequest(new { error = "invalid parentId" });
+            }
+
+            var result = await DispatchAs(dispatcher, actor, new MoveNodeCmd(pid, nid, parentId, body?.Index ?? 0), ct);
+            return result.Succeeded
+                ? Results.Ok(new { nodeId = nid.Compact })
+                : Results.BadRequest(new { error = "move failed", details = result.Errors });
+        });
+
+        // Copy a node and its subtree next to the original — how a card grid grows a card without
+        // restating the whole spec.
+        api.MapPost("/pages/{pageId}/nodes/{nodeId}/duplicate", async (
+            string pageId, string nodeId, ICommandDispatcher dispatcher, CancellationToken ct) =>
+        {
+            if (!TryPageId(pageId, out var pid)) return Results.BadRequest(new { error = "invalid pageId" });
+            if (!NodeId.TryParse(nodeId, out var nid)) return Results.BadRequest(new { error = "invalid nodeId" });
+            var copyId = NodeId.New();
+            var result = await DispatchAs(dispatcher, actor, new DuplicateNodeCmd(pid, nid, copyId), ct);
+            return result.Succeeded
+                ? Results.Ok(new { nodeId = copyId.Compact, copyOf = nid.Compact })
+                : Results.BadRequest(new { error = "duplicate failed", details = result.Errors });
+        });
+
+        // The page's own title and SEO meta. Both localized; locale defaults to the site's default.
+        api.MapPut("/pages/{pageId}/title", async (
+            string pageId, PageTitleRequest body, ICommandDispatcher dispatcher, PageDrafts drafts, SiteOverview sites, CancellationToken ct) =>
+        {
+            if (!TryPageId(pageId, out var pid)) return Results.BadRequest(new { error = "invalid pageId" });
+            var page = drafts.Get(pid);
+            if (page is null) return Results.NotFound(new { error = "unknown page" });
+            var locale = LocaleFor(sites, page, body?.Locale, out var localeError);
+            if (localeError is not null) return Results.BadRequest(new { error = localeError });
+
+            var result = await DispatchAs(dispatcher, actor, new ChangePageTitleCmd(pid, locale.Value, body?.Title ?? string.Empty), ct);
+            return result.Succeeded
+                ? Results.Ok(new { pageId = pid.Compact })
+                : Results.BadRequest(new { error = "title change failed", details = result.Errors });
+        });
+
+        api.MapPut("/pages/{pageId}/meta", async (
+            string pageId, PageMetaRequest body, ICommandDispatcher dispatcher, PageDrafts drafts, SiteOverview sites, CancellationToken ct) =>
+        {
+            if (!TryPageId(pageId, out var pid)) return Results.BadRequest(new { error = "invalid pageId" });
+            var page = drafts.Get(pid);
+            if (page is null) return Results.NotFound(new { error = "unknown page" });
+            var locale = LocaleFor(sites, page, body?.Locale, out var localeError);
+            if (localeError is not null) return Results.BadRequest(new { error = localeError });
+
+            var result = await DispatchAs(dispatcher, actor, new ChangePageMetaCmd(pid, locale.Value, body?.MetaTitle, body?.MetaDescription), ct);
+            return result.Succeeded
+                ? Results.Ok(new { pageId = pid.Compact })
+                : Results.BadRequest(new { error = "meta change failed", details = result.Errors });
         });
 
         api.MapDelete("/pages/{pageId}/nodes/{nodeId}", async (
@@ -214,6 +405,77 @@ public static class AuthoringApi
             return result.Succeeded
                 ? Results.Ok(new { siteId = sid.Compact, published = true })
                 : Results.BadRequest(new { error = "publish failed", details = result.Errors });
+        });
+
+        // Publish ONE page. The precise form: publishing a whole site also ships every other page
+        // that happens to be sitting stale, which on a live marketing site is not always what the
+        // caller meant.
+        api.MapPost("/pages/{pageId}/publish", async (string pageId, ICommandDispatcher dispatcher, CancellationToken ct) =>
+        {
+            if (!TryPageId(pageId, out var pid)) return Results.BadRequest(new { error = "invalid pageId" });
+            var result = await DispatchAs(dispatcher, actor, new PublishPageCmd(pid), ct);
+            return result.Succeeded
+                ? Results.Ok(new { pageId = pid.Compact, published = true })
+                : Results.BadRequest(new { error = "publish failed", details = result.Errors });
+        });
+
+        // ── site chrome ─────────────────────────────────────────────────────────────────────────
+        // Navigation travels as the whole list (mirroring the command and the editor's reorder-as-a-
+        // unit shape), so GET /sites/{id} first, change the order, PUT it back.
+        api.MapPut("/sites/{siteId}/navigation", async (
+            string siteId, JsonElement body, ICommandDispatcher dispatcher, SiteOverview sites, CancellationToken ct) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            var site = sites.Get(sid);
+            if (site is null) return Results.NotFound(new { error = "unknown site" });
+            if (!body.TryGetProperty("items", out var items) || items.ValueKind != JsonValueKind.Array)
+            {
+                return Results.BadRequest(new { error = "an 'items' array is required" });
+            }
+
+            var locale = site.DefaultLocale;
+            if (Text(body, "locale") is { Length: > 0 } raw)
+            {
+                if (!Locale.TryCreate(raw, out locale)) return Results.BadRequest(new { error = $"'{raw}' is not a valid locale tag" });
+            }
+
+            List<NavigationItem> parsed;
+            try
+            {
+                parsed = [.. items.EnumerateArray().Select(item => ParseNavigationItem(item, locale))];
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+
+            var result = await DispatchAs(dispatcher, actor, new ChangeNavigationCmd(sid, parsed), ct);
+            return result.Succeeded
+                ? Results.Ok(new { siteId = sid.Compact, items = parsed.Count })
+                : Results.BadRequest(new { error = "navigation change failed", details = result.Errors });
+        });
+
+        // The footer's fine-print line, on every page of the site. Null/empty text clears it.
+        api.MapPut("/sites/{siteId}/copy-line", async (
+            string siteId, CopyLineRequest? body, ICommandDispatcher dispatcher, SiteOverview sites, CancellationToken ct) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            var site = sites.Get(sid);
+            if (site is null) return Results.NotFound(new { error = "unknown site" });
+
+            var locale = site.DefaultLocale;
+            if (!string.IsNullOrWhiteSpace(body?.Locale) && !Locale.TryCreate(body.Locale, out locale))
+            {
+                return Results.BadRequest(new { error = $"'{body.Locale}' is not a valid locale tag" });
+            }
+
+            // Editing one locale must not drop the others, so the existing value is the base.
+            var text = site.CopyLine?.Text ?? LocalizedText.Empty;
+            var updated = text.With(locale, body?.Text ?? string.Empty);
+            var result = await DispatchAs(dispatcher, actor, new SetCopyLineCmd(sid, updated.IsEmpty ? null : new CopyLine(updated)), ct);
+            return result.Succeeded
+                ? Results.Ok(new { siteId = sid.Compact, copyLine = Localized(updated) })
+                : Results.BadRequest(new { error = "copy line change failed", details = result.Errors });
         });
 
         // ── assets ──────────────────────────────────────────────────────────────────────────────
@@ -337,6 +599,111 @@ public static class AuthoringApi
             ? PropBag.Empty
             : PropBag.Of(props.Select(kv => new KeyValuePair<string, string>(kv.Key, kv.Value ?? string.Empty)));
 
+    private static Dictionary<string, string> Localized(LocalizedText text) =>
+        text.Values.ToDictionary(kv => kv.Key.Value, kv => kv.Value, StringComparer.Ordinal);
+
+    private static object? LinkView(Link? link, IReadOnlyDictionary<PageId, string> slugs) => link switch
+    {
+        PageLink page => new { kind = "page", pageId = page.PageId.Compact, slug = slugs.GetValueOrDefault(page.PageId) },
+        ExternalLink external => new { kind = "external", url = external.Url },
+        _ => null,
+    };
+
+    /// <summary>
+    /// The locale a page write lands in: the caller's if given and valid, else the owning site's
+    /// default. Callers on a single-locale site should never have to name it.
+    /// </summary>
+    private static Locale LocaleFor(SiteOverview sites, Imprint.Authoring.Domain.Pages.Page page, string? requested, out string? error)
+    {
+        error = null;
+        if (!string.IsNullOrWhiteSpace(requested))
+        {
+            if (!Locale.TryCreate(requested, out var explicitLocale))
+            {
+                error = $"'{requested}' is not a valid locale tag (expected e.g. 'en' or 'de-AT').";
+                return default;
+            }
+
+            return explicitLocale;
+        }
+
+        var site = sites.Get(page.SiteId);
+        if (site is null)
+        {
+            error = "the page's site is unknown";
+            return default;
+        }
+
+        return site.DefaultLocale;
+    }
+
+    private static string? Text(JsonElement element, string key) =>
+        element.ValueKind == JsonValueKind.Object && element.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
+
+    /// <summary>
+    /// One navigation entry: a direct page link (<c>pageId</c>), a direct external link
+    /// (<c>url</c>), or a group (<c>children</c>). Label/description are plain strings in the
+    /// request's locale — the aggregate enforces which of them are mandatory.
+    /// </summary>
+    internal static NavigationItem ParseNavigationItem(JsonElement item, Locale locale)
+    {
+        if (item.ValueKind != JsonValueKind.Object)
+        {
+            throw new ArgumentException("Each navigation item must be a JSON object.");
+        }
+
+        var label = Text(item, "label") is { Length: > 0 } text ? LocalizedText.Of(locale, text) : null;
+
+        if (item.TryGetProperty("children", out var children) && children.ValueKind == JsonValueKind.Array && children.GetArrayLength() > 0)
+        {
+            return NavigationItem.Group(
+                label ?? throw new ArgumentException("A navigation group needs a label."),
+                [.. children.EnumerateArray().Select(child => ParseNavigationChild(child, locale))]);
+        }
+
+        return new NavigationItem { Label = label, Link = ParseNavigationLink(item) };
+    }
+
+    private static NavigationChild ParseNavigationChild(JsonElement child, Locale locale)
+    {
+        if (child.ValueKind != JsonValueKind.Object)
+        {
+            throw new ArgumentException("Each navigation child must be a JSON object.");
+        }
+
+        return new NavigationChild(
+            Text(child, "label") is { Length: > 0 } label ? LocalizedText.Of(locale, label) : null,
+            ParseNavigationLink(child) ?? throw new ArgumentException("A navigation child needs a pageId or a url."),
+            Text(child, "description") is { Length: > 0 } description ? LocalizedText.Of(locale, description) : null);
+    }
+
+    private static Link? ParseNavigationLink(JsonElement element)
+    {
+        if (Text(element, "url") is { Length: > 0 } url)
+        {
+            if (!CanonicalHtml.IsAllowedHref(url))
+            {
+                throw new ArgumentException($"'{url}' must be an https, http or mailto address.");
+            }
+
+            return new ExternalLink(url);
+        }
+
+        if (Text(element, "pageId") is { Length: > 0 } page)
+        {
+            if (!Guid.TryParseExact(page, "N", out var guid) && !Guid.TryParse(page, out guid))
+            {
+                throw new ArgumentException($"'{page}' is not a valid page id.");
+            }
+
+            return new PageLink(PageId.From(guid));
+        }
+
+        return null;
+    }
+
     private static bool TrySiteId(string? s, out SiteId id)
     {
         if (Guid.TryParseExact(s, "N", out var g) || Guid.TryParse(s, out g)) { id = SiteId.From(g); return true; }
@@ -379,6 +746,24 @@ public static class AuthoringApi
 
     /// <summary>Request body for replacing a widget's props.</summary>
     public sealed record SetPropsRequest(Dictionary<string, string>? Props);
+
+    /// <summary>Request body for adding a node: where it goes, and the spec of the node itself.</summary>
+    public sealed record AddNodeRequest(string? ParentId, int? Index, JsonElement Node, string? Locale);
+
+    /// <summary>Request body for moving a node (ParentId omitted ⇒ the page root).</summary>
+    public sealed record MoveNodeRequest(string? ParentId, int? Index);
+
+    /// <summary>Request body for rewriting one text field: text | html | label | alt.</summary>
+    public sealed record EditTextRequest(string Field, string? Locale, string Value);
+
+    /// <summary>Request body for changing a page's title.</summary>
+    public sealed record PageTitleRequest(string? Locale, string Title);
+
+    /// <summary>Request body for changing a page's SEO meta (null leaves a field as it is).</summary>
+    public sealed record PageMetaRequest(string? Locale, string? MetaTitle, string? MetaDescription);
+
+    /// <summary>Request body for the footer's fine-print copy line (empty text clears it).</summary>
+    public sealed record CopyLineRequest(string? Locale, string? Text);
 
     /// <summary>Request body for setting a brand asset reference — null/absent clears it.</summary>
     public sealed record SetAssetRefRequest(string? AssetId);
