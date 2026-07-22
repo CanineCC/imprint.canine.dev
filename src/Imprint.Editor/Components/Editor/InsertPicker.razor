@@ -1,5 +1,5 @@
 @using Imprint.Authoring.Domain.Blocks
-@using Imprint.Authoring.Features.Pages.AddPreset
+@using Imprint.Authoring.Features.Pages
 @using Imprint.Authoring.Projections
 @using Imprint.Editor.Services
 @implements IDisposable
@@ -174,9 +174,11 @@
 
     private async Task InsertPreset(string key)
     {
-        // Build the section here (rather than via the AddPreset slice) so we know its
-        // id up front and can insert it through the undoable AddNode path — a preset
-        // insertion is as undoable as any other insert.
+        // Build the section from the shared SectionPresets catalog here — client-side,
+        // so we know its id up front and can insert it through the undoable AddNode path
+        // (with a RemoveNode inverse). A preset insertion is as undoable as any other
+        // insert; this is deliberately NOT a dedicated server-side "add preset" command,
+        // which would mint the id out of the client's reach and lose that undo.
         if (SectionPresets.Find(key) is not { } preset)
         {
             return;

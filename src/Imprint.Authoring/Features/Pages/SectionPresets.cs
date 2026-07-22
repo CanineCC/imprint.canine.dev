@@ -1,7 +1,7 @@
 using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Pages;
 
-namespace Imprint.Authoring.Features.Pages.AddPreset;
+namespace Imprint.Authoring.Features.Pages;
 
 /// <summary>
 /// The section starters offered by the editor's insert picker. A preset is a factory,

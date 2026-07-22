@@ -1,22 +1,29 @@
 using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Pages;
-using Imprint.Authoring.Features.Pages.AddPreset;
+using Imprint.Authoring.Features.Pages;
+using Imprint.Authoring.Features.Pages.AddNode;
 using Imprint.Authoring.Features.Pages.CreatePage;
 using Imprint.Authoring.Projections;
 
 namespace Imprint.Authoring.Tests.Features.Pages;
 
-public sealed class AddPresetTests
+/// <summary>
+/// The shared <see cref="SectionPresets"/> catalog and the editor's insert path for it
+/// (build client-side, insert through the undoable AddNode slice — see PagesHost.AddPreset).
+/// The old dedicated <c>AddPreset</c> command was retired as dead, non-undoable drift; these
+/// pin the surviving behavior it used to cover.
+/// </summary>
+public sealed class SectionPresetsTests
 {
     [Fact]
-    public async Task AddPreset_hero_lands_a_full_section_in_the_draft()
+    public async Task Hero_preset_lands_a_full_section_in_the_draft()
     {
         await using var host = PagesHost.Create();
         var siteId = await PagesHost.SeedSite(host);
         var pageId = PageId.New();
         await host.Ok(new CreatePage(pageId, siteId, "Home", "home", "en"));
 
-        await host.Ok(new AddPreset(pageId, 0, "hero"));
+        await PagesHost.AddPreset(host, pageId, 0, "hero");
 
         var tree = host.Get<PageDrafts>().Get(pageId)!.Tree;
         var section = Assert.IsType<SectionNode>(Assert.Single(tree.Roots));
@@ -32,14 +39,14 @@ public sealed class AddPresetTests
     }
 
     [Fact]
-    public async Task AddPreset_text_lands_in_the_sites_default_locale()
+    public async Task Preset_text_lands_in_the_sites_default_locale()
     {
         await using var host = PagesHost.Create();
         var siteId = await PagesHost.SeedSite(host, "da", "en");
         var pageId = PageId.New();
         await host.Ok(new CreatePage(pageId, siteId, "Hjem", "hjem", "da"));
 
-        await host.Ok(new AddPreset(pageId, 0, "hero"));
+        await PagesHost.AddPreset(host, pageId, 0, "hero");
 
         var tree = host.Get<PageDrafts>().Get(pageId)!.Tree;
         var heading = Assert.Single(tree.All().OfType<HeadingNode>());
@@ -48,26 +55,22 @@ public sealed class AddPresetTests
     }
 
     [Fact]
-    public async Task AddPreset_with_unknown_key_is_rejected()
+    public void Unknown_preset_key_resolves_to_nothing()
     {
-        await using var host = PagesHost.Create();
-        var siteId = await PagesHost.SeedSite(host);
-        var pageId = PageId.New();
-        await host.Ok(new CreatePage(pageId, siteId, "Home", "home", "en"));
-
-        var error = await host.Fails(new AddPreset(pageId, 0, "mega-hero"));
-        Assert.Equal("There is no 'mega-hero' section preset.", error);
+        Assert.Null(SectionPresets.Find("mega-hero"));
+        Assert.NotNull(SectionPresets.Find("hero"));
     }
 
     [Fact]
-    public async Task AddPreset_at_an_out_of_range_index_is_rejected()
+    public async Task Inserting_a_preset_section_at_an_out_of_range_index_is_rejected()
     {
         await using var host = PagesHost.Create();
         var siteId = await PagesHost.SeedSite(host);
         var pageId = PageId.New();
         await host.Ok(new CreatePage(pageId, siteId, "Home", "home", "en"));
 
-        var error = await host.Fails(new AddPreset(pageId, 3, "hero"));
+        var section = SectionPresets.Find("hero")!.Build(new Locale("en"));
+        var error = await host.Fails(new AddNode(pageId, NodeId.Root, 3, section));
         Assert.Contains("outside the valid range", error);
     }
 }

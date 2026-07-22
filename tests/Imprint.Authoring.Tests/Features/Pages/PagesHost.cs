@@ -42,6 +42,21 @@ internal static class PagesHost
         await SaveAndCatchUp(host, site);
     }
 
+    /// <summary>
+    /// Adds a section preset to a page the way the editor does: build it from the shared
+    /// <see cref="SectionPresets"/> catalog in the site's default locale, then insert it
+    /// through the undoable AddNode slice. Replaces the retired <c>AddPreset</c> command
+    /// that these tests used as a shortcut — same resulting events, minus the dead slice.
+    /// </summary>
+    public static async Task<NodeId> AddPreset(AuthoringTestHost host, PageId pageId, int index, string key)
+    {
+        var page = await host.Get<IAggregateStore>().Load<Page>(pageId.Stream);
+        var locale = host.Get<Imprint.Authoring.Projections.SiteOverview>().Get(page.SiteId)!.DefaultLocale;
+        var section = SectionPresets.Find(key)!.Build(locale);
+        await host.Ok(new Authoring.Features.Pages.AddNode.AddNode(pageId, NodeId.Root, index, section));
+        return section.Id;
+    }
+
     public static async Task<BlockDefinition> SeedBlock(AuthoringTestHost host, string name, Node spec)
     {
         var definition = BlockDefinition.Define(BlockDefinitionId.New(), name, spec);

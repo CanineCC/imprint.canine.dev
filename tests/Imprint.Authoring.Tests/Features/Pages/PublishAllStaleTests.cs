@@ -1,6 +1,5 @@
 using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Pages;
-using Imprint.Authoring.Features.Pages.AddPreset;
 using Imprint.Authoring.Features.Pages.CreatePage;
 using Imprint.Authoring.Features.Pages.EditText;
 using Imprint.Authoring.Features.Pages.PublishAllStale;
@@ -23,7 +22,7 @@ public sealed class PublishAllStaleTests
 
         var modifiedId = PageId.New();
         await host.Ok(new CreatePage(modifiedId, siteId, "Modified", "modified", "en"));
-        await host.Ok(new AddPreset(modifiedId, 0, "hero"));
+        await PagesHost.AddPreset(host, modifiedId, 0, "hero");
         await host.Ok(new PublishPage(modifiedId));
         var headingId = host.Get<PageDrafts>().Get(modifiedId)!.Tree.All().OfType<HeadingNode>().First().Id;
         await host.Ok(new EditText(modifiedId, headingId, "text", "en", "Fresher words"));

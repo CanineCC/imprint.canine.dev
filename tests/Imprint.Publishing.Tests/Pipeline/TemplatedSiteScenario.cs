@@ -1,6 +1,6 @@
 using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Pages;
-using Imprint.Authoring.Features.Pages.AddPreset;
+using Imprint.Authoring.Features.Pages;
 
 namespace Imprint.Publishing.Tests.Pipeline;
 

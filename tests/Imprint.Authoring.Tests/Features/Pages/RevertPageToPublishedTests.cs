@@ -1,6 +1,5 @@
 using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Pages;
-using Imprint.Authoring.Features.Pages.AddPreset;
 using Imprint.Authoring.Features.Pages.CreatePage;
 using Imprint.Authoring.Features.Pages.EditText;
 using Imprint.Authoring.Features.Pages.PublishPage;
@@ -24,7 +23,7 @@ public sealed class RevertPageToPublishedTests
         var siteId = await PagesHost.SeedSite(host);
         var pageId = PageId.New();
         await host.Ok(new CreatePage(pageId, siteId, "Home", "home", "en"));
-        await host.Ok(new AddPreset(pageId, 0, "hero"));
+        await PagesHost.AddPreset(host, pageId, 0, "hero");
         await host.Ok(new PublishPage(pageId));
 
         var headingId = host.Get<PageDrafts>().Get(pageId)!.Tree.All().OfType<HeadingNode>().First().Id;
@@ -49,7 +48,7 @@ public sealed class RevertPageToPublishedTests
         var siteId = await PagesHost.SeedSite(host);
         var pageId = PageId.New();
         await host.Ok(new CreatePage(pageId, siteId, "Home", "home", "en"));
-        await host.Ok(new AddPreset(pageId, 0, "hero"));
+        await PagesHost.AddPreset(host, pageId, 0, "hero");
 
         var error = await host.Fails(new RevertPageToPublished(pageId));
         Assert.Contains("never been published", error);
@@ -62,7 +61,7 @@ public sealed class RevertPageToPublishedTests
         var siteId = await PagesHost.SeedSite(host);
         var pageId = PageId.New();
         await host.Ok(new CreatePage(pageId, siteId, "Home", "home", "en"));
-        await host.Ok(new AddPreset(pageId, 0, "hero"));
+        await PagesHost.AddPreset(host, pageId, 0, "hero");
         await host.Ok(new PublishPage(pageId));
 
         var versionBefore = host.Get<PageList>().Get(pageId)!.Version;
@@ -77,7 +76,7 @@ public sealed class RevertPageToPublishedTests
         var siteId = await PagesHost.SeedSite(host);
         var pageId = PageId.New();
         await host.Ok(new CreatePage(pageId, siteId, "Home", "home", "en"));
-        await host.Ok(new AddPreset(pageId, 0, "hero"));
+        await PagesHost.AddPreset(host, pageId, 0, "hero");
         await host.Ok(new PublishPage(pageId));
 
         var headingId = host.Get<PageDrafts>().Get(pageId)!.Tree.All().OfType<HeadingNode>().First().Id;
