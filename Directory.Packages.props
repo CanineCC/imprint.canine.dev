@@ -23,6 +23,9 @@
          job by default; this lets the editor itself terminate login where an estate already
          runs Keycloak). -->
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.9" />
+    <!-- The headless authoring MCP server (an AI agent drives the same command path as the
+         editor). ASP.NET Core HTTP transport; gated by the same Imprint:Authoring:Token. -->
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="1.4.0" />
   </ItemGroup>
 
   <!-- Test-only -->

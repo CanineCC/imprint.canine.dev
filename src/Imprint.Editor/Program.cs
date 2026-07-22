@@ -8,6 +8,7 @@ using Imprint.Editor.Api;
 using Imprint.Editor.Auth;
 using Imprint.Editor.Components;
 using Imprint.Editor.Contact;
+using Imprint.Editor.Mcp;
 using Imprint.Editor.Services;
 using Imprint.EventSourcing;
 using Imprint.Media;
@@ -98,6 +99,11 @@ builder.Services.AddSingleton(provider => new ContactIntake(
         new SiteContactRecipients(
             provider.GetRequiredService<SiteOverview>(),
             provider.GetRequiredService<PageDrafts>()).Find)));
+
+// The headless authoring MCP server (an AI agent drives the same command path as the editor).
+// Registration is unconditional; the /mcp endpoint is mounted below only when the authoring
+// token is configured (fail-closed).
+builder.Services.AddImprintAuthoringMcp();
 
 // Optional in-app Keycloak/OIDC protection. Off until Keycloak:Authority is configured;
 // refuses to run unauthenticated in Production (see ImprintAuthExtensions).
@@ -286,6 +292,9 @@ app.MapGet("/preview/{site}/{**path}", (string site, string? path, SitePreview p
 // Headless, token-authenticated authoring API (off-network content authoring via the same command
 // path as the editor). Fail-closed: mapped ONLY when Imprint:Authoring:Token is configured.
 app.MapAuthoringApi();
+
+// The headless authoring MCP server at /mcp, gated by the same token (fail-closed).
+app.MapImprintAuthoringMcp();
 
 await app.Services.InitializeImprintEventSourcing();
 

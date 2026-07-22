@@ -18,6 +18,8 @@
   <ItemGroup>
     <!-- Optional in-app Keycloak/OIDC protection (Auth is off until Keycloak:Authority is set). -->
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
+    <!-- Headless authoring MCP server (token-gated, mounted at /mcp). -->
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
   </ItemGroup>
 
 </Project>
