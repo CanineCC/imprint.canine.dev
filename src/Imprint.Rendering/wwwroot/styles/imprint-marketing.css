@@ -732,7 +732,7 @@
    only need the host tokens (defined above) plus block-level width/centering.
    The custom elements render as block-level, width-constrained, centered figures.
    ═══════════════════════════════════════════════════════════════════════════ */
-cai-score-card, cai-card-gallery, cai-band-scale, cai-composition-bar, cai-evidence-flow, contact-form {
+.ip-widget {
   display: block; width: 100%;
 }
 /* These five widgets re-render the block's own kicker/heading/lede INSIDE their
@@ -751,15 +751,15 @@ cai-score-card, cai-card-gallery, cai-band-scale, cai-composition-bar, cai-evide
 }
 /* gallery + flow + bandscale + composition are wide, centered figures */
 .ip-ap-gallery cai-card-gallery,
-.ip-ap-flow cai-evidence-flow { max-width: 100%; }
+.ip-ap-flow .ip-widget { max-width: 100%; }
 .ip-ap-band-scale cai-band-scale,
-.ip-ap-composition cai-composition-bar { max-width: 46rem; margin-inline: auto; }
+.ip-ap-composition .ip-widget { max-width: 46rem; margin-inline: auto; }
 /* the C4 heat-map + the findings list are wide, centered figures too */
-.ip-ap-c4-heat cai-c4-heat { max-width: 62rem; margin-inline: auto; }
-.ip-ap-findings cai-findings { max-width: 62rem; margin-inline: auto; }
+.ip-ap-c4-heat .ip-widget { max-width: 62rem; margin-inline: auto; }
+.ip-ap-findings .ip-widget { max-width: 62rem; margin-inline: auto; }
 /* a live/standalone score card is a single 460px card, centered */
-.ip-ap-live-card cai-score-card { max-width: 460px; margin-inline: auto; }
-.ip-ap-contact contact-form { max-width: 40rem; margin-inline: auto; }
+.ip-ap-live-card .ip-widget { max-width: 460px; margin-inline: auto; }
+.ip-ap-contact .ip-widget { max-width: 40rem; margin-inline: auto; }
 /* section caption prose that follows a widget → small muted centered */
 [class*="ip-ap-"] > .ip-stack > .ip-prose:last-child:not(:has(> p > strong:only-child)):not(:has(ul)) {
   font-size: var(--fs-xs);
