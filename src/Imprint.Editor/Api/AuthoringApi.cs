@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Imprint.Authoring.Domain;
+using Imprint.Authoring.Domain.Assets;
 using Imprint.Authoring.Domain.Pages;
 using Imprint.Authoring.Projections;
 using Imprint.Editor.Auth;
@@ -11,6 +12,9 @@ using CreatePageCmd = Imprint.Authoring.Features.Pages.CreatePage.CreatePage;
 using CreateSiteCmd = Imprint.Authoring.Features.Sites.CreateSite.CreateSite;
 using PublishAllStaleCmd = Imprint.Authoring.Features.Pages.PublishAllStale.PublishAllStale;
 using RemoveNodeCmd = Imprint.Authoring.Features.Pages.RemoveNode.RemoveNode;
+using SetFaviconCmd = Imprint.Authoring.Features.Sites.SetFavicon.SetFavicon;
+using SetHeaderLogoCmd = Imprint.Authoring.Features.Sites.SetHeaderLogo.SetHeaderLogo;
+using UploadAssetCmd = Imprint.Authoring.Features.Assets.UploadAsset.UploadAsset;
 
 namespace Imprint.Editor.Api;
 
@@ -211,7 +215,114 @@ public static class AuthoringApi
                 ? Results.Ok(new { siteId = sid.Compact, published = true })
                 : Results.BadRequest(new { error = "publish failed", details = result.Errors });
         });
+
+        // ── assets ──────────────────────────────────────────────────────────────────────────────
+        // Upload a file. Two accepted shapes: a multipart form-file (field "file", the primary
+        // path), or a raw request body with an X-Filename header and a Content-Type. Processing
+        // (variants/sanitize/transcode) runs async in AssetProcessingWorker — the id returns at
+        // once; GET /assets/{id} polls the status + variant URLs until it is Ready.
+        api.MapPost("/assets", async (HttpContext http, ICommandDispatcher dispatcher, CancellationToken ct) =>
+        {
+            string fileName;
+            string contentType;
+            Stream content;
+            long byteSize;
+
+            if (http.Request.HasFormContentType)
+            {
+                var form = await http.Request.ReadFormAsync(ct);
+                var file = form.Files.GetFile("file") ?? form.Files.FirstOrDefault();
+                if (file is null) return Results.BadRequest(new { error = "no file in the multipart form (expected a 'file' field)" });
+                fileName = file.FileName;
+                contentType = string.IsNullOrWhiteSpace(file.ContentType) || !file.ContentType.Contains('/')
+                    ? "application/octet-stream" : file.ContentType;
+                byteSize = file.Length;
+                content = file.OpenReadStream();
+            }
+            else
+            {
+                fileName = http.Request.Headers["X-Filename"].ToString().Trim();
+                if (string.IsNullOrWhiteSpace(fileName)) return Results.BadRequest(new { error = "a raw upload needs an X-Filename header" });
+                contentType = string.IsNullOrWhiteSpace(http.Request.ContentType) || !http.Request.ContentType.Contains('/')
+                    ? "application/octet-stream" : http.Request.ContentType;
+                // Buffer to learn the length (UploadAsset needs ByteSize; the request stream is
+                // not seekable). The upload cap is enforced by the aggregate.
+                var buffer = new MemoryStream();
+                await http.Request.Body.CopyToAsync(buffer, ct);
+                buffer.Position = 0;
+                byteSize = buffer.Length;
+                content = buffer;
+            }
+
+            if (byteSize <= 0) return Results.BadRequest(new { error = "the uploaded file is empty" });
+
+            var assetId = AssetId.New();
+            await using (content)
+            {
+                var result = await DispatchAs(dispatcher, actor, new UploadAssetCmd(assetId, fileName, contentType, byteSize, content), ct);
+                return result.Succeeded
+                    ? Results.Ok(new { assetId = assetId.Compact, status = "Pending" })
+                    : Results.BadRequest(new { error = "upload failed", details = result.Errors });
+            }
+        }).DisableAntiforgery();
+
+        // Poll one asset's processing status + its resolved variant URLs.
+        api.MapGet("/assets/{assetId}", (string assetId, AssetLibrary assets) =>
+        {
+            if (!TryAssetId(assetId, out var aid)) return Results.BadRequest(new { error = "invalid assetId" });
+            var asset = assets.Get(aid);
+            return asset is null ? Results.NotFound(new { error = "unknown asset" }) : Results.Ok(AssetView(asset));
+        });
+
+        // The asset library is a single shared shelf (not per-site), so this lists every asset;
+        // the siteId only scopes the URL and is validated to exist. A caller discovers images to
+        // use as a favicon / header logo here.
+        api.MapGet("/sites/{siteId}/assets", (string siteId, SiteOverview sites, AssetLibrary assets) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            if (sites.Get(sid) is null) return Results.NotFound(new { error = "unknown site" });
+            return Results.Ok(assets.All().Select(AssetView));
+        });
+
+        // ── brand imagery ───────────────────────────────────────────────────────────────────────
+        api.MapPut("/sites/{siteId}/favicon", async (string siteId, SetAssetRefRequest? body, ICommandDispatcher dispatcher, CancellationToken ct) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            if (!TryOptionalAssetId(body?.AssetId, out var aid)) return Results.BadRequest(new { error = "invalid assetId" });
+            var result = await DispatchAs(dispatcher, actor, new SetFaviconCmd(sid, aid), ct);
+            return result.Succeeded
+                ? Results.Ok(new { siteId = sid.Compact, faviconAssetId = aid?.Compact })
+                : Results.BadRequest(new { error = "set favicon failed", details = result.Errors });
+        });
+
+        api.MapPut("/sites/{siteId}/header-logo", async (string siteId, SetAssetRefRequest? body, ICommandDispatcher dispatcher, CancellationToken ct) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            if (!TryOptionalAssetId(body?.AssetId, out var aid)) return Results.BadRequest(new { error = "invalid assetId" });
+            var result = await DispatchAs(dispatcher, actor, new SetHeaderLogoCmd(sid, aid), ct);
+            return result.Succeeded
+                ? Results.Ok(new { siteId = sid.Compact, headerLogoAssetId = aid?.Compact })
+                : Results.BadRequest(new { error = "set header logo failed", details = result.Errors });
+        });
     }
+
+    /// <summary>A caller-facing asset view: identity, processing status and resolved /media URLs.</summary>
+    internal static object AssetView(Asset asset) => new
+    {
+        id = asset.Id.Compact,
+        name = asset.Name,
+        kind = asset.Kind.ToString(),
+        status = asset.Status.ToString(),
+        contentType = asset.ContentType,
+        variants = asset.Variants.Select(v => new { url = $"/media/{v.StorageKey}", v.Width, v.Height }).ToList(),
+        // A single representative URL: the largest raster variant, else the sanitized SVG, else
+        // the original file.
+        url = asset.Variants.Count > 0
+            ? $"/media/{asset.Variants[^1].StorageKey}"
+            : asset.DerivedStorageKey is { } derived
+                ? $"/media/{derived}"
+                : $"/media/{asset.OriginalStorageKey}",
+    };
 
     private static async Task<Result> DispatchAs(ICommandDispatcher dispatcher, string actor, ICommand command, CancellationToken ct)
     {
@@ -240,6 +351,23 @@ public static class AuthoringApi
         return false;
     }
 
+    internal static bool TryAssetId(string? s, out AssetId id)
+    {
+        if (Guid.TryParseExact(s, "N", out var g) || Guid.TryParse(s, out g)) { id = AssetId.From(g); return true; }
+        id = default;
+        return false;
+    }
+
+    // Blank/null means "clear" (returns null, true); a present-but-unparseable value is an error
+    // (false). Lets the favicon/logo endpoints accept an explicit null to remove the image.
+    private static bool TryOptionalAssetId(string? s, out AssetId? id)
+    {
+        if (string.IsNullOrWhiteSpace(s)) { id = null; return true; }
+        if (TryAssetId(s, out var parsed)) { id = parsed; return true; }
+        id = null;
+        return false;
+    }
+
     /// <summary>Request body for creating a site.</summary>
     public sealed record CreateSiteRequest(string Name, string? DefaultLocale);
 
@@ -251,30 +379,20 @@ public static class AuthoringApi
 
     /// <summary>Request body for replacing a widget's props.</summary>
     public sealed record SetPropsRequest(Dictionary<string, string>? Props);
+
+    /// <summary>Request body for setting a brand asset reference — null/absent clears it.</summary>
+    public sealed record SetAssetRefRequest(string? AssetId);
 }
 
 /// <summary>
-/// The bearer-token gate for the authoring API. Accepts <c>Authorization: Bearer &lt;token&gt;</c> or
-/// <c>X-Imprint-Authoring-Token: &lt;token&gt;</c>, compared against the configured secret in constant
-/// time. Any mismatch or absence ⇒ 401. Independent of the Keycloak/OIDC scheme.
+/// The shared bearer-token check for the headless authoring surfaces (the authoring API endpoint
+/// filter and the MCP endpoint branch). Accepts <c>Authorization: Bearer &lt;token&gt;</c> or
+/// <c>X-Imprint-Authoring-Token: &lt;token&gt;</c>, compared against the configured secret in
+/// constant time.
 /// </summary>
-internal sealed class BearerTokenFilter(string configuredToken) : IEndpointFilter
+internal static class AuthoringToken
 {
-    private readonly byte[] _expected = Encoding.UTF8.GetBytes(configuredToken);
-
-    public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
-    {
-        var http = context.HttpContext;
-        var presented = ExtractToken(http.Request);
-        if (presented is null || !FixedTimeEquals(presented))
-        {
-            return Results.Unauthorized();
-        }
-
-        return await next(context);
-    }
-
-    private static string? ExtractToken(HttpRequest request)
+    public static string? Extract(HttpRequest request)
     {
         var auth = request.Headers.Authorization.ToString();
         if (auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
@@ -286,6 +404,29 @@ internal sealed class BearerTokenFilter(string configuredToken) : IEndpointFilte
         return string.IsNullOrWhiteSpace(header) ? null : header.Trim();
     }
 
-    private bool FixedTimeEquals(string presented) =>
-        CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(presented), _expected);
+    public static bool Matches(HttpRequest request, string configuredToken)
+    {
+        var presented = Extract(request);
+        return presented is not null
+            && CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(presented), Encoding.UTF8.GetBytes(configuredToken));
+    }
+}
+
+/// <summary>
+/// The bearer-token gate for the authoring API. Accepts <c>Authorization: Bearer &lt;token&gt;</c> or
+/// <c>X-Imprint-Authoring-Token: &lt;token&gt;</c>, compared against the configured secret in constant
+/// time. Any mismatch or absence ⇒ 401. Independent of the Keycloak/OIDC scheme.
+/// </summary>
+internal sealed class BearerTokenFilter(string configuredToken) : IEndpointFilter
+{
+    public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    {
+        if (!AuthoringToken.Matches(context.HttpContext.Request, configuredToken))
+        {
+            return Results.Unauthorized();
+        }
+
+        return await next(context);
+    }
 }
