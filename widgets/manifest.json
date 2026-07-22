@@ -759,7 +759,7 @@
   {
     "tag": "wd-embed",
     "name": "Live Watchdog view (embed)",
-    "description": "Frames a view rendered by the Watchdog app itself — its own components, its own stylesheet, against real published data. Nothing is re-drawn here, so it can never drift from the product. The server refuses any repo that has not published a survey. Leave Repository empty to show the same hero the app's own gallery picks. The frame sizes itself to its content.",
+    "description": "Frames a view rendered by the Watchdog app itself — its own components, its own stylesheet, against real published data. Nothing is re-drawn here, so it can never drift from the product. 'findings' and 'composition' are carousels over the curated top 10 repositories, each slide naming its repo. The server refuses any repo that has not published a survey. Leave Repository empty for the curated set (or the app's hero pick for a single card). The frame sizes itself to its content.",
     "bundle": "wd-embed.js",
     "placeholder": "Live Watchdog view",
     "props": [
@@ -775,7 +775,9 @@
         "type": "choice",
         "default": "score-card",
         "options": [
-          "score-card"
+          "score-card",
+          "findings",
+          "composition"
         ]
       },
       {

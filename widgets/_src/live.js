@@ -79,9 +79,15 @@ export function cardFromGallery(c) {
     rows.push({ label: "Bus factor", value: `${c.busFactor} of ${c.authorCount} devs` });
   }
 
+  // `display` is the repo's DisplayName: its ALIAS when the owner set one, else "owner/name". An alias
+  // stands alone — prefixing it with the owner would print a name its owner deliberately replaced (and
+  // for an unaliased repo, `display` already CONTAINS "owner/", so pairing the two double-prints it).
+  const aliased = typeof c.display === "string" && c.display.length > 0
+    && c.display !== (c.owner ? c.owner + "/" + c.name : c.name);
+
   return {
-    name: c.name,
-    owner: c.owner || undefined,
+    name: aliased ? c.display : c.name,
+    owner: aliased ? undefined : (c.owner || undefined),
     score: Number(score),
     series: hasArc ? c.series.map(Number) : undefined,
     arcFirst: hasArc ? c.firstScore : null,
