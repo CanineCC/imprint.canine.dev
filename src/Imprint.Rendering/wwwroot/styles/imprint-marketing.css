@@ -405,27 +405,27 @@
    ballooning the hero by thousands of px (the spurious blank band under the card).
    So: column-gap = the two-up gutter; row-gap = 0; copy rhythm is restored as a
    margin between consecutive copy items just below. */
-.ip-ap-hero > .ip-stack:has(> :is(cai-score-card, cai-card-gallery, cai-band-scale, cai-composition-bar, cai-evidence-flow)) {
-  display: grid; grid-template-columns: 1.05fr 0.95fr;
+.ip-ap-hero > .ip-stack:has(> :is(wd-embed, cai-score-card, cai-card-gallery, cai-band-scale, cai-composition-bar, cai-evidence-flow)) {
+  display: grid; grid-template-columns: 2fr 1fr;
   column-gap: var(--mk-gap); row-gap: 0; align-items: start;
 }
 /* solo hero: a single measure-width copy column */
-.ip-ap-hero > .ip-stack:not(:has(> :is(cai-score-card, cai-card-gallery, cai-band-scale, cai-composition-bar, cai-evidence-flow))) h1 {
+.ip-ap-hero > .ip-stack:not(:has(> :is(wd-embed, cai-score-card, cai-card-gallery, cai-band-scale, cai-composition-bar, cai-evidence-flow))) h1 {
   max-width: 24ch;
 }
 /* All copy (kicker, h1, lede, CTAs, microcopy) sits in the left column; the widget
    card spans the right column across all the copy rows. Copy rhythm lives on the
    items (margin between consecutive copy siblings), NOT on the grid's row-gap —
    see the row-gap:0 note above. */
-.ip-ap-hero > .ip-stack > :not(cai-score-card):not(cai-card-gallery):not(contact-form):not(cai-band-scale):not(cai-composition-bar):not(cai-evidence-flow) {
+.ip-ap-hero > .ip-stack > :not(wd-embed):not(cai-score-card):not(cai-card-gallery):not(contact-form):not(cai-band-scale):not(cai-composition-bar):not(cai-evidence-flow) {
   grid-column: 1;
 }
-.ip-ap-hero > .ip-stack:has(> :is(cai-score-card, cai-card-gallery, cai-band-scale, cai-composition-bar, cai-evidence-flow))
-  > :not(cai-score-card):not(cai-card-gallery):not(contact-form):not(cai-band-scale):not(cai-composition-bar):not(cai-evidence-flow)
-  + :not(cai-score-card):not(cai-card-gallery):not(contact-form):not(cai-band-scale):not(cai-composition-bar):not(cai-evidence-flow) {
+.ip-ap-hero > .ip-stack:has(> :is(wd-embed, cai-score-card, cai-card-gallery, cai-band-scale, cai-composition-bar, cai-evidence-flow))
+  > :not(wd-embed):not(cai-score-card):not(cai-card-gallery):not(contact-form):not(cai-band-scale):not(cai-composition-bar):not(cai-evidence-flow)
+  + :not(wd-embed):not(cai-score-card):not(cai-card-gallery):not(contact-form):not(cai-band-scale):not(cai-composition-bar):not(cai-evidence-flow) {
   margin-top: 1.1rem;
 }
-.ip-ap-hero > .ip-stack > :is(cai-score-card, cai-card-gallery, cai-band-scale, cai-composition-bar, cai-evidence-flow) {
+.ip-ap-hero > .ip-stack > :is(wd-embed, cai-score-card, cai-card-gallery, cai-band-scale, cai-composition-bar, cai-evidence-flow) {
   grid-column: 2; grid-row: 1 / 99; justify-self: end; align-self: start;
 }
 .ip-ap-hero h1 {
@@ -441,7 +441,7 @@
 @media (max-width: 900px) {
   .ip-ap-hero > .ip-stack { grid-template-columns: 1fr; }
   .ip-ap-hero > .ip-stack > * { grid-column: 1 !important; }
-  .ip-ap-hero > .ip-stack > :is(cai-score-card, cai-card-gallery, cai-band-scale, cai-composition-bar, cai-evidence-flow) {
+  .ip-ap-hero > .ip-stack > :is(wd-embed, cai-score-card, cai-card-gallery, cai-band-scale, cai-composition-bar, cai-evidence-flow) {
     grid-row: auto !important; justify-self: stretch;
   }
 }
