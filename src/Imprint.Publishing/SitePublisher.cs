@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using Imprint.Authoring.Domain;
+using Imprint.Authoring.Domain.Assets;
 using Imprint.Authoring.Domain.Pages;
 using Imprint.Authoring.Domain.Sites;
 using Imprint.Authoring.Features.Assets;
@@ -119,6 +120,8 @@ public sealed class SitePublisher(
         private HeaderAction? _headerCta;
         private HeaderAction? _headerQuiet;
         private CopyLine? _copyLine;
+        private string? _faviconUrl;
+        private string? _logoUrl;
         private IReadOnlyList<PublishedPage> _pages = [];
         private Dictionary<PageId, PublishedPage> _pageById = [];
         private Dictionary<PageId, string> _slugPathOf = [];
@@ -145,6 +148,11 @@ public sealed class SitePublisher(
             _headerCta = site.HeaderCta;
             _headerQuiet = site.HeaderQuiet;
             _copyLine = site.CopyLine;
+            // Brand imagery is not necessarily referenced by any page, so it is resolved
+            // directly from the asset library to a /media/… URL (the same resolution the
+            // editor's ResolveAsset uses) rather than through the page-asset catalog.
+            _faviconUrl = BrandMediaUrl(site.FaviconAssetId, preferSmallest: true);
+            _logoUrl = BrandMediaUrl(site.HeaderLogoAssetId, preferSmallest: false);
             // Only THIS site's published pages — a target folder holds exactly one site.
             _pages = [.. publishedContent.AllForSite(site.Id)];
             _pageById = _pages.ToDictionary(page => page.Id);
@@ -509,6 +517,8 @@ public sealed class SitePublisher(
                 HeaderQuiet = HeaderLinkFor(_headerQuiet, locale),
                 FooterGroups = FooterColumnsFor(locale),
                 CopyLine = CopyLineFor(locale),
+                FaviconUrl = _faviconUrl,
+                LogoUrl = _logoUrl,
                 // Exact by construction: WidgetView emits data-island precisely when
                 // the tag has a descriptor AND ResolveWidgetBundle returns a URL —
                 // the same condition, so no second render pass is needed.
@@ -535,6 +545,8 @@ public sealed class SitePublisher(
                 HeaderQuiet = HeaderLinkFor(_headerQuiet, _defaultLocale),
                 FooterGroups = FooterColumnsFor(_defaultLocale),
                 CopyLine = CopyLineFor(_defaultLocale),
+                FaviconUrl = _faviconUrl,
+                LogoUrl = _logoUrl,
                 IncludeIslandLoader = false,
             };
 
@@ -581,6 +593,35 @@ public sealed class SitePublisher(
         }
 
         // -------------------------------------------------------------------- chrome
+
+        /// <summary>
+        /// Resolve a brand asset id to a single <c>/media/{storageKey}</c> URL, mirroring
+        /// EditorContent.ResolveAsset. A favicon prefers the smallest raster variant; a logo
+        /// prefers a modest header-height variant (the second-smallest, or the only one). A
+        /// vector serves its sanitized derived SVG. Null id or an unresolvable/unready asset
+        /// yields null, so the caller emits no favicon / falls back to the brand dot.
+        /// </summary>
+        private string? BrandMediaUrl(AssetId? assetId, bool preferSmallest)
+        {
+            if (assetId is not { } id || assetLibrary.Get(id) is not { } asset)
+            {
+                return null;
+            }
+
+            switch (asset)
+            {
+                case { Kind: AssetKind.Vector, Status: AssetStatus.Ready, DerivedStorageKey: { } svgKey }:
+                    return $"/media/{svgKey}";
+
+                case { Kind: AssetKind.Image } when asset.Variants.Count > 0:
+                    var ordered = asset.Variants.OrderBy(v => v.Width).ToList();
+                    var pick = preferSmallest ? ordered[0] : ordered[Math.Min(1, ordered.Count - 1)];
+                    return $"/media/{pick.StorageKey}";
+
+                default:
+                    return null; // pending/failed/degraded, or a non-image kind: no brand image
+            }
+        }
 
         private string DocumentTitle(PublishedPage page, Locale locale)
         {

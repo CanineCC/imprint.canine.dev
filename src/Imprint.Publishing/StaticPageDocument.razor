@@ -26,13 +26,24 @@
   {
     <link rel="alternate" hreflang="@alternate.Hreflang" href="@alternate.Href" />
   }
+  @if (Chrome.FaviconUrl is not null)
+  {
+    <link rel="icon" href="@Chrome.FaviconUrl" />
+  }
   <script>@((MarkupString)PublisherScripts.ThemeToggle)</script>
   <link rel="stylesheet" href="@Chrome.StylesheetHref" />
 </head>
 <body class="ip-page">
   <a href="#main">Skip to content</a>
   <header class="ip-site-header">
-    <a class="ip-brand" href="@Chrome.HomeHref"><span class="ip-brand-dot" aria-hidden="true"></span>@Chrome.SiteName</a>
+    <a class="ip-brand" href="@Chrome.HomeHref">@if (Chrome.LogoUrl is not null)
+      {
+        <img class="ip-brand-logo" src="@Chrome.LogoUrl" alt="@Chrome.SiteName" />
+      }
+      else
+      {
+        <span class="ip-brand-dot" aria-hidden="true"></span>
+      }@Chrome.SiteName</a>
     <nav class="ip-nav" aria-label="Main">
       <ul>
         @foreach (var item in Chrome.Nav)
@@ -119,7 +130,14 @@
       </div>
     }
     <div class="ip-footer-fine">
-      <span class="ip-footer-brand"><span class="ip-brand-dot" aria-hidden="true"></span>@Chrome.SiteName</span>
+      <span class="ip-footer-brand">@if (Chrome.LogoUrl is not null)
+        {
+          <img class="ip-brand-logo" src="@Chrome.LogoUrl" alt="@Chrome.SiteName" />
+        }
+        else
+        {
+          <span class="ip-brand-dot" aria-hidden="true"></span>
+        }@Chrome.SiteName</span>
       <span class="ip-footer-byline">by <a href="https://canine.dev">Canine Development</a></span>
       @if (Chrome.CopyLine is not null)
       {
