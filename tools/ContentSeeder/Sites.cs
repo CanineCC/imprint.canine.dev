@@ -122,9 +122,11 @@ public static class Sites
         ]),
         new("Who it's for", Children:
         [
-            new("Freelancers & solo devs", "/for-freelancers", "Prove your code, team of one"),
+            // Teams first: the primary buyer is the team running the surveys, not the
+            // two personas selling a hand-over (the engineering-facing repositioning).
             new("Engineering teams", "/for-teams", "A scheduled audit you can trend"),
             new("Providers & consultancies", "/for-consultancies", "Win the bid with proof"),
+            new("Freelancers & solo devs", "/for-freelancers", "Prove your code, team of one"),
             new("Builders", "/for-builders", "Fix the code, keep the score green"),
             new("Leads", "/for-leads", "Where to point the team this sprint"),
         ]),
@@ -133,7 +135,7 @@ public static class Sites
 
     private static readonly HeaderAct WatchdogCta = new("Survey a repo — free", "https://app.watchdog.canine.dev/");
     private static readonly HeaderAct? WatchdogQuiet = new("Sign in", "https://app.watchdog.canine.dev/");
-    private const string WatchdogCopy = "© 2025–2026 · The independent surveyor for C#/.NET software.";
+    private const string WatchdogCopy = "© 2025–2026 · Codebase surveys on a schedule. Read-only, reproducible, never a gate.";
 
     private static readonly IReadOnlyList<FooterCol> WatchdogFooter =
     [
