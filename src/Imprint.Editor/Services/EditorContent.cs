@@ -186,6 +186,19 @@ public static class NodeDefaults
             locale => new RichTextNode { Id = NodeId.New(), Html = LocalizedText.Of(locale, "<p>Write something…</p>") }),
         new("button", "Button", "A call-to-action link.",
             locale => new ButtonNode { Id = NodeId.New(), Label = LocalizedText.Of(locale, "Button") }),
+        // A compound: a heading + text grouped as a card, mirroring the marketing
+        // FeatureCard preset — so the real card is one click, not a stack you fill by
+        // hand. Inserts through the same undoable AddNode path as any node, so one Undo
+        // removes the whole card (heading + text together).
+        new("card", "Card", "A heading and text, grouped as a card.",
+            locale => new StackNode
+            {
+                Id = NodeId.New(),
+                Gap = Gap.Tight,
+                Children = NodeList.Of(
+                    new HeadingNode { Id = NodeId.New(), Level = 3, Text = LocalizedText.Of(locale, "Card title") },
+                    new RichTextNode { Id = NodeId.New(), Html = LocalizedText.Of(locale, "<p>Card text…</p>") }),
+            }),
         new("image", "Image", "A picture from your assets.",
             _ => new ImageNode { Id = NodeId.New() }),
         new("video", "Video", "WebM video, ambient or player.",
