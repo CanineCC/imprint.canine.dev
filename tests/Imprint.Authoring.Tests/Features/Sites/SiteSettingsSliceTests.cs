@@ -7,6 +7,8 @@ using Imprint.Authoring.Features.Sites.ChangeTypography;
 using Imprint.Authoring.Features.Sites.ConfigureEnvironments;
 using Imprint.Authoring.Features.Sites.RemoveLocale;
 using Imprint.Authoring.Features.Sites.RenameSite;
+using Imprint.Authoring.Features.Sites.SetFavicon;
+using Imprint.Authoring.Features.Sites.SetHeaderLogo;
 using Imprint.Authoring.Projections;
 
 namespace Imprint.Authoring.Tests.Features.Sites;
@@ -269,5 +271,73 @@ public sealed class SiteSettingsSliceTests
             siteId, [new DeployEnvironment("Test", "  ")]));
 
         Assert.Contains("publish folder", error);
+    }
+
+    // ------------------------------------------------------------------ SetFavicon
+
+    [Fact]
+    public async Task SetFavicon_with_an_existing_asset_updates_the_site()
+    {
+        await using var host = SliceTestHelpers.NewAssetHost();
+        var siteId = await host.CreateTestSite();
+        var assetId = AssetId.New();
+        await host.Ok(SliceTestHelpers.NewUpload(assetId, "icon.png", "image/png"));
+
+        await host.Ok(new SetFavicon(siteId, assetId));
+
+        Assert.Equal(assetId, host.Get<SiteOverview>().Get(siteId)!.FaviconAssetId);
+    }
+
+    [Fact]
+    public async Task SetFavicon_with_a_missing_asset_is_rejected()
+    {
+        await using var host = SliceTestHelpers.NewAssetHost();
+        var siteId = await host.CreateTestSite();
+
+        var error = await host.Fails(new SetFavicon(siteId, AssetId.New()));
+
+        Assert.Contains("no longer exists", error);
+        Assert.Null(host.Get<SiteOverview>().Get(siteId)!.FaviconAssetId);
+    }
+
+    [Fact]
+    public async Task SetFavicon_with_null_clears_it()
+    {
+        await using var host = SliceTestHelpers.NewAssetHost();
+        var siteId = await host.CreateTestSite();
+        var assetId = AssetId.New();
+        await host.Ok(SliceTestHelpers.NewUpload(assetId, "icon.png", "image/png"));
+        await host.Ok(new SetFavicon(siteId, assetId));
+
+        await host.Ok(new SetFavicon(siteId, null));
+
+        Assert.Null(host.Get<SiteOverview>().Get(siteId)!.FaviconAssetId);
+    }
+
+    // --------------------------------------------------------------- SetHeaderLogo
+
+    [Fact]
+    public async Task SetHeaderLogo_with_an_existing_asset_updates_the_site()
+    {
+        await using var host = SliceTestHelpers.NewAssetHost();
+        var siteId = await host.CreateTestSite();
+        var assetId = AssetId.New();
+        await host.Ok(SliceTestHelpers.NewUpload(assetId, "logo.png", "image/png"));
+
+        await host.Ok(new SetHeaderLogo(siteId, assetId));
+
+        Assert.Equal(assetId, host.Get<SiteOverview>().Get(siteId)!.HeaderLogoAssetId);
+    }
+
+    [Fact]
+    public async Task SetHeaderLogo_with_a_missing_asset_is_rejected()
+    {
+        await using var host = SliceTestHelpers.NewAssetHost();
+        var siteId = await host.CreateTestSite();
+
+        var error = await host.Fails(new SetHeaderLogo(siteId, AssetId.New()));
+
+        Assert.Contains("no longer exists", error);
+        Assert.Null(host.Get<SiteOverview>().Get(siteId)!.HeaderLogoAssetId);
     }
 }

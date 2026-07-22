@@ -97,6 +97,14 @@ public sealed record SiteHeaderActionsChanged(HeaderAction? Cta, HeaderAction? Q
 [EventType("site.copy-line-changed", 1)]
 public sealed record SiteCopyLineChanged(CopyLine? CopyLine);
 
+// Brand imagery. Each carries the chosen asset id (or null to clear); the asset's bytes
+// and variants live in the Asset stream, so the event stays a single reference.
+[EventType("site.favicon-changed", 1)]
+public sealed record SiteFaviconChanged(AssetId? FaviconAssetId);
+
+[EventType("site.header-logo-changed", 1)]
+public sealed record SiteHeaderLogoChanged(AssetId? HeaderLogoAssetId);
+
 // ── Access: who may open and edit the site besides its owner ──
 // The email is the same identity the auth layer stamps as the envelope actor, so a
 // collaborator's access check and their attribution in history use one value.

@@ -67,6 +67,13 @@ public sealed class SiteEventSamples : IEventSampleProvider
             yield return new SiteCopyLineChanged(
                 new CopyLine(LocalizedText.Of(en, "© 2025–2026 · The independent surveyor.")));
 
+            // Brand imagery — both the "set" (an asset id) and "clear" (null) shapes, so
+            // the nullable AssetId payload round-trips in both states.
+            yield return new SiteFaviconChanged(AssetId.New());
+            yield return new SiteFaviconChanged(null);
+            yield return new SiteHeaderLogoChanged(AssetId.New());
+            yield return new SiteHeaderLogoChanged(null);
+
             yield return new SiteOwnershipClaimed();
             yield return new SiteCollaboratorAdded("colleague@example.com");
             yield return new SiteCollaboratorRemoved("colleague@example.com");

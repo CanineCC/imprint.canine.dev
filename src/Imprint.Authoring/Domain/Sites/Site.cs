@@ -51,6 +51,12 @@ public sealed class Site : AggregateRoot
     public HeaderAction? HeaderQuiet { get; private set; }
     public CopyLine? CopyLine { get; private set; }
 
+    // Brand imagery, both optional. The favicon is the tab/bookmark icon; the header logo
+    // replaces the CSS brand dot in the published header and footer. Each points at an
+    // asset in the shared library (validated to exist by the slice), or null for "none".
+    public AssetId? FaviconAssetId { get; private set; }
+    public AssetId? HeaderLogoAssetId { get; private set; }
+
     // Emails of the people who may edit this site besides its owner, in the order they
     // were added. The owner is not in this list — it lives on the site.created envelope
     // actor (see SiteOverview), so the two never drift.
@@ -311,6 +317,36 @@ public sealed class Site : AggregateRoot
         Raise(new SiteHeaderActionsChanged(cta, quiet));
     }
 
+    /// <summary>
+    /// Set (or clear, with null) the site's favicon — the tab/bookmark icon. Whether the
+    /// asset id exists is a cross-aggregate question the slice checks against the asset
+    /// library; the aggregate only records the choice. No-op idempotent on an unchanged value.
+    /// </summary>
+    public void SetFavicon(AssetId? faviconAssetId)
+    {
+        if (Equals(FaviconAssetId, faviconAssetId))
+        {
+            return;
+        }
+
+        Raise(new SiteFaviconChanged(faviconAssetId));
+    }
+
+    /// <summary>
+    /// Set (or clear, with null) the site's header logo — rendered in place of the brand
+    /// dot in the published header and footer. Same cross-aggregate note as
+    /// <see cref="SetFavicon"/>. No-op idempotent on an unchanged value.
+    /// </summary>
+    public void SetHeaderLogo(AssetId? headerLogoAssetId)
+    {
+        if (Equals(HeaderLogoAssetId, headerLogoAssetId))
+        {
+            return;
+        }
+
+        Raise(new SiteHeaderLogoChanged(headerLogoAssetId));
+    }
+
     /// <summary>Set (or clear, with null) the footer's fine-print copy line.</summary>
     public void SetCopyLine(CopyLine? copyLine)
     {
@@ -516,6 +552,12 @@ public sealed class Site : AggregateRoot
                 break;
             case SiteCopyLineChanged e:
                 CopyLine = e.CopyLine;
+                break;
+            case SiteFaviconChanged e:
+                FaviconAssetId = e.FaviconAssetId;
+                break;
+            case SiteHeaderLogoChanged e:
+                HeaderLogoAssetId = e.HeaderLogoAssetId;
                 break;
             case SiteEnvironmentsChanged e:
                 _environments = [.. e.Environments];

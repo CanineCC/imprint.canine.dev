@@ -204,6 +204,61 @@ public sealed class SiteChromeTests
             .ThenNothing();
     }
 
+    // --------------------------------------------------------------- brand imagery
+
+    [Fact]
+    public void SetFavicon_raises_favicon_changed()
+    {
+        var assetId = AssetId.New();
+
+        AggregateSpec.For<Site>()
+            .Given(Created)
+            .When(s => s.SetFavicon(assetId))
+            .ThenRaised(new SiteFaviconChanged(assetId));
+    }
+
+    [Fact]
+    public void SetFavicon_can_clear_an_existing_favicon() =>
+        AggregateSpec.For<Site>()
+            .Given(Created, new SiteFaviconChanged(AssetId.New()))
+            .When(s => s.SetFavicon(null))
+            .ThenRaised(new SiteFaviconChanged(null));
+
+    [Fact]
+    public void SetFavicon_with_the_same_asset_raises_nothing()
+    {
+        var assetId = AssetId.New();
+
+        AggregateSpec.For<Site>()
+            .Given(Created, new SiteFaviconChanged(assetId))
+            .When(s => s.SetFavicon(assetId))
+            .ThenNothing();
+    }
+
+    [Fact]
+    public void SetHeaderLogo_raises_header_logo_changed()
+    {
+        var assetId = AssetId.New();
+
+        var outcome = AggregateSpec.For<Site>()
+            .Given(Created)
+            .When(s => s.SetHeaderLogo(assetId));
+
+        outcome.ThenRaised(new SiteHeaderLogoChanged(assetId));
+        Assert.Equal(assetId, outcome.Aggregate.HeaderLogoAssetId);
+    }
+
+    [Fact]
+    public void SetHeaderLogo_with_the_same_asset_raises_nothing()
+    {
+        var assetId = AssetId.New();
+
+        AggregateSpec.For<Site>()
+            .Given(Created, new SiteHeaderLogoChanged(assetId))
+            .When(s => s.SetHeaderLogo(assetId))
+            .ThenNothing();
+    }
+
     // ------------------------------------------------------------------ copy line
 
     [Fact]
