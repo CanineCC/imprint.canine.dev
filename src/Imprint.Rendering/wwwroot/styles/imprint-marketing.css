@@ -549,6 +549,12 @@
 .ip-ap-stat-band .ip-grid {
   gap: 1px; background: var(--hairline); border: 1px solid var(--hairline);
   border-radius: var(--r-md); overflow: hidden;
+  /* auto-FIT, not the base grid's auto-fill: this strip paints its cell walls with a
+     hairline background showing through a 1px gap, so an empty auto-fill track is not
+     invisible here — it is a blank walled cell. Collapsing empty tracks makes a band of
+     any count fill its row edge to edge. The exactly-2/-4 :has() rules in imprint-base
+     are more specific and still win, so those counts keep their deliberate pairing. */
+  grid-template-columns: repeat(auto-fit, minmax(min(var(--ip-min-item, 16rem), 100%), 1fr));
 }
 .ip-ap-stat-band .ip-grid > .ip-stack { background: var(--bg); padding: 1.1rem 1.25rem; gap: 0.2rem; }
 .ip-ap-stat-band .ip-grid h2 {
