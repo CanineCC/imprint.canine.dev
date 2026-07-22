@@ -38,6 +38,12 @@ else if (descriptor is not null)
     // that validation is what makes emitting it as an element name safe.
     builder.OpenElement(0, descriptor.Tag);
 
+    // A marker class so stylesheets can say "a widget" instead of enumerating tags. The hero's
+    // two-up layout used to name every card tag in eight selectors; swapping one card to a new
+    // tag silently dropped out of all eight and the card fell under the copy. NodeAttributes
+    // carries only data-node-id/type, so this can never be clobbered by the editor path.
+    builder.AddAttribute(1, "class", "ip-widget");
+
     // Editor canvas only: the selection contract (data-node-id/type) rides the host
     // element, exactly like every other node's root.
     if (editorAttributes)

@@ -112,7 +112,9 @@ public sealed class HtmlContractTests
         await host.Publisher.Synchronize();
 
         var home = host.ReadText("index.html");
-        Assert.Contains("<x-note text=\"hello\" data-island=\"/widgets/x-note.", home);
+        // Every island carries the ip-widget marker class, so stylesheets can target "a widget"
+        // without enumerating tags (the hero two-up layout used to name each card tag).
+        Assert.Contains("<x-note class=\"ip-widget\" text=\"hello\" data-island=\"/widgets/x-note.", home);
         Assert.Contains(">x-note placeholder</x-note>", home);
         Assert.Contains(PublisherScripts.IslandLoader, home);
 
