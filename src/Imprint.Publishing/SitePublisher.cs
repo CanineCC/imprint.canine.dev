@@ -120,6 +120,8 @@ public sealed class SitePublisher(
         private HeaderAction? _headerCta;
         private HeaderAction? _headerQuiet;
         private CopyLine? _copyLine;
+        private AssetId? _faviconAssetId;
+        private AssetId? _headerLogoAssetId;
         private string? _faviconUrl;
         private string? _logoUrl;
         private IReadOnlyList<PublishedPage> _pages = [];
@@ -148,11 +150,13 @@ public sealed class SitePublisher(
             _headerCta = site.HeaderCta;
             _headerQuiet = site.HeaderQuiet;
             _copyLine = site.CopyLine;
-            // Brand imagery is not necessarily referenced by any page, so it is resolved
-            // directly from the asset library to a /media/… URL (the same resolution the
-            // editor's ResolveAsset uses) rather than through the page-asset catalog.
-            _faviconUrl = BrandMediaUrl(site.FaviconAssetId, preferSmallest: true);
-            _logoUrl = BrandMediaUrl(site.HeaderLogoAssetId, preferSmallest: false);
+            // Brand imagery is not necessarily referenced by any page, so its ids are
+            // captured here and fed into the SAME published-asset catalog the page images
+            // use (below). That copies their bytes into /assets/… and lets us resolve the
+            // favicon/logo to a PUBLISHED /assets URL — one that exists in the deploy output
+            // and the /preview plane, unlike the editor-only /media route.
+            _faviconAssetId = site.FaviconAssetId;
+            _headerLogoAssetId = site.HeaderLogoAssetId;
             // Only THIS site's published pages — a target folder holds exactly one site.
             _pages = [.. publishedContent.AllForSite(site.Id)];
             _pageById = _pages.ToDictionary(page => page.Id);
@@ -198,8 +202,18 @@ public sealed class SitePublisher(
                 page => (IReadOnlyList<string>)
                     [.. NodesOf(page).OfType<WidgetNode>().Select(widget => widget.Tag).Distinct().Order(StringComparer.Ordinal)]);
 
+            // Brand assets ride the same catalog as page images: their bytes land under
+            // assets/ (CopyAssets) and stay unswept (DesiredFiles), so the published/preview
+            // <link rel=icon>/<img> point at real files.
+            var brandAssetIds = new[] { _faviconAssetId, _headerLogoAssetId }
+                .Where(id => id.HasValue).Select(id => id!.Value);
             _assets = await PublishedAssetCatalog.Build(
-                pageAssetIds.Values.SelectMany(ids => ids), assetLibrary, mediaStore, logger, ct);
+                pageAssetIds.Values.SelectMany(ids => ids).Concat(brandAssetIds),
+                assetLibrary, mediaStore, logger, ct);
+
+            // Now the catalog exists, resolve the brand imagery to its PUBLISHED /assets URL.
+            _faviconUrl = BrandPublishedUrl(_faviconAssetId, preferSmallest: true);
+            _logoUrl = BrandPublishedUrl(_headerLogoAssetId, preferSmallest: false);
             await LoadWidgetBundles(ct);
 
             var plans = PlanPages(ordered, pageAssetIds, oldManifest, cssHash);
@@ -595,32 +609,38 @@ public sealed class SitePublisher(
         // -------------------------------------------------------------------- chrome
 
         /// <summary>
-        /// Resolve a brand asset id to a single <c>/media/{storageKey}</c> URL, mirroring
-        /// EditorContent.ResolveAsset. A favicon prefers the smallest raster variant; a logo
-        /// prefers a modest header-height variant (the second-smallest, or the only one). A
-        /// vector serves its sanitized derived SVG. Null id or an unresolvable/unready asset
-        /// yields null, so the caller emits no favicon / falls back to the brand dot.
+        /// Resolve a brand asset id to a single PUBLISHED <c>/assets/…</c> URL from the
+        /// asset catalog (whose bytes CopyAssets writes into the output). A favicon prefers
+        /// the smallest raster variant; a logo prefers a modest header-height variant (the
+        /// second-smallest, or the only one). Null id or an unresolvable/unready asset yields
+        /// null, so the caller emits no favicon / falls back to the brand dot.
         /// </summary>
-        private string? BrandMediaUrl(AssetId? assetId, bool preferSmallest)
+        /// <remarks>
+        /// Raster (PNG/WebP) is fully supported. Vector brand images are NOT yet: the catalog
+        /// only ever INLINES SVGs (no standalone <c>assets/</c> file), so there is no file URL
+        /// to reference from <c>&lt;link rel="icon"&gt;</c> / the header <c>&lt;img&gt;</c>.
+        /// A vector favicon/logo therefore resolves to null (graceful brand-dot fallback) —
+        /// emitting an SVG file variant for brand vectors is a tracked follow-up.
+        /// </remarks>
+        private string? BrandPublishedUrl(AssetId? assetId, bool preferSmallest)
         {
-            if (assetId is not { } id || assetLibrary.Get(id) is not { } asset)
+            if (assetId is not { } id || _assets.Resolve(id) is not { } info)
             {
                 return null;
             }
 
-            switch (asset)
+            // Raster brand image: pick a small (favicon) / modest (logo) published variant.
+            // ImageVariants are ordered smallest-first by the catalog.
+            if (info.Kind == AssetKind.Image && info.ImageVariants.Count > 0)
             {
-                case { Kind: AssetKind.Vector, Status: AssetStatus.Ready, DerivedStorageKey: { } svgKey }:
-                    return $"/media/{svgKey}";
-
-                case { Kind: AssetKind.Image } when asset.Variants.Count > 0:
-                    var ordered = asset.Variants.OrderBy(v => v.Width).ToList();
-                    var pick = preferSmallest ? ordered[0] : ordered[Math.Min(1, ordered.Count - 1)];
-                    return $"/media/{pick.StorageKey}";
-
-                default:
-                    return null; // pending/failed/degraded, or a non-image kind: no brand image
+                var pick = preferSmallest
+                    ? info.ImageVariants[0]
+                    : info.ImageVariants[Math.Min(1, info.ImageVariants.Count - 1)];
+                return pick.Url;
             }
+
+            // Vector (inline-only, no file) or any non-raster kind: no published file URL.
+            return null;
         }
 
         private string DocumentTitle(PublishedPage page, Locale locale)

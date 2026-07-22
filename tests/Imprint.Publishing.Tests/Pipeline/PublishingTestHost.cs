@@ -172,6 +172,20 @@ internal sealed class PublishingTestHost : IAsyncDisposable
         await Commit(site);
     }
 
+    public async Task SetFavicon(SiteId siteId, AssetId? faviconAssetId)
+    {
+        var site = await Store.Load<Site>(siteId.Stream);
+        site.SetFavicon(faviconAssetId);
+        await Commit(site);
+    }
+
+    public async Task SetHeaderLogo(SiteId siteId, AssetId? headerLogoAssetId)
+    {
+        var site = await Store.Load<Site>(siteId.Stream);
+        site.SetHeaderLogo(headerLogoAssetId);
+        await Commit(site);
+    }
+
     public async Task SetCopyLine(SiteId siteId, CopyLine? copyLine)
     {
         var site = await Store.Load<Site>(siteId.Stream);

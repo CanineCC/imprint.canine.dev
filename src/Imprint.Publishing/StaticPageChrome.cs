@@ -43,14 +43,14 @@ public sealed record StaticPageChrome
     public string? CopyLine { get; init; }
 
     /// <summary>
-    /// The resolved <c>/media/…</c> URL of the site's favicon (a small/dedicated variant),
+    /// The resolved published <c>/assets/…</c> URL of the site's favicon (a small variant),
     /// or null when the site sets none — then no <c>&lt;link rel="icon"&gt;</c> is emitted.
     /// </summary>
     public string? FaviconUrl { get; init; }
 
     /// <summary>
-    /// The resolved <c>/media/…</c> URL of the site's header logo (a header-height variant),
-    /// or null — then the brand falls back to the CSS <c>.ip-brand-dot</c>.
+    /// The resolved published <c>/assets/…</c> URL of the site's header logo (a header-height
+    /// variant), or null — then the brand falls back to the CSS <c>.ip-brand-dot</c>.
     /// </summary>
     public string? LogoUrl { get; init; }
 
