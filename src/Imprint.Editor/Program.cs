@@ -20,7 +20,10 @@ var builder = WebApplication.CreateBuilder(args);
 // Optional overlay for deploy-injected secrets (the authoring/MCP bearer token) so they can be set
 // from CI (a GitHub secret written into the published artifact) rather than only on-box — no LAN step.
 // Optional + last so it wins over the base appsettings but an on-box env var still overrides it.
-builder.Configuration.AddJsonFile("appsettings.Authoring.json", optional: true, reloadOnChange: false);
+// Pinned to the binary's directory (AppContext.BaseDirectory) so it resolves regardless of the process
+// working directory the host launches us with (the blue/green cutover starts us from elsewhere).
+builder.Configuration.AddJsonFile(
+    Path.Combine(AppContext.BaseDirectory, "appsettings.Authoring.json"), optional: true, reloadOnChange: false);
 
 // The editor is habitually launched with `dotnet run` (any environment): load the
 // static-web-assets manifest explicitly so framework/RCL assets resolve outside
