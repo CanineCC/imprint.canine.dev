@@ -17,6 +17,11 @@ using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Optional overlay for deploy-injected secrets (the authoring/MCP bearer token) so they can be set
+// from CI (a GitHub secret written into the published artifact) rather than only on-box — no LAN step.
+// Optional + last so it wins over the base appsettings but an on-box env var still overrides it.
+builder.Configuration.AddJsonFile("appsettings.Authoring.json", optional: true, reloadOnChange: false);
+
 // The editor is habitually launched with `dotnet run` (any environment): load the
 // static-web-assets manifest explicitly so framework/RCL assets resolve outside
 // Development too. On published output (assets on disk) this is a silent no-op.

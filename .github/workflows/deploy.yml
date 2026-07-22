@@ -62,6 +62,17 @@ jobs:
           dotnet publish src/Imprint.Editor -c Release -m:1 /p:UseSharedCompilation=false -o /home/jimmy/apps/imprint/app.new
           test -f /home/jimmy/apps/imprint/app.new/Imprint.Editor.dll
 
+      # Deploy-injected authoring/MCP bearer token (a repo secret, NOT committed): written into the
+      # published artifact so the /api/authoring + /mcp surface mounts (fail-closed — empty secret ⇒
+      # not mapped). Lets the token be managed from CI instead of an on-box/LAN edit. Program.cs loads
+      # appsettings.Authoring.json as an optional last overlay.
+      - name: Inject authoring token (from CI secret)
+        env:
+          IMPRINT_AUTHORING_TOKEN: ${{ secrets.IMPRINT_AUTHORING_TOKEN }}
+        run: |
+          printf '{ "Imprint": { "Authoring": { "Token": "%s" } } }\n' "$IMPRINT_AUTHORING_TOKEN" \
+            > /home/jimmy/apps/imprint/app.new/appsettings.Authoring.json
+
       - name: Shut down build servers
         run: dotnet build-server shutdown || true
 
