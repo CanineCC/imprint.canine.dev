@@ -10,8 +10,11 @@
 @using Imprint.Authoring.Features.Sites.ClaimSite
 @using Imprint.Authoring.Features.Sites.RemoveCollaborator
 @using Imprint.Authoring.Features.Sites.SetCopyLine
+@using Imprint.Authoring.Features.Sites.SetFavicon
 @using Imprint.Authoring.Features.Sites.SetFooter
 @using Imprint.Authoring.Features.Sites.SetHeaderActions
+@using Imprint.Authoring.Features.Sites.SetHeaderLogo
+@using Imprint.Authoring.Domain.Assets
 @using Imprint.Editor.Auth
 @using Imprint.Editor.Components.Panels.Pages
 @using Imprint.Editor.Services
@@ -19,6 +22,7 @@
 @implements IDisposable
 @inject SiteOverview Sites
 @inject SiteAccess Access
+@inject AssetLibrary AssetLib
 @inject PageList Pages
 @inject PublishedContent Published
 @inject CommandRunner Commands
@@ -193,6 +197,50 @@
                 <button type="button" class="ed-btn ed-btn-primary" disabled="@(!_interactive || _busy)"
                         @onclick="SaveCopyLine">Save copy line</button>
             </div>
+        </section>
+
+        @* ---- Brand images (favicon + header logo) ---- *@
+        <section class="settings-card" aria-labelledby="set-brand">
+            <h2 id="set-brand">Brand images</h2>
+            <p class="settings-hint">
+                The <strong>favicon</strong> is the icon browsers show on the tab and in bookmarks.
+                The <strong>header logo</strong> replaces the little brand dot in the published header
+                and footer. Upload images on the <em>Assets</em> shelf in the editor first, then pick
+                them here. Leave a picker on <em>None</em> to keep the default dot / no icon.
+            </p>
+
+            @{ var imageAssets = AssetLib.All().Where(a => a.Kind is AssetKind.Image or AssetKind.Vector).ToList(); }
+            @if (imageAssets.Count == 0)
+            {
+                <p class="panel-empty">No image assets yet. Open the editor's Assets panel and upload an image or SVG.</p>
+            }
+            else
+            {
+                <div class="settings-row">
+                    <label for="brand-favicon" class="chrome-kind">Favicon</label>
+                    <select id="brand-favicon" class="ed-input" disabled="@(!_interactive || _busy)"
+                            value="@(site.FaviconAssetId?.Compact ?? "")"
+                            @onchange="e => SetBrandImage(e, favicon: true)">
+                        <option value="">None (no favicon)</option>
+                        @foreach (var asset in imageAssets)
+                        {
+                            <option value="@asset.Id.Compact">@asset.Name (@asset.Status)</option>
+                        }
+                    </select>
+                </div>
+                <div class="settings-row">
+                    <label for="brand-logo" class="chrome-kind">Header logo</label>
+                    <select id="brand-logo" class="ed-input" disabled="@(!_interactive || _busy)"
+                            value="@(site.HeaderLogoAssetId?.Compact ?? "")"
+                            @onchange="e => SetBrandImage(e, favicon: false)">
+                        <option value="">None (brand dot)</option>
+                        @foreach (var asset in imageAssets)
+                        {
+                            <option value="@asset.Id.Compact">@asset.Name (@asset.Status)</option>
+                        }
+                    </select>
+                </div>
+            }
         </section>
 
         @* ---- Languages (content locales — localization is editing work, so every
@@ -453,7 +501,14 @@
     private bool _canAccess;
     private bool _isOwner;
 
-    protected override void OnInitialized() => Sites.Changed += OnSitesChanged;
+    protected override void OnInitialized()
+    {
+        Sites.Changed += OnSitesChanged;
+        // The favicon/logo pickers list the asset library, so refresh when it changes.
+        AssetLib.Changed += OnAssetsChanged;
+    }
+
+    private void OnAssetsChanged() => _ = InvokeAsync(StateHasChanged);
 
     protected override async Task OnParametersSetAsync()
     {
@@ -883,6 +938,50 @@
         }
     }
 
+    // ---- Brand images (favicon + header logo) ----
+
+    private async Task SetBrandImage(ChangeEventArgs e, bool favicon)
+    {
+        if (_busy || _site is not { } site)
+        {
+            return;
+        }
+
+        var value = e.Value?.ToString();
+        AssetId? assetId = null;
+        if (!string.IsNullOrEmpty(value))
+        {
+            if (!TryParseAsset(value, out var parsed))
+            {
+                Toasts.Error("That is not a valid asset.");
+                return;
+            }
+
+            assetId = parsed;
+        }
+
+        var ok = favicon
+            ? await Commands.Run(new SetFavicon(site.Id, assetId))
+            : await Commands.Run(new SetHeaderLogo(site.Id, assetId));
+        if (ok)
+        {
+            _site = Sites.Get(site.Id);
+            Toasts.Show(favicon ? "Favicon updated." : "Header logo updated.");
+        }
+    }
+
+    private static bool TryParseAsset(string value, out AssetId id)
+    {
+        if (Guid.TryParseExact(value, "N", out var guid) || Guid.TryParse(value, out guid))
+        {
+            id = AssetId.From(guid);
+            return true;
+        }
+
+        id = default;
+        return false;
+    }
+
     private async Task TakeOwnership()
     {
         if (_busy || _site is not { } site || !Sites.IsUnclaimed(site.Id))
@@ -1012,5 +1111,9 @@
         return false;
     }
 
-    public void Dispose() => Sites.Changed -= OnSitesChanged;
+    public void Dispose()
+    {
+        Sites.Changed -= OnSitesChanged;
+        AssetLib.Changed -= OnAssetsChanged;
+    }
 }
