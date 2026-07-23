@@ -410,6 +410,14 @@
   column-gap: var(--mk-gap); row-gap: 0; align-items: start;
 }
 /* solo hero: a single measure-width copy column */
+/* SOLO hero (no evidence card): the copy is the whole hero, so centre it. Left-aligned measure-width
+   copy in a full-width section reads as a broken two-up — text on the left, a void on the right. */
+.ip-ap-hero > .ip-stack:not(:has(> .ip-widget:not(contact-form))) {
+  align-items: center; text-align: center;
+}
+.ip-ap-hero > .ip-stack:not(:has(> .ip-widget:not(contact-form))) > :is(.ip-prose, h1, h2) {
+  margin-inline: auto;
+}
 .ip-ap-hero > .ip-stack:not(:has(> .ip-widget:not(contact-form))) h1 {
   max-width: 24ch;
 }
@@ -593,6 +601,10 @@
 
 /* ── TABLE LIST (canonical bulleted rendering of a CMS table) ───────────────── */
 .ip-ap-table-list > .ip-stack { align-items: stretch; }
+/* The measure cap above applies to every .ip-prose, which silently squeezed the TABLE to a reading
+   column and left the right half of the section empty ("the ui tilts"). A table is not prose: it
+   spans. Its intro paragraph still reads at measure. */
+.ip-ap-table-list > .ip-stack > .ip-prose:has(ul) { max-width: none; }
 .ip-ap-table-list .ip-prose ul {
   list-style: none; padding: 0; margin: 0; border: 1px solid var(--hairline); border-radius: var(--r-lg); overflow: hidden;
 }
