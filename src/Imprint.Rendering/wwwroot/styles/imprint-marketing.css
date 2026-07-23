@@ -605,16 +605,27 @@
    column and left the right half of the section empty ("the ui tilts"). A table is not prose: it
    spans. Its intro paragraph still reads at measure. */
 .ip-ap-table-list > .ip-stack > .ip-prose:has(ul) { max-width: none; }
+/* A REAL table. The content model has no <table> — canonical rich text is p/ul/ol/li/strong/em/a/br —
+   so each CELL is its own <li> and the grid does the rest. Column count defaults to 3; a section
+   whose anchor ends in "-cols4" declares four (the subprocessor list). Below 40rem every table
+   collapses to one cell per line, which is the only honest way to read a table on a phone. */
 .ip-ap-table-list .ip-prose ul {
   list-style: none; padding: 0; margin: 0; border: 1px solid var(--hairline); border-radius: var(--r-lg); overflow: hidden;
+  display: grid; grid-template-columns: repeat(var(--ip-table-cols, 3), minmax(0, 1fr));
+}
+[id$="-cols4"] .ip-prose ul { --ip-table-cols: 4; }
+@container (max-width: 40rem) {
+  .ip-ap-table-list .ip-prose ul { grid-template-columns: 1fr; }
 }
 .ip-ap-table-list .ip-prose ul li {
   padding: 0.7rem 1rem; border-bottom: 1px solid var(--hairline); font-size: var(--fs-sm); color: var(--ink);
 }
-.ip-ap-table-list .ip-prose ul li:first-child {
-  background: var(--surface-2); color: var(--muted); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.04em;
+/* The header is the first ROW — one cell per column, not just the first cell. */
+.ip-ap-table-list .ip-prose ul li:nth-child(-n + var(--ip-table-cols, 3)) { background: var(--surface-2); }
+.ip-ap-table-list .ip-prose ul li:has(> strong:only-child) {
+  background: var(--surface-2); color: var(--muted); font-size: var(--fs-xs);
+  text-transform: uppercase; letter-spacing: 0.04em;
 }
-.ip-ap-table-list .ip-prose ul li:last-child { border-bottom: 0; }
 .ip-ap-table-list > .ip-stack > .ip-prose:last-child:not(:has(ul)) {
   font-size: var(--fs-xs); color: var(--muted); text-align: center;
 }

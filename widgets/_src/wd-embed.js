@@ -27,15 +27,35 @@ class WdEmbed extends HTMLElement {
   connectedCallback() {
     if (!this._root) {
       this._root = this.attachShadow({ mode: "open" });
+      // A skeleton while the frame loads. The page around it is static and lands well under 100ms;
+      // an embed is a live query against the product and can take a second or two. Without a
+      // placeholder the section collapses to nothing and then jumps — so reserve the space and show
+      // that it is working. The skeleton sits behind the frame, which stays transparent until it
+      // reports a height (its honest "I have rendered" signal).
       this._root.innerHTML =
         '<style>' +
         // width:100% because the marketing sections that centre their heads (`align-items: center`)
         // do NOT stretch a custom element the way they stretch a grid — the frame would size to its
         // content and render as a narrow column in the middle of a full-width section.
         ':host{display:block;width:100%}' +
-        'iframe{display:block;width:100%;border:0;color-scheme:normal;transition:height .15s ease-out}' +
+        '.wrap{position:relative;width:100%}' +
+        'iframe{display:block;width:100%;border:0;color-scheme:normal;' +
+          'transition:height .15s ease-out,opacity .2s ease-in;opacity:0}' +
+        ':host([data-ready]) iframe{opacity:1}' +
+        '.skel{position:absolute;inset:0;border:1px solid #2d353e;border-radius:10px;' +
+          'overflow:hidden;background:#1c2127}' +
+        ':host([data-theme-light]) .skel{border-color:#e1e6eb;background:#f5f7f9}' +
+        ':host([data-ready]) .skel{display:none}' +
+        '.skel::after{content:"";position:absolute;inset:0;transform:translateX(-100%);' +
+          'background:linear-gradient(90deg,transparent,rgba(127,170,206,.10),transparent);' +
+          'animation:sweep 1.4s ease-in-out infinite}' +
+        '@keyframes sweep{100%{transform:translateX(100%)}}' +
+        '@media (prefers-reduced-motion:reduce){.skel::after{animation:none}}' +
         '</style>' +
-        "<iframe title='' loading='lazy' scrolling='no' referrerpolicy='no-referrer'></iframe>";
+        '<div class="wrap">' +
+        '<div class="skel" role="status" aria-label="Loading live data"></div>' +
+        "<iframe title='' loading='lazy' scrolling='no' referrerpolicy='no-referrer'></iframe>" +
+        '</div>';
       this._frame = this._root.querySelector("iframe");
       this._onMessage = this._onMessage.bind(this);
     }
@@ -112,8 +132,15 @@ class WdEmbed extends HTMLElement {
     if (!this._frame.style.height) {
       this._frame.style.height = (Number.isFinite(min) && min > 0 ? min : 320) + "px";
     }
+    // The skeleton takes the resolved theme too, so it doesn't flash dark on a light page.
+    this.toggleAttribute("data-theme-light", this._theme() === "light");
     if (this._frame.getAttribute("src") !== src) {
+      this.removeAttribute("data-ready");
       this._frame.setAttribute("src", src);
+      // If no height ever arrives (frame blocked, offline), stop pretending to load: a permanent
+      // shimmer reads as broken, where an empty card at least reads as empty.
+      clearTimeout(this._giveUp);
+      this._giveUp = setTimeout(() => this.setAttribute("data-ready", ""), 8000);
     }
   }
 
@@ -126,6 +153,9 @@ class WdEmbed extends HTMLElement {
     const height = Number(data.height);
     if (!Number.isFinite(height) || height <= 0 || height > 20000) return;
     this._frame.style.height = Math.ceil(height) + "px";
+    // The embed posts a height only once it has rendered — the honest "ready" moment.
+    clearTimeout(this._giveUp);
+    this.setAttribute("data-ready", "");
   }
 }
 
