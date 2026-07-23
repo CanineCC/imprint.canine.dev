@@ -1134,10 +1134,18 @@ public sealed class SitePublisher(
                 desired.Add(file.RelativePath);
             }
 
-            // The self-hosted fonts are already-compressed woff2 (no .br/.gz siblings).
-            foreach (var font in FontAssets.All)
+            // Shipped static assets. woff2 is already compressed and gets no siblings, but the brand
+            // SVG is text and Precompress WILL write .br/.gz for it — so those have to be desired
+            // too, or Sweep deletes them and the next run rewrites them, breaking the zero-rewrite
+            // guarantee with two files every single sync.
+            foreach (var asset in FontAssets.All)
             {
-                desired.Add(font.RelativePath);
+                desired.Add(asset.RelativePath);
+                if (Precompressor.IsCompressible(asset.RelativePath))
+                {
+                    desired.Add(asset.RelativePath + ".br");
+                    desired.Add(asset.RelativePath + ".gz");
+                }
             }
 
             return desired;

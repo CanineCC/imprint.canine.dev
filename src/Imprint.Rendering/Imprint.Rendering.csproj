@@ -27,6 +27,7 @@
          serve the editor canvas. -->
     <EmbeddedResource Include="wwwroot/fonts/schibsted-var.woff2" LogicalName="Imprint.Rendering.fonts.schibsted-var.woff2" />
     <EmbeddedResource Include="wwwroot/fonts/jetbrains-var.woff2" LogicalName="Imprint.Rendering.fonts.jetbrains-var.woff2" />
+    <EmbeddedResource Include="wwwroot/brand/canine-badge.svg" LogicalName="Imprint.Rendering.brand.canine-badge.svg" />
   </ItemGroup>
 
 </Project>

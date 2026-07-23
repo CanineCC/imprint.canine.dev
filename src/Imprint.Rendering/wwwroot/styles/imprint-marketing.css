@@ -172,10 +172,20 @@
   color: var(--heading); text-decoration: none;
 }
 .ip-brand:hover { text-decoration: none; opacity: 0.85; }
+/* The brand mark is the canine badge, drawn as a CSS MASK over a solid colour rather than an <img>:
+   an image carries its own colours and cannot follow the theme, whereas a mask is tinted by whatever
+   it is filled with. One shape serves every property — each site's own accent — and canine.dev gets
+   the ink colour, which is near-white in dark and near-black in light. Shipped as a FILE, not a data
+   URI: the stylesheet is render-blocking and on a size budget, and a mask image is neither.
+   (Class name kept: it is the brand mark's slot, and renaming it would churn markup for nothing.) */
 .ip-brand-dot {
-  width: 11px; height: 11px; border-radius: 50%;
-  background: var(--accent); box-shadow: 0 0 0 4px var(--accent-wash); flex: none;
+  width: 20px; height: 22px; flex: none;
+  background: var(--accent);
+  -webkit-mask: url("/brand/canine-badge.svg") no-repeat center / contain;
+  mask: url("/brand/canine-badge.svg") no-repeat center / contain;
 }
+/* canine.dev is the parent brand: its mark is ink, not accent — white on dark, black on light. */
+.ip-site-canine .ip-brand-dot { background: var(--heading); }
 /* Uploaded brand logo, shown in place of the dot in the header and footer. */
 .ip-brand-logo { height: 24px; width: auto; display: block; flex: none; }
 
@@ -620,8 +630,8 @@
 .ip-ap-table-list .ip-prose ul li {
   padding: 0.7rem 1rem; border-bottom: 1px solid var(--hairline); font-size: var(--fs-sm); color: var(--ink);
 }
-/* The header is the first ROW — one cell per column, not just the first cell. */
-.ip-ap-table-list .ip-prose ul li:nth-child(-n + var(--ip-table-cols, 3)) { background: var(--surface-2); }
+/* The header is the first ROW. Keyed off the cells being bold-only rather than a position: nth-child
+   cannot take a custom property, so counting columns in a selector is not expressible. */
 .ip-ap-table-list .ip-prose ul li:has(> strong:only-child) {
   background: var(--surface-2); color: var(--muted); font-size: var(--fs-xs);
   text-transform: uppercase; letter-spacing: 0.04em;

@@ -63,6 +63,17 @@ const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + `
 .mk-form textarea { min-height: 130px; resize: vertical; }
 .mk-form-hp { position: absolute; left: -9999px; height: 0; overflow: hidden; }
 .mk-form-status { font-size: var(--fs-sm); color: var(--muted); }
+/* Success gets a dialog, not a line of text. The form can sit well below the fold on a long page,
+   so an inline "Thanks" is easy to miss entirely — the sender is left unsure whether it sent. A
+   modal cannot be scrolled past and has to be dismissed, which is the acknowledgement they came for. */
+.mk-modal { position: fixed; inset: 0; display: grid; place-items: center; z-index: 9999;
+  background: rgba(0,0,0,.55); padding: 24px; }
+.mk-modal[hidden] { display: none; }
+.mk-modal-card { background: var(--surface); color: var(--ink); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 22px 24px; max-width: 24rem; width: 100%;
+  box-shadow: 0 12px 40px rgb(0 0 0 / .45); text-align: center; }
+.mk-modal-card h3 { margin: 0 0 6px; font-size: var(--fs-lg); color: var(--heading); }
+.mk-modal-card p { margin: 0 0 16px; font-size: var(--fs-sm); color: var(--muted); }
 .mk-form-status.is-error { color: var(--band-poor-text); }
 .mk-form-status.is-ok { color: var(--band-exemplary-text); }
 .mk-cta-row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: flex-start; }
@@ -129,6 +140,13 @@ customElements.define(
       html += `<div class="mk-cta-row"><button class="btn btn-primary btn-lg" type="submit">Send message</button></div>`;
       // The status line is the inline send-result — it NEVER mentions an address.
       html += `<p class="mk-form-status" aria-live="polite"></p>`;
+      html += `<div class="mk-modal" role="dialog" aria-modal="true" aria-labelledby="mk-sent-h" hidden>
+        <div class="mk-modal-card">
+          <h3 id="mk-sent-h">Thanks — message sent.</h3>
+          <p>We'll get back to you.</p>
+          <button type="button" class="mk-btn mk-btn-primary" data-mk-ok>OK</button>
+        </div>
+      </div>`;
       if (privacyNote)
         html += `<p class="mk-form-status">${renderInline(privacyNote)}</p>`;
       html += `</form>`;
@@ -145,6 +163,28 @@ customElements.define(
         status.classList.toggle("is-error", ok === false);
       };
 
+      // Success is confirmed in a dialog the sender has to dismiss; errors and progress stay inline,
+      // because those belong next to the field you are about to correct.
+      const modal = root.querySelector(".mk-modal");
+      const okButton = modal && modal.querySelector("[data-mk-ok]");
+      const closeModal = () => {
+        if (!modal) return;
+        modal.hidden = true;
+        const first = form.querySelector("input, textarea");
+        if (first) first.focus();
+      };
+      const confirmSent = () => {
+        if (!modal) { showStatus("Thanks — we'll get back to you.", true); return; }
+        showStatus("", null);
+        modal.hidden = false;
+        if (okButton) okButton.focus();
+      };
+      if (okButton) okButton.addEventListener("click", closeModal);
+      if (modal) {
+        modal.addEventListener("click", (ev) => { if (ev.target === modal) closeModal(); });
+        modal.addEventListener("keydown", (ev) => { if (ev.key === "Escape") closeModal(); });
+      }
+
       form.addEventListener("submit", async (e) => {
         const hp = form.querySelector('input[name="website"]');
 
@@ -153,7 +193,7 @@ customElements.define(
         e.preventDefault();
           if (hp && hp.value.trim() !== "") {
             // A filled honeypot is a bot — pretend success, send nothing.
-            showStatus("Thanks — we'll get back to you.", true);
+            confirmSent();
             return;
           }
           if (button) button.disabled = true; // no double-sends
@@ -165,7 +205,7 @@ customElements.define(
             });
             if (!res.ok) throw new Error(String(res.status));
             form.reset();
-            showStatus("Thanks — we'll get back to you.", true);
+            confirmSent();
           } catch {
             // Never reveal an address here — retry is the only recovery we offer.
             showStatus(

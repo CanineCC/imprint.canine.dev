@@ -11,7 +11,7 @@ namespace Imprint.Rendering;
 /// </summary>
 public static class FontAssets
 {
-    /// <summary>One shipped font file: the path under the site root and its bytes.</summary>
+    /// <summary>One shipped static file: the path under the site root and its bytes.</summary>
     public sealed record FontFile(string RelativePath, byte[] Bytes);
 
     private static IReadOnlyList<FontFile>? _all;
@@ -21,12 +21,16 @@ public static class FontAssets
     [
         Load("fonts/schibsted-var.woff2", "Imprint.Rendering.fonts.schibsted-var.woff2"),
         Load("fonts/jetbrains-var.woff2", "Imprint.Rendering.fonts.jetbrains-var.woff2"),
+        // The brand mark. A FILE rather than a data URI in the stylesheet: the sheet is
+        // render-blocking and on a strict size budget, and a mask image is neither — it also
+        // caches once for the whole site instead of riding every stylesheet revision.
+        Load("brand/canine-badge.svg", "Imprint.Rendering.brand.canine-badge.svg"),
     ];
 
     private static FontFile Load(string relativePath, string resource)
     {
         using var stream = typeof(FontAssets).Assembly.GetManifestResourceStream(resource)
-            ?? throw new InvalidOperationException($"Embedded font '{resource}' is missing from Imprint.Rendering.");
+            ?? throw new InvalidOperationException($"Embedded asset '{resource}' is missing from Imprint.Rendering.");
         using var memory = new MemoryStream();
         stream.CopyTo(memory);
         return new FontFile(relativePath, memory.ToArray());

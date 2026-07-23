@@ -33,7 +33,7 @@
   <script>@((MarkupString)PublisherScripts.ThemeToggle)</script>
   <link rel="stylesheet" href="@Chrome.StylesheetHref" />
 </head>
-<body class="ip-page">
+<body class="ip-page ip-site-@SiteSlug">
   <a href="#main">Skip to content</a>
   <header class="ip-site-header">
     <a class="ip-brand" href="@Chrome.HomeHref">@if (Chrome.LogoUrl is not null)
@@ -162,4 +162,14 @@
 
   /// <summary>Replaces the PageView body — used by the 404 page, which has no node tree.</summary>
   [Parameter] public RenderFragment? Content { get; set; }
+}
+
+@code {
+    /// <summary>
+    /// The site as a CSS hook (<c>ip-site-canine</c>): a handful of brand rules legitimately differ
+    /// per property — canine.dev's mark is ink where every product's is its accent — and a class on
+    /// the body is the smallest way to say so without a stylesheet per site.
+    /// </summary>
+    private string SiteSlug =>
+        new string([.. Chrome.SiteName.ToLowerInvariant().Where(c => char.IsAsciiLetterOrDigit(c) || c == '-')]);
 }
