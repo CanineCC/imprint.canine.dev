@@ -562,6 +562,56 @@
     ]
   },
   {
+    "tag": "cai-public-reports",
+    "name": "Public reports — surveyed-corpus shop window",
+    "description": "A curated, capped shop window on Watchdog's surveyed OSS corpus. Leads with the corpus scale ('N,000+ repositories surveyed'), shows a language-diverse best-first set of at most 24 survey cards, and lets a visitor filter by language/lens or search by name — the filter hits the whole corpus server-side, so search implies depth the grid never dumps. Each card deep-links to the full signed survey on the app. Fetches /api/public/reports when an API base is set; falls back to a small labelled sample.",
+    "bundle": "cai-public-reports.js",
+    "placeholder": "Public reports — surveyed-corpus shop window",
+    "props": [
+      {
+        "name": "api-base",
+        "label": "Live API base URL (empty = show the sample)",
+        "type": "url",
+        "default": ""
+      },
+      {
+        "name": "kicker",
+        "label": "Kicker (small uppercase intro)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "heading",
+        "label": "Heading",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "lede",
+        "label": "Lede / intro paragraph",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "footnote",
+        "label": "Footnote under the grid",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "brand",
+        "label": "Brand accent",
+        "type": "choice",
+        "default": "watchdog",
+        "options": [
+          "watchdog",
+          "assay",
+          "cai"
+        ]
+      }
+    ]
+  },
+  {
     "tag": "contact-form",
     "name": "Contact form",
     "description": "A contact form with a topic selector (?topic= prefill), name / email / organisation / message fields and a spam honeypot. Submits via fetch() to the `action` endpoint (default: the imprint editor's anonymous /api/contact) and reports success/failure inline. The inbox recipients live in the private `recipients` prop (falling back to the endpoint's server config) — never in the page.",

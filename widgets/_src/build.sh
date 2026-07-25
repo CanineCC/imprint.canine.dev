@@ -26,6 +26,7 @@ TAGS=(
   cai-c4-heat
   cai-findings
   cai-language-support
+  cai-public-reports
   cai-verifier
   cai-calculator
   cai-report-index

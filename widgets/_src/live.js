@@ -255,3 +255,45 @@ export async function fetchText(apiBase, path) {
 }
 
 export { LENSES, grouped };
+
+// The curated public-reports feed for the <cai-public-reports> shop-window widget.
+// {apiBase}/api/public/reports?lang=&lens=&q= → { totals:{repositories,publishedSurveys},
+//   facets:{languages:[{language,count}],lenses:[{key,label}]}, cap, matched, capped, curated,
+//   reports:[{owner,name,display,score,band,bandHex,primaryLanguage,secondaryLanguages,lenses,
+//   tags,sourceUrl,reportPath}] }. Server-side filtered + capped, so the widget only ever holds a
+// small window over an endless corpus. Falls back to a labelled sample when api-base is unset.
+const REPORTS_SAMPLE = {
+  totals: { repositories: 3200, publishedSurveys: 3800 },
+  facets: {
+    languages: [
+      { language: "C#", count: 640 }, { language: "TypeScript", count: 410 },
+      { language: "Go", count: 300 }, { language: "Rust", count: 240 },
+      { language: "Python", count: 380 }, { language: "Java", count: 260 },
+    ],
+    lenses: [
+      { key: "domainModelling", label: "Domain modelling" },
+      { key: "eventSourcing", label: "Event sourcing" },
+      { key: "eventDriven", label: "Event-driven" },
+    ],
+  },
+  cap: 24, matched: 6, capped: false, curated: true,
+  reports: [
+    { owner: "ardalis", name: "CleanArchitecture", display: "ardalis/CleanArchitecture", score: 64, band: "Adequate", bandHex: "#b0872f", primaryLanguage: "C#", secondaryLanguages: [], lenses: ["codeHealth", "architecture", "domainModelling"], tags: ["WebApi", "clean-architecture"], sourceUrl: "https://github.com/ardalis/CleanArchitecture", reportPath: "/api/oss/ardalis/CleanArchitecture/report" },
+    { owner: "gin-gonic", name: "gin", display: "gin-gonic/gin", score: 72, band: "Strong", bandHex: "#1f7a5a", primaryLanguage: "Go", secondaryLanguages: [], lenses: ["codeHealth", "architecture", "maturity"], tags: ["library"], sourceUrl: "https://github.com/gin-gonic/gin", reportPath: "/api/oss/gin-gonic/gin/report" },
+    { owner: "tokio-rs", name: "axum", display: "tokio-rs/axum", score: 76, band: "Strong", bandHex: "#1f7a5a", primaryLanguage: "Rust", secondaryLanguages: [], lenses: ["codeHealth", "architecture"], tags: ["library"], sourceUrl: "https://github.com/tokio-rs/axum", reportPath: "/api/oss/tokio-rs/axum/report" },
+    { owner: "oskardudycz", name: "EventSourcing.NetCore", display: "oskardudycz/EventSourcing.NetCore", score: 68, band: "Adequate", bandHex: "#b0872f", primaryLanguage: "C#", secondaryLanguages: [], lenses: ["codeHealth", "architecture", "eventSourcing", "domainModelling"], tags: ["event-sourcing"], sourceUrl: "https://github.com/oskardudycz/EventSourcing.NetCore", reportPath: "/api/oss/oskardudycz/EventSourcing.NetCore/report" },
+    { owner: "tiangolo", name: "fastapi", display: "tiangolo/fastapi", score: 74, band: "Strong", bandHex: "#1f7a5a", primaryLanguage: "Python", secondaryLanguages: [], lenses: ["codeHealth", "architecture", "maturity"], tags: ["WebApi", "library"], sourceUrl: "https://github.com/tiangolo/fastapi", reportPath: "/api/oss/tiangolo/fastapi/report" },
+    { owner: "spring-projects", name: "spring-petclinic", display: "spring-projects/spring-petclinic", score: 66, band: "Adequate", bandHex: "#b0872f", primaryLanguage: "Java", secondaryLanguages: ["TypeScript"], lenses: ["codeHealth", "architecture", "domainModelling"], tags: ["WebApp"], sourceUrl: "https://github.com/spring-projects/spring-petclinic", reportPath: "/api/oss/spring-projects/spring-petclinic/report" },
+  ],
+};
+
+export async function fetchPublicReports(apiBase, params = {}) {
+  if (!(apiBase || "").trim()) return REPORTS_SAMPLE;
+  const qs = new URLSearchParams();
+  if (params.lang) qs.set("lang", params.lang);
+  if (params.lens) qs.set("lens", params.lens);
+  if (params.q) qs.set("q", params.q);
+  const path = "/api/public/reports" + (qs.toString() ? "?" + qs.toString() : "");
+  const d = await fetchJsonCached(apiBase, path, null);
+  return d && Array.isArray(d.reports) ? d : REPORTS_SAMPLE;
+}
