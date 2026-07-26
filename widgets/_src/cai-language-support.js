@@ -31,12 +31,13 @@ const SAMPLE = {
   note: "FIT is survey clarity — how clearly a language leads to a complete architecture survey. It is NOT a measure of language or code quality.",
   languages: [
     { code: "csharp", displayName: "C#", applicability: 10, supportKind: "Deep", band: "FULL", summary: "Native symbols resolve every lens with full fidelity.", coveredLenses: ["DDD", "Event sourcing", "Event-driven", "Vertical slice"], notApplicableLenses: [] },
-    { code: "java", displayName: "Java", applicability: 9, supportKind: "Deep", band: "FULL", summary: "Source-resolution is strong; the full domain survey fires.", coveredLenses: ["DDD", "Event sourcing", "Event-driven", "Vertical slice"], notApplicableLenses: ["strongly-typed-id (field-based)"] },
+    { code: "java", displayName: "Java", applicability: 9, supportKind: "Deep", band: "VERY HIGH", summary: "Source-resolution is strong; the full domain survey fires.", coveredLenses: ["DDD", "Event sourcing", "Event-driven", "Vertical slice"], notApplicableLenses: ["strongly-typed-id (field-based)"] },
     { code: "python", displayName: "Python", applicability: 7, supportKind: "Deep", band: "HIGH", summary: "Marker lenses are strong; call-owner lenses partial on untyped code — declined, never guessed.", coveredLenses: ["DDD", "Event sourcing", "Event-driven"], notApplicableLenses: ["Sealed/DU lens"] },
     { code: "ruby", displayName: "Ruby", applicability: 6, supportKind: "Deep", band: "MEDIUM", summary: "The hardest static target; markers and block-fold DSLs still resolve.", coveredLenses: ["DDD", "Event sourcing", "Event-driven"], notApplicableLenses: ["god-class/LCOM"] },
     { code: "javascript", displayName: "JavaScript", applicability: 4, supportKind: "Structural", band: "LOW", summary: "Structural suite only, without types — the least architecture signal.", coveredLenses: ["Structural", "Module graph"], notApplicableLenses: ["DDD", "Event sourcing"] },
   ],
   bands: [
+    { band: "VERY HIGH", label: "VERY HIGH", why: "Nearly every lens applies and resolves - a very clear survey, with a named lens or two deferred for this language. About survey clarity, not language quality." },
     { band: "FULL", label: "FULL", why: "Every lens applies and resolves cleanly — the clearest surveys we produce. About survey clarity, not language quality." },
     { band: "HIGH", label: "HIGH", why: "Most lenses apply and resolve — a clear, well-populated survey. About survey clarity, not language quality." },
     { band: "MEDIUM", label: "MEDIUM", why: "A meaningful slice of the survey is populated; some lenses are N/A or best-effort. About survey clarity, not language quality." },
