@@ -30,14 +30,14 @@ import { fetchLanguageSupport } from "./live.js";
 const SAMPLE = {
   note: "FIT is survey clarity — how clearly a language leads to a complete architecture survey. It is NOT a measure of language or code quality.",
   languages: [
-    { code: "csharp", displayName: "C#", applicability: 10, supportKind: "Deep", band: "PERFECT", summary: "Native symbols resolve every lens with full fidelity.", coveredLenses: ["DDD", "Event sourcing", "Event-driven", "Vertical slice"], notApplicableLenses: [] },
-    { code: "java", displayName: "Java", applicability: 9, supportKind: "Deep", band: "PERFECT", summary: "Source-resolution is strong; the full domain survey fires.", coveredLenses: ["DDD", "Event sourcing", "Event-driven", "Vertical slice"], notApplicableLenses: ["strongly-typed-id (field-based)"] },
+    { code: "csharp", displayName: "C#", applicability: 10, supportKind: "Deep", band: "FULL", summary: "Native symbols resolve every lens with full fidelity.", coveredLenses: ["DDD", "Event sourcing", "Event-driven", "Vertical slice"], notApplicableLenses: [] },
+    { code: "java", displayName: "Java", applicability: 9, supportKind: "Deep", band: "FULL", summary: "Source-resolution is strong; the full domain survey fires.", coveredLenses: ["DDD", "Event sourcing", "Event-driven", "Vertical slice"], notApplicableLenses: ["strongly-typed-id (field-based)"] },
     { code: "python", displayName: "Python", applicability: 7, supportKind: "Deep", band: "HIGH", summary: "Marker lenses are strong; call-owner lenses partial on untyped code — declined, never guessed.", coveredLenses: ["DDD", "Event sourcing", "Event-driven"], notApplicableLenses: ["Sealed/DU lens"] },
     { code: "ruby", displayName: "Ruby", applicability: 6, supportKind: "Deep", band: "MEDIUM", summary: "The hardest static target; markers and block-fold DSLs still resolve.", coveredLenses: ["DDD", "Event sourcing", "Event-driven"], notApplicableLenses: ["god-class/LCOM"] },
     { code: "javascript", displayName: "JavaScript", applicability: 4, supportKind: "Structural", band: "LOW", summary: "Structural suite only, without types — the least architecture signal.", coveredLenses: ["Structural", "Module graph"], notApplicableLenses: ["DDD", "Event sourcing"] },
   ],
   bands: [
-    { band: "PERFECT", label: "PERFECT", why: "Every lens applies and resolves cleanly — the clearest surveys we produce. About survey clarity, not language quality." },
+    { band: "FULL", label: "FULL", why: "Every lens applies and resolves cleanly — the clearest surveys we produce. About survey clarity, not language quality." },
     { band: "HIGH", label: "HIGH", why: "Most lenses apply and resolve — a clear, well-populated survey. About survey clarity, not language quality." },
     { band: "MEDIUM", label: "MEDIUM", why: "A meaningful slice of the survey is populated; some lenses are N/A or best-effort. About survey clarity, not language quality." },
     { band: "LOW", label: "LOW", why: "The structural lenses apply but not the deep domain catalogue. What we report is real; there is simply less of it. About survey clarity, not language quality." },
@@ -45,8 +45,8 @@ const SAMPLE = {
 };
 
 // Band display order (best-first) and the "focus" dot count that reads as clarity.
-const BAND_ORDER = ["PERFECT", "HIGH", "MEDIUM", "LOW"];
-const FOCUS = { PERFECT: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+const BAND_ORDER = ["FULL", "HIGH", "MEDIUM", "LOW"];
+const FOCUS = { FULL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
 
 const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + `
 .mk-fit { max-width: 66rem; margin: 0 auto; }
@@ -94,7 +94,7 @@ function focusDots(band) {
 }
 
 function cardHtml(l) {
-  const edge = { PERFECT: 1, HIGH: 0.7, MEDIUM: 0.45, LOW: 0.22 }[l.band] ?? 0.5;
+  const edge = { FULL: 1, HIGH: 0.7, MEDIUM: 0.45, LOW: 0.22 }[l.band] ?? 0.5;
   const covered = (l.coveredLenses || []).map((x) => `<span class="mk-fit-chip">${escapeHtml(x)}</span>`).join("");
   const na = (l.notApplicableLenses || []).map((x) => `<span class="mk-fit-chip na">${escapeHtml(x)}</span>`).join("");
   const naRow = na ? `<div class="mk-fit-lensrow"><span class="mk-fit-lenslabel">N/A</span><div class="mk-fit-chips">${na}</div></div>` : "";
