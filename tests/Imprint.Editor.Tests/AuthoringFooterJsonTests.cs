@@ -84,3 +84,54 @@ public sealed class AuthoringFooterJsonTests
         Assert.Contains("JSON object", ex.Message, StringComparison.Ordinal);
     }
 }
+
+/// <summary>
+/// Header actions, which share the footer's link parser and href allow-list. The rule worth pinning is that
+/// ABSENT means CLEARED: the two actions are set together, so the only way to remove a header link pointing at a
+/// page that no longer exists is to omit it. A parser that treated absent as "leave unchanged" would make a dead
+/// header CTA permanently unremovable through this API - which is exactly the state canine.dev was in.
+/// </summary>
+public sealed class AuthoringHeaderActionTests
+{
+    private static readonly Locale En = new("en");
+
+    private static JsonElement Json(string raw) => JsonDocument.Parse(raw).RootElement.Clone();
+
+    [Fact]
+    public void Parses_An_External_Action()
+    {
+        var action = AuthoringApi.ParseHeaderAction(
+            Json("""{"cta":{"label":"Contact","url":"https://watchdog.canine.dev/contact"}}"""), "cta", En);
+
+        Assert.NotNull(action);
+        Assert.Equal("Contact", action!.Label.Get(En));
+        Assert.Equal("https://watchdog.canine.dev/contact", Assert.IsType<ExternalLink>(action.Link).Url);
+    }
+
+    [Fact]
+    public void An_Absent_Property_Clears_The_Action()
+    {
+        Assert.Null(AuthoringApi.ParseHeaderAction(Json("""{"quiet":{"label":"x","url":"https://a.b"}}"""), "cta", En));
+    }
+
+    [Fact]
+    public void An_Explicit_Null_Clears_The_Action()
+    {
+        Assert.Null(AuthoringApi.ParseHeaderAction(Json("""{"cta":null}"""), "cta", En));
+    }
+
+    [Fact]
+    public void An_Action_Without_A_Label_Is_Refused()
+    {
+        var ex = Assert.Throws<ArgumentException>(() =>
+            AuthoringApi.ParseHeaderAction(Json("""{"cta":{"url":"https://a.b"}}"""), "cta", En));
+        Assert.Contains("label", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void A_Disallowed_Href_Is_Refused()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            AuthoringApi.ParseHeaderAction(Json("""{"cta":{"label":"x","url":"javascript:alert(1)"}}"""), "cta", En));
+    }
+}

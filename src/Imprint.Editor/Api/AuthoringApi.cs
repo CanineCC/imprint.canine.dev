@@ -11,6 +11,8 @@ using Imprint.EventSourcing;
 using AddNodeCmd = Imprint.Authoring.Features.Pages.AddNode.AddNode;
 using ChangeNavigationCmd = Imprint.Authoring.Features.Sites.ChangeNavigation.ChangeNavigation;
 using SetFooterCmd = Imprint.Authoring.Features.Sites.SetFooter.SetFooter;
+using AddLocaleCmd = Imprint.Authoring.Features.Sites.AddLocale.AddLocale;
+using SetHeaderActionsCmd = Imprint.Authoring.Features.Sites.SetHeaderActions.SetHeaderActions;
 using ChangeNodePropsCmd = Imprint.Authoring.Features.Pages.ChangeNodeProps.ChangeNodeProps;
 using ChangePageMetaCmd = Imprint.Authoring.Features.Pages.ChangePageMeta.ChangePageMeta;
 using ChangePageTitleCmd = Imprint.Authoring.Features.Pages.ChangePageTitle.ChangePageTitle;
@@ -492,6 +494,56 @@ public static class AuthoringApi
                 : Results.BadRequest(new { error = "footer change failed", details = footerResult.Errors });
         });
 
+        // A second language for the site. Every text field is stored per locale, so adding one does not touch
+        // existing content - it opens a slot the editor and these routes can write the translation into.
+        api.MapPost("/sites/{siteId}/locales", async (
+            string siteId, JsonElement body, ICommandDispatcher dispatcher, SiteOverview sites, CancellationToken ct) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            if (sites.Get(sid) is null) return Results.NotFound(new { error = "unknown site" });
+            if (Text(body, "locale") is not { Length: > 0 } locale)
+            {
+                return Results.BadRequest(new { error = "a 'locale' is required, e.g. 'da'" });
+            }
+
+            var localeResult = await DispatchAs(dispatcher, actor, new AddLocaleCmd(sid, locale), ct);
+            return localeResult.Succeeded
+                ? Results.Ok(new { siteId = sid.Compact, locale })
+                : Results.BadRequest(new { error = "add locale failed", details = localeResult.Errors });
+        });
+
+        // The header's primary CTA and its quiet link. They share a slot and are set together, so omitting one
+        // CLEARS it - which is the only way to remove a header action that points somewhere that no longer exists.
+        api.MapPut("/sites/{siteId}/header-actions", async (
+            string siteId, JsonElement body, ICommandDispatcher dispatcher, SiteOverview sites, CancellationToken ct) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            var site = sites.Get(sid);
+            if (site is null) return Results.NotFound(new { error = "unknown site" });
+
+            var locale = site.DefaultLocale;
+            if (Text(body, "locale") is { Length: > 0 } raw)
+            {
+                if (!Locale.TryCreate(raw, out locale)) return Results.BadRequest(new { error = $"'{raw}' is not a valid locale tag" });
+            }
+
+            HeaderAction? cta, quiet;
+            try
+            {
+                cta = ParseHeaderAction(body, "cta", locale);
+                quiet = ParseHeaderAction(body, "quiet", locale);
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+
+            var headerResult = await DispatchAs(dispatcher, actor, new SetHeaderActionsCmd(sid, cta, quiet), ct);
+            return headerResult.Succeeded
+                ? Results.Ok(new { siteId = sid.Compact, cta = cta is not null, quiet = quiet is not null })
+                : Results.BadRequest(new { error = "header actions change failed", details = headerResult.Errors });
+        });
+
         // The footer's fine-print line, on every page of the site. Null/empty text clears it.
         api.MapPut("/sites/{siteId}/copy-line", async (
             string siteId, CopyLineRequest? body, ICommandDispatcher dispatcher, SiteOverview sites, CancellationToken ct) =>
@@ -684,6 +736,28 @@ public static class AuthoringApi
     /// (<c>url</c>), or a group (<c>children</c>). Label/description are plain strings in the
     /// request's locale — the aggregate enforces which of them are mandatory.
     /// </summary>
+    /// <summary>One header action, or null when the property is absent or explicitly null - which is how an
+    /// action is CLEARED. Uses the same link parser and href allow-list as navigation and the footer.</summary>
+    internal static HeaderAction? ParseHeaderAction(JsonElement body, string property, Locale locale)
+    {
+        if (!body.TryGetProperty(property, out var element) || element.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+        {
+            return null;
+        }
+
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            throw new ArgumentException($"'{property}' must be a JSON object, or null to clear it.");
+        }
+
+        var label = Text(element, "label") is { Length: > 0 } text
+            ? LocalizedText.Of(locale, text)
+            : throw new ArgumentException($"A header '{property}' action needs a label.");
+
+        return new HeaderAction(label, ParseNavigationLink(element)
+            ?? throw new ArgumentException($"A header '{property}' action needs a pageId or a url."));
+    }
+
     /// <summary>One footer column: a heading plus its links. Reuses the navigation link parser, so a footer
     /// link accepts exactly the same <c>pageId</c> / <c>url</c> forms and the same href allow-list.</summary>
     internal static FooterLinkGroup ParseFooterGroup(JsonElement group, Locale locale)

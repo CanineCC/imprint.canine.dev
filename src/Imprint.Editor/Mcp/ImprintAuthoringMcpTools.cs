@@ -13,6 +13,8 @@ using ModelContextProtocol.Server;
 using AddNodeCmd = Imprint.Authoring.Features.Pages.AddNode.AddNode;
 using ChangeNavigationCmd = Imprint.Authoring.Features.Sites.ChangeNavigation.ChangeNavigation;
 using SetFooterCmd = Imprint.Authoring.Features.Sites.SetFooter.SetFooter;
+using AddLocaleCmd = Imprint.Authoring.Features.Sites.AddLocale.AddLocale;
+using SetHeaderActionsCmd = Imprint.Authoring.Features.Sites.SetHeaderActions.SetHeaderActions;
 using ChangeNodePropsCmd = Imprint.Authoring.Features.Pages.ChangeNodeProps.ChangeNodeProps;
 using ChangePageMetaCmd = Imprint.Authoring.Features.Pages.ChangePageMeta.ChangePageMeta;
 using ChangePageTitleCmd = Imprint.Authoring.Features.Pages.ChangePageTitle.ChangePageTitle;
@@ -492,6 +494,63 @@ public sealed class ImprintAuthoringMcpTools
 
         return await Dispatch(dispatcher, config, new SetFooterCmd(sid, groups), ct,
             () => new { ok = true, siteId = sid.Compact, groups = groups.Count, links = groups.Sum(g => g.Links.Count) });
+    }
+
+    [McpServerTool(Name = "add_locale")]
+    [Description("Add a language to the site, e.g. 'da'. Every text field is stored per locale, so this adds a slot rather than changing anything: existing content stays on the locale it was written in, and edit_text/set_page_meta can then write the translation by passing the new locale. Call get_site to see which locales exist.")]
+    public static async Task<object> AddLocale(
+        [Description("The site id.")] string siteId,
+        [Description("The locale tag to add, e.g. 'da' or 'de-AT'.")] string locale,
+        ICommandDispatcher dispatcher, IConfiguration config, SiteOverview sites, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        if (sites.Get(sid) is null) return Fail("unknown site");
+        if (string.IsNullOrWhiteSpace(locale)) return Fail("a locale is required, e.g. 'da'");
+
+        return await Dispatch(dispatcher, config, new AddLocaleCmd(sid, locale), ct,
+            () => new { ok = true, siteId = sid.Compact, locale });
+    }
+
+    [McpServerTool(Name = "set_header_actions")]
+    [Description("Set the header's primary CTA and quiet link. They share a slot and are set TOGETHER, so omitting one clears it - which is how a header link pointing at a page that no longer exists gets removed. Each is a JSON object: {\"label\":\"Contact\",\"pageId\":\"…\"} or {\"label\":\"Docs\",\"url\":\"https://…\"}. Pass null or omit to clear.")]
+    public static async Task<object> SetHeaderActions(
+        [Description("The site id.")] string siteId,
+        [Description("The primary CTA as a JSON object, or null/omitted to clear it.")] string? ctaJson,
+        [Description("The quiet link as a JSON object, or null/omitted to clear it.")] string? quietJson,
+        [Description("Optional locale for the labels (default: the site's default locale).")] string? locale,
+        ICommandDispatcher dispatcher, IConfiguration config, SiteOverview sites, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        var site = sites.Get(sid);
+        if (site is null) return Fail("unknown site");
+        var labelLocale = site.DefaultLocale;
+        if (!string.IsNullOrWhiteSpace(locale) && !Locale.TryCreate(locale, out labelLocale)) return Fail($"'{locale}' is not a valid locale tag");
+
+        HeaderAction? cta, quiet;
+        try
+        {
+            cta = ParseAction(ctaJson, "cta", labelLocale);
+            quiet = ParseAction(quietJson, "quiet", labelLocale);
+        }
+        catch (JsonException)
+        {
+            return Fail("ctaJson and quietJson must each be a JSON object, or omitted");
+        }
+        catch (ArgumentException ex)
+        {
+            return Fail(ex.Message);
+        }
+
+        return await Dispatch(dispatcher, config, new SetHeaderActionsCmd(sid, cta, quiet), ct,
+            () => new { ok = true, siteId = sid.Compact, cta = cta is not null, quiet = quiet is not null });
+
+        static HeaderAction? ParseAction(string? json, string name, Locale locale)
+        {
+            if (string.IsNullOrWhiteSpace(json) || json.Trim() is "null") return null;
+            using var document = JsonDocument.Parse(json);
+            var wrapper = JsonDocument.Parse($"{{\"{name}\":{json}}}");
+            return AuthoringApi.ParseHeaderAction(wrapper.RootElement, name, locale);
+        }
     }
 
     [McpServerTool(Name = "set_copy_line")]
