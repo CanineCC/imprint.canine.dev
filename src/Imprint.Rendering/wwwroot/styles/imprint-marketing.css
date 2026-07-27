@@ -614,7 +614,12 @@
 /* The measure cap above applies to every .ip-prose, which silently squeezed the TABLE to a reading
    column and left the right half of the section empty ("the ui tilts"). A table is not prose: it
    spans. Its intro paragraph still reads at measure. */
-.ip-ap-table-list > .ip-stack > .ip-prose:has(ul) { max-width: none; }
+/* Must out-specify the generic lede rule above, which is
+   [class*="ip-ap-"] > .ip-stack > .ip-prose:not(:has(> p > strong:only-child)) and therefore (0,4,1).
+   The original exception here was (0,3,1) and silently lost, so every table on every site kept the
+   reading-column cap this rule exists to remove - the squeeze it documents was never actually fixed.
+   Repeating the :not() clause raises this to (0,4,2) and makes the intent hold. */
+.ip-ap-table-list > .ip-stack > .ip-prose:has(ul):not(:has(> p > strong:only-child)) { max-width: none; }
 /* A REAL table. The content model has no <table> — canonical rich text is p/ul/ol/li/strong/em/a/br —
    so each CELL is its own <li> and the grid does the rest. Column count defaults to 3; a section
    whose anchor ends in "-cols4" declares four (the subprocessor list). Below 40rem every table
