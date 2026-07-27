@@ -26,6 +26,7 @@ using MoveNodeCmd = Imprint.Authoring.Features.Pages.MoveNode.MoveNode;
 using PublishAllStaleCmd = Imprint.Authoring.Features.Pages.PublishAllStale.PublishAllStale;
 using PublishPageCmd = Imprint.Authoring.Features.Pages.PublishPage.PublishPage;
 using RemoveNodeCmd = Imprint.Authoring.Features.Pages.RemoveNode.RemoveNode;
+using RemoveLocaleCmd = Imprint.Authoring.Features.Sites.RemoveLocale.RemoveLocale;
 using SeedLocaleCmd = Imprint.Authoring.Features.Sites.SeedLocale.SeedLocale;
 using SetCopyLineCmd = Imprint.Authoring.Features.Sites.SetCopyLine.SetCopyLine;
 using SetFaviconCmd = Imprint.Authoring.Features.Sites.SetFavicon.SetFavicon;
@@ -575,6 +576,21 @@ public sealed class ImprintAuthoringMcpTools
         var updated = (site.CopyLine?.Text ?? LocalizedText.Empty).With(lineLocale, text ?? string.Empty);
         return await Dispatch(dispatcher, config, new SetCopyLineCmd(sid, updated.IsEmpty ? null : new CopyLine(updated)), ct,
             () => new { ok = true, siteId = sid.Compact, copyLine = Localized(updated) });
+    }
+
+    [McpServerTool(Name = "remove_locale")]
+    [Description("Stop publishing a language. Use it when a locale was added but never translated — an unseeded locale renders the DEFAULT language under its own path and looks finished while being empty, which is worse than not offering the language at all. Nothing is lost: translations stay in history and come back if the locale is re-added. The default locale cannot be removed.")]
+    public static async Task<object> RemoveLocale(
+        [Description("The site id.")] string siteId,
+        [Description("The locale tag to stop publishing, e.g. 'da'.")] string locale,
+        ICommandDispatcher dispatcher, IConfiguration config, SiteOverview sites, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        if (sites.Get(sid) is null) return Fail("unknown site");
+        if (!Locale.TryCreate(locale, out _)) return Fail($"'{locale}' is not a valid locale tag");
+
+        return await Dispatch(dispatcher, config, new RemoveLocaleCmd(sid, locale), ct,
+            () => new { ok = true, siteId = sid.Compact, removed = locale });
     }
 
     [McpServerTool(Name = "seed_locale")]

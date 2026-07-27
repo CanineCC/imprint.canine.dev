@@ -12,6 +12,7 @@ using AddNodeCmd = Imprint.Authoring.Features.Pages.AddNode.AddNode;
 using ChangeNavigationCmd = Imprint.Authoring.Features.Sites.ChangeNavigation.ChangeNavigation;
 using SetFooterCmd = Imprint.Authoring.Features.Sites.SetFooter.SetFooter;
 using AddLocaleCmd = Imprint.Authoring.Features.Sites.AddLocale.AddLocale;
+using RemoveLocaleCmd = Imprint.Authoring.Features.Sites.RemoveLocale.RemoveLocale;
 using SeedLocaleCmd = Imprint.Authoring.Features.Sites.SeedLocale.SeedLocale;
 using SetHeaderActionsCmd = Imprint.Authoring.Features.Sites.SetHeaderActions.SetHeaderActions;
 using ChangeNodePropsCmd = Imprint.Authoring.Features.Pages.ChangeNodeProps.ChangeNodeProps;
@@ -515,6 +516,22 @@ public static class AuthoringApi
             return localeResult.Succeeded
                 ? Results.Ok(new { siteId = sid.Compact, locale })
                 : Results.BadRequest(new { error = "add locale failed", details = localeResult.Errors });
+        });
+
+        // Stop publishing a language. The counterpart of POST /locales, and the reason it exists: a locale added
+        // and never translated renders the DEFAULT language under its own path, so it looks finished while being
+        // empty. Removing it is not destructive - translations stay in the page streams and return if the locale
+        // is re-added, which is what makes this the safe move when a language is not ready yet.
+        api.MapDelete("/sites/{siteId}/locales/{locale}", async (
+            string siteId, string locale, ICommandDispatcher dispatcher, SiteOverview sites, CancellationToken ct) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            if (sites.Get(sid) is null) return Results.NotFound(new { error = "unknown site" });
+
+            var removeResult = await DispatchAs(dispatcher, actor, new RemoveLocaleCmd(sid, locale), ct);
+            return removeResult.Succeeded
+                ? Results.Ok(new { siteId = sid.Compact, removed = locale })
+                : Results.BadRequest(new { error = "remove locale failed", details = removeResult.Errors });
         });
 
         // Fill a locale's empty text from another one, across the chrome and every page. Run it straight after
