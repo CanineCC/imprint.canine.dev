@@ -10,6 +10,7 @@ using Imprint.Editor.Auth;
 using Imprint.EventSourcing;
 using AddNodeCmd = Imprint.Authoring.Features.Pages.AddNode.AddNode;
 using ChangeNavigationCmd = Imprint.Authoring.Features.Sites.ChangeNavigation.ChangeNavigation;
+using SetFooterCmd = Imprint.Authoring.Features.Sites.SetFooter.SetFooter;
 using ChangeNodePropsCmd = Imprint.Authoring.Features.Pages.ChangeNodeProps.ChangeNodeProps;
 using ChangePageMetaCmd = Imprint.Authoring.Features.Pages.ChangePageMeta.ChangePageMeta;
 using ChangePageTitleCmd = Imprint.Authoring.Features.Pages.ChangePageTitle.ChangePageTitle;
@@ -455,6 +456,42 @@ public static class AuthoringApi
                 : Results.BadRequest(new { error = "navigation change failed", details = result.Errors });
         });
 
+        // The footer's named link columns. Like navigation, the whole footer travels in one call: it is small,
+        // the editor rewrites it as a unit, and a partial-patch API over nested groups would be far easier to
+        // corrupt than to use. Read /sites/{id} first and PUT back the shape you want.
+        api.MapPut("/sites/{siteId}/footer", async (
+            string siteId, JsonElement body, ICommandDispatcher dispatcher, SiteOverview sites, CancellationToken ct) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            var site = sites.Get(sid);
+            if (site is null) return Results.NotFound(new { error = "unknown site" });
+            if (!body.TryGetProperty("groups", out var groups) || groups.ValueKind != JsonValueKind.Array)
+            {
+                return Results.BadRequest(new { error = "a 'groups' array is required" });
+            }
+
+            var locale = site.DefaultLocale;
+            if (Text(body, "locale") is { Length: > 0 } raw)
+            {
+                if (!Locale.TryCreate(raw, out locale)) return Results.BadRequest(new { error = $"'{raw}' is not a valid locale tag" });
+            }
+
+            List<FooterLinkGroup> parsed;
+            try
+            {
+                parsed = [.. groups.EnumerateArray().Select(group => ParseFooterGroup(group, locale))];
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+
+            var footerResult = await DispatchAs(dispatcher, actor, new SetFooterCmd(sid, parsed), ct);
+            return footerResult.Succeeded
+                ? Results.Ok(new { siteId = sid.Compact, groups = parsed.Count, links = parsed.Sum(g => g.Links.Count) })
+                : Results.BadRequest(new { error = "footer change failed", details = footerResult.Errors });
+        });
+
         // The footer's fine-print line, on every page of the site. Null/empty text clears it.
         api.MapPut("/sites/{siteId}/copy-line", async (
             string siteId, CopyLineRequest? body, ICommandDispatcher dispatcher, SiteOverview sites, CancellationToken ct) =>
@@ -647,6 +684,39 @@ public static class AuthoringApi
     /// (<c>url</c>), or a group (<c>children</c>). Label/description are plain strings in the
     /// request's locale — the aggregate enforces which of them are mandatory.
     /// </summary>
+    /// <summary>One footer column: a heading plus its links. Reuses the navigation link parser, so a footer
+    /// link accepts exactly the same <c>pageId</c> / <c>url</c> forms and the same href allow-list.</summary>
+    internal static FooterLinkGroup ParseFooterGroup(JsonElement group, Locale locale)
+    {
+        if (group.ValueKind != JsonValueKind.Object)
+        {
+            throw new ArgumentException("Each footer group must be a JSON object.");
+        }
+
+        var heading = Text(group, "heading") is { Length: > 0 } text
+            ? LocalizedText.Of(locale, text)
+            : throw new ArgumentException("A footer group needs a heading.");
+
+        if (!group.TryGetProperty("links", out var links) || links.ValueKind != JsonValueKind.Array)
+        {
+            throw new ArgumentException($"Footer group '{Text(group, "heading")}' needs a 'links' array.");
+        }
+
+        return new FooterLinkGroup(heading, [.. links.EnumerateArray().Select(link => ParseFooterLink(link, locale))]);
+    }
+
+    private static FooterLink ParseFooterLink(JsonElement link, Locale locale)
+    {
+        if (link.ValueKind != JsonValueKind.Object)
+        {
+            throw new ArgumentException("Each footer link must be a JSON object.");
+        }
+
+        return new FooterLink(
+            Text(link, "label") is { Length: > 0 } label ? LocalizedText.Of(locale, label) : null,
+            ParseNavigationLink(link) ?? throw new ArgumentException("A footer link needs a pageId or a url."));
+    }
+
     internal static NavigationItem ParseNavigationItem(JsonElement item, Locale locale)
     {
         if (item.ValueKind != JsonValueKind.Object)

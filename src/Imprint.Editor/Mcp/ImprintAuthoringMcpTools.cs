@@ -12,6 +12,7 @@ using Microsoft.Extensions.Configuration;
 using ModelContextProtocol.Server;
 using AddNodeCmd = Imprint.Authoring.Features.Pages.AddNode.AddNode;
 using ChangeNavigationCmd = Imprint.Authoring.Features.Sites.ChangeNavigation.ChangeNavigation;
+using SetFooterCmd = Imprint.Authoring.Features.Sites.SetFooter.SetFooter;
 using ChangeNodePropsCmd = Imprint.Authoring.Features.Pages.ChangeNodeProps.ChangeNodeProps;
 using ChangePageMetaCmd = Imprint.Authoring.Features.Pages.ChangePageMeta.ChangePageMeta;
 using ChangePageTitleCmd = Imprint.Authoring.Features.Pages.ChangePageTitle.ChangePageTitle;
@@ -457,6 +458,40 @@ public sealed class ImprintAuthoringMcpTools
 
         return await Dispatch(dispatcher, config, new ChangeNavigationCmd(sid, items), ct,
             () => new { ok = true, siteId = sid.Compact, items = items.Count });
+    }
+
+    [McpServerTool(Name = "set_footer")]
+    [Description("Replace the site's whole footer — call get_site first and PUT back the columns you want. groupsJson is a JSON array of columns: {\"heading\":\"Product\",\"links\":[{\"label\":\"Pricing\",\"pageId\":\"…\"},{\"label\":\"Docs\",\"url\":\"https://…\"}]}. Use this to fix a broken footer link — the footer is otherwise only editable in the interactive editor.")]
+    public static async Task<object> SetFooter(
+        [Description("The site id.")] string siteId,
+        [Description("The footer columns as a JSON array.")] string groupsJson,
+        [Description("Optional locale for the headings and labels (default: the site's default locale).")] string? locale,
+        ICommandDispatcher dispatcher, IConfiguration config, SiteOverview sites, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        var site = sites.Get(sid);
+        if (site is null) return Fail("unknown site");
+        var labelLocale = site.DefaultLocale;
+        if (!string.IsNullOrWhiteSpace(locale) && !Locale.TryCreate(locale, out labelLocale)) return Fail($"'{locale}' is not a valid locale tag");
+
+        List<FooterLinkGroup> groups;
+        try
+        {
+            using var document = JsonDocument.Parse(groupsJson ?? string.Empty);
+            if (document.RootElement.ValueKind != JsonValueKind.Array) return Fail("groupsJson must be a JSON array");
+            groups = [.. document.RootElement.EnumerateArray().Select(group => AuthoringApi.ParseFooterGroup(group, labelLocale))];
+        }
+        catch (JsonException)
+        {
+            return Fail("groupsJson must be a JSON array");
+        }
+        catch (ArgumentException ex)
+        {
+            return Fail(ex.Message);
+        }
+
+        return await Dispatch(dispatcher, config, new SetFooterCmd(sid, groups), ct,
+            () => new { ok = true, siteId = sid.Compact, groups = groups.Count, links = groups.Sum(g => g.Links.Count) });
     }
 
     [McpServerTool(Name = "set_copy_line")]
