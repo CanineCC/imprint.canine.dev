@@ -351,10 +351,8 @@
   letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent);
 }
 
-/* The kicker carries font-size: 0 above, to collapse the whitespace text nodes around its <strong>.
-   That makes ANY ch-based max-width compute to zero, because ch is relative to font-size - so the
-   measure cap the centred appearances apply to .ip-prose wrapped the kicker at every space
-   ("HVEM / VI / ER" on three lines). A kicker is one short line by construction and needs no cap. */
+/* font-size: 0 above makes any ch-based max-width compute to ZERO, which wrapped the kicker at every
+   space. It is one short line by construction, so it takes no cap. */
 [class*="ip-ap-"] > .ip-stack > .ip-prose:has(> p > strong:only-child):first-child { max-width: none; }
 
 /* Section headings + lede. h1 is hero-only; h2 is the section title. */
@@ -620,11 +618,8 @@
 /* The measure cap above applies to every .ip-prose, which silently squeezed the TABLE to a reading
    column and left the right half of the section empty ("the ui tilts"). A table is not prose: it
    spans. Its intro paragraph still reads at measure. */
-/* Must out-specify the generic lede rule above, which is
-   [class*="ip-ap-"] > .ip-stack > .ip-prose:not(:has(> p > strong:only-child)) and therefore (0,4,1).
-   The original exception here was (0,3,1) and silently lost, so every table on every site kept the
-   reading-column cap this rule exists to remove - the squeeze it documents was never actually fixed.
-   Repeating the :not() clause raises this to (0,4,2) and makes the intent hold. */
+/* The :not() is required: without it this is (0,3,1) and LOSES to the lede rule's (0,4,1), which is
+   why the squeeze described above was never actually fixed. */
 .ip-ap-table-list > .ip-stack > .ip-prose:has(ul):not(:has(> p > strong:only-child)) { max-width: none; }
 /* A REAL table. The content model has no <table> — canonical rich text is p/ul/ol/li/strong/em/a/br —
    so each CELL is its own <li> and the grid does the rest. Column count defaults to 3; a section
@@ -635,9 +630,7 @@
   display: grid; grid-template-columns: repeat(var(--ip-table-cols, 3), minmax(0, 1fr));
 }
 [id$="-cols4"] .ip-prose ul { --ip-table-cols: 4; }
-/* Two columns for a label/value table - a timeline (date, what happened), a spec sheet, a glossary.
-   The default of three is right for a comparison; a two-column table forced into three leaves a dead
-   column that reads as a rendering fault. */
+/* Label/value tables (a timeline, a spec sheet) are two columns; three leaves a dead one. */
 [id$="-cols2"] .ip-prose ul { --ip-table-cols: 2; }
 @container (max-width: 40rem) {
   .ip-ap-table-list .ip-prose ul { grid-template-columns: 1fr; }
