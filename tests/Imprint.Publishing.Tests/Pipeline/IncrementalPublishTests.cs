@@ -28,6 +28,50 @@ public sealed class IncrementalPublishTests
     }
 
     [Fact]
+    public async Task A_manifest_from_a_different_renderer_republishes_every_page()
+    {
+        // The failure this closes: a change to a view reached no published page, because
+        // nothing about the *renderer* fed staleness. The site kept serving markup its own
+        // code no longer produced, and nothing about the output said so.
+        await using var host = new PublishingTestHost();
+        await TemplatedSiteScenario.Build(host);
+        var first = await host.Publisher.Synchronize();
+        Assert.True(first.PagesRendered > 0);
+
+        var path = host.FullPath(PublishManifest.FileName);
+        File.WriteAllBytes(path, (PublishManifest.Load(path)! with { RendererVersion = "a-different-build" }).ToUtf8Json());
+
+        var report = await host.Publisher.Synchronize();
+
+        Assert.Equal(first.PagesRendered, report.PagesRendered);
+    }
+
+    [Fact]
+    public async Task Republishing_from_a_different_renderer_still_writes_nothing_unchanged()
+    {
+        // What the guarantee above costs: re-rendering is not re-writing. Markup that comes
+        // out identical touches no file, so correctness here is paid for in CPU, not churn.
+        await using var host = new PublishingTestHost();
+        await TemplatedSiteScenario.Build(host);
+        await host.Publisher.Synchronize();
+        var before = host.SnapshotWriteTimes();
+
+        var path = host.FullPath(PublishManifest.FileName);
+        File.WriteAllBytes(path, (PublishManifest.Load(path)! with { RendererVersion = "a-different-build" }).ToUtf8Json());
+
+        var report = await host.Publisher.Synchronize();
+
+        Assert.True(report.PagesRendered > 0);
+
+        // Only the manifest is rewritten — it is the thing that was wrong. Every page file
+        // is byte-identical, so not one of them is touched.
+        foreach (var (file, time) in before.Where(pair => pair.Key != PublishManifest.FileName))
+        {
+            Assert.Equal(time, host.SnapshotWriteTimes()[file]);
+        }
+    }
+
+    [Fact]
     public async Task Unpublish_removes_files_locale_variants_manifest_entry_and_nav_links()
     {
         await using var host = new PublishingTestHost();

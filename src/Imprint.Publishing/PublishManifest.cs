@@ -34,6 +34,22 @@ public sealed record PublishManifest
     /// <summary>hash16 of the published stylesheet's content (also part of its file name).</summary>
     public string CssHash { get; init; } = "";
 
+    /// <summary>
+    /// Identity of the renderer that produced this output. The manifest already tracked
+    /// every other input — content, chrome, assets, stylesheet, widget bundles — but not
+    /// the code that turns them into markup. So a change to a view (a new attribute, a
+    /// different element) reached no published page until something else happened to make
+    /// that page stale, and the site kept serving markup its own renderer no longer
+    /// produced. Recording the renderer makes a deploy that changes rendering republish
+    /// everything, which is what "the output reflects the current code" has to mean.
+    /// </summary>
+    /// <remarks>
+    /// Empty on a manifest written before this field existed. That reads as a mismatch and
+    /// republishes once — the correct migration, and free, because re-rendering to
+    /// byte-identical output writes nothing (the zero-rewrite guarantee).
+    /// </remarks>
+    public string RendererVersion { get; init; } = "";
+
     /// <summary>Tag → bundle content hash16, for widgets actually used on published pages.</summary>
     public IReadOnlyDictionary<string, string> WidgetBundles { get; init; } =
         new SortedDictionary<string, string>(StringComparer.Ordinal);

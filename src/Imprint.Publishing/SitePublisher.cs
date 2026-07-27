@@ -105,6 +105,16 @@ public sealed class SitePublisher(
         private readonly Dictionary<BlockDefinitionId, string> _blockHashes = [];
 
         private readonly Dictionary<PageId, string> _errors = [];
+        /// <summary>
+        /// The renderer's identity, as the module version id of the assembly the node views
+        /// live in — a fresh GUID on every build that actually changes it, which is exactly
+        /// the question being asked: "is this the code that produced the published markup?"
+        /// Nothing weaker works: an assembly version is hand-maintained and would be forgotten,
+        /// and hashing the views would miss a change in anything they call.
+        /// </summary>
+        private static readonly string RendererVersion =
+            typeof(RenderContext).Assembly.ManifestModule.ModuleVersionId.ToString("N")[..16];
+
         private readonly HashSet<PageId> _failed = [];
         private readonly HashSet<string> _written = new(StringComparer.Ordinal);
         private int _filesWritten;
@@ -443,6 +453,7 @@ public sealed class SitePublisher(
                     || old.RenderedAtSiteVersion < _siteVersion
                     || chromeStale
                     || oldManifest.CssHash != cssHash
+                    || oldManifest.RendererVersion != RendererVersion
                     || !old.Paths.SequenceEqual(paths, StringComparer.Ordinal)
                     || !old.AssetHashes.SequenceEqual(assetHashes, StringComparer.Ordinal)
                     || !old.Dependencies.SequenceEqual(dependencies, StringComparer.Ordinal)
@@ -1086,6 +1097,7 @@ public sealed class SitePublisher(
                 SiteVersion = _siteVersion,
                 Pages = entries,
                 CssHash = cssHash,
+                RendererVersion = RendererVersion,
                 WidgetBundles = new SortedDictionary<string, string>(
                     _widgetFiles.ToDictionary(pair => pair.Key, pair => pair.Value.Hash), StringComparer.Ordinal),
             };
