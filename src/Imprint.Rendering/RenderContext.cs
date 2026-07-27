@@ -38,6 +38,15 @@ public sealed record RenderContext
 
     /// <summary>Public URL of a widget's ES-module bundle (hashed); static mode only.</summary>
     public Func<string, string?>? ResolveWidgetBundle { get; init; }
+
+    /// <summary>
+    /// Every in-page id already emitted on this page, so a heading can tell whether its
+    /// slug is taken. Deliberately mutable inside an otherwise immutable context: ids are
+    /// unique per rendered document, and a context is built per page per locale, so this
+    /// set has exactly the right lifetime. Sections register their anchors as they render,
+    /// which is what stops a heading from stealing an anchor someone already links to.
+    /// </summary>
+    public HashSet<string> UsedAnchors { get; init; } = [];
 }
 
 /// <summary>

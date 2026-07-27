@@ -11,8 +11,46 @@
   private void RenderHeading(RenderTreeBuilder builder)
   {
     builder.OpenElement(0, $"h{Math.Clamp(Node.Level, 1, 4)}");
-    builder.AddMultipleAttributes(1, NodeAttributes);
-    builder.AddContent(2, Resolve(Node.Text));
+    if (AnchorId is { } id)
+    {
+      builder.AddAttribute(1, "id", id);
+    }
+
+    builder.AddMultipleAttributes(2, NodeAttributes);
+    builder.AddContent(3, Resolve(Node.Text));
     builder.CloseElement();
+  }
+
+  // A stable in-page id for every subheading, so a long document can carry a contents list
+  // and a reader can link to one clause of it. The theme has assumed this for a while —
+  // .ip-ap-doc h2 already reserves scroll-margin for the jump; only the id was missing.
+  //
+  // Derived from the DEFAULT locale's words, never the rendered locale's, so
+  // /page-dpa/#subprocessors means the same clause on every translation of the page. Ids
+  // are not localized for the same reason links are not: an address written down once has
+  // to resolve wherever it is followed.
+  //
+  // h1 is skipped: a page has one, nobody links to it, and it would only compete with the
+  // section anchor around it for a name. On a collision the id is suffixed rather than
+  // repeated, because two elements sharing an id means the browser silently jumps to
+  // whichever came first.
+  private string? AnchorId
+  {
+    get
+    {
+      if (Node.Level <= 1 ||
+          SectionAnchor.ForHeading(Node.Text.Resolve(Ctx.DefaultLocale, Ctx.DefaultLocale)) is not { } slug)
+      {
+        return null;
+      }
+
+      var id = slug;
+      for (var n = 2; !Ctx.UsedAnchors.Add(id); n++)
+      {
+        id = $"{slug}-{n}";
+      }
+
+      return id;
+    }
   }
 }

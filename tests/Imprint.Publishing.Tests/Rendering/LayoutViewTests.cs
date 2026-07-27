@@ -127,9 +127,45 @@ public sealed class LayoutViewTests
 
         var html = await RenderHarness.RenderNode(Static, heading);
 
-        Assert.Contains("<h3>", html);
+        Assert.Contains("<h3 id=\"fish-chips\">", html);
         Assert.Contains("Fish &amp; Chips", html);
         Assert.Contains("</h3>", html);
+    }
+
+    [Fact]
+    public async Task Heading_id_drops_the_clause_number_so_a_numbered_legal_heading_is_linkable()
+    {
+        var html = await RenderHarness.RenderNode(Static, SampleNodes.Heading("6. Subprocessors", level: 2));
+
+        Assert.Contains("id=\"subprocessors\"", html);
+    }
+
+    [Fact]
+    public async Task Heading_id_is_the_same_in_every_locale()
+    {
+        // The whole point: a link into a translated document has to reach the same clause.
+        var heading = SampleNodes.Heading("Data protection");
+
+        Assert.Contains("id=\"data-protection\"", await RenderHarness.RenderNode(Static with { UsedAnchors = [] }, heading));
+        Assert.Contains("id=\"data-protection\"",
+            await RenderHarness.RenderNode(Static with { Locale = RenderHarness.Da, UsedAnchors = [] }, heading));
+    }
+
+    [Fact]
+    public async Task Heading_h1_gets_no_id()
+    {
+        var html = await RenderHarness.RenderNode(Static, SampleNodes.Heading("The title", level: 1));
+
+        Assert.DoesNotContain("id=", html);
+    }
+
+    [Fact]
+    public async Task Two_headings_with_the_same_words_get_distinct_ids()
+    {
+        var ctx = Static with { UsedAnchors = [] };
+
+        Assert.Contains("id=\"contact\"", await RenderHarness.RenderNode(ctx, SampleNodes.Heading("Contact")));
+        Assert.Contains("id=\"contact-2\"", await RenderHarness.RenderNode(ctx, SampleNodes.Heading("Contact")));
     }
 
     [Fact]

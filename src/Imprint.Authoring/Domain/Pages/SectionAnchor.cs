@@ -12,7 +12,33 @@ namespace Imprint.Authoring.Domain.Pages;
 /// </summary>
 public static class SectionAnchor
 {
-    public static string? Sanitize(string? anchor)
+    public static string? Sanitize(string? anchor) =>
+        Slug(anchor) is { } slug && slug[0] is >= 'a' and <= 'z' ? slug : null;
+
+    /// <summary>
+    /// The same slug, for an id derived from a heading's own words rather than an authored
+    /// anchor. It differs in one way: a leading run of digits is dropped instead of
+    /// rejecting the whole value, because a numbered legal heading ("6. Subprocessors")
+    /// must still yield a usable id — <c>#subprocessors</c>. The number stays visible in
+    /// the heading, so nothing is lost for someone citing a clause.
+    /// </summary>
+    public static string? ForHeading(string? text)
+    {
+        if (Slug(text) is not { } slug)
+        {
+            return null;
+        }
+
+        var start = 0;
+        while (start < slug.Length && slug[start] is not (>= 'a' and <= 'z'))
+        {
+            start++;
+        }
+
+        return start < slug.Length ? slug[start..] : null;
+    }
+
+    private static string? Slug(string? anchor)
     {
         if (string.IsNullOrWhiteSpace(anchor))
         {
@@ -39,12 +65,11 @@ public static class SectionAnchor
             }
         }
 
-        if (sb.Length == 0 || sb[0] is not (>= 'a' and <= 'z'))
+        if (sb.Length == 0)
         {
             return null;
         }
 
-        var value = sb.Length <= 80 ? sb.ToString() : sb.ToString(0, 80).TrimEnd('-');
-        return value;
+        return sb.Length <= 80 ? sb.ToString() : sb.ToString(0, 80).TrimEnd('-');
     }
 }

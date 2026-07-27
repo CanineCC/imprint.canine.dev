@@ -27,6 +27,20 @@
     SectionAppearanceClass.For(Node.Appearance));
 
   // The in-page anchor, sanitized at render time so a stored value can never emit a
-  // broken or unsafe id; null renders no attribute at all (Blazor omits it).
-  private string? AnchorId => SectionAnchor.Sanitize(Node.Anchor);
+  // broken or unsafe id; null renders no attribute at all (Blazor omits it). Claiming it
+  // in the context is what stops a later heading minting the same id from its own words:
+  // an authored anchor is the one people already link to, so it wins the name.
+  private string? AnchorId
+  {
+    get
+    {
+      var id = SectionAnchor.Sanitize(Node.Anchor);
+      if (id is not null)
+      {
+        Ctx.UsedAnchors.Add(id);
+      }
+
+      return id;
+    }
+  }
 }
