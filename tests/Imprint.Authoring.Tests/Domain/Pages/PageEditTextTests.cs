@@ -127,6 +127,25 @@ public sealed class PageEditTextTests
     }
 
     [Fact]
+    public void EditText_richtext_accepts_a_link_to_a_section_of_this_page()
+    {
+        var outcome = Spec().When(p =>
+            p.EditText(_richText.Id, "html", En, "<p><a href=\"#independence\">Independence</a></p>"));
+
+        var richText = Assert.IsType<RichTextNode>(outcome.Aggregate.Tree.Find(_richText.Id));
+        Assert.Equal("<p><a href=\"#independence\">Independence</a></p>", richText.Html.Get(En));
+    }
+
+    [Theory]
+    [InlineData("#")]                      // a fragment that names nothing
+    [InlineData("#two words")]             // not a valid id, and would break the attribute
+    [InlineData("javascript:alert(1)#x")]  // a '#' further in must not rescue a disallowed scheme
+    public void EditText_richtext_rejects_a_malformed_fragment(string href) =>
+        Spec()
+            .When(p => p.EditText(_richText.Id, "html", En, $"<p><a href=\"{href}\">x</a></p>"))
+            .ThenFails("Links must be");
+
+    [Fact]
     public void EditText_plain_value_over_500_characters_is_rejected()
     {
         Spec()

@@ -30,5 +30,8 @@ else
     _ => null,
   };
 
-  private string? Rel => Node.LinkTo is ExternalLink ? "noopener" : null;
+  // Only a link that actually leaves the page needs noopener; a #section on this page does
+  // not, and claiming it anyway reads as an off-site link to anyone inspecting the markup.
+  private string? Rel =>
+    Node.LinkTo is ExternalLink { Url: var url } && !url.StartsWith('#') ? "noopener" : null;
 }

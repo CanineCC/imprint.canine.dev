@@ -234,12 +234,22 @@ public static partial class CanonicalHtml
 
         return IsAllowedHref(value.ToString())
             ? null
-            : "Links must be https, http, mailto or a page reference.";
+            : "Links must be https, http, mailto, a page reference or a #section on this page.";
     }
 
     /// <summary>Scheme allowlist, checked on the entity-decoded value. Never a blocklist.</summary>
     public static bool IsAllowedHref(string href)
     {
+        // A same-page fragment. Safe by construction — no scheme and no host, so it cannot
+        // leave the page it is written on, which is also what makes it the only correct way
+        // to link a one-page site's own sections: an absolute URL to a section would send a
+        // reader of one locale to the same section on the DEFAULT locale's page, in the
+        // wrong language. Links are not localized; a fragment does not need to be.
+        if (href.StartsWith('#'))
+        {
+            return href.Length > 1 && !href.Contains(' ', StringComparison.Ordinal);
+        }
+
         if (href.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
             href.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
         {
