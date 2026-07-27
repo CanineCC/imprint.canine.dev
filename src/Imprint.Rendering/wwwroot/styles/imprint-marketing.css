@@ -351,6 +351,12 @@
   letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent);
 }
 
+/* The kicker carries font-size: 0 above, to collapse the whitespace text nodes around its <strong>.
+   That makes ANY ch-based max-width compute to zero, because ch is relative to font-size - so the
+   measure cap the centred appearances apply to .ip-prose wrapped the kicker at every space
+   ("HVEM / VI / ER" on three lines). A kicker is one short line by construction and needs no cap. */
+[class*="ip-ap-"] > .ip-stack > .ip-prose:has(> p > strong:only-child):first-child { max-width: none; }
+
 /* Section headings + lede. h1 is hero-only; h2 is the section title. */
 [class*="ip-ap-"] h2 {
   font-size: var(--mk-h2); line-height: 1.12; letter-spacing: -0.02em; color: var(--heading);
