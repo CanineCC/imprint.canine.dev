@@ -12,6 +12,7 @@ using AddNodeCmd = Imprint.Authoring.Features.Pages.AddNode.AddNode;
 using ChangeNavigationCmd = Imprint.Authoring.Features.Sites.ChangeNavigation.ChangeNavigation;
 using SetFooterCmd = Imprint.Authoring.Features.Sites.SetFooter.SetFooter;
 using AddLocaleCmd = Imprint.Authoring.Features.Sites.AddLocale.AddLocale;
+using SeedLocaleCmd = Imprint.Authoring.Features.Sites.SeedLocale.SeedLocale;
 using SetHeaderActionsCmd = Imprint.Authoring.Features.Sites.SetHeaderActions.SetHeaderActions;
 using ChangeNodePropsCmd = Imprint.Authoring.Features.Pages.ChangeNodeProps.ChangeNodeProps;
 using ChangePageMetaCmd = Imprint.Authoring.Features.Pages.ChangePageMeta.ChangePageMeta;
@@ -510,6 +511,23 @@ public static class AuthoringApi
             return localeResult.Succeeded
                 ? Results.Ok(new { siteId = sid.Compact, locale })
                 : Results.BadRequest(new { error = "add locale failed", details = localeResult.Errors });
+        });
+
+        // Fill a locale's empty text from another one, across the chrome and every page. Run it straight after
+        // adding a locale: text resolves through the default locale, so an unseeded locale renders the default
+        // language and looks finished while being a copy. This makes the copy real, and translating an edit.
+        // Gaps only, so it is safe to re-run - work already translated is never overwritten by its original.
+        api.MapPost("/sites/{siteId}/locales/{locale}/seed-from/{source}", async (
+            string siteId, string locale, string source,
+            ICommandDispatcher dispatcher, SiteOverview sites, CancellationToken ct) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            if (sites.Get(sid) is null) return Results.NotFound(new { error = "unknown site" });
+
+            var seedResult = await DispatchAs(dispatcher, actor, new SeedLocaleCmd(sid, locale, source), ct);
+            return seedResult.Succeeded
+                ? Results.Ok(new { siteId = sid.Compact, seeded = locale, from = source })
+                : Results.BadRequest(new { error = "seed locale failed", details = seedResult.Errors });
         });
 
         // The header's primary CTA and its quiet link. They share a slot and are set together, so omitting one

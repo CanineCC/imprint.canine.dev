@@ -123,6 +123,59 @@ public sealed class Site : AggregateRoot
         Raise(new SiteLocaleRemoved(locale));
     }
 
+    /// <summary>
+    /// Copy the site chrome's text — navigation labels, footer headings and links, the
+    /// header actions and the fine-print line — from <paramref name="source"/> into
+    /// <paramref name="target"/> wherever the target has nothing yet.
+    /// </summary>
+    /// <remarks>
+    /// The page counterpart of this lives on <c>Page</c>; chrome needs its own because it
+    /// is a different aggregate, and leaving it out is the more visible half of the bug:
+    /// unseeded chrome resolves to the default locale, so a translated page would carry a
+    /// header and footer in the wrong language.
+    /// <para>
+    /// It rebuilds the structures and hands them to the ordinary setters, so every
+    /// invariant those enforce — a group needs a label, an external link needs a label —
+    /// is enforced here too, and no new event is introduced.
+    /// </para>
+    /// </remarks>
+    public void SeedChromeLocale(Locale target, Locale source)
+    {
+        if (target == source)
+        {
+            throw new DomainException("A locale cannot be seeded from itself.");
+        }
+
+        SetNavigation([.. _navigation.Select(item => item with
+        {
+            Label = Seeded(item.Label, target, source),
+            Children = [.. item.Children.Select(child => child with
+            {
+                Label = Seeded(child.Label, target, source),
+                Description = Seeded(child.Description, target, source),
+            })],
+        })]);
+
+        SetFooter([.. _footerGroups.Select(group => new FooterLinkGroup(
+            Seeded(group.Heading, target, source) ?? group.Heading,
+            [.. group.Links.Select(link => link with { Label = Seeded(link.Label, target, source) })]))]);
+
+        SetHeaderActions(
+            HeaderCta is null ? null : HeaderCta with { Label = Seeded(HeaderCta.Label, target, source)! },
+            HeaderQuiet is null ? null : HeaderQuiet with { Label = Seeded(HeaderQuiet.Label, target, source)! });
+
+        if (CopyLine is not null)
+        {
+            SetCopyLine(new CopyLine(Seeded(CopyLine.Text, target, source)!));
+        }
+    }
+
+    /// <summary>The text with the target locale filled from the source, or unchanged when there is nothing to fill.</summary>
+    private static LocalizedText? Seeded(LocalizedText? text, Locale target, Locale source) =>
+        text is null || text.Has(target) || !text.Has(source)
+            ? text
+            : text.With(target, text.Get(source)!);
+
     public void ChangeDefaultLocale(Locale locale)
     {
         if (!_locales.Contains(locale))

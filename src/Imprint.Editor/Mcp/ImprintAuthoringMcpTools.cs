@@ -26,6 +26,7 @@ using MoveNodeCmd = Imprint.Authoring.Features.Pages.MoveNode.MoveNode;
 using PublishAllStaleCmd = Imprint.Authoring.Features.Pages.PublishAllStale.PublishAllStale;
 using PublishPageCmd = Imprint.Authoring.Features.Pages.PublishPage.PublishPage;
 using RemoveNodeCmd = Imprint.Authoring.Features.Pages.RemoveNode.RemoveNode;
+using SeedLocaleCmd = Imprint.Authoring.Features.Sites.SeedLocale.SeedLocale;
 using SetCopyLineCmd = Imprint.Authoring.Features.Sites.SetCopyLine.SetCopyLine;
 using SetFaviconCmd = Imprint.Authoring.Features.Sites.SetFavicon.SetFavicon;
 using SetHeaderLogoCmd = Imprint.Authoring.Features.Sites.SetHeaderLogo.SetHeaderLogo;
@@ -497,7 +498,7 @@ public sealed class ImprintAuthoringMcpTools
     }
 
     [McpServerTool(Name = "add_locale")]
-    [Description("Add a language to the site, e.g. 'da'. Every text field is stored per locale, so this adds a slot rather than changing anything: existing content stays on the locale it was written in, and edit_text/set_page_meta can then write the translation by passing the new locale. Call get_site to see which locales exist.")]
+    [Description("Add a language to the site, e.g. 'da'. Every text field is stored per locale, so this adds a slot rather than changing anything: existing content stays on the locale it was written in, and edit_text/set_page_meta then write the translation by passing the new locale. Follow it with seed_locale — text falls back to the default locale, so an unseeded language renders the default one and looks finished while being empty. Call get_site to see which locales exist.")]
     public static async Task<object> AddLocale(
         [Description("The site id.")] string siteId,
         [Description("The locale tag to add, e.g. 'da' or 'de-AT'.")] string locale,
@@ -570,6 +571,21 @@ public sealed class ImprintAuthoringMcpTools
         var updated = (site.CopyLine?.Text ?? LocalizedText.Empty).With(lineLocale, text ?? string.Empty);
         return await Dispatch(dispatcher, config, new SetCopyLineCmd(sid, updated.IsEmpty ? null : new CopyLine(updated)), ct,
             () => new { ok = true, siteId = sid.Compact, copyLine = Localized(updated) });
+    }
+
+    [McpServerTool(Name = "seed_locale")]
+    [Description("Copy every text the site holds in one locale into another, wherever the target has nothing yet — the chrome and every page. Run it straight after add_locale, so translating is editing rather than retyping. It fills gaps only: an already-translated string is never overwritten, and re-running is safe.")]
+    public static async Task<object> SeedLocale(
+        [Description("The site id.")] string siteId,
+        [Description("The locale to fill, e.g. 'da'.")] string locale,
+        [Description("The locale to copy from, e.g. 'en'.")] string source,
+        ICommandDispatcher dispatcher, IConfiguration config, SiteOverview sites, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        if (sites.Get(sid) is null) return Fail("unknown site");
+
+        return await Dispatch(dispatcher, config, new SeedLocaleCmd(sid, locale, source), ct,
+            () => new { ok = true, siteId = sid.Compact, seeded = locale, from = source });
     }
 
     [McpServerTool(Name = "delete_node")]

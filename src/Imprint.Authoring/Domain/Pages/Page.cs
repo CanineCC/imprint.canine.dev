@@ -229,6 +229,79 @@ public sealed class Page : AggregateRoot
     }
 
     /// <summary>
+    /// Copy every text this page holds in <paramref name="source"/> into
+    /// <paramref name="target"/>, wherever the target has nothing yet — what you run the
+    /// moment a locale is added, so translating is editing rather than retyping.
+    /// </summary>
+    /// <remarks>
+    /// Filling only the gaps is what makes this safe to run twice: a translation already
+    /// made is never overwritten by the original it was made from.
+    /// <para>
+    /// Seeding is not a nicety. Text resolves through the default locale, so an unseeded
+    /// page in a second locale renders the default language rather than nothing — the new
+    /// locale looks finished while being a copy, and the copy is invisible. Seeding makes
+    /// that state explicit: the words are the same, but they are now this locale's words,
+    /// and editing one no longer silently changes the other.
+    /// </para>
+    /// <para>
+    /// It raises the ordinary text events, so a seed is indistinguishable downstream from
+    /// someone typing the same words — no new event, nothing to teach the projections.
+    /// </para>
+    /// </remarks>
+    public void SeedLocale(Locale target, Locale source)
+    {
+        EnsureNotDeleted();
+
+        if (target == source)
+        {
+            throw new DomainException("A locale cannot be seeded from itself.");
+        }
+
+        if (Title.Has(source) && !Title.Has(target))
+        {
+            Raise(new TitleChanged(target, Title.Get(source)!));
+        }
+
+        // Meta title and description travel in one event, so they are decided together:
+        // whichever is missing takes the source value, and one already translated keeps
+        // what it has.
+        var fillTitle = MetaTitle.Has(source) && !MetaTitle.Has(target);
+        var fillDescription = MetaDescription.Has(source) && !MetaDescription.Has(target);
+        if (fillTitle || fillDescription)
+        {
+            Raise(new MetaChanged(
+                target,
+                fillTitle ? MetaTitle.Get(source) : MetaTitle.Get(target),
+                fillDescription ? MetaDescription.Get(source) : MetaDescription.Get(target)));
+        }
+
+        foreach (var node in Tree.All())
+        {
+            foreach (var field in TextFieldsOf(node))
+            {
+                var text = TextFieldOf(node, field);
+                if (text is null || !text.Has(source) || text.Has(target))
+                {
+                    continue;
+                }
+
+                Raise(new TextChanged(node.Id, field, target, text.Get(source)!));
+            }
+        }
+    }
+
+    /// <summary>The text fields a node actually has — the read side of <c>WithTextApplied</c>.</summary>
+    private static string[] TextFieldsOf(Node node) => node switch
+    {
+        HeadingNode => [TextField],
+        RichTextNode => [HtmlField],
+        ButtonNode => [LabelField],
+        ImageNode => [AltField],
+        SvgNode => [AltField],
+        _ => [],
+    };
+
+    /// <summary>
     /// Replace the page's entire content (its section roots) — the primitive behind
     /// "discard unpublished changes / restore last published". The caller supplies the
     /// target roots: the published snapshot for a revert, or the pre-revert draft for its
