@@ -624,6 +624,10 @@
   display: grid; grid-template-columns: repeat(var(--ip-table-cols, 3), minmax(0, 1fr));
 }
 [id$="-cols4"] .ip-prose ul { --ip-table-cols: 4; }
+/* Two columns for a label/value table - a timeline (date, what happened), a spec sheet, a glossary.
+   The default of three is right for a comparison; a two-column table forced into three leaves a dead
+   column that reads as a rendering fault. */
+[id$="-cols2"] .ip-prose ul { --ip-table-cols: 2; }
 @container (max-width: 40rem) {
   .ip-ap-table-list .ip-prose ul { grid-template-columns: 1fr; }
 }
