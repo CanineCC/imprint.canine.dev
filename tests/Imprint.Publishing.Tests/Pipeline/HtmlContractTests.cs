@@ -36,15 +36,21 @@ public sealed class HtmlContractTests
         Assert.Single(stylesheets);
         Assert.Contains("<link rel=\"stylesheet\" href=\"/css/site.", html);
 
-        // Inline scripts: exactly the two sanctioned ones, byte-identical to the
-        // frozen assets; theme toggle sits in <head> BEFORE the stylesheet.
-        Assert.Equal(2, Regex.Matches(html, "<script>").Count);
+        // Inline scripts: exactly the three sanctioned ones, byte-identical to the frozen assets. The
+        // theme toggle and the language preference both sit in <head> BEFORE the stylesheet, because both
+        // decide something the visitor would otherwise see flash past - the wrong theme, or the wrong
+        // language. The count is pinned so a fourth inline script is a deliberate contract change.
+        Assert.Equal(3, Regex.Matches(html, "<script>").Count);
         Assert.Contains(PublisherScripts.ThemeToggle, html);
+        Assert.Contains(PublisherScripts.LanguagePreference, html);
         Assert.Contains(PublisherScripts.IslandLoader, html);
-        Assert.True(
-            html.IndexOf(PublisherScripts.ThemeToggle, StringComparison.Ordinal) <
-            html.IndexOf("<link rel=\"stylesheet\"", StringComparison.Ordinal),
-            "theme toggle must precede the stylesheet");
+        foreach (var head in new[] { PublisherScripts.ThemeToggle, PublisherScripts.LanguagePreference })
+        {
+            Assert.True(
+                html.IndexOf(head, StringComparison.Ordinal) <
+                html.IndexOf("<link rel=\"stylesheet\"", StringComparison.Ordinal),
+                "head scripts must precede the stylesheet");
+        }
 
         // Landmarks, skip link, marketing chrome shell, nav with aria-current on the
         // active item. The header/footer carry the ip-* chrome classes the marketing
@@ -123,10 +129,10 @@ public sealed class HtmlContractTests
             home.IndexOf("<x-note", StringComparison.Ordinal) <
             home.IndexOf(PublisherScripts.IslandLoader, StringComparison.Ordinal));
 
-        // A page without widgets carries no loader — and only one inline script.
+        // A page without widgets carries no loader — only the two <head> scripts.
         var about = host.ReadText("about/index.html");
         Assert.DoesNotContain(PublisherScripts.IslandLoader, about);
-        Assert.Single(Regex.Matches(about, "<script>"));
+        Assert.Equal(2, Regex.Matches(about, "<script>").Count);
     }
 
     [Fact]

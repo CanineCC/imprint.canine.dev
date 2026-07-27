@@ -16,6 +16,13 @@ public static class PublisherScripts
     public static string ThemeToggle { get; } = Load("theme-toggle.js");
 
     /// <summary>
+    /// Language preference (~20 lines). Inlined into &lt;head&gt; beside the theme override and for the same
+    /// reason: it must decide before first paint, or a visitor sees the wrong language flash past. It reads
+    /// the page's own hreflang alternates, so it costs nothing and does nothing on a single-locale site.
+    /// </summary>
+    public static string LanguagePreference { get; } = Load("language-preference.js");
+
+    /// <summary>
     /// Island loader (~1 KB), inlined at the end of &lt;body&gt; — it queries
     /// <c>[data-island]</c> synchronously, so it must run after the islands exist in
     /// the DOM. Only emitted on pages that actually contain islands.
