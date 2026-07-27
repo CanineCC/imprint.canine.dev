@@ -453,6 +453,8 @@ public static class AuthoringApi
                 return Results.BadRequest(new { error = ex.Message });
             }
 
+            parsed = CarryOtherLocales(parsed, site.Navigation, locale);
+
             var result = await DispatchAs(dispatcher, actor, new ChangeNavigationCmd(sid, parsed), ct);
             return result.Succeeded
                 ? Results.Ok(new { siteId = sid.Compact, items = parsed.Count })
@@ -488,6 +490,8 @@ public static class AuthoringApi
             {
                 return Results.BadRequest(new { error = ex.Message });
             }
+
+            parsed = CarryOtherLocales(parsed, site.FooterGroups, locale);
 
             var footerResult = await DispatchAs(dispatcher, actor, new SetFooterCmd(sid, parsed), ct);
             return footerResult.Succeeded
@@ -809,6 +813,92 @@ public static class AuthoringApi
             ParseNavigationLink(link) ?? throw new ArgumentException("A footer link needs a pageId or a url."));
     }
 
+    /// <summary>
+    /// Carry every OTHER locale's chrome labels over from what the site has now, matching
+    /// by link. Callers send labels for one locale at a time, so without this, translating
+    /// the English navigation would silently delete the Danish one.
+    /// </summary>
+    /// <remarks>
+    /// Matching is by link identity, not by position: a link keeps its translations when it
+    /// is reordered, renamed or moved between footer columns, and loses them only when the
+    /// link itself changes — which is a different destination, so old labels would be wrong
+    /// anyway. An item the site does not have yet is new, and correctly carries only the
+    /// locale it arrived in.
+    /// <para>
+    /// The incoming locale always wins for its own value; this only ever fills in locales
+    /// the caller did not speak for.
+    /// </para>
+    /// </remarks>
+    internal static List<NavigationItem> CarryOtherLocales(
+        List<NavigationItem> incoming, IReadOnlyList<NavigationItem> existing, Locale locale)
+    {
+        var byLink = new Dictionary<Link, NavigationItem>();
+        var childrenByLink = new Dictionary<Link, NavigationChild>();
+        foreach (var item in existing)
+        {
+            if (item.Link is { } link)
+            {
+                byLink[link] = item;
+            }
+
+            foreach (var child in item.Children)
+            {
+                childrenByLink[child.Link] = child;
+            }
+        }
+
+        return [.. incoming.Select(item => item with
+        {
+            Label = Merged(item.Label, item.Link is { } link && byLink.TryGetValue(link, out var was) ? was.Label : null, locale),
+            Children = [.. item.Children.Select(child =>
+            {
+                var previous = childrenByLink.GetValueOrDefault(child.Link);
+                return child with
+                {
+                    Label = Merged(child.Label, previous?.Label, locale),
+                    Description = Merged(child.Description, previous?.Description, locale),
+                };
+            })],
+        })];
+    }
+
+    /// <inheritdoc cref="CarryOtherLocales(List{NavigationItem}, IReadOnlyList{NavigationItem}, Locale)"/>
+    internal static List<FooterLinkGroup> CarryOtherLocales(
+        List<FooterLinkGroup> incoming, IReadOnlyList<FooterLinkGroup> existing, Locale locale)
+    {
+        // Links match by link across ALL old columns, so moving one between columns keeps its
+        // translations. A heading has no link to match on, so it matches by position — the
+        // order the caller just supplied is the only identity a column has.
+        var linksByLink = existing
+            .SelectMany(group => group.Links)
+            .GroupBy(link => link.Link)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        return [.. incoming.Select((group, index) => new FooterLinkGroup(
+            Merged(group.Heading, index < existing.Count ? existing[index].Heading : null, locale) ?? group.Heading,
+            [.. group.Links.Select(link => link with
+            {
+                Label = Merged(link.Label, linksByLink.GetValueOrDefault(link.Link)?.Label, locale),
+            })]))];
+    }
+
+    /// <summary>The incoming value for its own locale, over everything the previous value held elsewhere.</summary>
+    private static LocalizedText? Merged(LocalizedText? incoming, LocalizedText? previous, Locale locale)
+    {
+        if (previous is null)
+        {
+            return incoming;
+        }
+
+        var carried = previous.With(locale, string.Empty); // drop the stale value for this locale
+        foreach (var (otherLocale, value) in incoming?.Values ?? [])
+        {
+            carried = carried.With(otherLocale, value);
+        }
+
+        return carried.IsEmpty ? null : carried;
+    }
+
     internal static NavigationItem ParseNavigationItem(JsonElement item, Locale locale)
     {
         if (item.ValueKind != JsonValueKind.Object)
@@ -847,7 +937,8 @@ public static class AuthoringApi
         {
             if (!CanonicalHtml.IsAllowedHref(url))
             {
-                throw new ArgumentException($"'{url}' must be an https, http or mailto address.");
+                throw new ArgumentException(
+                    $"'{url}' must be an https, http or mailto address, or a #section of this site's page.");
             }
 
             return new ExternalLink(url);

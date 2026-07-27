@@ -459,6 +459,8 @@ public sealed class ImprintAuthoringMcpTools
             return Fail(ex.Message);
         }
 
+        items = AuthoringApi.CarryOtherLocales(items, site.Navigation, labelLocale);
+
         return await Dispatch(dispatcher, config, new ChangeNavigationCmd(sid, items), ct,
             () => new { ok = true, siteId = sid.Compact, items = items.Count });
     }
@@ -492,6 +494,8 @@ public sealed class ImprintAuthoringMcpTools
         {
             return Fail(ex.Message);
         }
+
+        groups = AuthoringApi.CarryOtherLocales(groups, site.FooterGroups, labelLocale);
 
         return await Dispatch(dispatcher, config, new SetFooterCmd(sid, groups), ct,
             () => new { ok = true, siteId = sid.Compact, groups = groups.Count, links = groups.Sum(g => g.Links.Count) });
