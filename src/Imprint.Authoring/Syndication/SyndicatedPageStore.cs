@@ -39,6 +39,17 @@ public sealed record SyndicatedPage(
 /// </remarks>
 public sealed class SyndicatedPageStore
 {
+    /// <summary>
+    /// Raised after a push or a withdrawal actually changed something, so the publisher can pick it up.
+    /// </summary>
+    /// <remarks>
+    /// Authored pages wake the publisher through the projection engine's catch-up. These pages are not event-sourced
+    /// (see the type remarks), so they raise nothing — and without this a pushed page would sit in the table until
+    /// some UNRELATED authoring event happened to trigger a pass. On a site nobody is editing, that is indefinitely:
+    /// the producer would be told its push succeeded, and the page would never appear.
+    /// </remarks>
+    public event Action? Changed;
+
     private readonly string _connectionString;
 
     public SyndicatedPageStore(string connectionString)
@@ -111,6 +122,7 @@ public sealed class SyndicatedPageStore
         write.Parameters.AddWithValue("$hash", page.ContentHash);
         write.Parameters.AddWithValue("$updated", page.UpdatedAt.ToString("O"));
         write.ExecuteNonQuery();
+        Changed?.Invoke();
         return true;
     }
 
@@ -122,7 +134,13 @@ public sealed class SyndicatedPageStore
         command.CommandText = "DELETE FROM SyndicatedPages WHERE SiteId = $site AND Path = $path;";
         command.Parameters.AddWithValue("$site", siteId.Compact);
         command.Parameters.AddWithValue("$path", path);
-        return command.ExecuteNonQuery() > 0;
+        if (command.ExecuteNonQuery() == 0)
+        {
+            return false;
+        }
+
+        Changed?.Invoke();
+        return true;
     }
 
     /// <summary>Every syndicated page of one site, in path order so a publish pass is deterministic.</summary>

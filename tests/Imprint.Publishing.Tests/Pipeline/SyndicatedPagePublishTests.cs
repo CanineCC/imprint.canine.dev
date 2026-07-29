@@ -121,4 +121,31 @@ public sealed class SyndicatedPagePublishTests
         Assert.True(host.FileExists("index.html"));
         Assert.True(host.FileExists("about/index.html"));
     }
+
+    [Fact]
+    public async Task A_change_announces_itself_so_the_publisher_can_pick_it_up()
+    {
+        // These pages are not event-sourced, so they never reach the projection engine. Without a signal of their
+        // own a pushed page would sit in the table until some UNRELATED authoring event happened to trigger a pass —
+        // on a site nobody is editing, that is indefinitely, and the producer would have been told it succeeded.
+        await using var host = new PublishingTestHost();
+        var store = host.Services.GetRequiredService<SyndicatedPageStore>();
+        var siteId = SiteId.New();
+        var page = Survey(siteId, "registry/github/jasperfx/marten", "JasperFx/marten");
+
+        var woken = 0;
+        store.Changed += () => woken++;
+
+        store.Upsert(page);
+        Assert.Equal(1, woken);
+
+        store.Upsert(page);                     // identical content changes nothing, so it wakes nothing
+        Assert.Equal(1, woken);
+
+        store.Remove(siteId, page.Path);
+        Assert.Equal(2, woken);
+
+        store.Remove(siteId, page.Path);        // already gone
+        Assert.Equal(2, woken);
+    }
 }

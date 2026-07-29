@@ -1,4 +1,5 @@
 using Imprint.Authoring.Projections;
+using Imprint.Authoring.Syndication;
 using Imprint.EventSourcing;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -22,6 +23,7 @@ namespace Imprint.Publishing;
 public sealed class PublisherHostedService(
     SitePublisher publisher,
     ProjectionEngine projections,
+    SyndicatedPageStore syndicated,
     SiteOverview siteOverview,
     DeployPathResolver paths,
     PublishingOptions options,
@@ -32,7 +34,7 @@ public sealed class PublisherHostedService(
         // One pending-work token is enough: N catch-ups during a pass still mean
         // exactly one more pass.
         var pending = new SemaphoreSlim(0);
-        void OnCaughtUp(long _)
+        void Wake()
         {
             if (pending.CurrentCount == 0)
             {
@@ -40,7 +42,15 @@ public sealed class PublisherHostedService(
             }
         }
 
+        void OnCaughtUp(long _) => Wake();
+
         projections.CaughtUp += OnCaughtUp;
+
+        // Syndicated pages are not event-sourced, so they never reach the projection engine and would
+        // otherwise wait for an unrelated authoring event to carry them out. A producer pushing a few
+        // hundred pages lands inside one debounce window and publishes once, which is the same
+        // behaviour a theme-editing session already gets.
+        syndicated.Changed += Wake;
         try
         {
             await TrySynchronize(stoppingToken);
@@ -65,6 +75,7 @@ public sealed class PublisherHostedService(
         finally
         {
             projections.CaughtUp -= OnCaughtUp;
+            syndicated.Changed -= Wake;
         }
     }
 
