@@ -21,5 +21,9 @@ public static class AuthoringServiceCollectionExtensions
                 AuthoringJson.Configure,
                 upcasters: [new PageCreatedUpcaster()])
             .AddSingleton<ContentUsage>()
-            .AddSingleton<TranslationCoverage>();
+            .AddSingleton<TranslationCoverage>()
+            // Pages produced elsewhere and served as part of a site. It shares the store's
+            // connection string but not its event log: the producing system is the source of
+            // truth, so these are mirrored rows, not a history we own.
+            .AddSingleton(new Syndication.SyndicatedPageStore(connectionString));
 }

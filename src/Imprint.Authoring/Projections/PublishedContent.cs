@@ -14,7 +14,25 @@ public sealed record PublishedPage(
     LocalizedText MetaTitle,
     LocalizedText MetaDescription,
     PageTree Tree,
-    long PublishedVersion);
+    long PublishedVersion)
+{
+    /// <summary>
+    /// Where this page is served, relative to the site root — <c>about</c>, or a nested
+    /// <c>registry/github/jasperfx/marten</c>. Empty for the home page.
+    /// </summary>
+    /// <remarks>
+    /// An authored page's address is its slug, and a slug is deliberately flat: one segment of
+    /// lower-case letters, digits and hyphens, so an editor cannot invent a folder structure by
+    /// typing a slash. Pages that arrive from another system are not typed by an editor and DO carry
+    /// a hierarchy — a survey belongs under its owner, which belongs under its host — so the address
+    /// is modelled separately from the slug rather than by loosening what a slug may contain.
+    /// <para>
+    /// Everything downstream of path assignment already worked in strings, so this is the one place
+    /// the distinction has to exist.
+    /// </para>
+    /// </remarks>
+    public string PublicPath { get; init; } = Slug.Value ?? string.Empty;
+}
 
 /// <summary>
 /// The publisher's source. Folds every page event through its own aggregate instances

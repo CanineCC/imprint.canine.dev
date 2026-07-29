@@ -6,6 +6,7 @@ using Imprint.Authoring.Domain.Pages;
 using Imprint.Authoring.Domain.Sites;
 using Imprint.Authoring.Features.Assets;
 using Imprint.Authoring.Projections;
+using Imprint.Authoring.Syndication;
 using Imprint.Rendering;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -31,6 +32,7 @@ public sealed class SitePublisher(
     PublishingOptions options,
     SiteOverview siteOverview,
     PublishedContent publishedContent,
+    SyndicatedPageStore syndicated,
     AssetLibrary assetLibrary,
     BlockLibrary blockLibrary,
     WidgetRegistry widgetRegistry,
@@ -61,7 +63,7 @@ public sealed class SitePublisher(
         gate.RunExclusive(async () =>
         {
             var pass = new Pass(
-                options, target.Site, target.OutputPath, target.BaseUrl, publishedContent,
+                options, target.Site, target.OutputPath, target.BaseUrl, publishedContent, syndicated,
                 assetLibrary, blockLibrary, widgetRegistry, mediaStore, loggerFactory, _logger);
             var report = await pass.Run(ct);
             status.Record(report);
@@ -81,6 +83,7 @@ public sealed class SitePublisher(
         string outputPath,
         string? baseUrl,
         PublishedContent publishedContent,
+        SyndicatedPageStore syndicated,
         AssetLibrary assetLibrary,
         BlockLibrary blockLibrary,
         WidgetRegistry widgetRegistry,
@@ -167,8 +170,11 @@ public sealed class SitePublisher(
             // and the /preview plane, unlike the editor-only /media route.
             _faviconAssetId = site.FaviconAssetId;
             _headerLogoAssetId = site.HeaderLogoAssetId;
-            // Only THIS site's published pages — a target folder holds exactly one site.
-            _pages = [.. publishedContent.AllForSite(site.Id)];
+            // Only THIS site's published pages — a target folder holds exactly one site. Pages
+            // syndicated from another system join them here and are otherwise indistinguishable:
+            // same views, same chrome, same sitemap, same sweep. Everything the renderer learns,
+            // they learn too, because there is only one renderer.
+            _pages = [.. publishedContent.AllForSite(site.Id), .. SyndicatedPagesOf(site.Id)];
             _pageById = _pages.ToDictionary(page => page.Id);
 
             var oldManifest =
@@ -281,7 +287,7 @@ public sealed class SitePublisher(
                 .. _pages
                     .OrderByDescending(page => homeId is { } home && page.Id == home)
                     .ThenBy(page => NavigationOrder(page.Id))
-                    .ThenBy(page => page.Slug.Value, StringComparer.Ordinal)
+                    .ThenBy(page => page.PublicPath, StringComparer.Ordinal)
                     .ThenBy(page => page.Id.Compact, StringComparer.Ordinal),
             ];
         }
@@ -320,7 +326,7 @@ public sealed class SitePublisher(
         private void ClaimPaths(List<PublishedPage> ordered, PublishManifest oldManifest)
         {
             var homeId = HomePageId();
-            foreach (var group in ordered.GroupBy(page => homeId is { } home && page.Id == home ? "" : page.Slug.Value))
+            foreach (var group in ordered.GroupBy(page => homeId is { } home && page.Id == home ? "" : page.PublicPath))
             {
                 var claimants = group.ToList();
                 var winner = claimants[0];
@@ -1064,6 +1070,42 @@ public sealed class SitePublisher(
 
             xml.Append("</urlset>\n");
             return xml.ToString();
+        }
+
+        /// <summary>
+        /// The syndicated pages of this site, as pages the rest of the pass cannot tell apart from
+        /// authored ones.
+        /// </summary>
+        /// <remarks>
+        /// The page id is derived from the site and path rather than minted, so it is the SAME id on
+        /// every pass. The manifest is keyed by page id, so a fresh id each run would look like the
+        /// old page vanishing and a new one appearing — republishing everything, sweeping files, and
+        /// churning the output for content that never changed.
+        /// <para>
+        /// A syndicated page has no publish version to compare, so its content hash takes that role:
+        /// it moves when the producer sends something different, and only then.
+        /// </para>
+        /// </remarks>
+        private IEnumerable<PublishedPage> SyndicatedPagesOf(SiteId siteId) =>
+            syndicated.AllForSite(siteId).Select(page => new PublishedPage(
+                SyndicatedPageId(siteId, page.Path),
+                siteId,
+                default,   // a syndicated page is addressed by PublicPath; it has no editor-typed slug
+                page.Title,
+                page.MetaTitle,
+                page.MetaDescription,
+                new PageTree(NodeList.Of([page.Node])),
+                PublishedVersion: 0)
+            {
+                PublicPath = page.Path,
+            });
+
+        /// <summary>A stable id for a page that has no aggregate: the same site and path always name it.</summary>
+        private static PageId SyndicatedPageId(SiteId siteId, string path)
+        {
+            var seed = System.Security.Cryptography.SHA256.HashData(
+                Encoding.UTF8.GetBytes($"syndicated:{siteId.Compact}:{path}"));
+            return PageId.From(new Guid(seed.AsSpan(0, 16)));
         }
 
         private string BuildRobots() =>
