@@ -18,6 +18,7 @@ using SeedLocaleCmd = Imprint.Authoring.Features.Sites.SeedLocale.SeedLocale;
 using SetHeaderActionsCmd = Imprint.Authoring.Features.Sites.SetHeaderActions.SetHeaderActions;
 using ChangeNodePropsCmd = Imprint.Authoring.Features.Pages.ChangeNodeProps.ChangeNodeProps;
 using ChangePageMetaCmd = Imprint.Authoring.Features.Pages.ChangePageMeta.ChangePageMeta;
+using ChangePageSlugCmd = Imprint.Authoring.Features.Pages.ChangeSlug.ChangeSlug;
 using ChangePageTitleCmd = Imprint.Authoring.Features.Pages.ChangePageTitle.ChangePageTitle;
 using CreatePageCmd = Imprint.Authoring.Features.Pages.CreatePage.CreatePage;
 using CreateSiteCmd = Imprint.Authoring.Features.Sites.CreateSite.CreateSite;
@@ -374,6 +375,21 @@ public static class AuthoringApi
             return result.Succeeded
                 ? Results.Ok(new { pageId = pid.Compact })
                 : Results.BadRequest(new { error = "title change failed", details = result.Errors });
+        });
+
+        // Move a page to a different address. The domain and its handler have always supported this (slugs are
+        // unique per site, and the publisher's sweep removes the old directory) — there was simply no headless way
+        // to ask for it, so an off-network editor could create and retitle a page but never move one.
+        api.MapPut("/pages/{pageId}/slug", async (
+            string pageId, PageSlugRequest body, ICommandDispatcher dispatcher, PageDrafts drafts, CancellationToken ct) =>
+        {
+            if (!TryPageId(pageId, out var pid)) return Results.BadRequest(new { error = "invalid pageId" });
+            if (drafts.Get(pid) is null) return Results.NotFound(new { error = "unknown page" });
+
+            var result = await DispatchAs(dispatcher, actor, new ChangePageSlugCmd(pid, body?.Slug ?? string.Empty), ct);
+            return result.Succeeded
+                ? Results.Ok(new { pageId = pid.Compact, slug = body!.Slug })
+                : Results.BadRequest(new { error = "slug change failed", details = result.Errors });
         });
 
         api.MapPut("/pages/{pageId}/meta", async (
@@ -1105,6 +1121,10 @@ public static class AuthoringApi
 
     /// <summary>Request body for changing a page's title.</summary>
     public sealed record PageTitleRequest(string? Locale, string Title);
+
+    /// <summary>The new address for a page. A slug is not localized — an address written down once has to resolve
+    /// wherever it is followed.</summary>
+    public sealed record PageSlugRequest(string Slug);
 
     /// <summary>Request body for changing a page's SEO meta (null leaves a field as it is).</summary>
     public sealed record PageMetaRequest(string? Locale, string? MetaTitle, string? MetaDescription);
