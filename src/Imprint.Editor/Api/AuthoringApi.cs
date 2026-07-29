@@ -6,6 +6,7 @@ using Imprint.Authoring.Domain.Assets;
 using Imprint.Authoring.Domain.Pages;
 using Imprint.Authoring.Domain.Sites;
 using Imprint.Authoring.Projections;
+using Imprint.Authoring.Syndication;
 using Imprint.Editor.Auth;
 using Imprint.EventSourcing;
 using AddNodeCmd = Imprint.Authoring.Features.Pages.AddNode.AddNode;
@@ -516,6 +517,82 @@ public static class AuthoringApi
             return localeResult.Succeeded
                 ? Results.Ok(new { siteId = sid.Compact, locale })
                 : Results.BadRequest(new { error = "add locale failed", details = localeResult.Errors });
+        });
+
+        // Pages this site serves but does not author: another system produces them and pushes them here. The body
+        // carries CONTENT — a node spec, exactly what add_node takes — never markup, so the producer never has to
+        // know this site's chrome, stylesheet or heading anchors. It gets them by being rendered here.
+        //
+        // The path may be nested (registry/github/jasperfx/marten). Every segment is validated as a slug, so a
+        // pushed path cannot escape the output directory or shadow sitemap.xml — containment by alphabet rather
+        // than by a traversal check somebody has to remember.
+        api.MapPut("/sites/{siteId}/syndicated/{**path}", async (
+            string siteId, string path, JsonElement body, SiteOverview sites, SyndicatedPageStore store, CancellationToken ct) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            var site = sites.Get(sid);
+            if (site is null) return Results.NotFound(new { error = "unknown site" });
+            if (SyndicatedPath.Sanitize(path) is not { } cleanPath)
+            {
+                return Results.BadRequest(new { error = "path segments must each be slug-shaped (a-z, 0-9, hyphen), 1–6 deep" });
+            }
+
+            if (!body.TryGetProperty("node", out var nodeSpec))
+            {
+                return Results.BadRequest(new { error = "a 'node' object is required — the page's content" });
+            }
+
+            var locale = site.DefaultLocale;
+            if (Text(body, "locale") is { Length: > 0 } rawLocale)
+            {
+                if (!Locale.TryCreate(rawLocale, out locale)) return Results.BadRequest(new { error = $"'{rawLocale}' is not a valid locale tag" });
+            }
+
+            if (!AuthoringNodeJson.TryParse(nodeSpec, locale, out var node, out var nodeError))
+            {
+                return Results.BadRequest(new { error = nodeError });
+            }
+
+            var title = LocalizedText.Of(locale, Text(body, "title") ?? "");
+            var metaTitle = LocalizedText.Of(locale, Text(body, "metaTitle") ?? "");
+            var metaDescription = LocalizedText.Of(locale, Text(body, "metaDescription") ?? "");
+
+            var changed = store.Upsert(new SyndicatedPage(
+                sid, cleanPath, title, metaTitle, metaDescription, node,
+                SyndicatedPageStore.HashOf(title, metaTitle, metaDescription, node),
+                DateTimeOffset.UtcNow));
+
+            // "changed" is the useful half of the answer: the producer re-pushes everything it owns on every run,
+            // and knowing which pushes were no-ops is how it can report real work instead of traffic.
+            return Results.Ok(new { siteId = sid.Compact, path = cleanPath, changed });
+        });
+
+        // Withdraw one. The publisher's sweep removes the files on the next pass — a survey that is no longer
+        // published must stop being served, not linger as an orphan outliving the thing it described.
+        api.MapDelete("/sites/{siteId}/syndicated/{**path}", (
+            string siteId, string path, SiteOverview sites, SyndicatedPageStore store) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            if (sites.Get(sid) is null) return Results.NotFound(new { error = "unknown site" });
+            if (SyndicatedPath.Sanitize(path) is not { } cleanPath) return Results.BadRequest(new { error = "invalid path" });
+
+            return Results.Ok(new { siteId = sid.Compact, path = cleanPath, removed = store.Remove(sid, cleanPath) });
+        });
+
+        // What this site currently serves on the producer's behalf, so it can reconcile: anything listed here and
+        // no longer in its own set is something it should withdraw.
+        api.MapGet("/sites/{siteId}/syndicated", (string siteId, SiteOverview sites, SyndicatedPageStore store) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            if (sites.Get(sid) is null) return Results.NotFound(new { error = "unknown site" });
+
+            return Results.Ok(new
+            {
+                siteId = sid.Compact,
+                pages = store.AllForSite(sid)
+                    .Select(p => new { path = p.Path, contentHash = p.ContentHash, updatedAt = p.UpdatedAt })
+                    .ToList(),
+            });
         });
 
         // Stop publishing a language. The counterpart of POST /locales, and the reason it exists: a locale added
