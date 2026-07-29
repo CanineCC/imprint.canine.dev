@@ -8,6 +8,28 @@ namespace Imprint.Publishing.Tests.Pipeline;
 public sealed class AuxiliaryOutputTests
 {
     [Fact]
+    public async Task Llms_txt_indexes_the_site_in_its_own_words()
+    {
+        // The file this replaces was hand-edited on the server and went stale: it still described the
+        // product as C#/.NET only long after that stopped being true, and nothing could see the drift
+        // because it lived in no repository. Deriving it from the pages means it cannot say something
+        // the site does not.
+        await using var host = new PublishingTestHost();
+        await TemplatedSiteScenario.Build(host);
+        await host.Publisher.Synchronize();
+
+        var llms = host.ReadText("llms.txt");
+
+        Assert.StartsWith("# ", llms);
+        Assert.Contains("## Pages", llms);
+        Assert.Contains("](/)", llms);          // the home page
+        Assert.Contains("](/about/)", llms);
+
+        // One answer to "what is this", not the same answer once per published language.
+        Assert.DoesNotContain("/da/", llms);
+    }
+
+    [Fact]
     public async Task Sitemap_lists_every_published_url_with_hreflang_alternates()
     {
         await using var host = new PublishingTestHost();

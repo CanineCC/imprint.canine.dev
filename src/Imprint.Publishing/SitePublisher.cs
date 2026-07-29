@@ -240,6 +240,7 @@ public sealed class SitePublisher(
             await WriteIfChanged(_cssFile, cssBytes, ct);
             await WriteIfChanged("sitemap.xml", Encoding.UTF8.GetBytes(BuildSitemap(plans)), ct);
             await WriteIfChanged("robots.txt", Encoding.UTF8.GetBytes(BuildRobots()), ct);
+            await WriteIfChanged("llms.txt", Encoding.UTF8.GetBytes(BuildLlmsTxt(plans)), ct);
             await CopyFonts(ct);
             await CopyAssets(ct);
             await CopyWidgetBundles(ct);
@@ -1068,6 +1069,60 @@ public sealed class SitePublisher(
         private string BuildRobots() =>
             $"User-agent: *\nAllow: /\n\nSitemap: {Absolute("/sitemap.xml")}\n";
 
+        /// <summary>
+        /// The llms.txt index: what this site is, and every page with the words its own author gave
+        /// it. Written for a language model deciding whether it can describe us accurately.
+        /// </summary>
+        /// <remarks>
+        /// Generated, not authored, and that is the whole point. The file this replaces was a loose
+        /// text file on the server, edited by hand in July and never again: it still told models the
+        /// product was C#/.NET only, long after it measured thirteen languages. Nobody could see it
+        /// drift, because it was not in any repository and nothing compared it to the site.
+        /// <para>
+        /// Deriving it from the same titles and meta descriptions the pages render means it cannot
+        /// say something the site does not. It goes stale only if the site does, and then it is
+        /// wrong in the same way — which is a problem you can see.
+        /// </para>
+        /// <para>
+        /// Only the default locale is listed. A model asking "what is this" needs one clear answer,
+        /// not the same answer in every published language.
+        /// </para>
+        /// </remarks>
+        private string BuildLlmsTxt(List<PagePlan> plans)
+        {
+            var home = plans.Find(p => p.SlugPath is { Length: 0 } || p.SlugPath == string.Empty)
+                       ?? plans.Find(p => p.SlugPath is not null);
+
+            var text = new StringBuilder(2048);
+            text.Append("# ").Append(_siteName).Append('\n');
+
+            if (home is not null && MetaDescriptionOf(home.Page, _defaultLocale) is { Length: > 0 } summary)
+            {
+                text.Append("\n> ").Append(summary).Append('\n');
+            }
+
+            text.Append("\n## Pages\n\n");
+            foreach (var plan in plans)
+            {
+                if (plan.SlugPath is null || _failed.Contains(plan.Page.Id))
+                {
+                    continue;
+                }
+
+                text.Append("- [").Append(DocumentTitle(plan.Page, _defaultLocale)).Append("](")
+                    .Append(Absolute(DirectoryPath(plan.SlugPath, _defaultLocale))).Append(')');
+
+                if (MetaDescriptionOf(plan.Page, _defaultLocale) is { Length: > 0 } description)
+                {
+                    text.Append(": ").Append(description);
+                }
+
+                text.Append('\n');
+            }
+
+            return text.ToString();
+        }
+
         private static string XmlEscape(string value) => value
             .Replace("&", "&amp;", StringComparison.Ordinal)
             .Replace("<", "&lt;", StringComparison.Ordinal)
@@ -1123,6 +1178,7 @@ public sealed class SitePublisher(
             Keep("404.html");
             Keep("sitemap.xml");
             Keep("robots.txt");
+            Keep("llms.txt");
             foreach (var plan in plans)
             {
                 if (plan.SlugPath is null || _failed.Contains(plan.Page.Id))
