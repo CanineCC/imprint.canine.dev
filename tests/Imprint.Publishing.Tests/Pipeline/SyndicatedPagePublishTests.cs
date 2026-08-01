@@ -13,7 +13,39 @@ namespace Imprint.Publishing.Tests.Pipeline;
 /// </summary>
 public sealed class SyndicatedPagePublishTests
 {
-    private static SyndicatedPage Survey(SiteId siteId, string path, string heading) =>
+    [Fact]
+    public async Task Pushing_new_content_to_the_same_path_re_renders_it()
+    {
+        // A syndicated page has no aggregate, so it is created with PublishedVersion 0 and stays there —
+        // and staleness asks "old.PublishedVersion < page.PublishedVersion", which is 0 < 0 forever. Without
+        // its content hash standing in as its version, a page renders ONCE and every later push is stored
+        // and never re-rendered.
+        //
+        // That shipped: the producer reported "955 page(s) built, 955 changed" while the site re-rendered
+        // two of them — the two whose PATH was new. So a corpus index went on advertising 2,853 projects and
+        // linking to 1,883 pages that had just been withdrawn, and the only way it ever refreshed was a
+        // chrome or CSS edit happening to re-render the whole site.
+        await using var host = new PublishingTestHost();
+        var scenario = await TemplatedSiteScenario.Build(host);
+        var store = host.Services.GetRequiredService<SyndicatedPageStore>();
+
+        store.Upsert(Survey(scenario.SiteId, "registry/github/jasperfx/marten", "JasperFx/marten"));
+        await host.Publisher.Synchronize();
+        Assert.Contains("A document database and event store", host.ReadText("registry/github/jasperfx/marten/index.html"));
+
+        store.Upsert(Survey(scenario.SiteId, "registry/github/jasperfx/marten", "JasperFx/marten",
+            body: "<p>Now it says something else entirely.</p>", contentHash: "hash-2"));
+        await host.Publisher.Synchronize();
+
+        var html = host.ReadText("registry/github/jasperfx/marten/index.html");
+        Assert.Contains("Now it says something else entirely.", html);
+        Assert.DoesNotContain("A document database and event store", html);
+    }
+
+    private static SyndicatedPage Survey(
+        SiteId siteId, string path, string heading,
+        string body = "<p>A document database and event store built on PostgreSQL.</p>",
+        string contentHash = "hash-1") =>
         new(siteId, path,
             LocalizedText.Of(new Locale("en"), heading),
             LocalizedText.Empty,
@@ -26,7 +58,7 @@ public sealed class SyndicatedPagePublishTests
                     new RichTextNode
                     {
                         Id = NodeId.New(),
-                        Html = LocalizedText.Of(new Locale("en"), "<p>A document database and event store built on PostgreSQL.</p>"),
+                        Html = LocalizedText.Of(new Locale("en"), body),
                     },
                     new HeadingNode
                     {
@@ -35,7 +67,7 @@ public sealed class SyndicatedPagePublishTests
                     },
                 ]),
             },
-            ContentHash: "hash-1",
+            ContentHash: contentHash,
             UpdatedAt: DateTimeOffset.Parse("2026-07-29T00:00:00Z"));
 
     [Fact]

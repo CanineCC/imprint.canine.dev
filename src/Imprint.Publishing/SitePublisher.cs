@@ -1025,6 +1025,18 @@ public sealed class SitePublisher(
         private IReadOnlyList<string> DependencyTokensOf(PublishedPage page)
         {
             var tokens = new SortedSet<string>(StringComparer.Ordinal);
+
+            // A syndicated page has no aggregate and therefore no version to compare — it is created with
+            // PublishedVersion 0 and stays there, so "old.PublishedVersion < page.PublishedVersion" is
+            // 0 < 0 for its whole life. Without this token such a page renders ONCE, when it first appears,
+            // and every later push is stored and never re-rendered: the producer reports "955 changed" and
+            // the site keeps serving the first version until something site-wide (a chrome edit, a CSS or
+            // renderer change) happens to re-render everything. Its content hash IS its version.
+            if (_syndicatedHashes.TryGetValue(page.Id, out var contentHash))
+            {
+                tokens.Add($"syndicated:{contentHash}");
+            }
+
             foreach (var node in NodesOf(page))
             {
                 switch (node)
@@ -1227,8 +1239,10 @@ public sealed class SitePublisher(
         /// it moves when the producer sends something different, and only then.
         /// </para>
         /// </remarks>
+        private readonly Dictionary<PageId, string> _syndicatedHashes = [];
+
         private IEnumerable<PublishedPage> SyndicatedPagesOf(SiteId siteId) =>
-            syndicated.AllForSite(siteId).Select(page => new PublishedPage(
+            syndicated.AllForSite(siteId).Select(page => Remember(siteId, page)).Select(page => new PublishedPage(
                 SyndicatedPageId(siteId, page.Path),
                 siteId,
                 default,   // a syndicated page is addressed by PublicPath; it has no editor-typed slug
@@ -1240,6 +1254,13 @@ public sealed class SitePublisher(
             {
                 PublicPath = page.Path,
             });
+
+        /// <summary>Records a syndicated page's content hash so staleness can see it change.</summary>
+        private SyndicatedPage Remember(SiteId siteId, SyndicatedPage page)
+        {
+            _syndicatedHashes[SyndicatedPageId(siteId, page.Path)] = page.ContentHash;
+            return page;
+        }
 
         /// <summary>A stable id for a page that has no aggregate: the same site and path always name it.</summary>
         private static PageId SyndicatedPageId(SiteId siteId, string path)
