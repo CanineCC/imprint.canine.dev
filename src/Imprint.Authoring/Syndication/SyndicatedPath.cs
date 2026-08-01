@@ -18,8 +18,13 @@ namespace Imprint.Authoring.Syndication;
 /// </remarks>
 public static class SyndicatedPath
 {
-    /// <summary>The maximum number of segments — deep enough for host/owner/name, shallow enough to stay a path.</summary>
-    private const int MaxSegments = 6;
+    /// <summary>The maximum number of segments — deep enough for a nested namespace, shallow enough to stay a path.</summary>
+    /// <remarks>
+    /// Six covered <c>surveys/host/owner/name</c> with room to spare, until a forge with nested namespaces
+    /// arrived: <c>surveys/gitlab/teo-dotnet/backend/restapi/orderingapi</c> is already six, so one more
+    /// subgroup level would have been refused. Eight leaves the same headroom the original six intended.
+    /// </remarks>
+    private const int MaxSegments = 8;
 
     /// <summary>
     /// The canonical form of <paramref name="path"/>, or null when it is not one this site can serve.

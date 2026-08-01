@@ -69,9 +69,11 @@ public sealed class SyndicatedPathTests
     [Fact]
     public void Refuses_a_path_deeper_than_a_path_should_be()
     {
-        // host/owner/name needs three. Six is generous; beyond that something is being encoded in
-        // the URL that belongs in the page.
-        Assert.NotNull(SyndicatedPath.Sanitize("a/b/c/d/e/f"));
-        Assert.Null(SyndicatedPath.Sanitize("a/b/c/d/e/f/g"));
+        // host/owner/name needs three, and a nested namespace needs more — a real address in the corpus
+        // is already surveys/gitlab/teo-dotnet/backend/restapi/orderingapi, which is six. Eight keeps the
+        // headroom; beyond that something is being encoded in the URL that belongs in the page.
+        Assert.NotNull(SyndicatedPath.Sanitize("surveys/gitlab/teo-dotnet/backend/restapi/orderingapi"));
+        Assert.NotNull(SyndicatedPath.Sanitize("a/b/c/d/e/f/g/h"));
+        Assert.Null(SyndicatedPath.Sanitize("a/b/c/d/e/f/g/h/i"));
     }
 }
