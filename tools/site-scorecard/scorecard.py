@@ -276,6 +276,14 @@ def check_page(page: Page, ctx: "SiteContext") -> list[Check]:
     add("og.type", "machine", 2, "og:type" in page.og)
     add("og.url", "machine", 2, "og:url" in page.og)
     add("og.image", "machine", 5, "og:image" in page.og)
+    # Presence is not enough. A share card is fetched by link scrapers, not browsers, and
+    # several of them — LinkedIn most consequentially — skip a WebP og:image and render a
+    # no-image card. A page can pass "og:image present" and still share as a bare link, so
+    # the format is its own check.
+    image_url = page.og.get("og:image", "")
+    add("og.image-scrapable", "machine", 4,
+        not image_url or not image_url.split("?")[0].lower().endswith((".webp", ".avif")),
+        f"scrapers may skip this format: {image_url.rsplit('/', 1)[-1]}" if image_url else "")
     add("twitter.card", "machine", 3, "twitter:card" in page.twitter)
     add("jsonld.present", "machine", 12, bool(page.jsonld),
         "no structured data" if not page.jsonld else "")

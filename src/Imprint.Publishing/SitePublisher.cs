@@ -233,7 +233,12 @@ public sealed class SitePublisher(
                 .Where(id => id.HasValue).Select(id => id!.Value);
             _assets = await PublishedAssetCatalog.Build(
                 pageAssetIds.Values.SelectMany(ids => ids).Concat(brandAssetIds),
-                assetLibrary, mediaStore, logger, ct);
+                assetLibrary, mediaStore, logger, ct,
+                // The share card is fetched by link scrapers, not browsers. Several of
+                // them (LinkedIn among them) skip a WebP og:image and fall back to a
+                // no-image card, so this one asset also ships in the format it was
+                // uploaded in.
+                withOriginals: _socialImageAssetId is { } social ? [social] : []);
 
             // Now the catalog exists, resolve the brand imagery to its PUBLISHED /assets URL.
             _faviconUrl = BrandPublishedUrl(_faviconAssetId, preferSmallest: true);
@@ -690,6 +695,15 @@ public sealed class SitePublisher(
             if (assetId is not { } id || _assets.Resolve(id) is not { } info)
             {
                 return null;
+            }
+
+            // The unconverted upload when we asked for one: a WebP share card is silently
+            // dropped by some scrapers, and a card that does not render is worth less than
+            // a slightly larger PNG. Falls back to the widest variant if no original
+            // shipped, which is still better than emitting nothing.
+            if (info.OriginalUrl is { Length: > 0 } original)
+            {
+                return original;
             }
 
             // ImageVariants are ordered smallest-first by the catalog.

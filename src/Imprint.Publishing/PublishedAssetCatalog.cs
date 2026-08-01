@@ -43,14 +43,18 @@ internal sealed class PublishedAssetCatalog
         AssetLibrary library,
         IMediaStore media,
         ILogger logger,
-        CancellationToken ct)
+        CancellationToken ct,
+        IEnumerable<AssetId>? withOriginals = null)
     {
+        // Publishing the untouched upload costs a second copy of the file, so it is opt-in
+        // per asset rather than done for every image on the site.
+        var originals = withOriginals?.ToHashSet() ?? [];
         var catalog = new PublishedAssetCatalog();
         foreach (var id in referenced.Distinct())
         {
             try
             {
-                catalog._entries[id] = await ResolveOne(id, library, media, logger, ct);
+                catalog._entries[id] = await ResolveOne(id, library, media, logger, ct, originals.Contains(id));
             }
             catch (Exception e) when (e is IOException or FileNotFoundException or UnauthorizedAccessException)
             {
@@ -66,7 +70,8 @@ internal sealed class PublishedAssetCatalog
     }
 
     private static async Task<Entry> ResolveOne(
-        AssetId id, AssetLibrary library, IMediaStore media, ILogger logger, CancellationToken ct)
+        AssetId id, AssetLibrary library, IMediaStore media, ILogger logger, CancellationToken ct,
+        bool withOriginal = false)
     {
         var asset = library.Get(id);
         if (asset is null)
@@ -76,7 +81,7 @@ internal sealed class PublishedAssetCatalog
 
         return (asset.Kind, asset.Status) switch
         {
-            (AssetKind.Image, AssetStatus.Ready) => await ResolveImage(asset, media, ct),
+            (AssetKind.Image, AssetStatus.Ready) => await ResolveImage(asset, media, withOriginal, ct),
             (AssetKind.Video, AssetStatus.Ready) when asset.DerivedStorageKey is { } webm =>
                 await ResolveSingleFile(asset, webm, ".webm", media, ct),
             // ReadyDegraded video (no ffmpeg): the original file ships as-is — the
@@ -94,7 +99,7 @@ internal sealed class PublishedAssetCatalog
         };
     }
 
-    private static async Task<Entry> ResolveImage(Asset asset, IMediaStore media, CancellationToken ct)
+    private static async Task<Entry> ResolveImage(Asset asset, IMediaStore media, bool withOriginal, CancellationToken ct)
     {
         var files = new List<AssetFile>();
         var hashes = new List<string>();
@@ -121,6 +126,16 @@ internal sealed class PublishedAssetCatalog
             sources[(sources.Count - 1) / 2].Url,
             sources, largest.Width, largest.Height,
             InlineSvg: null, asset.DefaultAlt);
+
+        if (withOriginal)
+        {
+            var originalHash = await HashOf(media, asset.OriginalStorageKey, ct);
+            var extension = OriginalExtension(asset);
+            var relative = $"assets/{asset.Id.Compact}-original.{originalHash}{extension}";
+            files.Add(new AssetFile(relative, asset.OriginalStorageKey));
+            hashes.Add(originalHash);
+            info = info with { OriginalUrl = $"/{relative}" };
+        }
 
         // Optional dark rendition: copied like the base variants under a "-dark-" name.
         // Its hashes are added to this entry so a re-processed dark variant flips the

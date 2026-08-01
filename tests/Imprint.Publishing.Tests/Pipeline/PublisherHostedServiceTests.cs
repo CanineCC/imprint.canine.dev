@@ -66,9 +66,16 @@ public sealed class PublisherHostedServiceTests
         }
     }
 
+    // The budget is generous on purpose. This waits on a DEBOUNCED background publish, so
+    // the wall-clock it needs depends on how loaded the machine is, not on whether the code
+    // is correct — and at the old 10s it failed intermittently when the full solution ran
+    // its projects in parallel while passing every time in isolation. A slow machine
+    // reported as a broken one is the worst kind of test, because the fix is to ignore it.
+    // A passing run still returns on the first poll; only a genuinely stuck one waits.
     private static async Task WaitFor(Func<bool> condition, string what)
     {
-        for (var attempt = 0; attempt < 200; attempt++)
+        var deadline = DateTime.UtcNow.AddSeconds(60);
+        do
         {
             if (condition())
             {
@@ -77,6 +84,7 @@ public sealed class PublisherHostedServiceTests
 
             await Task.Delay(50);
         }
+        while (DateTime.UtcNow < deadline);
 
         Assert.Fail($"Timed out waiting for {what}.");
     }

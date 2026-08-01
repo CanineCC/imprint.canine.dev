@@ -66,6 +66,14 @@ public sealed record AssetRenderInfo(
     string? InlineSvg,
     LocalizedText DefaultAlt)
 {
+    /// <summary>
+    /// The uploaded file itself, published unconverted — set only for assets that asked
+    /// for it. Derived variants are WebP, which browsers all accept but several link
+    /// scrapers do not, so anything consumed by a third-party fetcher rather than a
+    /// browser needs the boring original. Null when it was not requested.
+    /// </summary>
+    public string? OriginalUrl { get; init; }
+
     /// <summary>Dark-mode image sources; empty when the asset is neutral.</summary>
     public IReadOnlyList<ImageSource> DarkImageVariants { get; init; } = [];
 

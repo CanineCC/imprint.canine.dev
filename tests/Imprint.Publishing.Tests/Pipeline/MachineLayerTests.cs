@@ -66,12 +66,20 @@ public sealed class MachineLayerTests
 
         var html = host.ReadText("index.html");
 
-        // Widest variant, not the favicon's smallest-first preference: platforms degrade to
-        // a text-only card below their minimum, so the biggest render we have always wins.
-        Assert.Contains(
-            $"<meta property=\"og:image\" content=\"https://acme.example/assets/{socialId.Compact}-1200.",
-            html);
-        Assert.DoesNotContain($"/assets/{socialId.Compact}-600.", html);
+        // The share card ships as the file that was uploaded, not as a derived WebP.
+        // Link scrapers are not browsers: several of them (LinkedIn among them) skip a
+        // WebP og:image entirely and show a no-image card, so a page can score perfectly
+        // on "og:image present" and still share as a bare link. The format is the finding.
+        var image = Regex.Match(html, "<meta property=\"og:image\" content=\"([^\"]+)\"");
+        Assert.True(image.Success, "the page carries an og:image");
+        Assert.StartsWith($"https://acme.example/assets/{socialId.Compact}-original.", image.Groups[1].Value);
+        Assert.EndsWith(".jpg", image.Groups[1].Value);
+        Assert.DoesNotContain(".webp", image.Groups[1].Value);
+
+        // And the file it points at is really published, not merely named.
+        Assert.True(
+            host.FileExists(image.Groups[1].Value.Replace("https://acme.example/", "")),
+            "the share card's original must exist in the output");
 
         // With an image there is something to show large; without one there was not.
         Assert.Contains("<meta name=\"twitter:card\" content=\"summary_large_image\" />", html);
