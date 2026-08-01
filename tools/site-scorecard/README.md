@@ -64,9 +64,48 @@ each is now a load-bearing comment in the source:
   the listed `/page-dpa/`; counting it as an unlisted page turned one redirect defect into
   two findings and inflated the apparent problem.
 
+A fourth correction went the other way, and the direction matters. `og.image` passed as soon
+as the tag existed — but every derived variant is WebP, and LinkedIn skips a WebP `og:image`
+and shows a no-image card. The pages scored 100 on the machine layer while sharing as bare
+links on the channel that matters most for this audience. `og.image-scrapable` was added and
+the sites' score fell before the fix raised it again.
+
+**Tightening a check because reality is worse than the score claimed is honest. Loosening one
+because reality is inconvenient is not.** Both pressures show up in the same week and feel
+identical from the inside; the difference is whether the change makes the number track the
+world more closely or less. When in doubt, the check that lowers the score is the safer bet.
+
 If a check fires, verify the finding by hand before acting on it. If it turns out to be a
 tool defect, fix the tool in the same change — an instrument that drifts is the one failure
 mode that invalidates every number it has ever produced.
+
+## Result — 2026-08-01, after the first optimisation run
+
+| Site | Score | Grade | identity | machine | structure | hygiene | site |
+|---|---|---|---|---|---|---|---|
+| **overall** | **95.2** | **A** | | | | | |
+| cai | 96.8 | A | 99.1 | 100.0 | 87.5 | 89.8 | 100.0 |
+| www | 96.5 | A | 94.0 | 100.0 | 100.0 | 85.7 | 100.0 |
+| assay | 93.7 | A | 91.4 | 100.0 | 100.0 | 71.4 | 100.0 |
+| watchdog | 93.7 | A | 92.6 | 100.0 | 100.0 | 71.4 | 83.3 |
+
+Measured against a **stricter** rubric than the baseline below: `og.image-scrapable` was added
+mid-run after the cards shipped, because presence of an `og:image` turned out not to mean the
+card renders (see "Keeping the instrument honest"). Watchdog scored 93.5 before that check and
+90.7 immediately after it, on unchanged pages — the drop was the check starting to tell the
+truth, and the fix that followed earned the grade back.
+
+What is left, and why it is not a number problem:
+
+- **`hygiene` 71.4 on assay and watchdog** — pinned by ONE link, the header CTA to
+  `app.*.canine.dev/`, which 302s to `/ui` by deliberate product design. The check is binary
+  per page, so a page with one unfixable hop scores the same as one with twelve fixable ones,
+  and fixing the twelve shows no movement. That is a flaw in this rubric, not in the sites;
+  making the check proportional is the open proposal.
+- **`site` 83.3 on watchdog** — five dead URLs in an `llms.txt` served through an on-box nginx
+  override, outside the publish root and outside this repository. See
+  `docs/recovered/watchdog-llms.txt.2026-07-05`.
+- **`structure` 87.5 on cai** — the ~2,700-page survey template is thin (about 256 words).
 
 ## Baseline — 2026-08-01, before any optimisation work
 
