@@ -37,6 +37,35 @@ public sealed class SyndicatedPathTests
     public void Refuses_a_path_that_would_shadow_the_sites_own_files(string input) =>
         Assert.Null(SyndicatedPath.Sanitize(input));
 
+    [Theory]
+    [InlineData("da")]        // a locale we publish
+    [InlineData("en")]
+    [InlineData("fr")]        // and one we do not — the shape is what collides, not the config
+    public void Refuses_a_FIRST_segment_that_would_shadow_a_locale_prefix(string input)
+    {
+        // /da/ is the Danish site. A page addressed "da" would sit on top of it.
+        Assert.Null(SyndicatedPath.Sanitize(input));
+        Assert.Null(SyndicatedPath.Sanitize($"{input}/anything"));
+    }
+
+    [Theory]
+    [InlineData("surveys/lang/go", "surveys/lang/go")]
+    [InlineData("surveys/lang/php", "surveys/lang/php")]
+    [InlineData("surveys/github/nektos/act", "surveys/github/nektos/act")]
+    [InlineData("surveys/github/junegunn/fzf", "surveys/github/junegunn/fzf")]
+    [InlineData("surveys/github/lfe/lfe", "surveys/github/lfe/lfe")]
+    [InlineData("surveys/github/jet/propulsion", "surveys/github/jet/propulsion")]
+    public void Accepts_a_short_segment_that_is_not_the_first(string input, string expected)
+    {
+        // A locale only ever occupies the FIRST segment of a URL, so a two- or three-letter
+        // segment deeper in a path cannot shadow one. Holding every depth to the locale
+        // reservation refused these real addresses: it cost the corpus its Go and PHP field
+        // guides and 64 repository pages, while the index that linked to them published fine —
+        // so a 2,700-page public corpus linked to its own 404s, and the only visible symptom was
+        // a 400 in a worker log nobody was reading.
+        Assert.Equal(expected, SyndicatedPath.Sanitize(input));
+    }
+
     [Fact]
     public void Refuses_a_path_deeper_than_a_path_should_be()
     {

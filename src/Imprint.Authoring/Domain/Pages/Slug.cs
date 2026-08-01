@@ -19,7 +19,29 @@ public readonly partial record struct Slug
 
     private Slug(string value) => Value = value;
 
-    public static bool TryCreate(string? input, out Slug slug, out string? error)
+    /// <summary>
+    /// A segment that begins a path, and therefore shares a namespace with the locale prefix —
+    /// <c>/da/</c> is a locale, so a page addressed <c>da</c> would shadow it.
+    /// </summary>
+    public static bool TryCreate(string? input, out Slug slug, out string? error) =>
+        TryCreate(input, guardLocalePrefix: true, out slug, out error);
+
+    /// <summary>
+    /// A segment that is NOT the first in its path, where the locale reservation does not apply.
+    /// </summary>
+    /// <remarks>
+    /// A locale only ever occupies the FIRST segment of a published URL, so <c>go</c> or <c>da</c>
+    /// deeper in a path cannot shadow one. Applying the reservation at every depth refused real
+    /// addresses for a collision that cannot happen: it rejected every two- and three-letter
+    /// segment, which silently cost the corpus its Go and PHP field guides
+    /// (<c>surveys/lang/go</c>, <c>surveys/lang/php</c>) and 64 repository pages — <c>nektos/act</c>,
+    /// <c>junegunn/fzf</c>, <c>gin-gonic/gin</c> — while the pages that linked to them published
+    /// happily, so the corpus linked to its own 404s.
+    /// </remarks>
+    public static bool TryCreateNested(string? input, out Slug slug, out string? error) =>
+        TryCreate(input, guardLocalePrefix: false, out slug, out error);
+
+    private static bool TryCreate(string? input, bool guardLocalePrefix, out Slug slug, out string? error)
     {
         slug = default;
         error = null;
@@ -36,7 +58,7 @@ public readonly partial record struct Slug
             return false;
         }
 
-        if (Locale.TryCreate(candidate, out _))
+        if (guardLocalePrefix && Locale.TryCreate(candidate, out _))
         {
             error = $"'{candidate}' looks like a language code, which is reserved for locale URLs.";
             return false;

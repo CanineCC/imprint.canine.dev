@@ -40,10 +40,19 @@ public static class SyndicatedPath
         var clean = new string[segments.Length];
         for (var i = 0; i < segments.Length; i++)
         {
-            // Every segment has to be a valid slug in its own right. Slug.TryCreate lower-cases,
-            // enforces the alphabet, and refuses the names the published output reserves — so a
-            // path can never reach outside the site or shadow sitemap.xml.
-            if (!Slug.TryCreate(segments[i], out var slug, out _))
+            // Every segment has to be a valid slug in its own right: that lower-cases, enforces
+            // the alphabet, and refuses the names the published output reserves — so a path can
+            // never reach outside the site or shadow sitemap.xml.
+            //
+            // Only the FIRST segment is also held to the locale reservation, because only the
+            // first segment of a URL can be mistaken for a locale prefix. Holding every depth to
+            // it rejected any two- or three-letter segment, which is a real repository name
+            // (nektos/act) and a real language slug (surveys/lang/go) far more often than it is
+            // a threat.
+            var ok = i == 0
+                ? Slug.TryCreate(segments[i], out var slug, out _)
+                : Slug.TryCreateNested(segments[i], out slug, out _);
+            if (!ok)
             {
                 return null;
             }
