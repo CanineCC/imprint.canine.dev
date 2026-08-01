@@ -83,17 +83,24 @@ mode that invalidates every number it has ever produced.
 
 | Site | Score | Grade | identity | machine | structure | hygiene | site |
 |---|---|---|---|---|---|---|---|
-| **overall** | **95.2** | **A** | | | | | |
-| cai | 96.8 | A | 99.1 | 100.0 | 87.5 | 89.8 | 100.0 |
+| **overall** | **95.7** | **A** | | | | | |
+| cai | 97.6 | **A+** | 99.1 | 100.0 | 88.2 | 96.7 | 100.0 |
 | www | 96.5 | A | 94.0 | 100.0 | 100.0 | 85.7 | 100.0 |
-| assay | 93.7 | A | 91.4 | 100.0 | 100.0 | 71.4 | 100.0 |
-| watchdog | 93.7 | A | 92.6 | 100.0 | 100.0 | 71.4 | 83.3 |
+| assay | 94.4 | A | 93.3 | 100.0 | 100.0 | 71.4 | 100.0 |
+| watchdog | 94.1 | A | 92.6 | 100.0 | 100.0 | 71.4 | 100.0 |
 
 Measured against a **stricter** rubric than the baseline below: `og.image-scrapable` was added
 mid-run after the cards shipped, because presence of an `og:image` turned out not to mean the
 card renders (see "Keeping the instrument honest"). Watchdog scored 93.5 before that check and
 90.7 immediately after it, on unchanged pages — the drop was the check starting to tell the
 truth, and the fix that followed earned the grade back.
+
+Two of the largest wins were not metadata at all. The scorecard's link checking surfaced that
+`cai.canine.dev` was linking to its own 404s: a syndication path validator refused any two- or
+three-letter segment (it read them as locale tags), so the corpus had never published its Go and
+PHP field guides or 102 repository pages — `nektos/act`, `junegunn/fzf`, `gin-gonic/gin` — while
+the pages linking to them published normally. The only symptom was a 400 in a worker log. Fixing
+it took cai from 96.8 to 97.6 and grew the corpus from 2,739 to 2,841 pages.
 
 What is left, and why it is not a number problem:
 
@@ -102,10 +109,13 @@ What is left, and why it is not a number problem:
   per page, so a page with one unfixable hop scores the same as one with twelve fixable ones,
   and fixing the twelve shows no movement. That is a flaw in this rubric, not in the sites;
   making the check proportional is the open proposal.
-- **`site` 83.3 on watchdog** — five dead URLs in an `llms.txt` served through an on-box nginx
-  override, outside the publish root and outside this repository. See
-  `docs/recovered/watchdog-llms.txt.2026-07-05`.
-- **`structure` 87.5 on cai** — the ~2,700-page survey template is thin (about 256 words).
+- **`hygiene` 96.7 on cai** — 5 pages of 2,841 link to `/api/oss/{owner}/{name}/report` for
+  repositories whose OWNER contains a slash (GitLab subgroups). The link is built with
+  `Uri.EscapeDataString`, so the owner arrives as `a%2Fb`; the route has a single `{owner}`
+  segment and ASP.NET decodes `%2F` before matching, so it cannot match. Those repositories are
+  unaddressable by that route — the honest fixes are a catch-all route or omitting a link that
+  cannot resolve.
+- **`structure` 88.2 on cai** — the ~2,800-page survey template is thin (about 256 words).
 
 ## Baseline — 2026-08-01, before any optimisation work
 
