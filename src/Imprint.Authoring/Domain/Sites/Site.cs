@@ -28,6 +28,11 @@ public sealed class Site : AggregateRoot
     public const int MaxCollaborators = 20;
     public const int MaxCollaboratorEmailLength = 254;
 
+    // Generous, because this is prose a site writes about itself, but bounded: llms.txt is
+    // read whole by a model, and an unbounded preamble is the same defect as an unbounded
+    // page list.
+    public const int MaxLlmsPreambleLength = 20_000;
+
     private readonly List<Locale> _locales = [];
     private readonly List<string> _collaborators = [];
     private IReadOnlyList<NavigationItem> _navigation = [];
@@ -60,6 +65,10 @@ public sealed class Site : AggregateRoot
     // The share card image. Not the logo: og:image wants a wide picture (1200x630-ish) and
     // platforms reject the wrong shape rather than cropping it, so this is its own choice.
     public AssetId? SocialImageAssetId { get; private set; }
+
+    // What llms.txt says about this site before the generated page index. A page list
+    // alone tells a model what pages exist and nothing about what the site IS.
+    public string? LlmsPreamble { get; private set; }
 
     // Emails of the people who may edit this site besides its owner, in the order they
     // were added. The owner is not in this list — it lives on the site.created envelope
@@ -419,6 +428,27 @@ public sealed class Site : AggregateRoot
         Raise(new SiteSocialImageChanged(socialImageAssetId));
     }
 
+    /// <summary>
+    /// Set (or clear, with null) the llms.txt preamble — the site's own account of itself,
+    /// emitted above the generated page index. No-op idempotent on an unchanged value.
+    /// </summary>
+    public void SetLlmsPreamble(string? preamble)
+    {
+        var trimmed = string.IsNullOrWhiteSpace(preamble) ? null : preamble.Trim();
+        if (LlmsPreamble == trimmed)
+        {
+            return;
+        }
+
+        if (trimmed is { Length: > MaxLlmsPreambleLength })
+        {
+            throw new DomainException(
+                $"The llms.txt preamble is limited to {MaxLlmsPreambleLength} characters.");
+        }
+
+        Raise(new SiteLlmsPreambleChanged(trimmed));
+    }
+
     /// <summary>Set (or clear, with null) the footer's fine-print copy line.</summary>
     public void SetCopyLine(CopyLine? copyLine)
     {
@@ -633,6 +663,9 @@ public sealed class Site : AggregateRoot
                 break;
             case SiteSocialImageChanged e:
                 SocialImageAssetId = e.SocialImageAssetId;
+                break;
+            case SiteLlmsPreambleChanged e:
+                LlmsPreamble = e.Preamble;
                 break;
             case SiteEnvironmentsChanged e:
                 _environments = [.. e.Environments];

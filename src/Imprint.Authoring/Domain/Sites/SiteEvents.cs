@@ -112,6 +112,12 @@ public sealed record SiteHeaderLogoChanged(AssetId? HeaderLogoAssetId);
 [EventType("site.social-image-changed", 1)]
 public sealed record SiteSocialImageChanged(AssetId? SocialImageAssetId);
 
+// The llms.txt preamble: what a site says about ITSELF to a machine reading the whole
+// file, above the generated page index. Not localized — llms.txt is emitted once per
+// site at the root, not once per locale.
+[EventType("site.llms-preamble-changed", 1)]
+public sealed record SiteLlmsPreambleChanged(string? Preamble);
+
 // ── Access: who may open and edit the site besides its owner ──
 // The email is the same identity the auth layer stamps as the envelope actor, so a
 // collaborator's access check and their attribution in history use one value.

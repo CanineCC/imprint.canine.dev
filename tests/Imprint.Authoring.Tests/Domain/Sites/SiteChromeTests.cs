@@ -308,6 +308,42 @@ public sealed class SiteChromeTests
         Assert.Equal(share, outcome.Aggregate.SocialImageAssetId);
     }
 
+    // -------------------------------------------------------------- llms preamble
+
+    [Fact]
+    public void SetLlmsPreamble_raises_preamble_changed()
+    {
+        var outcome = AggregateSpec.For<Site>()
+            .Given(Created)
+            .When(s => s.SetLlmsPreamble("# Acme\n\n> What we are."));
+
+        outcome.ThenRaised(new SiteLlmsPreambleChanged("# Acme\n\n> What we are."));
+        Assert.Equal("# Acme\n\n> What we are.", outcome.Aggregate.LlmsPreamble);
+    }
+
+    [Fact]
+    public void A_blank_preamble_is_no_preamble_not_a_preamble_of_spaces() =>
+        AggregateSpec.For<Site>()
+            .Given(Created, new SiteLlmsPreambleChanged("# Acme"))
+            .When(s => s.SetLlmsPreamble("   \n  "))
+            .ThenRaised(new SiteLlmsPreambleChanged(null));
+
+    [Fact]
+    public void SetLlmsPreamble_with_the_same_text_raises_nothing() =>
+        AggregateSpec.For<Site>()
+            .Given(Created, new SiteLlmsPreambleChanged("# Acme"))
+            .When(s => s.SetLlmsPreamble("  # Acme  "))
+            .ThenNothing();
+
+    [Fact]
+    public void A_preamble_longer_than_the_limit_is_refused() =>
+        // llms.txt is read whole by a model; an unbounded preamble is the same defect as
+        // an unbounded page list, just written by hand instead of generated.
+        AggregateSpec.For<Site>()
+            .Given(Created)
+            .When(s => s.SetLlmsPreamble(new string('x', Site.MaxLlmsPreambleLength + 1)))
+            .ThenFails($"limited to {Site.MaxLlmsPreambleLength}");
+
     // ------------------------------------------------------------------ copy line
 
     [Fact]

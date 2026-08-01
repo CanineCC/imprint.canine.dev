@@ -193,6 +193,13 @@ internal sealed class PublishingTestHost : IAsyncDisposable
         await Commit(site);
     }
 
+    public async Task SetLlmsPreamble(SiteId siteId, string? preamble)
+    {
+        var site = await Store.Load<Site>(siteId.Stream);
+        site.SetLlmsPreamble(preamble);
+        await Commit(site);
+    }
+
     public async Task SetCopyLine(SiteId siteId, CopyLine? copyLine)
     {
         var site = await Store.Load<Site>(siteId.Stream);

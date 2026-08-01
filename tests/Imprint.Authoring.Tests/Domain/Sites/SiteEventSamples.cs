@@ -75,6 +75,8 @@ public sealed class SiteEventSamples : IEventSampleProvider
             yield return new SiteHeaderLogoChanged(null);
             yield return new SiteSocialImageChanged(AssetId.New());
             yield return new SiteSocialImageChanged(null);
+            yield return new SiteLlmsPreambleChanged("# Acme\n\n> What we are.");
+            yield return new SiteLlmsPreambleChanged(null);
 
             yield return new SiteOwnershipClaimed();
             yield return new SiteCollaboratorAdded("colleague@example.com");

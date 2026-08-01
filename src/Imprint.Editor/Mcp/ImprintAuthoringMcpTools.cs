@@ -31,6 +31,7 @@ using SeedLocaleCmd = Imprint.Authoring.Features.Sites.SeedLocale.SeedLocale;
 using SetCopyLineCmd = Imprint.Authoring.Features.Sites.SetCopyLine.SetCopyLine;
 using SetFaviconCmd = Imprint.Authoring.Features.Sites.SetFavicon.SetFavicon;
 using SetSocialImageCmd = Imprint.Authoring.Features.Sites.SetSocialImage.SetSocialImage;
+using SetLlmsPreambleCmd = Imprint.Authoring.Features.Sites.SetLlmsPreamble.SetLlmsPreamble;
 using SetHeaderLogoCmd = Imprint.Authoring.Features.Sites.SetHeaderLogo.SetHeaderLogo;
 using UploadAssetCmd = Imprint.Authoring.Features.Assets.UploadAsset.UploadAsset;
 
@@ -659,6 +660,18 @@ public sealed class ImprintAuthoringMcpTools
         if (!TryOptionalAssetId(assetId, out var aid)) return Fail("invalid assetId");
         return await Dispatch(dispatcher, config, new SetFaviconCmd(sid, aid), ct,
             () => new { ok = true, siteId = sid.Compact, faviconAssetId = aid?.Compact });
+    }
+
+    [McpServerTool(Name = "set_llms_preamble")]
+    [Description("Set (or clear) the site's llms.txt preamble - the markdown the site says about ITSELF, emitted above the generated page index. This is what a model reads to learn what the site IS; a list of page titles cannot tell it that. Write real markdown (headings, bullets). Pass null/empty to clear, and llms.txt falls back to the site name plus the home page description. Max 20000 characters.")]
+    public static async Task<object> SetLlmsPreamble(
+        [Description("The site id.")] string siteId,
+        [Description("The markdown preamble, or null/empty to clear.")] string? preamble,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        return await Dispatch(dispatcher, config, new SetLlmsPreambleCmd(sid, preamble), ct,
+            () => new { ok = true, siteId = sid.Compact, length = preamble?.Length ?? 0 });
     }
 
     [McpServerTool(Name = "set_social_image")]

@@ -139,6 +139,10 @@ public sealed class SitePublisher(
         private string? _faviconUrl;
         private string? _logoUrl;
         private string? _socialImageUrl;
+        private string? _llmsPreamble;
+
+        // Bounded so llms.txt stays a map a model reads whole, not a corpus dump.
+        private const int MaxLlmsPages = 200;
         private IReadOnlyList<PublishedPage> _pages = [];
         private Dictionary<PageId, PublishedPage> _pageById = [];
         private Dictionary<PageId, string> _slugPathOf = [];
@@ -173,6 +177,7 @@ public sealed class SitePublisher(
             _faviconAssetId = site.FaviconAssetId;
             _headerLogoAssetId = site.HeaderLogoAssetId;
             _socialImageAssetId = site.SocialImageAssetId;
+            _llmsPreamble = site.LlmsPreamble;
             // Only THIS site's published pages — a target folder holds exactly one site. Pages
             // syndicated from another system join them here and are otherwise indistinguishable:
             // same views, same chrome, same sitemap, same sweep. Everything the renderer learns,
@@ -1258,23 +1263,32 @@ public sealed class SitePublisher(
                        ?? plans.Find(p => p.SlugPath is not null);
 
             var text = new StringBuilder(2048);
-            text.Append("# ").Append(_siteName).Append('\n');
 
-            if (home is not null && MetaDescriptionOf(home.Page, _defaultLocale) is { Length: > 0 } summary)
+            // A site that has written its own account of itself says something a page list
+            // cannot: what it IS, not merely which pages exist. When it has, that stands in
+            // for the generated header entirely.
+            if (_llmsPreamble is { Length: > 0 } preamble)
             {
-                text.Append("\n> ").Append(summary).Append('\n');
+                text.Append(preamble.TrimEnd()).Append('\n');
+            }
+            else
+            {
+                text.Append("# ").Append(_siteName).Append('\n');
+                if (home is not null && MetaDescriptionOf(home.Page, _defaultLocale) is { Length: > 0 } summary)
+                {
+                    text.Append("\n> ").Append(summary).Append('\n');
+                }
             }
 
-            text.Append("\n## Pages\n\n");
-            foreach (var plan in plans)
-            {
-                if (plan.SlugPath is null || _failed.Contains(plan.Page.Id))
-                {
-                    continue;
-                }
+            var listable = plans
+                .Where(plan => plan.SlugPath is not null && !_failed.Contains(plan.Page.Id))
+                .ToList();
 
+            text.Append("\n## Pages\n\n");
+            foreach (var plan in listable.Take(MaxLlmsPages))
+            {
                 text.Append("- [").Append(DocumentTitle(plan.Page, _defaultLocale)).Append("](")
-                    .Append(Absolute(DirectoryPath(plan.SlugPath, _defaultLocale))).Append(')');
+                    .Append(Absolute(DirectoryPath(plan.SlugPath!, _defaultLocale))).Append(')');
 
                 if (MetaDescriptionOf(plan.Page, _defaultLocale) is { Length: > 0 } description)
                 {
@@ -1282,6 +1296,18 @@ public sealed class SitePublisher(
                 }
 
                 text.Append('\n');
+            }
+
+            // llms.txt is read WHOLE by a model, so a site that publishes a large generated
+            // corpus would otherwise ship half a megabyte of near-identical lines and get
+            // truncated or skipped — which loses the curated part at the top too. The list
+            // is bounded, and the omission is stated rather than silent: a file that stops
+            // early without saying so reads as "this is everything".
+            if (listable.Count > MaxLlmsPages)
+            {
+                text.Append("\n> ").Append(listable.Count - MaxLlmsPages)
+                    .Append(" further pages are not listed here. The complete set is in ")
+                    .Append(Absolute("/sitemap.xml")).Append(".\n");
             }
 
             return text.ToString();
