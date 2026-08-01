@@ -259,6 +259,55 @@ public sealed class SiteChromeTests
             .ThenNothing();
     }
 
+    // --------------------------------------------------------------- share image
+
+    [Fact]
+    public void SetSocialImage_raises_social_image_changed()
+    {
+        var assetId = AssetId.New();
+
+        var outcome = AggregateSpec.For<Site>()
+            .Given(Created)
+            .When(s => s.SetSocialImage(assetId));
+
+        outcome.ThenRaised(new SiteSocialImageChanged(assetId));
+        Assert.Equal(assetId, outcome.Aggregate.SocialImageAssetId);
+    }
+
+    [Fact]
+    public void SetSocialImage_can_clear_an_existing_share_image() =>
+        AggregateSpec.For<Site>()
+            .Given(Created, new SiteSocialImageChanged(AssetId.New()))
+            .When(s => s.SetSocialImage(null))
+            .ThenRaised(new SiteSocialImageChanged(null));
+
+    [Fact]
+    public void SetSocialImage_with_the_same_asset_raises_nothing()
+    {
+        var assetId = AssetId.New();
+
+        AggregateSpec.For<Site>()
+            .Given(Created, new SiteSocialImageChanged(assetId))
+            .When(s => s.SetSocialImage(assetId))
+            .ThenNothing();
+    }
+
+    [Fact]
+    public void The_share_image_is_its_own_choice_not_the_logo()
+    {
+        // og:image wants a wide picture and the header logo is not one. Setting either
+        // must leave the other alone, or a site gains a broken share card by picking a logo.
+        var logo = AssetId.New();
+        var share = AssetId.New();
+
+        var outcome = AggregateSpec.For<Site>()
+            .Given(Created, new SiteHeaderLogoChanged(logo))
+            .When(s => s.SetSocialImage(share));
+
+        Assert.Equal(logo, outcome.Aggregate.HeaderLogoAssetId);
+        Assert.Equal(share, outcome.Aggregate.SocialImageAssetId);
+    }
+
     // ------------------------------------------------------------------ copy line
 
     [Fact]

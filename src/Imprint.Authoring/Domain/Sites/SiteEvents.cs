@@ -105,6 +105,13 @@ public sealed record SiteFaviconChanged(AssetId? FaviconAssetId);
 [EventType("site.header-logo-changed", 1)]
 public sealed record SiteHeaderLogoChanged(AssetId? HeaderLogoAssetId);
 
+// The share card image (og:image) — what a chat app, a social platform or a model shows
+// when it is handed the URL instead of the page. Separate from the logo on purpose: this
+// one is wide (1200x630-ish) and the header logo is not, and a platform rejects the wrong
+// shape rather than cropping it.
+[EventType("site.social-image-changed", 1)]
+public sealed record SiteSocialImageChanged(AssetId? SocialImageAssetId);
+
 // ── Access: who may open and edit the site besides its owner ──
 // The email is the same identity the auth layer stamps as the envelope actor, so a
 // collaborator's access check and their attribution in history use one value.

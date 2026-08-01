@@ -71,14 +71,16 @@ public sealed class HtmlContractTests
         // Block instance content renders from its definition.
         Assert.Contains("Reusable promo block", html);
 
-        // No editor residue. The only external URL is the fixed Canine byline in the
-        // footer chrome; the page CONTENT and nav still carry no external links (this
-        // site sets none), so there is no other https:// and no http:// at all.
+        // No editor residue. Exactly two external URLs, both structural: the fixed Canine
+        // byline in the footer chrome, and the schema.org context of the structured data.
+        // The page CONTENT and nav still carry no external links (this site sets none), so
+        // any third https:// is a regression and there is no http:// at all.
         Assert.DoesNotContain("data-node-id", html);
         Assert.DoesNotContain("data-node-type", html);
         Assert.DoesNotContain("http://", html);
-        Assert.Single(Regex.Matches(html, "https://"));
+        Assert.Equal(2, Regex.Matches(html, "https://").Count);
         Assert.Contains("https://canine.dev", html);
+        Assert.Single(Regex.Matches(html, "https://schema.org"));
     }
 
     [Fact]

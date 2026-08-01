@@ -26,6 +26,42 @@
   {
     <link rel="alternate" hreflang="@alternate.Hreflang" href="@alternate.Href" />
   }
+  @if (Chrome.RobotsDirective is not null)
+  {
+    <meta name="robots" content="@Chrome.RobotsDirective" />
+  }
+  @if (Chrome.Social is { } social)
+  {
+    <meta property="og:title" content="@social.Title" />
+    @if (social.Description is not null)
+    {
+      <meta property="og:description" content="@social.Description" />
+    }
+    <meta property="og:type" content="@social.Type" />
+    <meta property="og:site_name" content="@social.SiteName" />
+    @if (social.Url is not null)
+    {
+      <meta property="og:url" content="@social.Url" />
+    }
+    @if (social.Locale is not null)
+    {
+      <meta property="og:locale" content="@social.Locale" />
+    }
+    @if (social.ImageUrl is not null)
+    {
+      <meta property="og:image" content="@social.ImageUrl" />
+    }
+    <meta name="twitter:card" content="@(social.ImageUrl is null ? "summary" : "summary_large_image")" />
+  }
+  @* The whole element is written as markup, attribute included, because Razor's attribute
+     encoder rewrites the '+' in the media type to '&#x2B;'. A spec-compliant parser decodes
+     that back, but plenty of crawlers match the literal string and would miss the block
+     entirely. The payload is safe by construction — StructuredData escapes '<' and '>', so
+     it cannot close this element early. *@
+  @foreach (var block in Chrome.JsonLd)
+  {
+    @((MarkupString)$"<script type=\"application/ld+json\">{block}</script>")
+  }
   @if (Chrome.FaviconUrl is not null)
   {
     <link rel="icon" href="@Chrome.FaviconUrl" />

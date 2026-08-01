@@ -57,6 +57,10 @@ public sealed class Site : AggregateRoot
     public AssetId? FaviconAssetId { get; private set; }
     public AssetId? HeaderLogoAssetId { get; private set; }
 
+    // The share card image. Not the logo: og:image wants a wide picture (1200x630-ish) and
+    // platforms reject the wrong shape rather than cropping it, so this is its own choice.
+    public AssetId? SocialImageAssetId { get; private set; }
+
     // Emails of the people who may edit this site besides its owner, in the order they
     // were added. The owner is not in this list — it lives on the site.created envelope
     // actor (see SiteOverview), so the two never drift.
@@ -400,6 +404,21 @@ public sealed class Site : AggregateRoot
         Raise(new SiteHeaderLogoChanged(headerLogoAssetId));
     }
 
+    /// <summary>
+    /// Set (or clear, with null) the site's share card image — the <c>og:image</c> every
+    /// page carries. Same cross-aggregate note as <see cref="SetFavicon"/>. No-op
+    /// idempotent on an unchanged value.
+    /// </summary>
+    public void SetSocialImage(AssetId? socialImageAssetId)
+    {
+        if (Equals(SocialImageAssetId, socialImageAssetId))
+        {
+            return;
+        }
+
+        Raise(new SiteSocialImageChanged(socialImageAssetId));
+    }
+
     /// <summary>Set (or clear, with null) the footer's fine-print copy line.</summary>
     public void SetCopyLine(CopyLine? copyLine)
     {
@@ -611,6 +630,9 @@ public sealed class Site : AggregateRoot
                 break;
             case SiteHeaderLogoChanged e:
                 HeaderLogoAssetId = e.HeaderLogoAssetId;
+                break;
+            case SiteSocialImageChanged e:
+                SocialImageAssetId = e.SocialImageAssetId;
                 break;
             case SiteEnvironmentsChanged e:
                 _environments = [.. e.Environments];

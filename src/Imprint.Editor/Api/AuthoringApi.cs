@@ -30,6 +30,7 @@ using PublishPageCmd = Imprint.Authoring.Features.Pages.PublishPage.PublishPage;
 using RemoveNodeCmd = Imprint.Authoring.Features.Pages.RemoveNode.RemoveNode;
 using SetCopyLineCmd = Imprint.Authoring.Features.Sites.SetCopyLine.SetCopyLine;
 using SetFaviconCmd = Imprint.Authoring.Features.Sites.SetFavicon.SetFavicon;
+using SetSocialImageCmd = Imprint.Authoring.Features.Sites.SetSocialImage.SetSocialImage;
 using SetHeaderLogoCmd = Imprint.Authoring.Features.Sites.SetHeaderLogo.SetHeaderLogo;
 using UploadAssetCmd = Imprint.Authoring.Features.Assets.UploadAsset.UploadAsset;
 
@@ -776,6 +777,16 @@ public static class AuthoringApi
             return result.Succeeded
                 ? Results.Ok(new { siteId = sid.Compact, faviconAssetId = aid?.Compact })
                 : Results.BadRequest(new { error = "set favicon failed", details = result.Errors });
+        });
+
+        api.MapPut("/sites/{siteId}/social-image", async (string siteId, SetAssetRefRequest? body, ICommandDispatcher dispatcher, CancellationToken ct) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            if (!TryOptionalAssetId(body?.AssetId, out var aid)) return Results.BadRequest(new { error = "invalid assetId" });
+            var result = await DispatchAs(dispatcher, actor, new SetSocialImageCmd(sid, aid), ct);
+            return result.Succeeded
+                ? Results.Ok(new { siteId = sid.Compact, socialImageAssetId = aid?.Compact })
+                : Results.BadRequest(new { error = "set social image failed", details = result.Errors });
         });
 
         api.MapPut("/sites/{siteId}/header-logo", async (string siteId, SetAssetRefRequest? body, ICommandDispatcher dispatcher, CancellationToken ct) =>

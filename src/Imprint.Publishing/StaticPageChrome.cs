@@ -21,6 +21,27 @@ public sealed record StaticPageChrome
 
     public IReadOnlyList<Alternate> Alternates { get; init; } = [];
 
+    /// <summary>
+    /// The Open Graph / Twitter card fields, or null to emit none. Derived by the publisher
+    /// from the page's own title, description and canonical URL — a share preview and a
+    /// search snippet describe the same page, so they are never authored twice.
+    /// </summary>
+    public SocialCard? Social { get; init; }
+
+    /// <summary>
+    /// Finished JSON-LD documents, each emitted in its own
+    /// <c>&lt;script type="application/ld+json"&gt;</c>. Serialised by the publisher so the
+    /// component stays a dumb template; see <see cref="StructuredData"/>.
+    /// </summary>
+    public IReadOnlyList<string> JsonLd { get; init; } = [];
+
+    /// <summary>
+    /// The <c>robots</c> directive, or null to emit none (the normal case — absence means
+    /// "index, follow", and saying so explicitly on every page adds bytes and no meaning).
+    /// Set on pages that must stay out of an index, such as the 404.
+    /// </summary>
+    public string? RobotsDirective { get; init; }
+
     public required string StylesheetHref { get; init; }
 
     public required string SiteName { get; init; }
@@ -62,6 +83,21 @@ public sealed record StaticPageChrome
     public bool IncludeIslandLoader { get; init; }
 
     public sealed record Alternate(string Hreflang, string Href);
+
+    /// <summary>
+    /// What a social platform or a language model sees when it is handed the URL rather
+    /// than the page. <paramref name="Url"/> and <paramref name="ImageUrl"/> are absolute
+    /// or null: Open Graph has no base to resolve a relative reference against, so a
+    /// root-relative value there is worse than an absent one.
+    /// </summary>
+    public sealed record SocialCard(
+        string Title,
+        string? Description,
+        string? Url,
+        string Type,
+        string SiteName,
+        string? ImageUrl,
+        string? Locale);
 
     /// <summary>
     /// One top-level nav entry: EITHER a direct link (<see cref="Href"/> set,

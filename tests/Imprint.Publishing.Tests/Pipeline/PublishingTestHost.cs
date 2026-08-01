@@ -186,6 +186,13 @@ internal sealed class PublishingTestHost : IAsyncDisposable
         await Commit(site);
     }
 
+    public async Task SetSocialImage(SiteId siteId, AssetId? socialImageAssetId)
+    {
+        var site = await Store.Load<Site>(siteId.Stream);
+        site.SetSocialImage(socialImageAssetId);
+        await Commit(site);
+    }
+
     public async Task SetCopyLine(SiteId siteId, CopyLine? copyLine)
     {
         var site = await Store.Load<Site>(siteId.Stream);

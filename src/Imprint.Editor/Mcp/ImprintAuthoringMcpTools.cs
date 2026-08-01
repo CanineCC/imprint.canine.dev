@@ -30,6 +30,7 @@ using RemoveLocaleCmd = Imprint.Authoring.Features.Sites.RemoveLocale.RemoveLoca
 using SeedLocaleCmd = Imprint.Authoring.Features.Sites.SeedLocale.SeedLocale;
 using SetCopyLineCmd = Imprint.Authoring.Features.Sites.SetCopyLine.SetCopyLine;
 using SetFaviconCmd = Imprint.Authoring.Features.Sites.SetFavicon.SetFavicon;
+using SetSocialImageCmd = Imprint.Authoring.Features.Sites.SetSocialImage.SetSocialImage;
 using SetHeaderLogoCmd = Imprint.Authoring.Features.Sites.SetHeaderLogo.SetHeaderLogo;
 using UploadAssetCmd = Imprint.Authoring.Features.Assets.UploadAsset.UploadAsset;
 
@@ -658,6 +659,19 @@ public sealed class ImprintAuthoringMcpTools
         if (!TryOptionalAssetId(assetId, out var aid)) return Fail("invalid assetId");
         return await Dispatch(dispatcher, config, new SetFaviconCmd(sid, aid), ct,
             () => new { ok = true, siteId = sid.Compact, faviconAssetId = aid?.Compact });
+    }
+
+    [McpServerTool(Name = "set_social_image")]
+    [Description("Set (or clear) the site's share card image - the og:image every page carries, shown when the URL is pasted into a chat app, a social platform or handed to a model. Wants a WIDE image (about 1200x630); the header logo is the wrong shape and is never used as a stand-in. Pass an uploaded image's asset id, or null/empty to clear. The asset must already exist.")]
+    public static async Task<object> SetSocialImage(
+        [Description("The site id.")] string siteId,
+        [Description("The asset id to use, or null/empty to clear.")] string? assetId,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        if (!TryOptionalAssetId(assetId, out var aid)) return Fail("invalid assetId");
+        return await Dispatch(dispatcher, config, new SetSocialImageCmd(sid, aid), ct,
+            () => new { ok = true, siteId = sid.Compact, socialImageAssetId = aid?.Compact });
     }
 
     [McpServerTool(Name = "set_header_logo")]

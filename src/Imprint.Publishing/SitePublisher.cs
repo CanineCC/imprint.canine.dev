@@ -135,8 +135,10 @@ public sealed class SitePublisher(
         private CopyLine? _copyLine;
         private AssetId? _faviconAssetId;
         private AssetId? _headerLogoAssetId;
+        private AssetId? _socialImageAssetId;
         private string? _faviconUrl;
         private string? _logoUrl;
+        private string? _socialImageUrl;
         private IReadOnlyList<PublishedPage> _pages = [];
         private Dictionary<PageId, PublishedPage> _pageById = [];
         private Dictionary<PageId, string> _slugPathOf = [];
@@ -170,6 +172,7 @@ public sealed class SitePublisher(
             // and the /preview plane, unlike the editor-only /media route.
             _faviconAssetId = site.FaviconAssetId;
             _headerLogoAssetId = site.HeaderLogoAssetId;
+            _socialImageAssetId = site.SocialImageAssetId;
             // Only THIS site's published pages — a target folder holds exactly one site. Pages
             // syndicated from another system join them here and are otherwise indistinguishable:
             // same views, same chrome, same sitemap, same sweep. Everything the renderer learns,
@@ -221,7 +224,7 @@ public sealed class SitePublisher(
             // Brand assets ride the same catalog as page images: their bytes land under
             // assets/ (CopyAssets) and stay unswept (DesiredFiles), so the published/preview
             // <link rel=icon>/<img> point at real files.
-            var brandAssetIds = new[] { _faviconAssetId, _headerLogoAssetId }
+            var brandAssetIds = new[] { _faviconAssetId, _headerLogoAssetId, _socialImageAssetId }
                 .Where(id => id.HasValue).Select(id => id!.Value);
             _assets = await PublishedAssetCatalog.Build(
                 pageAssetIds.Values.SelectMany(ids => ids).Concat(brandAssetIds),
@@ -230,6 +233,7 @@ public sealed class SitePublisher(
             // Now the catalog exists, resolve the brand imagery to its PUBLISHED /assets URL.
             _faviconUrl = BrandPublishedUrl(_faviconAssetId, preferSmallest: true);
             _logoUrl = BrandPublishedUrl(_headerLogoAssetId, preferSmallest: false);
+            _socialImageUrl = SocialImagePublishedUrl(_socialImageAssetId);
             await LoadWidgetBundles(ct);
 
             var plans = PlanPages(ordered, pageAssetIds, oldManifest, cssHash);
@@ -541,6 +545,8 @@ public sealed class SitePublisher(
                 MetaDescription = MetaDescriptionOf(page, locale),
                 CanonicalHref = Absolute(DirectoryPath(slugPath, locale)),
                 Alternates = AlternatesOf(slugPath),
+                Social = SocialCardFor(page, slugPath, locale),
+                JsonLd = JsonLdFor(page, slugPath, locale),
                 StylesheetHref = $"/{_cssFile}",
                 SiteName = _siteName,
                 HomeHref = HomeHref(locale),
@@ -569,6 +575,11 @@ public sealed class SitePublisher(
                 MetaDescription = null,
                 CanonicalHref = null, // a 404 has no canonical URL
                 Alternates = [],
+                // Nothing here is a page: no share card, no structured data, and an
+                // explicit refusal to be indexed — the one page that needs to say so.
+                Social = null,
+                JsonLd = [],
+                RobotsDirective = "noindex, follow",
                 StylesheetHref = $"/{_cssFile}",
                 SiteName = _siteName,
                 HomeHref = "/",
@@ -661,16 +672,127 @@ public sealed class SitePublisher(
             return null;
         }
 
-        private string DocumentTitle(PublishedPage page, Locale locale)
+        /// <summary>
+        /// The share card image, resolved to its LARGEST published variant — the opposite
+        /// of the favicon's preference and the reason this is not just another
+        /// <see cref="BrandPublishedUrl"/> call. Platforms want roughly 1200px wide and
+        /// degrade to a text-only card below their minimum, so the widest render we have is
+        /// always the right one. Vector and non-raster assets have no published file, so
+        /// they resolve to null and no <c>og:image</c> is emitted at all.
+        /// </summary>
+        private string? SocialImagePublishedUrl(AssetId? assetId)
         {
-            var title = page.MetaTitle.Resolve(locale, _defaultLocale);
-            if (title.Length == 0)
+            if (assetId is not { } id || _assets.Resolve(id) is not { } info)
             {
-                title = page.Title.Resolve(locale, _defaultLocale);
+                return null;
             }
 
+            // ImageVariants are ordered smallest-first by the catalog.
+            return info is { Kind: AssetKind.Image, ImageVariants.Count: > 0 }
+                ? info.ImageVariants[^1].Url
+                : null;
+        }
+
+        /// <summary>The page's own title, without the site-name suffix the document title adds.</summary>
+        private string PageTitle(PublishedPage page, Locale locale)
+        {
+            var title = page.MetaTitle.Resolve(locale, _defaultLocale);
+            return title.Length > 0 ? title : page.Title.Resolve(locale, _defaultLocale);
+        }
+
+        private string DocumentTitle(PublishedPage page, Locale locale)
+        {
+            var title = PageTitle(page, locale);
             return title.Length > 0 ? $"{title} · {_siteName}" : _siteName;
         }
+
+        /// <summary>
+        /// What a social platform or a model sees when handed the URL instead of the page.
+        /// Derived from the same title and description the search snippet uses — the two
+        /// describe one page, so authoring them separately only creates a way to disagree.
+        /// </summary>
+        private StaticPageChrome.SocialCard SocialCardFor(PublishedPage page, string slugPath, Locale locale)
+        {
+            var title = PageTitle(page, locale);
+            return new StaticPageChrome.SocialCard(
+                Title: title.Length > 0 ? title : _siteName,
+                Description: MetaDescriptionOf(page, locale),
+                // Open Graph has no base to resolve a relative reference against, so
+                // without a configured origin an absent url beats an unusable one.
+                Url: _baseUrl is null ? null : Absolute(DirectoryPath(slugPath, locale)),
+                Type: "website",
+                SiteName: _siteName,
+                // Absolute or absent, for the same reason as the url above. The header logo
+                // is deliberately never used as a stand-in: it is the wrong shape, and a
+                // platform rejects it rather than cropping, which shows a broken card where
+                // a clean text-only one would have done.
+                ImageUrl: _baseUrl is null || _socialImageUrl is null ? null : Absolute(_socialImageUrl),
+                Locale: OpenGraphLocale(locale));
+        }
+
+        /// <summary>
+        /// og:locale is language_TERRITORY, not a bare language tag. A locale with no
+        /// region cannot be expressed in that form, so it goes unstated rather than wrong.
+        /// </summary>
+        private static string? OpenGraphLocale(Locale locale) =>
+            locale.Value.Split('-') is [{ Length: > 0 } language, { Length: > 0 } region]
+                ? $"{language}_{region.ToUpperInvariant()}"
+                : null;
+
+        private IReadOnlyList<string> JsonLdFor(PublishedPage page, string slugPath, Locale locale)
+        {
+            var title = PageTitle(page, locale);
+            return
+            [
+                StructuredData.PageGraph(
+                    siteName: _siteName,
+                    lang: locale.Value,
+                    pageUrl: Absolute(DirectoryPath(slugPath, locale)),
+                    homeUrl: Absolute(HomeHref(locale)),
+                    title: title.Length > 0 ? title : _siteName,
+                    description: MetaDescriptionOf(page, locale),
+                    logoUrl: _logoUrl is null ? null : Absolute(_logoUrl),
+                    isHome: HomePageId() == page.Id,
+                    trail: TrailFor(slugPath, locale)),
+            ];
+        }
+
+        /// <summary>
+        /// The ancestor pages leading to this one, for the breadcrumb. Built from the slug
+        /// path, and an ancestor segment that no page occupies is skipped rather than
+        /// invented — a breadcrumb that names a page you cannot open is a broken promise.
+        /// </summary>
+        private IReadOnlyList<(string Name, string Url)> TrailFor(string slugPath, Locale locale)
+        {
+            if (slugPath.Length == 0)
+            {
+                return [];
+            }
+
+            var trail = new List<(string, string)> { (_siteName, Absolute(HomeHref(locale))) };
+            var segments = slugPath.Split('/');
+            var prefix = string.Empty;
+            for (var i = 0; i < segments.Length - 1; i++)
+            {
+                prefix = prefix.Length == 0 ? segments[i] : $"{prefix}/{segments[i]}";
+                if (PageAt(prefix) is { } ancestor)
+                {
+                    trail.Add((PageTitle(ancestor, locale), Absolute(DirectoryPath(prefix, locale))));
+                }
+            }
+
+            return trail;
+        }
+
+        private Dictionary<string, PublishedPage>? _pageAtPath;
+
+        // Claimed paths are unique by construction (ClaimPaths resolves collisions), so the
+        // inverse of _slugPathOf is a function, not a multimap.
+        private PublishedPage? PageAt(string slugPath) =>
+            (_pageAtPath ??= _slugPathOf
+                .Where(entry => _pageById.ContainsKey(entry.Key))
+                .ToDictionary(entry => entry.Value, entry => _pageById[entry.Key]))
+            .GetValueOrDefault(slugPath);
 
         private string? MetaDescriptionOf(PublishedPage page, Locale locale)
         {
