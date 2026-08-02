@@ -28,6 +28,7 @@ TAGS=(
   cai-band-scale
   cai-lens-gauges
   cai-trend
+  cai-survey-list
   cai-composition-bar
   cai-evidence-flow
   cai-c4-heat

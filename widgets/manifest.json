@@ -402,6 +402,51 @@
     ]
   },
   {
+    "tag": "cai-survey-list",
+    "name": "CAI survey list",
+    "description": "A measured corpus a reader can work through: the band distribution as a bar that IS the band filter, a search box, a sort, and the projects as cards. One control rather than a chart and a separate filter row that can disagree with each other. DATA ONLY: no API base, it never fetches, so a language page cannot list another language's projects — and the full list ships in the attribute, so a reader who never runs the script still finds every one.",
+    "bundle": "cai-survey-list.js",
+    "placeholder": "CAI survey list",
+    "props": [
+      {
+        "name": "projects",
+        "label": "Projects (JSON array of {owner, name, score, loc, busFactor, day, at, href}) — `at` is ISO 8601 and enables the by-date sort",
+        "type": "text",
+        "default": "[]"
+      },
+      {
+        "name": "kicker",
+        "label": "Kicker (small uppercase intro)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "heading",
+        "label": "Heading",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "lede",
+        "label": "Lede / intro paragraph",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "empty-text",
+        "label": "Message when nothing matches",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "brand",
+        "label": "Brand accent (watchdog | assay | cai)",
+        "type": "text",
+        "default": ""
+      }
+    ]
+  },
+  {
     "tag": "cai-composition-bar",
     "name": "CAI composition bar",
     "description": "A pure-SVG proportion bar for the brilliant / fine / slop code-composition split, coloured with the CAI band vocabulary. Builds the segments from the HERO published card's measured brilliant%/slop% (the highest-scoring published repo, from /api/oss) when an API base is set; falls back to the seeded segments.",
