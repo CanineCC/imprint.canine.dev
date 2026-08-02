@@ -34,6 +34,7 @@ using SetSocialImageCmd = Imprint.Authoring.Features.Sites.SetSocialImage.SetSoc
 using SetLlmsPreambleCmd = Imprint.Authoring.Features.Sites.SetLlmsPreamble.SetLlmsPreamble;
 using SetHeaderLogoCmd = Imprint.Authoring.Features.Sites.SetHeaderLogo.SetHeaderLogo;
 using UploadAssetCmd = Imprint.Authoring.Features.Assets.UploadAsset.UploadAsset;
+using UploadAssetDarkVariantCmd = Imprint.Authoring.Features.Assets.UploadAssetDarkVariant.UploadAssetDarkVariant;
 
 namespace Imprint.Editor.Mcp;
 
@@ -647,6 +648,35 @@ public sealed class ImprintAuthoringMcpTools
         await using var stream = new MemoryStream(bytes);
         return await Dispatch(dispatcher, config, new UploadAssetCmd(assetId, fileName, type, bytes.Length, stream), ct,
             () => new { ok = true, assetId = assetId.Compact, status = "Pending" });
+    }
+
+    [McpServerTool(Name = "upload_asset_dark")]
+    [Description("Attach a dark-mode rendition to an EXISTING image or SVG asset, from base64-encoded bytes. Without one, a single rendition is inlined into BOTH colour schemes — so an SVG authored with a light background ships onto a dark page. Processing is async: poll get_asset until Ready. Re-uploading supersedes the previous dark rendition.")]
+    public static async Task<object> UploadAssetDark(
+        [Description("The id of the asset to attach the dark rendition to.")] string assetId,
+        [Description("The dark file's bytes, base64-encoded.")] string base64,
+        [Description("The file name, e.g. 'logo-dark.svg' (its extension matters).")] string fileName,
+        [Description("The media type, e.g. 'image/png' or 'image/svg+xml'.")] string contentType,
+        ICommandDispatcher dispatcher, IConfiguration config, AssetLibrary assets, CancellationToken ct = default)
+    {
+        if (!AuthoringApi.TryAssetId(assetId, out var aid)) return Fail("invalid assetId");
+        if (assets.Get(aid) is null) return Fail("unknown asset");
+        if (string.IsNullOrWhiteSpace(fileName)) return Fail("fileName is required");
+        byte[] bytes;
+        try
+        {
+            bytes = Convert.FromBase64String(base64 ?? string.Empty);
+        }
+        catch (FormatException)
+        {
+            return Fail("base64 is not valid base64");
+        }
+
+        if (bytes.Length == 0) return Fail("the file is empty");
+        var type = string.IsNullOrWhiteSpace(contentType) || !contentType.Contains('/') ? "application/octet-stream" : contentType;
+        await using var stream = new MemoryStream(bytes);
+        return await Dispatch(dispatcher, config, new UploadAssetDarkVariantCmd(aid, fileName, type, bytes.Length, stream), ct,
+            () => new { ok = true, assetId = aid.Compact, status = "Pending", dark = true });
     }
 
     [McpServerTool(Name = "set_favicon")]

@@ -33,6 +33,7 @@ using SetFaviconCmd = Imprint.Authoring.Features.Sites.SetFavicon.SetFavicon;
 using SetSocialImageCmd = Imprint.Authoring.Features.Sites.SetSocialImage.SetSocialImage;
 using SetHeaderLogoCmd = Imprint.Authoring.Features.Sites.SetHeaderLogo.SetHeaderLogo;
 using UploadAssetCmd = Imprint.Authoring.Features.Assets.UploadAsset.UploadAsset;
+using UploadAssetDarkVariantCmd = Imprint.Authoring.Features.Assets.UploadAssetDarkVariant.UploadAssetDarkVariant;
 
 namespace Imprint.Editor.Api;
 
@@ -713,46 +714,40 @@ public static class AuthoringApi
         // once; GET /assets/{id} polls the status + variant URLs until it is Ready.
         api.MapPost("/assets", async (HttpContext http, ICommandDispatcher dispatcher, CancellationToken ct) =>
         {
-            string fileName;
-            string contentType;
-            Stream content;
-            long byteSize;
-
-            if (http.Request.HasFormContentType)
-            {
-                var form = await http.Request.ReadFormAsync(ct);
-                var file = form.Files.GetFile("file") ?? form.Files.FirstOrDefault();
-                if (file is null) return Results.BadRequest(new { error = "no file in the multipart form (expected a 'file' field)" });
-                fileName = file.FileName;
-                contentType = string.IsNullOrWhiteSpace(file.ContentType) || !file.ContentType.Contains('/')
-                    ? "application/octet-stream" : file.ContentType;
-                byteSize = file.Length;
-                content = file.OpenReadStream();
-            }
-            else
-            {
-                fileName = http.Request.Headers["X-Filename"].ToString().Trim();
-                if (string.IsNullOrWhiteSpace(fileName)) return Results.BadRequest(new { error = "a raw upload needs an X-Filename header" });
-                contentType = string.IsNullOrWhiteSpace(http.Request.ContentType) || !http.Request.ContentType.Contains('/')
-                    ? "application/octet-stream" : http.Request.ContentType;
-                // Buffer to learn the length (UploadAsset needs ByteSize; the request stream is
-                // not seekable). The upload cap is enforced by the aggregate.
-                var buffer = new MemoryStream();
-                await http.Request.Body.CopyToAsync(buffer, ct);
-                buffer.Position = 0;
-                byteSize = buffer.Length;
-                content = buffer;
-            }
-
-            if (byteSize <= 0) return Results.BadRequest(new { error = "the uploaded file is empty" });
+            var (upload, error) = await ReadUpload(http, ct);
+            if (upload is null) return error!;
 
             var assetId = AssetId.New();
-            await using (content)
+            await using (upload.Content)
             {
-                var result = await DispatchAs(dispatcher, actor, new UploadAssetCmd(assetId, fileName, contentType, byteSize, content), ct);
+                var result = await DispatchAs(dispatcher, actor, new UploadAssetCmd(assetId, upload.FileName, upload.ContentType, upload.ByteSize, upload.Content), ct);
                 return result.Succeeded
                     ? Results.Ok(new { assetId = assetId.Compact, status = "Pending" })
                     : Results.BadRequest(new { error = "upload failed", details = result.Errors });
+            }
+        }).DisableAntiforgery();
+
+        // Attach a dark-mode rendition to an EXISTING asset — the headless twin of the editor's
+        // AssetDarkVariant panel. Without this a headless caller can only ever upload a light
+        // asset, and SvgView then inlines that single rendition into both colour schemes: a
+        // diagram authored with a light background rect ships onto a dark page. Same two body
+        // shapes as POST /assets; processing is async exactly the same way, so poll
+        // GET /assets/{id} until Ready. Re-uploading supersedes the previous dark rendition.
+        api.MapPost("/assets/{assetId}/dark", async (string assetId, HttpContext http, ICommandDispatcher dispatcher, AssetLibrary assets, CancellationToken ct) =>
+        {
+            if (!TryAssetId(assetId, out var aid)) return Results.BadRequest(new { error = "invalid assetId" });
+            // Checked before the bytes are read so a typo'd id fails fast rather than after an upload.
+            if (assets.Get(aid) is null) return Results.NotFound(new { error = "unknown asset" });
+
+            var (upload, error) = await ReadUpload(http, ct);
+            if (upload is null) return error!;
+
+            await using (upload.Content)
+            {
+                var result = await DispatchAs(dispatcher, actor, new UploadAssetDarkVariantCmd(aid, upload.FileName, upload.ContentType, upload.ByteSize, upload.Content), ct);
+                return result.Succeeded
+                    ? Results.Ok(new { assetId = aid.Compact, status = "Pending", dark = true })
+                    : Results.BadRequest(new { error = "dark-variant upload failed", details = result.Errors });
             }
         }).DisableAntiforgery();
 
@@ -1103,6 +1098,57 @@ public static class AuthoringApi
         if (Guid.TryParseExact(s, "N", out var g) || Guid.TryParse(s, out g)) { id = AssetId.From(g); return true; }
         id = default;
         return false;
+    }
+
+    /// <summary>One uploaded file, however it arrived on the request.</summary>
+    internal sealed record UploadBody(string FileName, string ContentType, long ByteSize, Stream Content);
+
+    /// <summary>
+    /// Reads an upload in either accepted shape — a multipart form-file (field "file", the
+    /// primary path) or a raw body with an X-Filename header — so the base and dark-variant
+    /// upload routes cannot diverge on how they parse a request. Returns the body, or a null
+    /// body plus the <see cref="IResult"/> to return.
+    /// </summary>
+    internal static async Task<(UploadBody? Body, IResult? Error)> ReadUpload(HttpContext http, CancellationToken ct)
+    {
+        string fileName;
+        string contentType;
+        Stream content;
+        long byteSize;
+
+        if (http.Request.HasFormContentType)
+        {
+            var form = await http.Request.ReadFormAsync(ct);
+            var file = form.Files.GetFile("file") ?? form.Files.FirstOrDefault();
+            if (file is null) return (null, Results.BadRequest(new { error = "no file in the multipart form (expected a 'file' field)" }));
+            fileName = file.FileName;
+            contentType = string.IsNullOrWhiteSpace(file.ContentType) || !file.ContentType.Contains('/')
+                ? "application/octet-stream" : file.ContentType;
+            byteSize = file.Length;
+            content = file.OpenReadStream();
+        }
+        else
+        {
+            fileName = http.Request.Headers["X-Filename"].ToString().Trim();
+            if (string.IsNullOrWhiteSpace(fileName)) return (null, Results.BadRequest(new { error = "a raw upload needs an X-Filename header" }));
+            contentType = string.IsNullOrWhiteSpace(http.Request.ContentType) || !http.Request.ContentType.Contains('/')
+                ? "application/octet-stream" : http.Request.ContentType;
+            // Buffer to learn the length (the upload commands need ByteSize; the request stream
+            // is not seekable). The upload cap is enforced by the aggregate.
+            var buffer = new MemoryStream();
+            await http.Request.Body.CopyToAsync(buffer, ct);
+            buffer.Position = 0;
+            byteSize = buffer.Length;
+            content = buffer;
+        }
+
+        if (byteSize <= 0)
+        {
+            await content.DisposeAsync();
+            return (null, Results.BadRequest(new { error = "the uploaded file is empty" }));
+        }
+
+        return (new UploadBody(fileName, contentType, byteSize, content), null);
     }
 
     // Blank/null means "clear" (returns null, true); a present-but-unparseable value is an error
