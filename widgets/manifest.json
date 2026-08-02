@@ -300,6 +300,51 @@
     ]
   },
   {
+    "tag": "cai-lens-gauges",
+    "name": "CAI lens gauges",
+    "description": "The ten lenses as gauges: each score inked with its band, a bar to read at a glance, and the dimension that GATES it — which is what tells a reader what to fix rather than only that it could be better. DATA ONLY: there is no API base and it never fetches, so every number comes from the page that renders it and this island cannot show one repository's figures under another's name.",
+    "bundle": "cai-lens-gauges.js",
+    "placeholder": "CAI lens gauges",
+    "props": [
+      {
+        "name": "lenses",
+        "label": "Lenses (JSON array of {label, value, note}) — value null renders an em dash",
+        "type": "text",
+        "default": "[]"
+      },
+      {
+        "name": "kicker",
+        "label": "Kicker (small uppercase intro)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "heading",
+        "label": "Heading",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "lede",
+        "label": "Lede / intro paragraph",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "footnote",
+        "label": "Footnote under the gauges",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "brand",
+        "label": "Brand accent (watchdog | assay | cai)",
+        "type": "text",
+        "default": ""
+      }
+    ]
+  },
+  {
     "tag": "cai-composition-bar",
     "name": "CAI composition bar",
     "description": "A pure-SVG proportion bar for the brilliant / fine / slop code-composition split, coloured with the CAI band vocabulary. Builds the segments from the HERO published card's measured brilliant%/slop% (the highest-scoring published repo, from /api/oss) when an API base is set; falls back to the seeded segments.",

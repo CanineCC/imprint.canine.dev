@@ -42,6 +42,40 @@ public sealed class SyndicatedPagePublishTests
         Assert.DoesNotContain("A document database and event store", html);
     }
 
+    [Fact]
+    public async Task A_syndicated_page_can_carry_one_of_the_sites_own_widgets()
+    {
+        // The corpus producer sends an ISLAND, never a drawing: the site renders the widget from live data, so a
+        // survey page shows the same score card the marketing site does and cannot drift from it. That only works
+        // if a widget node survives syndication and gets the island treatment like any authored page's would.
+        await using var host = new PublishingTestHost();
+        var scenario = await TemplatedSiteScenario.Build(host);
+        var store = host.Services.GetRequiredService<SyndicatedPageStore>();
+
+        var page = Survey(scenario.SiteId, "registry/github/jasperfx/marten", "JasperFx/marten") with
+        {
+            Node = new SectionNode
+            {
+                Id = NodeId.New(),
+                Children = NodeList.Of([
+                    new WidgetNode
+                    {
+                        Id = NodeId.New(),
+                        Tag = "x-note",
+                        Props = PropBag.Of([new KeyValuePair<string, string>("text", "hello")]),
+                    },
+                ]),
+            },
+        };
+        store.Upsert(page);
+
+        await host.Publisher.Synchronize();
+
+        var html = host.ReadText("registry/github/jasperfx/marten/index.html");
+        Assert.Contains("<x-note class=\"ip-widget\" text=\"hello\" data-island=\"/widgets/x-note.", html);
+        Assert.Contains(PublisherScripts.IslandLoader, html);   // and the loader ships with it
+    }
+
     private static SyndicatedPage Survey(
         SiteId siteId, string path, string heading,
         string body = "<p>A document database and event store built on PostgreSQL.</p>",

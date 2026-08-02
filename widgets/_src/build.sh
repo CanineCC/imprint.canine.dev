@@ -21,6 +21,7 @@ TAGS=(
   cai-score-card
   cai-card-gallery
   cai-band-scale
+  cai-lens-gauges
   cai-composition-bar
   cai-evidence-flow
   cai-c4-heat
