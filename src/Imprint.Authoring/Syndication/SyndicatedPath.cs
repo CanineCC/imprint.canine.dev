@@ -24,7 +24,8 @@ public static class SyndicatedPath
     /// arrived: <c>surveys/gitlab/teo-dotnet/backend/restapi/orderingapi</c> is already six, so one more
     /// subgroup level would have been refused. Eight leaves the same headroom the original six intended.
     /// </remarks>
-    private const int MaxSegments = 8;
+    /// <summary>The deepest a syndicated path may nest. Public so the API's error message cannot drift from it.</summary>
+    public const int MaxSegments = 8;
 
     /// <summary>
     /// The canonical form of <paramref name="path"/>, or null when it is not one this site can serve.

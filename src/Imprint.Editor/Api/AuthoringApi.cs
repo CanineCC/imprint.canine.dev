@@ -551,7 +551,13 @@ public static class AuthoringApi
             if (site is null) return Results.NotFound(new { error = "unknown site" });
             if (SyndicatedPath.Sanitize(path) is not { } cleanPath)
             {
-                return Results.BadRequest(new { error = "path segments must each be slug-shaped (a-z, 0-9, hyphen), 1–6 deep" });
+                // The depth in this message is the one SyndicatedPath actually enforces. It said 6 after the limit
+                // was raised to 8 for nested namespaces, so the one caller who would ever hit it — a producer
+                // publishing a deep GitLab subgroup — would have been told to shorten a path that was legal.
+                return Results.BadRequest(new
+                {
+                    error = $"path segments must each be slug-shaped (a-z, 0-9, hyphen), 1–{SyndicatedPath.MaxSegments} deep",
+                });
             }
 
             if (!body.TryGetProperty("node", out var nodeSpec))
