@@ -46,8 +46,22 @@ const SAMPLE = {
 };
 
 // Band display order (best-first) and the "focus" dot count that reads as clarity.
-const BAND_ORDER = ["FULL", "HIGH", "MEDIUM", "LOW"];
-const FOCUS = { FULL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+// ONE definition of the bands — their order, their focus-dot count and their card weight. These three
+// were three separate literals, and all three had silently fallen out of sync with the server's band set:
+// "VERY HIGH" was missing from every one, so four Deep languages (F#, Java, Kotlin, VB.NET) vanished from
+// the matrix entirely, and had they rendered they would have drawn ZERO focus dots — the second-best band
+// looking like the worst. Deriving all three from one list makes that class of drift impossible.
+const BANDS = [
+  { band: "FULL", dots: 5, edge: 1 },
+  { band: "VERY HIGH", dots: 4, edge: 0.85 },
+  { band: "HIGH", dots: 3, edge: 0.7 },
+  { band: "MEDIUM", dots: 2, edge: 0.45 },
+  { band: "LOW", dots: 1, edge: 0.22 },
+];
+const BAND_ORDER = BANDS.map((b) => b.band);
+const FOCUS = Object.fromEntries(BANDS.map((b) => [b.band, b.dots]));
+const EDGE = Object.fromEntries(BANDS.map((b) => [b.band, b.edge]));
+const DOT_MAX = Math.max(...BANDS.map((b) => b.dots));
 
 const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + `
 .mk-fit { max-width: 66rem; margin: 0 auto; }
@@ -90,12 +104,12 @@ const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + `
 function focusDots(band) {
   const on = FOCUS[band] || 0;
   let h = '<span class="mk-fit-dots" aria-hidden="true">';
-  for (let i = 1; i <= 4; i++) h += `<i class="${i <= on ? "on" : ""}"></i>`;
+  for (let i = 1; i <= DOT_MAX; i++) h += `<i class="${i <= on ? "on" : ""}"></i>`;
   return h + "</span>";
 }
 
 function cardHtml(l) {
-  const edge = { FULL: 1, HIGH: 0.7, MEDIUM: 0.45, LOW: 0.22 }[l.band] ?? 0.5;
+  const edge = EDGE[l.band] ?? 0.5;
   const covered = (l.coveredLenses || []).map((x) => `<span class="mk-fit-chip">${escapeHtml(x)}</span>`).join("");
   const na = (l.notApplicableLenses || []).map((x) => `<span class="mk-fit-chip na">${escapeHtml(x)}</span>`).join("");
   const naRow = na ? `<div class="mk-fit-lensrow"><span class="mk-fit-lenslabel">N/A</span><div class="mk-fit-chips">${na}</div></div>` : "";
@@ -148,7 +162,18 @@ customElements.define(
         html += `<p class="mk-fit-note"><strong>${lead}</strong>${rest ? " — " + rest : ""}</p>`;
       }
 
-      for (const band of BAND_ORDER) {
+      // Render the known bands in order, then ANY band the server sent that this list doesn't know.
+      // Iterating a hard-coded list alone silently DROPS a language whose band is missing from it — which is
+      // exactly what happened: "VERY HIGH" was absent, so F#, Java, Kotlin and VB.NET (four Deep languages)
+      // vanished from the public matrix while the page looked complete. A catalogue widget must never quietly
+      // publish a subset.
+      const known = new Set(BAND_ORDER);
+      const extra = [];
+      for (const l of data.languages) {
+        if (!known.has(l.band) && !extra.includes(l.band)) extra.push(l.band);
+      }
+
+      for (const band of [...BAND_ORDER, ...extra]) {
         const langs = data.languages.filter((l) => l.band === band);
         if (langs.length === 0) continue;
         html += `<section class="mk-fit-band"><div class="mk-fit-bandhead">`;
