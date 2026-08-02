@@ -447,6 +447,57 @@
     ]
   },
   {
+    "tag": "cai-language-board",
+    "name": "CAI language board",
+    "description": "Every measured language as a row, its median drawn as a band-inked bar on one shared 0–100 axis that is never scaled to the data — these are CAI scores, and 60 means the same thing on every row. The chart IS the list: each bar links to that language's field guide. Search and sort included. The ungrouped count is stated separately and never sorted away, so the totals reconcile. DATA ONLY: no API base, it never fetches.",
+    "bundle": "cai-language-board.js",
+    "placeholder": "CAI language board",
+    "props": [
+      {
+        "name": "languages",
+        "label": "Languages (JSON array of {name, count, median, href})",
+        "type": "text",
+        "default": "[]"
+      },
+      {
+        "name": "ungrouped",
+        "label": "Ungrouped projects (JSON {count}) — stated so the totals reconcile",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "kicker",
+        "label": "Kicker (small uppercase intro)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "heading",
+        "label": "Heading",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "lede",
+        "label": "Lede / intro paragraph",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "empty-text",
+        "label": "Message when nothing matches",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "brand",
+        "label": "Brand accent (watchdog | assay | cai)",
+        "type": "text",
+        "default": ""
+      }
+    ]
+  },
+  {
     "tag": "cai-composition-bar",
     "name": "CAI composition bar",
     "description": "A pure-SVG proportion bar for the brilliant / fine / slop code-composition split, coloured with the CAI band vocabulary. Builds the segments from the HERO published card's measured brilliant%/slop% (the highest-scoring published repo, from /api/oss) when an API base is set; falls back to the seeded segments.",
