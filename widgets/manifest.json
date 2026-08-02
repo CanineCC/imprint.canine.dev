@@ -498,6 +498,45 @@
     ]
   },
   {
+    "tag": "cai-link-cards",
+    "name": "CAI link cards",
+    "description": "Where a reader goes next, as cards with a mark on each rather than a row of underlined sentences that all look like footnotes. The icon is a claim about the destination: the forge's own mark for a repository link, the HTML5 mark for a report served as HTML (not a PDF glyph, which would promise a download that does not exist), and the shared canine badge tinted with that product's accent for Watchdog and CAI — the same mark the site headers use, so a card cannot drift into being a second logo. DATA ONLY: no API base, it never fetches.",
+    "bundle": "cai-link-cards.js",
+    "placeholder": "CAI link cards",
+    "props": [
+      {
+        "name": "links",
+        "label": "Links (JSON array of {icon, label, note, href}); icon = github | gitlab | html | doc | watchdog | cai",
+        "type": "text",
+        "default": "[]"
+      },
+      {
+        "name": "kicker",
+        "label": "Kicker (small uppercase intro)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "heading",
+        "label": "Heading",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "lede",
+        "label": "Lede / intro paragraph",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "brand",
+        "label": "Brand accent (watchdog | assay | cai)",
+        "type": "text",
+        "default": ""
+      }
+    ]
+  },
+  {
     "tag": "cai-composition-bar",
     "name": "CAI composition bar",
     "description": "A pure-SVG proportion bar for the brilliant / fine / slop code-composition split, coloured with the CAI band vocabulary. Builds the segments from the HERO published card's measured brilliant%/slop% (the highest-scoring published repo, from /api/oss) when an API base is set; falls back to the seeded segments.",

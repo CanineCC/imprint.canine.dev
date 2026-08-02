@@ -30,6 +30,7 @@ TAGS=(
   cai-trend
   cai-survey-list
   cai-language-board
+  cai-link-cards
   cai-composition-bar
   cai-evidence-flow
   cai-c4-heat
