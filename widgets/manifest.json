@@ -302,7 +302,7 @@
   {
     "tag": "cai-lens-gauges",
     "name": "CAI lens gauges",
-    "description": "The ten lenses as gauges: each score inked with its band, a bar to read at a glance, and the dimension that GATES it — which is what tells a reader what to fix rather than only that it could be better. DATA ONLY: there is no API base and it never fetches, so every number comes from the page that renders it and this island cannot show one repository's figures under another's name.",
+    "description": "The lenses as gauges: each score inked with its band, a bar to read at a glance, and an optional note per lens — today the band word, the gating dimension once a card carries one. DATA ONLY: there is no API base and it never fetches, so every number comes from the page that renders it and this island cannot show one repository's figures under another's name.",
     "bundle": "cai-lens-gauges.js",
     "placeholder": "CAI lens gauges",
     "props": [
@@ -333,6 +333,63 @@
       {
         "name": "footnote",
         "label": "Footnote under the gauges",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "brand",
+        "label": "Brand accent (watchdog | assay | cai)",
+        "type": "text",
+        "default": ""
+      }
+    ]
+  },
+  {
+    "tag": "cai-trend",
+    "name": "CAI trend line",
+    "description": "One repository's score across its own scans, as a line. The y-axis is SNAPPED to the CAI cutlines (0/25/50/70/90/100) and never autoscaled to the data, so a 0.4-point wobble cannot be drawn as a climb; the cutlines inside the range are drawn, so \"rose but stayed Fair\" is legible. Only the first and last dates are labelled. A single measurement renders as the number and its date with no chart. DATA ONLY: no API base, it never fetches, so it cannot plot one repository's history under another's name.",
+    "bundle": "cai-trend.js",
+    "placeholder": "CAI trend line",
+    "props": [
+      {
+        "name": "series",
+        "label": "Scores oldest→newest (JSON array of numbers)",
+        "type": "text",
+        "default": "[]"
+      },
+      {
+        "name": "first-date",
+        "label": "Date of the first measurement",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "last-date",
+        "label": "Date of the latest measurement",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "kicker",
+        "label": "Kicker (small uppercase intro)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "heading",
+        "label": "Heading",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "lede",
+        "label": "Lede / intro paragraph",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "caption",
+        "label": "Caption under the chart",
         "type": "text",
         "default": ""
       },

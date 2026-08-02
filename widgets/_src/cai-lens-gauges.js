@@ -29,8 +29,8 @@ import { bandFor } from "./cai.js";
 
 const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + `
 .mk-gauges { max-width: 46rem; margin: 0 auto; display: grid; gap: 2px;
-  border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--line); }
-.mk-gauge { background: var(--ground); padding: 13px 16px;
+  border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--border); }
+.mk-gauge { background: var(--surface); padding: 13px 16px;
   display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; align-items: baseline; }
 .mk-gauge-name { font-weight: 650; font-size: var(--fs-sm); }
 .mk-gauge-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
