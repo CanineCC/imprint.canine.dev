@@ -123,17 +123,29 @@ customElements.define(
     #index = null; // { latest, versions[] }
     #catalog = null; // the catalog currently shown
     #chosen = null; // the version the reader picked, if any
+    #tried = false; // has a live read been ATTEMPTED and finished?
 
     async liveLoad() {
       const base = this.apiBase();
-      if (!base) return;
+      if (!base) {
+        this.#tried = true;
+        return;
+      }
 
       const index = await getJson(base, "/api/rubrics");
-      if (!index || !Array.isArray(index.versions) || index.versions.length === 0) return;
+      if (!index || !Array.isArray(index.versions) || index.versions.length === 0) {
+        this.#tried = true;
+        this.render(this.shadowRoot);
+        return;
+      }
 
       const want = this.#chosen || index.latest || index.versions[0];
       const catalog = await getJson(base, `/api/rubrics/${encodeURIComponent(want)}/catalog`);
-      if (!catalog || !Array.isArray(catalog.dimensions)) return;
+      if (!catalog || !Array.isArray(catalog.dimensions)) {
+        this.#tried = true;
+        this.render(this.shadowRoot);
+        return;
+      }
 
       this.#index = index;
       this.#catalog = catalog;
@@ -168,8 +180,10 @@ customElements.define(
           .join("");
         h += `<label class="dx-pick">Rubric version <select part="version">${opts}</select></label>`;
         h += `<span class="dx-badge">live from the archive</span>`;
-      } else {
+      } else if (this.#tried) {
         h += `<span class="dx-badge sample">sample — the archive was not reachable</span>`;
+      } else {
+        h += `<span class="dx-badge sample">sample — the live catalogue loads from the archive</span>`;
       }
       h += `<span class="dx-count">${dims.length} entries · ${coded.length} with a code · ${meta} meta-dimensions · ${lenses.length} lenses</span>`;
       h += "</div>";
