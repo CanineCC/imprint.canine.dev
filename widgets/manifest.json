@@ -799,6 +799,45 @@
     ]
   },
   {
+    "tag": "cai-dimensions",
+    "name": "Rubric dimension catalogue (live)",
+    "description": "Every dimension and lens in the CAI rubric, read LIVE from the published archive with a version picker. Rubrics are immutable and a score always names the one it was computed under, so a reader holding an older survey can select THAT version and read the definitions it was scored against. Fetches /api/rubrics and /api/rubrics/{version}/catalog when an API base is set and AUTO-UPDATES on every rubric publication — it never snapshots the catalogue, which is how the old hand-copied table drifted four versions stale. Falls back to a small labelled sample when the archive is unreachable.",
+    "bundle": "cai-dimensions.js",
+    "placeholder": "Rubric dimension catalogue",
+    "props": [
+      {
+        "name": "api-base",
+        "label": "Live API base URL (empty = show the sample)",
+        "type": "url",
+        "default": ""
+      },
+      {
+        "name": "kicker",
+        "label": "Kicker (small uppercase intro)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "heading",
+        "label": "Heading",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "lede",
+        "label": "Lede / intro paragraph",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "footnote",
+        "label": "Footnote under the matrix",
+        "type": "text",
+        "default": ""
+      }
+    ]
+  },
+  {
     "tag": "cai-public-reports",
     "name": "Public reports — surveyed-corpus shop window",
     "description": "A curated, capped shop window on Watchdog's surveyed OSS corpus. Leads with the corpus scale ('N,000+ repositories surveyed'), shows a language-diverse best-first set of at most 24 survey cards, and lets a visitor filter by language/lens or search by name — the filter hits the whole corpus server-side, so search implies depth the grid never dumps. Each card deep-links to the full signed survey on the app. Fetches /api/public/reports when an API base is set; falls back to a small labelled sample.",
