@@ -8,9 +8,21 @@ namespace Imprint.Authoring.Domain.Pages;
 /// folders) and anything that parses as a locale tag (locale URL prefixes) are
 /// rejected so a page can never shadow <c>/assets/</c> or <c>/da/</c>.
 /// </summary>
+/// <remarks>
+/// <para><b>Why a dot is in the alphabet.</b> Some addresses carry an identifier that is minted
+/// elsewhere and printed verbatim on the artifact it names — a CAI rubric version
+/// (<c>rubric-2026.08.19</c>) is stamped on every survey scored under it. A reader who copies that
+/// string off a report has to be able to paste it into the URL and land on the right page; forcing
+/// <c>rubric-2026-08-19</c> makes the address a near-miss of the identifier it addresses, which is
+/// exactly the kind of transcription a person gets wrong.</para>
+/// <para>Containment is unaffected, and still comes from the alphabet rather than from a traversal
+/// check somebody has to remember to write. A segment must begin AND end with a letter or digit, so
+/// <c>.</c> and <c>..</c> cannot be segments at all, and no segment can start with a dot (no hidden
+/// files). <c>/</c> remains the only separator, so a dot can never introduce a new path level.</para>
+/// </remarks>
 public readonly partial record struct Slug
 {
-    [GeneratedRegex("^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$")]
+    [GeneratedRegex("^[a-z0-9](?:[a-z0-9.-]{0,78}[a-z0-9])?$")]
     private static partial Regex Shape();
 
     private static readonly string[] Reserved = ["assets", "css", "js", "widgets", "sitemap", "robots"];

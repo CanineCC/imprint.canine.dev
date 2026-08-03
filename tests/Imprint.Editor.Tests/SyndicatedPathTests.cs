@@ -14,6 +14,9 @@ public sealed class SyndicatedPathTests
     [InlineData("/registry/github/jasperfx/marten/", "registry/github/jasperfx/marten")]  // trimmed
     [InlineData("Registry/GitHub/JasperFx/Marten", "registry/github/jasperfx/marten")]    // lower-cased
     [InlineData("registry", "registry")]                                                  // one segment is fine
+    // A version identifier minted elsewhere and printed on the artifact it names must survive into the
+    // address verbatim, so a reader can paste what the report shows them. Dots are in the alphabet for this.
+    [InlineData("dimensions/rubric-2026.08.19", "dimensions/rubric-2026.08.19")]
     public void Accepts_a_nested_slug_shaped_path(string input, string expected) =>
         Assert.Equal(expected, SyndicatedPath.Sanitize(input));
 
@@ -24,6 +27,10 @@ public sealed class SyndicatedPathTests
     [InlineData("registry\\github\\thing")]   // backslashes
     [InlineData("registry/with space")]       // space
     [InlineData("registry/über")]             // outside the alphabet
+    [InlineData("..")]                        // a bare dot-segment is not a segment
+    [InlineData("registry/..")]               // …at any depth
+    [InlineData("registry/.hidden")]          // a segment may not START with a dot
+    [InlineData("registry/trailing.")]        // …nor end with one
     [InlineData("")]
     [InlineData(null)]
     public void Refuses_anything_that_is_not_slug_shaped(string? input) =>
