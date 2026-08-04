@@ -33,6 +33,46 @@ import { bandFor } from "./cai.js";
 // The band cutlines. A snapped axis picks the pair of these that brackets the data.
 const CUTS = [0, 25, 50, 70, 90, 100];
 
+// Two scores are the same score when they round to the same tenth — the precision every surface
+// here publishes at. Comparing floats exactly would leave 82.5 and 82.50000000000001 as a "change".
+const SAME = 0.05;
+
+/**
+ * A series reduced to the marks worth drawing: a run of identical scores keeps its FIRST and LAST
+ * and drops everything between.
+ *
+ * A repository scanned nightly sits at one score for weeks, and drawing a dot per scan turned a
+ * flat stretch into a solid bar of overlapping circles — a hundred marks saying what two marks and
+ * the line between them already say. Each kept mark carries its own index, so the line's geometry
+ * is UNCHANGED: dropping interior points of a flat run cannot move the path, because they were
+ * collinear with its ends. The time axis keeps its true spacing, and a plateau still looks as long
+ * as it was — which a chart that merely deleted the duplicates would get wrong.
+ *
+ * `run` travels with each mark so the tooltip can say what the missing dots said: how many scans
+ * held that score.
+ */
+export function collapseFlatRuns(series) {
+  const marks = [];
+  let i = 0;
+  while (i < series.length) {
+    let end = i;
+    while (end + 1 < series.length && Math.abs(series[end + 1] - series[i]) < SAME) {
+      end++;
+    }
+
+    const run = end - i + 1;
+    marks.push({ i, v: series[i], run });
+    // A run of one or two is already its own first-and-last; only a third point can be interior.
+    if (end > i) {
+      marks.push({ i: end, v: series[end], run });
+    }
+
+    i = end + 1;
+  }
+
+  return marks;
+}
+
 const W = 720;
 const H = 240;
 const PAD = { top: 26, right: 18, bottom: 34, left: 40 };
@@ -135,7 +175,10 @@ customElements.define(
 
       const last = series[series.length - 1];
       const lastBand = bandFor(last);
-      const points = series.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
+      // The marks, and the path through them. Both come from the collapsed set: the interior of a
+      // flat run is collinear with its ends, so the drawn line is identical and the markup is not.
+      const marks = collapseFlatRuns(series);
+      const points = marks.map((m) => `${x(m.i).toFixed(1)},${y(m.v).toFixed(1)}`);
 
       html += `<div class="mk-trend"><div class="mk-trend-plot">`;
       html += `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${escapeHtml(
@@ -161,13 +204,14 @@ customElements.define(
         html += `<text class="mk-trend-date" x="${W - PAD.right}" y="${H - 10}" text-anchor="end">${escapeHtml(lastDate)}</text>`;
       }
 
-      series.forEach((v, i) => {
-        const isLast = i === series.length - 1;
-        const cx = x(i).toFixed(1);
-        const cy = y(v).toFixed(1);
-        // A hit target far bigger than the mark, so a 5px dot is not a 5px target.
+      marks.forEach((m) => {
+        const isLast = m.i === series.length - 1;
+        const cx = x(m.i).toFixed(1);
+        const cy = y(m.v).toFixed(1);
+        // A hit target far bigger than the mark, so a 5px dot is not a 5px target. `data-run` is
+        // what the dropped dots knew: a mark capping a flat stretch answers for the whole stretch.
         html += `<circle class="mk-trend-hit" cx="${cx}" cy="${cy}" r="18" tabindex="0"`
-          + ` data-i="${i}" data-v="${fmt(v)}"></circle>`;
+          + ` data-i="${m.i}" data-v="${fmt(m.v)}" data-run="${m.run}"></circle>`;
         html += isLast
           ? `<circle class="mk-trend-end fill-${lastBand.key}" cx="${cx}" cy="${cy}" r="5.5"></circle>`
           : `<circle class="mk-trend-dot" cx="${cx}" cy="${cy}" r="4"></circle>`;
@@ -205,8 +249,15 @@ customElements.define(
         const i = Number(hit.getAttribute("data-i"));
         const rect = hit.getBoundingClientRect();
         const box = plot.getBoundingClientRect();
+        // A mark that caps a flat stretch answers for the whole stretch, because the dots inside it
+        // were dropped: say how many scans held the score instead of naming one of them and leaving
+        // a reader to wonder what happened to the other thirty.
+        const run = Number(hit.getAttribute("data-run")) || 1;
+        const where = run >= 3
+          ? `unchanged across ${run} scans`
+          : `scan ${i + 1} of ${series.length}`;
         tip.hidden = false;
-        tip.innerHTML = `<b>${escapeHtml(hit.getAttribute("data-v") || "")}</b> · scan ${i + 1} of ${series.length}`;
+        tip.innerHTML = `<b>${escapeHtml(hit.getAttribute("data-v") || "")}</b> · ${escapeHtml(where)}`;
         tip.style.left = `${rect.left + rect.width / 2 - box.left}px`;
         tip.style.top = `${rect.top - box.top - 6}px`;
         tip.classList.add("on");
