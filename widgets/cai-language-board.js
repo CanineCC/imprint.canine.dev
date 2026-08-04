@@ -1,4 +1,4 @@
-var g=`
+var k=`
 :host {
   /* neutrals \u2014 dark "graphite" */
   --bg: #15191e;
@@ -106,7 +106,7 @@ var g=`
   --accent-strong: #1c4f41;
   --on-accent: #ffffff;
 }
-`;function s(e){return String(e??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function b(e){if(e==null||e==="")return"";let r=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,t="",a=0,o;for(;(o=r.exec(e))!==null;){o.index>a&&(t+=s(e.slice(a,o.index)));let c=o[0];if(c.startsWith("**"))t+=`<strong>${s(c.slice(2,-2))}</strong>`;else if(c.startsWith("`"))t+=`<code>${s(c.slice(1,-1))}</code>`;else{let n=/^\[([^\]]+)\]\(([^)]+)\)$/.exec(c);n?t+=`<a href="${s(n[2])}">${s(n[1])}</a>`:t+=s(c)}a=o.index+c.length}return a<e.length&&(t+=s(e.slice(a))),t}var x=`
+`;function c(e){return String(e??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function v(e){if(e==null||e==="")return"";let r=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,n="",i=0,a;for(;(a=r.exec(e))!==null;){a.index>i&&(n+=c(e.slice(i,a.index)));let s=a[0];if(s.startsWith("**"))n+=`<strong>${c(s.slice(2,-2))}</strong>`;else if(s.startsWith("`"))n+=`<code>${c(s.slice(1,-1))}</code>`;else{let l=/^\[([^\]]+)\]\(([^)]+)\)$/.exec(s);l?n+=`<a href="${c(l[2])}">${c(l[1])}</a>`:n+=c(s)}i=a.index+s.length}return i<e.length&&(n+=c(e.slice(i))),n}var w=`
 :host { display: block; color: var(--ink); font: 400 var(--fs-md)/1.5 var(--font-ui); }
 * { box-sizing: border-box; }
 a { color: var(--accent-ink); text-decoration: none; }
@@ -114,12 +114,12 @@ a:hover { text-decoration: underline; }
 code { background: var(--surface-2); padding: 1px 5px; border-radius: var(--r-sm); font: 500 var(--fs-xs) var(--font-mono); }
 strong { font-weight: 600; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-`;function v(e){let r=e.getAttribute("kicker"),t=e.getAttribute("heading"),a=e.getAttribute("lede");if(!r&&!t&&!a)return"";let o='<div class="mk-section-head">';return r&&(o+=`<span class="mk-kicker">${s(r)}</span>`),t&&(o+=`<h2>${b(t)}</h2>`),a&&(o+=`<p>${b(a)}</p>`),o+="</div>",o}var k=`
+`;function y(e){let r=e.getAttribute("kicker"),n=e.getAttribute("heading"),i=e.getAttribute("lede");if(!r&&!n&&!i)return"";let a='<div class="mk-section-head">';return r&&(a+=`<span class="mk-kicker">${c(r)}</span>`),n&&(a+=`<h2>${v(n)}</h2>`),i&&(a+=`<p>${v(i)}</p>`),a+="</div>",a}var $=`
 .mk-section-head { margin-bottom: 1.5rem; }
 .mk-section-head h2 { font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.1rem); line-height: 1.2; margin: 0.3rem 0 0; color: var(--heading); font-weight: 600; letter-spacing: -0.01em; }
 .mk-section-head p { color: var(--muted); font-size: var(--fs-lg); line-height: 1.6; margin: 0.55rem 0 0; }
 .mk-kicker { display: inline-flex; align-items: center; gap: 0.55rem; font-size: var(--fs-2xs); font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
-`,p=class extends HTMLElement{#a;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#e(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#a=new MutationObserver(()=>{let r=this.dataset.theme;this.#e(),this.dataset.theme!==r&&this.render(this.shadowRoot)}),this.#a.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#a?.disconnect()}#e(){let r=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=r;let t=(this.getAttribute("brand")||"").trim().toLowerCase();t==="assay"||t==="cai"||t==="watchdog"?this.dataset.brand=t:delete this.dataset.brand}json(r,t){let a=this.getAttribute(r);if(a==null||a.trim()==="")return t;try{return JSON.parse(a)}catch{return t}}};var d=[{label:"Critical",key:"critical",floor:0},{label:"Weak",key:"poor",floor:25},{label:"Adequate",key:"fair",floor:50},{label:"Strong",key:"healthy",floor:70},{label:"Exemplary",key:"exemplary",floor:90}];function f(e){return e>=90?d[4]:e>=70?d[3]:e>=50?d[2]:e>=25?d[1]:d[0]}var w=`
+`,b=class extends HTMLElement{#e;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#a(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#e=new MutationObserver(()=>{let r=this.dataset.theme;this.#a(),this.dataset.theme!==r&&this.render(this.shadowRoot)}),this.#e.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#e?.disconnect()}#a(){let r=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=r;let n=(this.getAttribute("brand")||"").trim().toLowerCase();n==="assay"||n==="cai"||n==="watchdog"?this.dataset.brand=n:delete this.dataset.brand}json(r,n){let i=this.getAttribute(r);if(i==null||i.trim()==="")return n;try{return JSON.parse(i)}catch{return n}}};var p=[{label:"Critical",key:"critical",floor:0},{label:"Weak",key:"poor",floor:25},{label:"Adequate",key:"fair",floor:50},{label:"Strong",key:"healthy",floor:70},{label:"Exemplary",key:"exemplary",floor:90}];function g(e){return e>=90?p[4]:e>=70?p[3]:e>=50?p[2]:e>=25?p[1]:p[0]}var S=`
 .ink-exemplary { color: var(--band-exemplary-text); }
 .ink-healthy { color: var(--band-healthy-text); }
 .ink-fair { color: var(--band-fair-text); }
@@ -220,8 +220,8 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
 .cai-row:last-child { border-bottom: 0; }
 .cai-row b { color: var(--heading); font-weight: 600; text-align: right; }
 .cai-row .mono { font-family: var(--font-mono); font-size: var(--fs-xs); }
-`;var y=[25,50,70,90],M=g+x+k+w+`
-.mk-board { max-width: 52rem; margin: 0 auto; }
+`;var N=[25,50,70,90],A=k+w+$+S+`
+.mk-board { max-width: 56rem; margin: 0 auto; }
 .mk-board-ctl { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin-bottom: 0.5rem; }
 .mk-board-ctl input, .mk-board-ctl select { font: inherit; font-size: var(--fs-sm); color: var(--ink);
   background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r-sm); padding: 7px 11px; }
@@ -229,23 +229,45 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
 .mk-board-ctl input:focus-visible, .mk-board-ctl select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .mk-board-count { font-size: var(--fs-xs); color: var(--muted); margin: 0 0 0.8rem; }
 
+/* One grid, declared once and shared by the column heads, every row and the axis \u2014 so a heading
+   can never drift off the column it names. */
 .mk-rows { display: grid; gap: 2px; }
-a.mk-row, div.mk-row { display: grid; grid-template-columns: 9.5rem 1fr 3.2rem; gap: 0 0.9rem;
-  align-items: center; padding: 9px 12px; border-radius: var(--r-sm); text-decoration: none; color: inherit; }
+a.mk-row, div.mk-row, .mk-head, .mk-axis {
+  display: grid; grid-template-columns: 9.5rem 1fr 4.4rem 3.4rem; gap: 0 0.9rem; align-items: center; }
+a.mk-row, div.mk-row { padding: 9px 12px; border-radius: var(--r-sm); text-decoration: none; color: inherit; }
 a.mk-row:hover, a.mk-row:focus-visible { background: var(--surface-2); text-decoration: none; }
+.mk-head, .mk-axis { padding: 0 12px; }
+.mk-head { margin-bottom: 0.35rem; font-size: var(--fs-2xs); color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.06em; }
+.mk-head span:nth-child(3), .mk-head span:nth-child(4) { text-align: right; }
 .mk-row-name { font-weight: 650; font-size: var(--fs-sm); }
 .mk-row-n { display: block; font-size: var(--fs-2xs); color: var(--muted); font-weight: 500; }
-.mk-row-track { position: relative; height: 12px; border-radius: var(--r-full);
-  background: var(--surface-2); overflow: hidden; }
-.mk-row-fill { position: absolute; inset: 0 auto 0 0; border-radius: var(--r-full); }
-/* The cutlines must read on BOTH sides of the fill. A ground-coloured tick disappears against the
-   unfilled track in light mode, where track and ground are nearly the same value. */
-.mk-row-cut { position: absolute; top: 0; bottom: 0; width: 1px;
-  background: color-mix(in srgb, var(--muted) 60%, transparent); }
+
+/* The distribution. Bars grow from the baseline, each bin fixed to its ten points of the axis. */
+.mk-dist { position: relative; height: 26px; background: var(--surface-2);
+  border-radius: var(--r-sm); overflow: hidden; }
+/* The middle half, shaded behind the bars. Faint on purpose \u2014 it is context for the bars, not a
+   sixth series \u2014 but not so faint it cannot be found: at 7% it was invisible in both themes. */
+.mk-dist-iqr { position: absolute; top: 0; bottom: 0;
+  background: color-mix(in srgb, var(--ink) 12%, transparent); }
+.mk-dist-bin { position: absolute; bottom: 0; border-radius: 1px 1px 0 0; }
+/* The cutlines must read on BOTH sides of a bar. A ground-coloured tick disappears against the
+   empty track in light mode, where track and ground are nearly the same value. */
+.mk-dist-cut { position: absolute; top: 0; bottom: 0; width: 1px;
+  background: color-mix(in srgb, var(--muted) 55%, transparent); }
+.mk-dist-med { position: absolute; top: 0; bottom: 0; width: 2px; transform: translateX(-1px);
+  background: var(--ink); opacity: 0.75; }
 .mk-row-med { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 700;
   font-size: var(--fs-sm); text-align: right; }
-.mk-axis { display: grid; grid-template-columns: 9.5rem 1fr 3.2rem; gap: 0 0.9rem; padding: 0 12px;
-  margin-top: 0.4rem; }
+.mk-row-iqr { display: block; font-family: var(--font-mono); font-size: var(--fs-2xs);
+  color: var(--muted); font-weight: 500; }
+.mk-row-depth { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 650;
+  font-size: var(--fs-sm); text-align: right; }
+.mk-row-depth.is-none { color: var(--muted); font-weight: 500; }
+.mk-row-depth span { display: block; font-family: var(--font-body, inherit); font-size: var(--fs-2xs);
+  color: var(--muted); font-weight: 500; }
+
+.mk-axis { margin-top: 0.4rem; }
 .mk-axis-scale { position: relative; height: 15px; grid-column: 2; }
 .mk-axis-scale span { position: absolute; transform: translateX(-50%); font-family: var(--font-mono);
   font-size: var(--fs-2xs); color: var(--muted); }
@@ -254,8 +276,9 @@ a.mk-row:hover, a.mk-row:focus-visible { background: var(--surface-2); text-deco
 .mk-axis-scale span:last-child { transform: translateX(-100%); }
 .mk-board-note { margin: 1.1rem 0 0; padding-top: 0.9rem; border-top: 1px solid var(--border);
   font-size: var(--fs-xs); color: var(--muted); line-height: 1.6; }
+.mk-board-note + .mk-board-note { margin-top: 0.5rem; padding-top: 0; border-top: 0; }
 .mk-board-empty { padding: 1.6rem 0; text-align: center; color: var(--muted); font-size: var(--fs-sm); }
-@media (max-width: 34rem) {
-  a.mk-row, div.mk-row, .mk-axis { grid-template-columns: 7rem 1fr 3rem; gap: 0 0.5rem; }
+@media (max-width: 40rem) {
+  a.mk-row, div.mk-row, .mk-head, .mk-axis { grid-template-columns: 7rem 1fr 3.6rem 2.8rem; gap: 0 0.5rem; }
 }
-`,N=[["count","Most projects first"],["median-desc","Highest median first"],["median-asc","Lowest median first"],["name","Name A\u2013Z"]];customElements.define("cai-language-board",class extends p{render(e){let r=(this.json("languages",[])||[]).filter(n=>n&&n.name),t=this.json("ungrouped",null);this._sort=this._sort||"count",this._q=this._q||"";let a=`<style>${M}</style>`;if(a+=v(this),r.length===0){e.innerHTML=a;return}a+='<div class="mk-board">',a+='<div class="mk-board-ctl">',a+=`<input type="search" class="mk-q" placeholder="Search languages" aria-label="Search languages" value="${s(this._q)}">`,a+='<select class="mk-sort" aria-label="Sort">';for(let[n,i]of N)a+=`<option value="${n}"${n===this._sort?" selected":""}>${s(i)}</option>`;a+="</select></div>",a+='<p class="mk-board-count" role="status"></p>',a+='<div class="mk-rows"></div>',a+='<div class="mk-axis"><div class="mk-axis-scale">';for(let n of[0,...y,100])a+=`<span style="left:${n}%">${n}</span>`;a+="</div></div>",t&&Number(t.count)>0&&(a+=`<p class="mk-board-note">${s(`${t.count} measured project${Number(t.count)===1?" has":"s have"} no primary language the scan could name, so ${Number(t.count)===1?"it is":"they are"} not grouped above. They are counted in the total.`)}</p>`),a+="</div>",e.innerHTML=a;let o=e.querySelector(".mk-q"),c=e.querySelector(".mk-sort");o?.addEventListener("input",()=>{this._q=o.value,this.paint(e,r)}),c?.addEventListener("change",()=>{this._sort=c.value,this.paint(e,r)}),this.paint(e,r)}paint(e,r){let t=e.querySelector(".mk-rows"),a=e.querySelector(".mk-board-count");if(!t||!a)return;let o=this._q.trim().toLowerCase(),c=r.filter(i=>!o||String(i.name).toLowerCase().includes(o)).sort({count:(i,l)=>Number(l.count)-Number(i.count),"median-desc":(i,l)=>Number(l.median)-Number(i.median),"median-asc":(i,l)=>Number(i.median)-Number(l.median),name:(i,l)=>String(i.name).localeCompare(String(l.name))}[this._sort]||(()=>0));if(a.textContent=c.length===r.length?`${r.length} language${r.length===1?"":"s"} with a field guide`:`${c.length} of ${r.length} languages`,c.length===0){t.innerHTML=`<p class="mk-board-empty">${s(this.getAttribute("empty-text")||"No language here matches that.")}</p>`;return}let n="";for(let i of c){let l=Number(i.median),m=f(l),h=Number(i.count)||0,u=i.href?"a":"div",$=i.href?` href="${s(i.href)}"`:"";n+=`<${u} class="mk-row"${$}>`,n+=`<span class="mk-row-name">${s(i.name)}<span class="mk-row-n">${h} project${h===1?"":"s"}</span></span>`,n+=`<span class="mk-row-track" role="img" aria-label="${s(`median ${l.toFixed(1)}, ${m.label}`)}">`,n+=`<span class="mk-row-fill fill-${m.key}" style="width:${Math.max(1,Math.min(100,l))}%"></span>`;for(let S of y)n+=`<span class="mk-row-cut" style="left:${S}%"></span>`;n+="</span>",n+=`<span class="mk-row-med ink-${m.key}">${l.toFixed(1)}</span>`,n+=`</${u}>`}t.innerHTML=n}});
+`,C=[["count","Most projects first"],["median-desc","Highest median first"],["median-asc","Lowest median first"],["depth","Deepest survey first"],["name","Name A\u2013Z"]];function d(e){let r=Number(e);return e==null||e===""||Number.isNaN(r)?null:r}function f(e){return Math.max(0,Math.min(100,Number(e)))}customElements.define("cai-language-board",class extends b{render(e){let r=(this.json("languages",[])||[]).filter(t=>t&&t.name),n=this.json("ungrouped",null),i=this.getAttribute("depth-note");this._hasDepth=r.some(t=>d(t.depth)!==null),this._sort=this._sort||"count",this._q=this._q||"";let a=`<style>${A}</style>`;if(a+=y(this),r.length===0){e.innerHTML=a;return}a+='<div class="mk-board">',a+='<div class="mk-board-ctl">',a+=`<input type="search" class="mk-q" placeholder="Search languages" aria-label="Search languages" value="${c(this._q)}">`,a+='<select class="mk-sort" aria-label="Sort">';for(let[t,o]of C)t==="depth"&&!this._hasDepth||(a+=`<option value="${t}"${t===this._sort?" selected":""}>${c(o)}</option>`);a+="</select></div>",a+='<p class="mk-board-count" role="status"></p>',a+=`<div class="mk-head" aria-hidden="true"><span>Language</span><span>Distribution of CAI scores</span><span>Median</span><span>${this._hasDepth?"Depth":""}</span></div>`,a+='<div class="mk-rows"></div>',a+='<div class="mk-axis"><div class="mk-axis-scale">';for(let t of[0,...N,100])a+=`<span style="left:${t}%">${t}</span>`;a+="</div></div>",i&&(a+=`<p class="mk-board-note">${c(i)}</p>`),n&&Number(n.count)>0&&(a+=`<p class="mk-board-note">${c(`${n.count} measured project${Number(n.count)===1?" has":"s have"} no primary language the scan could name, so ${Number(n.count)===1?"it is":"they are"} not grouped above. They are counted in the total.`)}</p>`),a+="</div>",e.innerHTML=a;let s=e.querySelector(".mk-q"),l=e.querySelector(".mk-sort");s?.addEventListener("input",()=>{this._q=s.value,this.paint(e,r)}),l?.addEventListener("change",()=>{this._sort=l.value,this.paint(e,r)}),this.paint(e,r)}paint(e,r){let n=e.querySelector(".mk-rows"),i=e.querySelector(".mk-board-count");if(!n||!i)return;let a=this._q.trim().toLowerCase(),s=r.filter(t=>!a||String(t.name).toLowerCase().includes(a)).sort({count:(t,o)=>Number(o.count)-Number(t.count),"median-desc":(t,o)=>Number(o.median)-Number(t.median),"median-asc":(t,o)=>Number(t.median)-Number(o.median),depth:(t,o)=>(d(o.depth)??-1)-(d(t.depth)??-1),name:(t,o)=>String(t.name).localeCompare(String(o.name))}[this._sort]||(()=>0));if(i.textContent=s.length===r.length?`${r.length} language${r.length===1?"":"s"} with a field guide`:`${s.length} of ${r.length} languages`,s.length===0){n.innerHTML=`<p class="mk-board-empty">${c(this.getAttribute("empty-text")||"No language here matches that.")}</p>`;return}let l="";for(let t of s){let o=Number(t.median),u=g(o),m=Number(t.count)||0,h=t.href?"a":"div",x=t.href?` href="${c(t.href)}"`:"";l+=`<${h} class="mk-row"${x}>`,l+=`<span class="mk-row-name">${c(t.name)}<span class="mk-row-n">${m} project${m===1?"":"s"}</span></span>`,l+=this.distribution(t,o,u),l+=`<span class="mk-row-med ink-${u.key}">${o.toFixed(1)}`+this.spread(t)+"</span>",this._hasDepth?l+=this.depth(t):l+="<span></span>",l+=`</${h}>`}n.innerHTML=l}distribution(e,r,n){let i=Array.isArray(e.dist)?e.dist.map(o=>Number(o)||0):null,a=d(e.low),s=d(e.high),l=`median ${r.toFixed(1)}, ${n.label}`;a!==null&&s!==null&&(l+=`; half of them between ${a.toFixed(1)} and ${s.toFixed(1)}`);let t=`<span class="mk-dist" role="img" aria-label="${c(l)}">`;if(!i||i.length===0||i.every(o=>o===0))t+=`<span class="mk-dist-bin fill-${n.key}" style="left:0;width:${f(r)}%;height:100%"></span>`;else{a!==null&&s!==null&&s>a&&(t+=`<span class="mk-dist-iqr" style="left:${f(a)}%;width:${f(s)-f(a)}%"></span>`);let o=100/i.length,u=Math.max(...i);i.forEach((m,h)=>{if(m<=0)return;let x=Math.max(8,Math.round(m/u*100)),M=g((h+.5)*o).key;t+=`<span class="mk-dist-bin fill-${M}" style="left:${h*o}%;width:${o}%;height:${x}%"></span>`})}for(let o of N)t+=`<span class="mk-dist-cut" style="left:${o}%"></span>`;return t+=`<span class="mk-dist-med" style="left:${f(r)}%"></span>`,t+"</span>"}spread(e){let r=d(e.low),n=d(e.high);return r===null||n===null?"":`<span class="mk-row-iqr">${r.toFixed(0)}\u2013${n.toFixed(0)}</span>`}depth(e){let r=d(e.depth);if(r===null)return'<span class="mk-row-depth is-none" title="No project in this language has been surveyed since per-dimension outcomes were recorded.">\u2014</span>';let n=d(e.depthOf),i=n===null?`median depth ${r} dimensions resolved`:`median depth ${r} dimensions resolved, recorded for ${n} project${n===1?"":"s"}`;return`<span class="mk-row-depth" aria-label="${c(i)}">${r}<span>dims</span></span>`}});

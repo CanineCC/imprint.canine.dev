@@ -449,15 +449,21 @@
   {
     "tag": "cai-language-board",
     "name": "CAI language board",
-    "description": "Every measured language as a row, its median drawn as a band-inked bar on one shared 0–100 axis that is never scaled to the data — these are CAI scores, and 60 means the same thing on every row. The chart IS the list: each bar links to that language's field guide. Search and sort included. The ungrouped count is stated separately and never sorted away, so the totals reconcile. DATA ONLY: no API base, it never fetches.",
+    "description": "Every measured language as a row: the DISTRIBUTION of its projects' CAI scores in ten-point bins on one shared 0–100 axis that is never scaled to the data — these are CAI scores, and 60 means the same thing on every row — with the median, the middle half, and how deep the survey of them reached. The chart IS the list: each row links to that language's field guide. Search and sort included. The ungrouped count is stated separately and never sorted away, so the totals reconcile. DATA ONLY: no API base, it never fetches.",
     "bundle": "cai-language-board.js",
     "placeholder": "CAI language board",
     "props": [
       {
         "name": "languages",
-        "label": "Languages (JSON array of {name, count, median, href})",
+        "label": "Languages (JSON array of {name, count, median, low, high, dist[10], depth, depthOf, href}) — dist is the count of projects per ten-point bin; depth is dimensions resolved, null where none was recorded",
         "type": "text",
         "default": "[]"
+      },
+      {
+        "name": "depth-note",
+        "label": "Depth note — what the depth column means and how much of the board it covers",
+        "type": "text",
+        "default": ""
       },
       {
         "name": "ungrouped",
