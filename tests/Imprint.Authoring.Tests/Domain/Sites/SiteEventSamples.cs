@@ -77,6 +77,8 @@ public sealed class SiteEventSamples : IEventSampleProvider
             yield return new SiteSocialImageChanged(null);
             yield return new SiteLlmsPreambleChanged("# Acme\n\n> What we are.");
             yield return new SiteLlmsPreambleChanged(null);
+            yield return new SiteLlmsExcludedPathsChanged(["surveys/github", "surveys/gitlab"]);
+            yield return new SiteLlmsExcludedPathsChanged([]);
 
             yield return new SiteOwnershipClaimed();
             yield return new SiteCollaboratorAdded("colleague@example.com");

@@ -118,6 +118,29 @@ public sealed record SiteSocialImageChanged(AssetId? SocialImageAssetId);
 [EventType("site.llms-preamble-changed", 1)]
 public sealed record SiteLlmsPreambleChanged(string? Preamble);
 
+// Path prefixes the LLM files skip. Stored normalized (lowercase, no leading or trailing
+// slash) so the publisher compares them against slug paths without re-parsing on every
+// page, on every pass. An empty list is the normal case: no policy.
+[EventType("site.llms-excluded-paths-changed", 1)]
+public sealed record SiteLlmsExcludedPathsChanged(IReadOnlyList<string> Paths)
+{
+    // Same list-equality reasoning as SiteNavigationChanged: the set of prefixes is the
+    // value, and a positional list member would otherwise compare by reference.
+    public bool Equals(SiteLlmsExcludedPathsChanged? other) =>
+        other is not null && Paths.SequenceEqual(other.Paths, StringComparer.Ordinal);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        foreach (var path in Paths)
+        {
+            hash.Add(path, StringComparer.Ordinal);
+        }
+
+        return hash.ToHashCode();
+    }
+}
+
 // ── Access: who may open and edit the site besides its owner ──
 // The email is the same identity the auth layer stamps as the envelope actor, so a
 // collaborator's access check and their attribution in history use one value.

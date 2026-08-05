@@ -19,6 +19,8 @@ the site, rendered". Deleting the directory and replaying produces the same byte
 ├── assets/{assetId}.{hash}.webm|svg|<original ext>
 ├── widgets/{tag}.{hash}.js         # only widgets actually used on published pages
 ├── sitemap.xml, robots.txt
+├── llms.txt                        # the index a model reads: what this site is, page by page
+├── llms-full.txt                   # the corpus: every page's prose, default locale, one file
 ├── publish-manifest.json           # the projection's durable checkpoint
 └── *.br / *.gz                     # precompressed siblings for text files
 ```
@@ -58,6 +60,48 @@ Every published page:
   `aria-label` from alt, or `aria-hidden="true"` when alt empty.
 - Navigation: `<nav>` with `aria-current="page"`; skip-link; exactly one `<h1>` per
   page is the editor's job (the inspector warns), landmarks: `header/main/footer`.
+
+## The machine layer: `llms.txt` and `llms-full.txt`
+
+Both are generated from the same content the pages render, never authored on the
+server. That is the point: a hand-written file drifts silently, because nothing
+compares it to the site. These go stale only if the site does.
+
+- **`llms.txt`** — the index. The site's own preamble if it has set one
+  (`Site.LlmsPreamble`, `set_llms_preamble`), otherwise a generated header, then
+  every page as title + URL + meta description. Capped at 200 pages; past that it
+  states how many it left out and points at `sitemap.xml`.
+- **`llms-full.txt`** — the corpus. The same header, then every page's body prose:
+  headings as Markdown, rich text as plain text, buttons as resolved links, images
+  as their alt text. Sourced from the page **tree**, not the rendered HTML — pages
+  that are not stale are never rendered, so their HTML is not in memory, and block
+  instances are resolved through `OverrideApplier` so the file quotes what the page
+  shows rather than what its block definitions say. Bounded at ~1M characters,
+  cutting between pages and stating the omission.
+
+Both are default-locale only: a model asking what a site says needs one answer, not
+the same answer per language. Both are swept, precompressed and cached like any
+other text output.
+
+**SEO-only paths.** A site can serve thousands of generated pages that are perfectly
+good search-engine content and pure noise to a model trying to learn what the site
+is. Nothing about how a page was produced says which it is — on cai.canine.dev the
+rubric catalogues are syndicated exactly like the survey long tail — so the site
+declares the paths: `Site.SetLlmsExcludedPaths(["surveys", "dimensions/rubric*"])`,
+MCP tool `set_llms_excluded_paths`. Each prefix covers itself and everything under it,
+so `surveys/github` would still leave the `/surveys/` index page listed. A trailing
+`*` on the last segment matches by segment prefix instead — `dimensions/rubric*` covers
+every dated `rubric-2026.08.19` snapshot, including ones minted after the policy was
+written, which a literal list would silently miss. Both LLM files then state how many
+pages were left out and point at the sitemap: a file that silently drops a section of
+the site reads as the whole site.
+
+`sitemap.xml` is never affected, and neither is `robots.txt`. Those pages exist to be
+indexed, which is precisely what a sitemap is for. Note the scope of this setting: it
+governs what the two curated files *say*, not what any crawler is *allowed to fetch*.
+Keeping a path out of llms.txt does not keep GPTBot out of it — that is a robots.txt
+decision, and a different one, because the AI crawlers that answer questions about a
+site are not the same as the ones that train on it.
 
 ## Theme → CSS
 

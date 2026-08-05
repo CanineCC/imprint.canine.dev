@@ -33,6 +33,10 @@ public sealed class Site : AggregateRoot
     // page list.
     public const int MaxLlmsPreambleLength = 20_000;
 
+    // A handful of prefixes is a policy; a hundred is a page list by another name, and the
+    // publisher would be filtering every page against all of them on every pass.
+    public const int MaxLlmsExcludedPaths = 20;
+
     private readonly List<Locale> _locales = [];
     private readonly List<string> _collaborators = [];
     private IReadOnlyList<NavigationItem> _navigation = [];
@@ -69,6 +73,13 @@ public sealed class Site : AggregateRoot
     // What llms.txt says about this site before the generated page index. A page list
     // alone tells a model what pages exist and nothing about what the site IS.
     public string? LlmsPreamble { get; private set; }
+
+    // Path prefixes whose pages are published for search engines but kept out of llms.txt
+    // and llms-full.txt: each prefix and everything nested under it. A site can serve
+    // thousands of generated pages that are perfectly good SEO and pure noise to a model
+    // trying to learn what the site is — and only the site knows which those are, because
+    // nothing about how a page was produced says whether it is worth reading.
+    public IReadOnlyList<string> LlmsExcludedPaths { get; private set; } = [];
 
     // Emails of the people who may edit this site besides its owner, in the order they
     // were added. The owner is not in this list — it lives on the site.created envelope
@@ -449,6 +460,86 @@ public sealed class Site : AggregateRoot
         Raise(new SiteLlmsPreambleChanged(trimmed));
     }
 
+    /// <summary>
+    /// Declare which path prefixes are published for search engines only, and therefore
+    /// stay out of llms.txt and llms-full.txt. Each prefix covers itself and everything
+    /// nested under it: <c>surveys/github</c> excludes <c>surveys/github/…</c> but leaves
+    /// <c>surveys/</c> itself listed. Null or empty clears the policy. Nothing here touches
+    /// sitemap.xml — these pages exist to be indexed, which is the whole point.
+    /// <para>
+    /// A trailing <c>*</c> on the last segment matches by segment prefix rather than by
+    /// whole segment: <c>dimensions/rubric*</c> covers every dated
+    /// <c>dimensions/rubric-2026.08.19</c> snapshot. Without it a site that mints one of
+    /// those a week would have to re-declare its policy every time, and would silently
+    /// keep listing the ones nobody remembered to add.
+    /// </para>
+    /// </summary>
+    public void SetLlmsExcludedPaths(IReadOnlyList<string>? paths)
+    {
+        var cleaned = new List<string>();
+        foreach (var path in paths ?? [])
+        {
+            var trimmed = path?.Trim().Trim('/').ToLowerInvariant();
+            if (string.IsNullOrEmpty(trimmed))
+            {
+                continue;
+            }
+
+            if (!IsPathPrefixShaped(trimmed))
+            {
+                throw new DomainException(
+                    $"'{path}' is not a valid path prefix: use slug-shaped segments separated by '/', e.g. 'surveys/github'.");
+            }
+
+            if (!cleaned.Contains(trimmed, StringComparer.Ordinal))
+            {
+                cleaned.Add(trimmed);
+            }
+        }
+
+        if (cleaned.Count > MaxLlmsExcludedPaths)
+        {
+            throw new DomainException(
+                $"At most {MaxLlmsExcludedPaths} excluded path prefixes are allowed.");
+        }
+
+        if (LlmsExcludedPaths.SequenceEqual(cleaned, StringComparer.Ordinal))
+        {
+            return;
+        }
+
+        Raise(new SiteLlmsExcludedPathsChanged(cleaned));
+    }
+
+    private static bool IsPathPrefixShaped(string path)
+    {
+        // One trailing wildcard, on the last segment only. Anything richer would be a glob
+        // language, and the publisher matches these against every page on every pass.
+        if (path.EndsWith('*'))
+        {
+            path = path[..^1];
+        }
+
+        if (path.Contains('*', StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        foreach (var segment in path.Split('/'))
+        {
+            // Dots are allowed inside a segment because real syndicated paths carry them
+            // (rubric-2026.08.19), but a segment made only of punctuation is not a path
+            // segment — ".." above all, which is traversal-shaped and matches nothing.
+            if (!segment.Any(char.IsAsciiLetterOrDigit)
+                || !segment.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '.'))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     /// <summary>Set (or clear, with null) the footer's fine-print copy line.</summary>
     public void SetCopyLine(CopyLine? copyLine)
     {
@@ -666,6 +757,9 @@ public sealed class Site : AggregateRoot
                 break;
             case SiteLlmsPreambleChanged e:
                 LlmsPreamble = e.Preamble;
+                break;
+            case SiteLlmsExcludedPathsChanged e:
+                LlmsExcludedPaths = [.. e.Paths];
                 break;
             case SiteEnvironmentsChanged e:
                 _environments = [.. e.Environments];

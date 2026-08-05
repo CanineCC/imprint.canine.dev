@@ -140,9 +140,17 @@ public sealed class SitePublisher(
         private string? _logoUrl;
         private string? _socialImageUrl;
         private string? _llmsPreamble;
+        private IReadOnlyList<string> _llmsExcludedPaths = [];
 
         // Bounded so llms.txt stays a map a model reads whole, not a corpus dump.
         private const int MaxLlmsPages = 200;
+
+        // llms-full.txt IS the corpus dump, so it is bounded by size rather than by page
+        // count: what decides whether it is useful is whether it fits the context it gets
+        // read into, and a thousand short pages cost less than fifty long ones. Counted in
+        // chars, which for this content (overwhelmingly ASCII prose) tracks UTF-8 bytes
+        // closely enough for a budget — it is a ceiling, not an exact byte guarantee.
+        private const int MaxLlmsFullChars = 1_000_000;
         private IReadOnlyList<PublishedPage> _pages = [];
         private Dictionary<PageId, PublishedPage> _pageById = [];
         private Dictionary<PageId, string> _slugPathOf = [];
@@ -178,6 +186,7 @@ public sealed class SitePublisher(
             _headerLogoAssetId = site.HeaderLogoAssetId;
             _socialImageAssetId = site.SocialImageAssetId;
             _llmsPreamble = site.LlmsPreamble;
+            _llmsExcludedPaths = [.. site.LlmsExcludedPaths];
             // Only THIS site's published pages — a target folder holds exactly one site. Pages
             // syndicated from another system join them here and are otherwise indistinguishable:
             // same views, same chrome, same sitemap, same sweep. Everything the renderer learns,
@@ -261,6 +270,7 @@ public sealed class SitePublisher(
             await WriteIfChanged("sitemap.xml", Encoding.UTF8.GetBytes(BuildSitemap(plans)), ct);
             await WriteIfChanged("robots.txt", Encoding.UTF8.GetBytes(BuildRobots()), ct);
             await WriteIfChanged("llms.txt", Encoding.UTF8.GetBytes(BuildLlmsTxt(plans)), ct);
+            await WriteIfChanged("llms-full.txt", Encoding.UTF8.GetBytes(BuildLlmsFullTxt(plans)), ct);
             await CopyFonts(ct);
             await CopyAssets(ct);
             await CopyWidgetBundles(ct);
@@ -1315,9 +1325,15 @@ public sealed class SitePublisher(
                 }
             }
 
-            var listable = plans
-                .Where(plan => plan.SlugPath is not null && !_failed.Contains(plan.Page.Id))
-                .ToList();
+            var (listable, excluded) = LlmsPages(plans);
+
+            // The index says which pages exist; a model that wants the words themselves
+            // should not have to fetch them one page at a time. Stated here because this
+            // is the file it already knows to look for.
+            text.Append("\n> The full text of every page is at ")
+                .Append(Absolute("/llms-full.txt")).Append(".\n");
+
+            AppendExclusionNote(text, excluded);
 
             text.Append("\n## Pages\n\n");
             foreach (var plan in listable.Take(MaxLlmsPages))
@@ -1347,6 +1363,217 @@ public sealed class SitePublisher(
 
             return text.ToString();
         }
+
+        /// <summary>
+        /// The llms-full.txt corpus: every published page's prose, in one file, in the order
+        /// the site itself puts them in. What llms.txt promises, delivered.
+        /// </summary>
+        /// <remarks>
+        /// llms.txt describes the site from the outside — titles and meta descriptions, which
+        /// are marketing summaries of pages, not the pages. A model handed only that can say
+        /// what we claim to be but cannot answer a question the body text answers, so it fetches
+        /// fifty URLs or, more often, guesses. One file removes the choice.
+        /// <para>
+        /// The prose comes from the page TREE, not from the rendered HTML on disk: rendering is
+        /// skipped for pages that are not stale, so the HTML is not in memory here, and reading
+        /// it back would mean parsing chrome out of every document on every pass. The tree is
+        /// already loaded, and it is the same source the renderer reads — including block
+        /// instances, which are resolved through <see cref="OverrideApplier"/> exactly as
+        /// <c>BlockInstanceView</c> resolves them, so a placed block contributes the words the
+        /// page actually shows rather than the definition's originals.
+        /// </para>
+        /// <para>
+        /// Default locale only, for the reason llms.txt lists one locale: a model asking what
+        /// this site says needs one answer, not the same answer in every published language.
+        /// </para>
+        /// </remarks>
+        private string BuildLlmsFullTxt(List<PagePlan> plans)
+        {
+            var text = new StringBuilder(64 * 1024);
+
+            if (_llmsPreamble is { Length: > 0 } preamble)
+            {
+                text.Append(preamble.TrimEnd()).Append('\n');
+            }
+            else
+            {
+                text.Append("# ").Append(_siteName).Append('\n');
+            }
+
+            var (listable, excluded) = LlmsPages(plans);
+            AppendExclusionNote(text, excluded);
+
+            var included = 0;
+            foreach (var plan in listable)
+            {
+                // Built aside so the budget decides on the finished section: appending first
+                // and trimming after would leave a page cut mid-sentence, which reads as if
+                // the site said something it did not.
+                var title = PageTitle(plan.Page, _defaultLocale);
+                var section = new StringBuilder(4096);
+                section.Append("\n---\n\n## ").Append(title).Append('\n')
+                    .Append('\n').Append(Absolute(DirectoryPath(plan.SlugPath!, _defaultLocale))).Append('\n');
+
+                // MetaDescriptionOf falls back to the title when a page has no description.
+                // In the index that fallback is better than an empty line; here it would
+                // print the heading again, one line below itself.
+                if (MetaDescriptionOf(plan.Page, _defaultLocale) is { Length: > 0 } description
+                    && !string.Equals(description, title, StringComparison.Ordinal))
+                {
+                    section.Append('\n').Append(description).Append('\n');
+                }
+
+                AppendProse(section, plan.Page);
+
+                if (text.Length + section.Length > MaxLlmsFullChars)
+                {
+                    break;
+                }
+
+                text.Append(section);
+                included++;
+            }
+
+            // Same contract as llms.txt: a file that stops early without saying so reads as
+            // the whole site, and a model would answer "the site does not mention it".
+            if (included < listable.Count)
+            {
+                text.Append("\n---\n\n> ").Append(listable.Count - included)
+                    .Append(" further pages are not included here. The complete set is in ")
+                    .Append(Absolute("/sitemap.xml")).Append(".\n");
+            }
+
+            return text.ToString();
+        }
+
+        /// <summary>
+        /// The pages the LLM files speak for, and how many were deliberately left out.
+        /// </summary>
+        /// <remarks>
+        /// A site can publish thousands of generated pages that are entirely legitimate SEO
+        /// and pure noise to a model trying to learn what the site is — and nothing about how
+        /// a page was produced says which it is. Syndicated pages are not the dividing line:
+        /// on cai.canine.dev the rubric catalogues arrive the same way the survey pages do,
+        /// and one is the standard while the other is a long tail. So the site declares the
+        /// paths (<see cref="Site.SetLlmsExcludedPaths"/>) rather than the publisher guessing.
+        /// <para>
+        /// This filter is for the LLM files only. sitemap.xml still lists everything: those
+        /// pages exist to be indexed, which is exactly what a sitemap is for.
+        /// </para>
+        /// </remarks>
+        private (List<PagePlan> Listed, int Excluded) LlmsPages(List<PagePlan> plans)
+        {
+            var published = plans
+                .Where(plan => plan.SlugPath is not null && !_failed.Contains(plan.Page.Id))
+                .ToList();
+
+            if (_llmsExcludedPaths.Count == 0)
+            {
+                return (published, 0);
+            }
+
+            var listed = published.Where(plan => !IsLlmsExcluded(plan.SlugPath!)).ToList();
+            return (listed, published.Count - listed.Count);
+        }
+
+        // A prefix covers itself and everything nested under it. The "/" guard is what keeps
+        // "surveys" from also swallowing a page called "surveys-explained" — unless the site
+        // asked for exactly that with a trailing "*", which matches by segment prefix and so
+        // covers a family of generated names ("dimensions/rubric*") without naming each one.
+        private bool IsLlmsExcluded(string slugPath) =>
+            _llmsExcludedPaths.Any(prefix => prefix.EndsWith('*')
+                ? slugPath.StartsWith(prefix[..^1], StringComparison.Ordinal)
+                : slugPath.Equals(prefix, StringComparison.Ordinal)
+                  || slugPath.StartsWith(prefix + "/", StringComparison.Ordinal));
+
+        // Said out loud for the same reason the size caps are: a file that silently omits a
+        // section of the site reads as the whole site. Worded as a choice, not a truncation,
+        // so a model can tell "deliberately out of scope" from "did not fit".
+        private void AppendExclusionNote(StringBuilder text, int excluded)
+        {
+            if (excluded == 0)
+            {
+                return;
+            }
+
+            text.Append("\n> ").Append(excluded)
+                .Append(excluded == 1 ? " page under " : " pages under ")
+                .Append(string.Join(", ", _llmsExcludedPaths.Select(
+                    prefix => prefix.EndsWith('*') ? $"/{prefix}" : $"/{prefix}/")))
+                .Append(excluded == 1 ? " is" : " are")
+                .Append(" published for search engines and deliberately left out here. The complete set is in ")
+                .Append(Absolute("/sitemap.xml")).Append(".\n");
+        }
+
+        /// <summary>The words a page renders, in document order, flattened to plain prose.</summary>
+        private void AppendProse(StringBuilder text, PublishedPage page)
+        {
+            foreach (var node in ProseNodesOf(page))
+            {
+                switch (node)
+                {
+                    case HeadingNode heading when Localized(heading.Text) is { Length: > 0 } value:
+                        // The page owns "##", so its own headings start one level below it and
+                        // stop at Markdown's floor rather than emitting "#######".
+                        text.Append('\n').Append(new string('#', Math.Clamp(heading.Level + 1, 3, 6)))
+                            .Append(' ').Append(value).Append('\n');
+                        break;
+
+                    case RichTextNode richText
+                        when CanonicalHtml.ToPlainText(Localized(richText.Html)) is { Length: > 0 } prose:
+                        text.Append('\n').Append(prose).Append('\n');
+                        break;
+
+                    case ButtonNode button when Localized(button.Label) is { Length: > 0 } label:
+                        // A call to action is a link the page makes prominent — worth keeping as
+                        // one, so a model can follow it instead of reading a verb with no object.
+                        text.Append('\n')
+                            .Append(HrefOf(button.LinkTo) is { } href ? $"[{label}]({href})" : label)
+                            .Append('\n');
+                        break;
+
+                    // Alt text is the only thing an image contributes that survives being read
+                    // aloud, which is the same test this file applies to everything in it.
+                    case ImageNode image when Localized(image.Alt) is { Length: > 0 } alt:
+                        text.Append("\n![").Append(alt).Append("]\n");
+                        break;
+
+                    case SvgNode svg when Localized(svg.Alt) is { Length: > 0 } alt:
+                        text.Append("\n![").Append(alt).Append("]\n");
+                        break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Like <see cref="NodesOf"/>, but block instances carry their overrides. NodesOf is
+        /// used to collect asset and widget references, which overrides cannot change, so it
+        /// reads the definition directly; text is the one thing overrides DO change.
+        /// </summary>
+        private IEnumerable<Node> ProseNodesOf(PublishedPage page)
+        {
+            foreach (var node in page.Tree.All())
+            {
+                yield return node;
+                if (node is BlockInstanceNode instance && blockLibrary.Get(instance.DefinitionId) is { } definition)
+                {
+                    foreach (var inner in PageTree.Flatten(OverrideApplier.Apply(definition.Spec, instance.Overrides)))
+                    {
+                        yield return inner;
+                    }
+                }
+            }
+        }
+
+        private string Localized(LocalizedText text) => text.Resolve(_defaultLocale, _defaultLocale);
+
+        private string? HrefOf(Link? link) => link switch
+        {
+            PageLink page when _slugPathOf.TryGetValue(page.PageId, out var target) =>
+                Absolute(DirectoryPath(target, _defaultLocale)),
+            ExternalLink external when CanonicalHtml.IsAllowedHref(external.Url) => external.Url,
+            _ => null,
+        };
 
         private static string XmlEscape(string value) => value
             .Replace("&", "&amp;", StringComparison.Ordinal)
@@ -1404,6 +1631,7 @@ public sealed class SitePublisher(
             Keep("sitemap.xml");
             Keep("robots.txt");
             Keep("llms.txt");
+            Keep("llms-full.txt");
             foreach (var plan in plans)
             {
                 if (plan.SlugPath is null || _failed.Contains(plan.Page.Id))

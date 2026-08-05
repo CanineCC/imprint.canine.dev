@@ -200,6 +200,13 @@ internal sealed class PublishingTestHost : IAsyncDisposable
         await Commit(site);
     }
 
+    public async Task SetLlmsExcludedPaths(SiteId siteId, params string[] paths)
+    {
+        var site = await Store.Load<Site>(siteId.Stream);
+        site.SetLlmsExcludedPaths(paths);
+        await Commit(site);
+    }
+
     public async Task SetCopyLine(SiteId siteId, CopyLine? copyLine)
     {
         var site = await Store.Load<Site>(siteId.Stream);
@@ -401,6 +408,14 @@ internal sealed class PublishingTestHost : IAsyncDisposable
         var block = await Store.Load<BlockDefinition>(id.Stream);
         block.ChangeSpec(spec);
         await Commit(block);
+    }
+
+    public async Task SetBlockOverride(
+        PageId pageId, NodeId instanceId, NodeId definitionNodeId, string field, string value)
+    {
+        var page = await Store.Load<Page>(pageId.Stream);
+        page.SetBlockOverride(instanceId, definitionNodeId, field, En, value);
+        await Commit(page);
     }
 
     // -------------------------------------------------------------------- widgets

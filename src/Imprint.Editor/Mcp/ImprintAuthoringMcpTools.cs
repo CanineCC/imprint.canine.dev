@@ -32,6 +32,7 @@ using SeedLocaleCmd = Imprint.Authoring.Features.Sites.SeedLocale.SeedLocale;
 using SetCopyLineCmd = Imprint.Authoring.Features.Sites.SetCopyLine.SetCopyLine;
 using SetFaviconCmd = Imprint.Authoring.Features.Sites.SetFavicon.SetFavicon;
 using SetSocialImageCmd = Imprint.Authoring.Features.Sites.SetSocialImage.SetSocialImage;
+using SetLlmsExcludedPathsCmd = Imprint.Authoring.Features.Sites.SetLlmsExcludedPaths.SetLlmsExcludedPaths;
 using SetLlmsPreambleCmd = Imprint.Authoring.Features.Sites.SetLlmsPreamble.SetLlmsPreamble;
 using SetHeaderLogoCmd = Imprint.Authoring.Features.Sites.SetHeaderLogo.SetHeaderLogo;
 using UploadAssetCmd = Imprint.Authoring.Features.Assets.UploadAsset.UploadAsset;
@@ -703,6 +704,18 @@ public sealed class ImprintAuthoringMcpTools
         if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
         return await Dispatch(dispatcher, config, new SetLlmsPreambleCmd(sid, preamble), ct,
             () => new { ok = true, siteId = sid.Compact, length = preamble?.Length ?? 0 });
+    }
+
+    [McpServerTool(Name = "set_llms_excluded_paths")]
+    [Description("Declare which path prefixes are published for search engines ONLY, and therefore stay out of llms.txt and llms-full.txt. Each prefix covers itself and everything nested under it: 'surveys/github' excludes surveys/github/... while leaving the /surveys/ index page listed. A trailing '*' on the LAST segment matches by segment prefix instead, so 'dimensions/rubric*' covers every dated dimensions/rubric-2026.08.19 snapshot without naming them one by one (and keeps covering new ones). Use this when a site serves many generated pages that are good SEO but noise to a model trying to learn what the site is. sitemap.xml is NEVER affected - those pages exist to be indexed, and this does not stop any crawler from fetching them. The LLM files state how many pages were left out and point at the sitemap, so the omission is never silent. Pass an empty array to clear. Max 20 prefixes.")]
+    public static async Task<object> SetLlmsExcludedPaths(
+        [Description("The site id.")] string siteId,
+        [Description("Path prefixes, e.g. ['surveys/github','surveys/gitlab']. Empty clears the policy.")] string[]? paths,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        return await Dispatch(dispatcher, config, new SetLlmsExcludedPathsCmd(sid, paths), ct,
+            () => new { ok = true, siteId = sid.Compact, prefixes = paths?.Length ?? 0 });
     }
 
     [McpServerTool(Name = "set_social_image")]
