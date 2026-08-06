@@ -39,8 +39,15 @@ public sealed record NavigationItem
     /// <summary>True when this entry is a group (has children) rather than a direct link.</summary>
     public bool IsGroup => Children.Count > 0;
 
-    /// <summary>The target page when this entry is a direct same-site page link; null otherwise.</summary>
-    public PageId? PageId => Link is PageLink page ? page.PageId : null;
+    /// <summary>
+    /// The page this entry <em>is</em> — which decides navigation order, home candidacy and the
+    /// once-only rule. A link into a section of a page is deliberately excluded: "Independence"
+    /// pointing at the front page's independence section is a shortcut to part of that page, not
+    /// a second claim on it, and treating it as one would make the home page ambiguous and forbid
+    /// the very menu this exists for. Staleness tracking wants the other reading and asks the
+    /// <see cref="Link"/> directly.
+    /// </summary>
+    public PageId? PageId => Link is PageLink { Fragment: null } page ? page.PageId : null;
 
     // List-typed member defeats synthesized record equality (reference compare), yet
     // events and the aggregate's no-op check compare navigation by value — so children

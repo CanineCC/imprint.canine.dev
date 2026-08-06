@@ -339,7 +339,7 @@ public static class AuthoringNodeJson
                 throw new SpecException("pageId is not a valid page id.");
             }
 
-            return new PageLink(PageId.From(guid));
+            return new PageLink(PageId.From(guid), String(spec, "fragment"));
         }
 
         return null;
@@ -449,7 +449,7 @@ public static class AuthoringNodeJson
 
     private static object? DescribeLink(Link? link) => link switch
     {
-        PageLink page => new { kind = "page", pageId = page.PageId.Compact },
+        PageLink page => new { kind = "page", pageId = page.PageId.Compact, fragment = page.Fragment },
         ExternalLink external => new { kind = "external", url = external.Url },
         _ => null,
     };

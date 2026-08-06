@@ -144,6 +144,75 @@ public sealed class MarketingChromeTests
     }
 
     [Fact]
+    public async Task A_nav_link_to_a_section_of_a_page_works_from_every_page_in_every_locale()
+    {
+        // The one-page site's own trick — "Independence" in the header jumping to a section —
+        // breaks the moment the site grows a second page (a bare #anchor points at the page you
+        // are on) or a second locale (an absolute URL pins the default language). A page link
+        // carrying a section survives both: the path is resolved per locale, the anchor rides along.
+        await using var host = new PublishingTestHost();
+        var siteId = await host.CreateSite("Canine", "en");
+        await host.AddLocale(siteId, "da");
+        var homeId = await host.CreatePage(siteId, "home", "Home");
+        await host.AddSection(homeId, SectionPresets.Find("hero")!.Build(PublishingTestHost.En) with
+        {
+            Anchor = "independence",
+        });
+        var aboutId = await host.CreatePage(siteId, "about", "About");
+        await host.AddSection(aboutId, SectionPresets.Find("text")!.Build(PublishingTestHost.En));
+        await host.Publish(homeId);
+        await host.Publish(aboutId);
+
+        var en = PublishingTestHost.En;
+        await host.SetNavigation(siteId,
+        [
+            NavigationItem.Page(homeId),
+            new NavigationItem
+            {
+                Label = LocalizedText.Of(en, "Independence"), Link = new PageLink(homeId, "independence"),
+            },
+            NavigationItem.Page(aboutId),
+        ]);
+        await host.Publisher.Synchronize();
+
+        // From a sub-page, in each locale, the link is that locale's front page plus the section.
+        Assert.Contains("<a href=\"/#independence\">Independence</a>", host.ReadText("about/index.html"));
+        Assert.Contains("<a href=\"/da/#independence\">Independence</a>", host.ReadText("da/about/index.html"));
+
+        // And on the front page itself only the whole-page entry says "you are here" — a section
+        // of the page is not the page.
+        var home = host.ReadText("index.html");
+        Assert.Contains("<a href=\"/#independence\">Independence</a>", home);
+        Assert.DoesNotContain("<a href=\"/#independence\" aria-current", home);
+    }
+
+    [Fact]
+    public async Task A_section_link_to_a_page_that_is_not_published_is_dropped_whole()
+    {
+        // The fragment must not turn an unresolvable page into a link to nowhere: the same rule
+        // as any other page link — no published path, no entry.
+        await using var host = new PublishingTestHost();
+        var siteId = await host.CreateSite("Canine", "en");
+        var homeId = await host.CreatePage(siteId, "home", "Home");
+        await host.AddSection(homeId, SectionPresets.Find("hero")!.Build(PublishingTestHost.En));
+        await host.Publish(homeId);
+        var draftId = await host.CreatePage(siteId, "team", "The team");
+
+        var en = PublishingTestHost.En;
+        await host.SetNavigation(siteId,
+        [
+            NavigationItem.Page(homeId),
+            new NavigationItem
+            {
+                Label = LocalizedText.Of(en, "The team"), Link = new PageLink(draftId, "people"),
+            },
+        ]);
+        await host.Publisher.Synchronize();
+
+        Assert.DoesNotContain("#people", host.ReadText("index.html"));
+    }
+
+    [Fact]
     public async Task External_footer_links_survive_a_locale_variant()
     {
         await using var host = new PublishingTestHost();

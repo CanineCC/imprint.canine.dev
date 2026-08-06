@@ -837,7 +837,7 @@ public static class AuthoringApi
 
     private static object? LinkView(Link? link, IReadOnlyDictionary<PageId, string> slugs) => link switch
     {
-        PageLink page => new { kind = "page", pageId = page.PageId.Compact, slug = slugs.GetValueOrDefault(page.PageId) },
+        PageLink page => new { kind = "page", pageId = page.PageId.Compact, slug = slugs.GetValueOrDefault(page.PageId), fragment = page.Fragment },
         ExternalLink external => new { kind = "external", url = external.Url },
         _ => null,
     };
@@ -1073,7 +1073,7 @@ public static class AuthoringApi
                 throw new ArgumentException($"'{page}' is not a valid page id.");
             }
 
-            return new PageLink(PageId.From(guid));
+            return new PageLink(PageId.From(guid), Text(element, "fragment"));
         }
 
         return null;

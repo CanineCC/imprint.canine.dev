@@ -42,6 +42,16 @@ navigation items, deleted flag. Stream: `site-{id}`.
     `text`/`background` and `on-primary`/`primary` in both modes — enforced by test).
 - `NavigationItem { PageId PageId, LocalizedText? LabelOverride }` — label falls back
   to the page title.
+- `PageLink { PageId PageId, string? Fragment }` — a same-site target, resolved to the
+  reader's locale at render time. `Fragment` narrows it to one section of that page
+  (`/#independence`, `/da/#independence`), sanitized by `SectionAnchor` so an unusable
+  anchor degrades to the page rather than to a broken href. It is the only way to link a
+  section from another page or another language: a bare `#anchor` reaches only the page
+  you are standing on, and an absolute URL pins the default locale.
+  - A section link is **not** the page: it carries no navigation order or home
+    candidacy, never claims `aria-current`, and must carry its own label (three sections
+    of the front page would otherwise all read "Home"). Two entries with the same page
+    *and* section are still a duplicate.
 
 ### Events
 
@@ -126,8 +136,10 @@ normalizes `contenteditable` output to this form before submitting — the serve
 - Block elements: `<p>`, `<ul>`, `<ol>`, `<li>` (li only inside ul/ol; p/ul/ol only at
   top level; no nesting of lists in v1).
 - Inline elements: `<strong>`, `<em>`, `<a href="…">`, `<br>`.
-- `<a>` href must be `https:`, `http:`, `mailto:` or a page reference
-  `page:{guid}` (resolved to the page's URL at render; broken refs render as plain text).
+- `<a>` href must be `https:`, `http:`, `mailto:`, a `#section` of the page it is written
+  on, or a page reference `page:{guid}` — optionally `page:{guid}#section` (resolved to
+  that page's URL *in the reader's locale* at render, with the section appended; broken
+  refs render as plain text, an unusable section degrades to the page).
 - No attributes anywhere except `href` on `<a>`. Text is HTML-entity-encoded
   (`&lt; &gt; &amp; &quot;`). Anything else ⇒ validation error.
 

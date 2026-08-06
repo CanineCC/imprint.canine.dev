@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Pages;
 using Imprint.Authoring.Domain.Sites;
@@ -62,6 +63,34 @@ public sealed class AuthoringLocaleMergeTests
 
         Assert.Equal("Pricing", merged[0].Label!.Get(En));
         Assert.Null(merged[0].Label!.Get(Da));
+    }
+
+    [Fact]
+    public void A_navigation_item_can_name_a_section_of_the_page_it_points_at()
+    {
+        var pageId = PageId.New();
+        using var json = JsonDocument.Parse(
+            $$"""{"label":"Independence","pageId":"{{pageId.Compact}}","fragment":"Independence"}""");
+
+        var item = AuthoringApi.ParseNavigationItem(json.RootElement, En);
+
+        Assert.Equal(new PageLink(pageId, "independence"), item.Link);
+    }
+
+    [Fact]
+    public void A_section_of_a_page_is_one_entry_in_every_language()
+    {
+        // The reason the section link had to become a PAGE link. Written as an absolute URL it
+        // needs the locale in the address — /#independence and /da/#independence — which makes
+        // the two languages two different entries, and translating one then deletes the other's
+        // label. As a page link the destination is identical in both, so the merge finds it.
+        var link = new PageLink(PageId.New(), "independence");
+        var existing = new[] { new NavigationItem { Label = Both("Independence", "Uvildighed"), Link = link } };
+        var incoming = new List<NavigationItem> { new() { Label = LocalizedText.Of(En, "Independence"), Link = link } };
+
+        var merged = AuthoringApi.CarryOtherLocales(incoming, existing, En);
+
+        Assert.Equal("Uvildighed", merged[0].Label!.Get(Da));
     }
 
     [Fact]

@@ -261,9 +261,12 @@ public static partial class CanonicalHtml
             return href.Length > "mailto:".Length;
         }
 
-        if (href.StartsWith("page:", StringComparison.OrdinalIgnoreCase))
+        // A page reference, optionally narrowed to one of that page's sections. Unlike the
+        // absolute URL ruled out above, it is localized on the way out, so it is the form that
+        // lets one page link into a section of another without changing the reader's language.
+        if (href.StartsWith(PageHref.Scheme, StringComparison.OrdinalIgnoreCase))
         {
-            return Guid.TryParse(href["page:".Length..], out _);
+            return PageHref.TryParse(href, out _, out _);
         }
 
         return false;

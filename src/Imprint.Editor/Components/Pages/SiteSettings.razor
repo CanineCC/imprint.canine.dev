@@ -70,7 +70,8 @@
             <p class="settings-hint">
                 Everything around the page content: the menu, the header's action buttons, the
                 footer's link columns, and the fine-print copy line. A link is a full URL
-                (<code>https://…</code>) or a same-site page as <code>page://slug</code>.
+                (<code>https://…</code>) or a same-site page as <code>page://slug</code> — add
+                <code>#section</code> to land on one section of that page.
             </p>
 
             <h3 class="chrome-heading">Navigation menu</h3>
@@ -703,7 +704,8 @@
     private string UrlOf(Link link) => link switch
     {
         ExternalLink external => external.Url,
-        PageLink page => $"page://{Pages.Get(page.PageId)?.Slug.Value ?? page.PageId.Compact}",
+        PageLink page => $"page://{Pages.Get(page.PageId)?.Slug.Value ?? page.PageId.Compact}"
+                         + (page.Fragment is { } fragment ? $"#{fragment}" : ""),
         _ => "",
     };
 
@@ -725,11 +727,14 @@
 
         if (trimmed.StartsWith("page://", StringComparison.OrdinalIgnoreCase))
         {
-            var slug = trimmed["page://".Length..].Trim('/');
+            var rest = trimmed["page://".Length..];
+            var hash = rest.IndexOf('#', StringComparison.Ordinal);
+            var slug = (hash < 0 ? rest : rest[..hash]).Trim('/');
+            var fragment = hash < 0 ? null : rest[(hash + 1)..];
             if (_site is { } site &&
                 Pages.All(site.Id).FirstOrDefault(p => string.Equals(p.Slug.Value, slug, StringComparison.OrdinalIgnoreCase)) is { } match)
             {
-                return new PageLink(match.Id);
+                return new PageLink(match.Id, fragment);
             }
 
             error = $"No page with slug '{slug}' on this site.";
@@ -741,7 +746,7 @@
             return new ExternalLink(trimmed);
         }
 
-        error = $"'{trimmed}' is not an absolute URL (https://…) or a page://slug link.";
+        error = $"'{trimmed}' is not an absolute URL (https://…) or a page://slug[#section] link.";
         return null;
     }
 

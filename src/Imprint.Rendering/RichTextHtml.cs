@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using Imprint.Authoring.Domain;
+using Imprint.Authoring.Domain.Pages;
 
 namespace Imprint.Rendering;
 
@@ -49,10 +50,9 @@ public static class RichTextHtml
             pos = hrefEnd + 2;
 
             var decoded = DecodeEntities(rawHref);
-            if (decoded.StartsWith("page:", StringComparison.OrdinalIgnoreCase) &&
-                Guid.TryParse(decoded["page:".Length..], out var pageGuid))
+            if (PageHref.TryParse(decoded, out var pageId, out var fragment))
             {
-                var path = resolvePagePath(PageId.From(pageGuid));
+                var path = new PageLink(pageId, fragment).Href(resolvePagePath(pageId));
                 if (path is null)
                 {
                     // Broken page reference: unwrap the anchor, keep its inline content

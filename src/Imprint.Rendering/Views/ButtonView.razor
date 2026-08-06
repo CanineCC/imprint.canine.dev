@@ -22,7 +22,7 @@ else
 
   private string? ResolveHref() => Node.LinkTo switch
   {
-    PageLink page => Ctx.ResolvePagePath(page.PageId),
+    PageLink page => page.Href(Ctx.ResolvePagePath(page.PageId)),
     // Verbatim only when the scheme allowlist passes — same gate the richtext
     // validator applies, so no href can reach markup through the button that could
     // not reach it through prose.

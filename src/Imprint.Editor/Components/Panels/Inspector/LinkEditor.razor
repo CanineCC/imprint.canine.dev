@@ -27,6 +27,14 @@
                 </option>
             }
         </select>
+        @if (Value is PageLink)
+        {
+            @* Optional: land on one section of that page rather than its top. Kept beside the
+               page picker instead of inside the address box, because it is the same link —
+               and typing it as a URL would lose the locale the page link carries. *@
+            <DebouncedText Value="@CurrentFragment" Placeholder="Section (optional), e.g. pricing"
+                           AriaLabel="Section of that page" OnCommit="OnFragmentCommitted" />
+        }
     }
     else
     {
@@ -51,6 +59,8 @@
 
     private string CurrentUrl => Value is ExternalLink external ? external.Url : "";
 
+    private string CurrentFragment => Value is PageLink { Fragment: { } fragment } ? fragment : "";
+
     protected override void OnInitialized()
     {
         _tab = Value is ExternalLink ? LinkTab.Web : LinkTab.Page;
@@ -59,7 +69,15 @@
 
     private Task OnPagePicked(ChangeEventArgs args) =>
         args.Value is string raw && Guid.TryParseExact(raw, "N", out var guid)
-            ? ValueChanged.InvokeAsync(new PageLink(PageId.From(guid)))
+            // Picking a different page drops the section: an anchor named on the old page is
+            // a promise about that page, and carrying it over would quietly point at nothing.
+            ? ValueChanged.InvokeAsync(new PageLink(PageId.From(guid),
+                Value is PageLink existing && existing.PageId.Compact == raw ? existing.Fragment : null))
+            : Task.CompletedTask;
+
+    private Task OnFragmentCommitted(string raw) =>
+        Value is PageLink page
+            ? ValueChanged.InvokeAsync(page with { Fragment = raw.Trim().TrimStart('#') })
             : Task.CompletedTask;
 
     private Task OnUrlCommitted(string raw)

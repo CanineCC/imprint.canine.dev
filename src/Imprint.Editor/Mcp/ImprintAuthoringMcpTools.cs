@@ -436,7 +436,7 @@ public sealed class ImprintAuthoringMcpTools
     }
 
     [McpServerTool(Name = "set_navigation")]
-    [Description("Replace the site's whole navigation — call get_site first and PUT back the order you want. itemsJson is a JSON array: {\"label\":\"Pricing\",\"pageId\":\"…\"} for a page link, {\"label\":\"Docs\",\"url\":\"https://…\"} for an external one, or {\"label\":\"Who it's for\",\"children\":[{\"label\":\"Teams\",\"pageId\":\"…\",\"description\":\"…\"}]} for a dropdown group.")]
+    [Description("Replace the site's whole navigation — call get_site first and PUT back the order you want. itemsJson is a JSON array: {\"label\":\"Pricing\",\"pageId\":\"…\"} for a page link (add \"fragment\":\"pricing\" to land on one section of that page — unlike an absolute URL it stays in the reader's locale), {\"label\":\"Docs\",\"url\":\"https://…\"} for an external one, or {\"label\":\"Who it's for\",\"children\":[{\"label\":\"Teams\",\"pageId\":\"…\",\"description\":\"…\"}]} for a dropdown group.")]
     public static async Task<object> SetNavigation(
         [Description("The site id.")] string siteId,
         [Description("The navigation items as a JSON array.")] string itemsJson,
@@ -472,7 +472,7 @@ public sealed class ImprintAuthoringMcpTools
     }
 
     [McpServerTool(Name = "set_footer")]
-    [Description("Replace the site's whole footer — call get_site first and PUT back the columns you want. groupsJson is a JSON array of columns: {\"heading\":\"Product\",\"links\":[{\"label\":\"Pricing\",\"pageId\":\"…\"},{\"label\":\"Docs\",\"url\":\"https://…\"}]}. Use this to fix a broken footer link — the footer is otherwise only editable in the interactive editor.")]
+    [Description("Replace the site's whole footer — call get_site first and PUT back the columns you want. groupsJson is a JSON array of columns: {\"heading\":\"Product\",\"links\":[{\"label\":\"Pricing\",\"pageId\":\"…\",\"fragment\":\"pricing\"},{\"label\":\"Docs\",\"url\":\"https://…\"}]}. Use this to fix a broken footer link — the footer is otherwise only editable in the interactive editor.")]
     public static async Task<object> SetFooter(
         [Description("The site id.")] string siteId,
         [Description("The footer columns as a JSON array.")] string groupsJson,
@@ -523,7 +523,7 @@ public sealed class ImprintAuthoringMcpTools
     }
 
     [McpServerTool(Name = "set_header_actions")]
-    [Description("Set the header's primary CTA and quiet link. They share a slot and are set TOGETHER, so omitting one clears it - which is how a header link pointing at a page that no longer exists gets removed. Each is a JSON object: {\"label\":\"Contact\",\"pageId\":\"…\"} or {\"label\":\"Docs\",\"url\":\"https://…\"}. Pass null or omit to clear.")]
+    [Description("Set the header's primary CTA and quiet link. They share a slot and are set TOGETHER, so omitting one clears it - which is how a header link pointing at a page that no longer exists gets removed. Each is a JSON object: {\"label\":\"Contact\",\"pageId\":\"…\",\"fragment\":\"section\"} or {\"label\":\"Docs\",\"url\":\"https://…\"}. Pass null or omit to clear.")]
     public static async Task<object> SetHeaderActions(
         [Description("The site id.")] string siteId,
         [Description("The primary CTA as a JSON object, or null/omitted to clear it.")] string? ctaJson,
@@ -923,7 +923,7 @@ public sealed class ImprintAuthoringMcpTools
 
     private static object? LinkView(Link? link, IReadOnlyDictionary<PageId, string> slugs) => link switch
     {
-        PageLink page => new { kind = "page", pageId = page.PageId.Compact, slug = slugs.GetValueOrDefault(page.PageId) },
+        PageLink page => new { kind = "page", pageId = page.PageId.Compact, slug = slugs.GetValueOrDefault(page.PageId), fragment = page.Fragment },
         ExternalLink external => new { kind = "external", url = external.Url },
         _ => null,
     };

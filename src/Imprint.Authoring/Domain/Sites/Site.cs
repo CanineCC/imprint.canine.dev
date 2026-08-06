@@ -268,10 +268,11 @@ public sealed class Site : AggregateRoot
             ValidateNavigationItem(item);
         }
 
-        // A same-site page may appear at most once as a top-level DIRECT link — that is
-        // what makes navigation order and the home page (nav-first page) well-defined.
-        // Group children and external links carry no page identity, so they are exempt.
-        var topLevelPages = items.Select(i => i.PageId).OfType<PageId>().ToList();
+        // A same-site destination may appear at most once as a top-level DIRECT link — that
+        // is what makes navigation order and the home page (nav-first page) well-defined.
+        // Compared as links, so three sections of the front page are three destinations while
+        // the page itself stays unique. Group children and external links are exempt.
+        var topLevelPages = items.Select(i => i.Link).OfType<PageLink>().ToList();
         if (topLevelPages.Distinct().Count() != topLevelPages.Count)
         {
             throw new DomainException("Navigation cannot contain the same page twice.");
@@ -314,7 +315,7 @@ public sealed class Site : AggregateRoot
             {
                 // An external child link's label is the only text it has, so require it;
                 // a page child may omit the label and inherit the page title.
-                if (child.Link is ExternalLink && (child.Label is null || child.Label.IsEmpty))
+                if (NeedsOwnLabel(child.Link) && (child.Label is null || child.Label.IsEmpty))
                 {
                     throw new DomainException("An external navigation link must have a label.");
                 }
@@ -329,11 +330,19 @@ public sealed class Site : AggregateRoot
             throw new DomainException("A navigation entry must be either a link or a group with children.");
         }
 
-        if (item.Link is ExternalLink && (item.Label is null || item.Label.IsEmpty))
+        if (NeedsOwnLabel(item.Link) && (item.Label is null || item.Label.IsEmpty))
         {
             throw new DomainException("An external navigation link must have a label.");
         }
     }
+
+    /// <summary>
+    /// Which links cannot borrow their text. An external one has no page to borrow from; a link
+    /// into a section of a page could borrow the page's title, but then a menu of three sections
+    /// of the front page would read "Home, Home, Home" — the section is the point, so it has to
+    /// be named.
+    /// </summary>
+    private static bool NeedsOwnLabel(Link? link) => link is ExternalLink or PageLink { Fragment: not null };
 
     /// <summary>Replace the footer's named link columns. Empty clears the footer.</summary>
     public void SetFooter(IReadOnlyList<FooterLinkGroup> groups)

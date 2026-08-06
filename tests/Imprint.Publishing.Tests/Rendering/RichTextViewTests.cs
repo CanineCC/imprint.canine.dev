@@ -29,6 +29,35 @@ public sealed class RichTextViewTests
     }
 
     [Fact]
+    public async Task A_page_link_can_name_a_section_of_that_page()
+    {
+        // The cross-page section link prose could not express before: a bare #anchor only reaches
+        // the page you are standing on, and an absolute URL would land a Danish reader on the
+        // English copy. The page reference is localized on the way out; the anchor rides along.
+        var node = SampleNodes.RichText(
+            $"<p>See <a href=\"page:{SampleNodes.LinkedPageId.Value}#pricing\">what it costs</a></p>");
+        var ctx = Static with { ResolvePagePath = id => id == SampleNodes.LinkedPageId ? "/da/guides/intro/" : null };
+
+        var html = await RenderHarness.RenderNode(ctx, node);
+
+        Assert.Contains("<a href=\"/da/guides/intro/#pricing\">what it costs</a>", html);
+    }
+
+    [Fact]
+    public async Task An_unusable_section_falls_back_to_the_page_itself()
+    {
+        // An anchor no section could ever carry would be a dead href. Dropping it leaves the
+        // reader on the right page, one scroll from where the author meant.
+        var node = SampleNodes.RichText(
+            $"<p><a href=\"page:{SampleNodes.LinkedPageId.Value}#!!\">there</a></p>");
+        var ctx = Static with { ResolvePagePath = id => id == SampleNodes.LinkedPageId ? "/guides/intro/" : null };
+
+        var html = await RenderHarness.RenderNode(ctx, node);
+
+        Assert.Contains("<a href=\"/guides/intro/\">there</a>", html);
+    }
+
+    [Fact]
     public async Task Broken_page_links_unwrap_keeping_inner_formatting()
     {
         var node = SampleNodes.RichText($"<p>Read <a href=\"page:{Guid.NewGuid()}\">the <strong>lost</strong> guide</a> now</p>");

@@ -1,4 +1,5 @@
 using Imprint.Authoring.Domain;
+using Imprint.Authoring.Domain.Pages;
 using Imprint.Authoring.Domain.Sites;
 using Imprint.Authoring.Domain.Sites.Events;
 using Imprint.TestKit;
@@ -43,6 +44,56 @@ public sealed class SiteNavigationTests
             .Given(Created)
             .When(s => s.SetNavigation(items))
             .ThenFails("same page twice");
+    }
+
+    [Fact]
+    public void SetNavigation_may_hold_several_sections_of_the_same_page()
+    {
+        // The menu this feature exists for: the front page plus three of its sections. They are
+        // four destinations, not four claims on one page, so the once-only rule must not see
+        // them as duplicates.
+        var homeId = PageId.New();
+        var items = new[]
+        {
+            NavigationItem.Page(homeId, null),
+            new NavigationItem { Label = LocalizedText.Of(En, "Independence"), Link = new PageLink(homeId, "independence") },
+            new NavigationItem { Label = LocalizedText.Of(En, "What we make"), Link = new PageLink(homeId, "products") },
+        };
+
+        AggregateSpec.For<Site>()
+            .Given(Created)
+            .When(s => s.SetNavigation(items))
+            .ThenRaised(new SiteNavigationChanged(items));
+    }
+
+    [Fact]
+    public void SetNavigation_with_the_same_section_of_a_page_twice_is_rejected()
+    {
+        // Two entries with the same target are still a duplicate, section or not.
+        var homeId = PageId.New();
+        var items = new[]
+        {
+            new NavigationItem { Label = LocalizedText.Of(En, "Independence"), Link = new PageLink(homeId, "independence") },
+            new NavigationItem { Label = LocalizedText.Of(En, "Uvildighed"), Link = new PageLink(homeId, "independence") },
+        };
+
+        AggregateSpec.For<Site>()
+            .Given(Created)
+            .When(s => s.SetNavigation(items))
+            .ThenFails("same page twice");
+    }
+
+    [Fact]
+    public void SetNavigation_with_an_unnamed_section_link_is_rejected()
+    {
+        // A section link cannot inherit the page title: a menu of three front-page sections
+        // would read "Home, Home, Home".
+        var items = new[] { new NavigationItem { Link = new PageLink(PageId.New(), "independence") } };
+
+        AggregateSpec.For<Site>()
+            .Given(Created)
+            .When(s => s.SetNavigation(items))
+            .ThenFails("must have a label");
     }
 
     [Fact]

@@ -254,6 +254,36 @@ public sealed record BlockInstanceNode : Node
 [JsonDerivedType(typeof(ExternalLink), "external")]
 public abstract record Link;
 
-public sealed record PageLink(PageId PageId) : Link;
+/// <summary>
+/// A same-site page, resolved to the reader's own locale at render time. <see cref="Fragment"/>
+/// optionally narrows it to one section of that page — the only correct way to put "Independence"
+/// in a header when the section lives on the front page: an absolute URL to <c>/#independence</c>
+/// would send a Danish reader to the English front page, and a bare <c>#independence</c> only
+/// works while you are already standing on it.
+/// <para>The value is sanitized by <see cref="SectionAnchor"/>, the same gate a section's own
+/// anchor passes, so a link can only ever name an id a section could actually carry — and an
+/// unusable one reads back as no fragment at all rather than as a broken href.</para>
+/// </summary>
+public sealed record PageLink(PageId PageId, string? Fragment = null) : Link
+{
+    private readonly string? _fragment = SectionAnchor.Sanitize(Fragment);
+
+    // Sanitizing in the accessor as well as at construction covers `with { Fragment = … }`
+    // too — an object initializer writes the property directly, so a constructor-only gate
+    // would let the editor's one-field edit slip an unusable anchor past it.
+    public string? Fragment
+    {
+        get => _fragment;
+        init => _fragment = SectionAnchor.Sanitize(value);
+    }
+
+    /// <summary>
+    /// The link's href, given the page's path in the reader's locale: the path itself, with the
+    /// section appended when there is one. Null in, null out — an unresolvable page stays
+    /// unresolvable, which is what tells every caller to drop the link rather than emit a dead one.
+    /// </summary>
+    public string? Href(string? pagePath) =>
+        pagePath is null || Fragment is null ? pagePath : $"{pagePath}#{Fragment}";
+}
 
 public sealed record ExternalLink(string Url) : Link;

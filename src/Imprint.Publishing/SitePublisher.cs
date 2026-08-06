@@ -386,7 +386,9 @@ public sealed class SitePublisher(
         {
             foreach (var item in _navigation)
             {
-                if (item.PageId is { } topLevel)
+                // The Link, not item.PageId: a link into a section of a page still shows that
+                // page's slug, so it is still a staleness input even though it is not that page.
+                if (item.Link is PageLink { PageId: var topLevel })
                 {
                     yield return topLevel;
                 }
@@ -913,7 +915,11 @@ public sealed class SitePublisher(
                         label = _pageById[page.PageId].Title.Resolve(locale, _defaultLocale);
                     }
 
-                    return (DirectoryPath(slugPath, locale), label, page.PageId);
+                    // A section link is not the page: on the front page itself, "Independence"
+                    // alongside "Home" must not both read as where you are, so only the
+                    // whole-page link claims aria-current.
+                    return (page.Href(DirectoryPath(slugPath, locale))!, label,
+                        page.Fragment is null ? page.PageId : null);
 
                 case ExternalLink external:
                     // The aggregate guarantees an external link carries a label.
@@ -1570,7 +1576,7 @@ public sealed class SitePublisher(
         private string? HrefOf(Link? link) => link switch
         {
             PageLink page when _slugPathOf.TryGetValue(page.PageId, out var target) =>
-                Absolute(DirectoryPath(target, _defaultLocale)),
+                page.Href(Absolute(DirectoryPath(target, _defaultLocale))),
             ExternalLink external when CanonicalHtml.IsAllowedHref(external.Url) => external.Url,
             _ => null,
         };
