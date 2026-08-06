@@ -969,9 +969,18 @@ public static class AuthoringApi
             }
         }
 
-        return [.. incoming.Select(item => item with
+        // A group heading has no link to match on, so — like a footer column's heading — it
+        // matches by position. Without it, translating the English menu deletes the Danish
+        // name of every dropdown, which is invisible while the two languages spell it the
+        // same ("Onboarding") and silent data loss the moment they do not.
+        LocalizedText? PreviousLabel(NavigationItem item, int index) =>
+            item.Link is { } link
+                ? byLink.TryGetValue(link, out var was) ? was.Label : null
+                : existing.ElementAtOrDefault(index) is { IsGroup: true } sameSlot ? sameSlot.Label : null;
+
+        return [.. incoming.Select((item, index) => item with
         {
-            Label = Merged(item.Label, item.Link is { } link && byLink.TryGetValue(link, out var was) ? was.Label : null, locale),
+            Label = Merged(item.Label, PreviousLabel(item, index), locale),
             Children = [.. item.Children.Select(child =>
             {
                 var previous = childrenByLink.GetValueOrDefault(child.Link);

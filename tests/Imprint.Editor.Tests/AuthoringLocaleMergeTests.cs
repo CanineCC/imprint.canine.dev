@@ -66,6 +66,36 @@ public sealed class AuthoringLocaleMergeTests
     }
 
     [Fact]
+    public void A_dropdown_heading_keeps_its_other_languages()
+    {
+        // A group is the one entry with no link to match on, so it matches by position — the
+        // same rule a footer column's heading already uses.
+        var child = new NavigationChild(Both("Read me first", "Læs mig først"), new PageLink(PageId.New()));
+        var existing = new[] { NavigationItem.Group(Both("Onboarding", "Introduktion"), [child]) };
+        var incoming = new List<NavigationItem> { NavigationItem.Group(LocalizedText.Of(En, "Onboarding"), [child]) };
+
+        var merged = AuthoringApi.CarryOtherLocales(incoming, existing, En);
+
+        Assert.Equal("Introduktion", merged[0].Label!.Get(Da));
+    }
+
+    [Fact]
+    public void A_dropdown_does_not_inherit_the_heading_of_a_plain_link_in_its_slot()
+    {
+        // Position only identifies a group against another group. Borrowing a page entry's
+        // label would put a page's name on a menu that no longer points at it.
+        var existing = new[] { NavigationItem.External(Both("Status", "Status"), "https://status.example.com/") };
+        var incoming = new List<NavigationItem>
+        {
+            NavigationItem.Group(LocalizedText.Of(En, "Onboarding"), [new NavigationChild(null, new PageLink(PageId.New()))]),
+        };
+
+        var merged = AuthoringApi.CarryOtherLocales(incoming, existing, En);
+
+        Assert.Null(merged[0].Label!.Get(Da));
+    }
+
+    [Fact]
     public void A_navigation_item_can_name_a_section_of_the_page_it_points_at()
     {
         var pageId = PageId.New();
