@@ -159,6 +159,64 @@ public sealed class MarkdownToNodesTests
         }
     }
 
+    // ------------------------------------------------------------------------- widgets
+
+    [Fact]
+    public void A_widget_directive_becomes_a_widget_node()
+    {
+        var result = Convert("::: widget cai-score-card repo=acme/api :::");
+
+        Assert.True(result.Ok);
+        var widget = Assert.IsType<WidgetNode>(Assert.Single(result.Nodes));
+        Assert.Equal("cai-score-card", widget.Tag);
+        Assert.Equal("acme/api", widget.Props.Get("repo"));
+    }
+
+    [Fact]
+    public void A_widget_prop_may_be_quoted_to_hold_spaces()
+    {
+        var result = Convert("""::: widget x-countdown label="Launch day" until=2027-01-01 :::""");
+
+        Assert.True(result.Ok);
+        var widget = Assert.IsType<WidgetNode>(Assert.Single(result.Nodes));
+        Assert.Equal("Launch day", widget.Props.Get("label"));
+        Assert.Equal("2027-01-01", widget.Props.Get("until"));
+    }
+
+    [Fact]
+    public void A_widget_needs_no_props()
+    {
+        var result = Convert("::: widget x-theme-toggle :::");
+
+        Assert.True(result.Ok);
+        Assert.Equal("x-theme-toggle", Assert.IsType<WidgetNode>(Assert.Single(result.Nodes)).Tag);
+    }
+
+    [Fact]
+    public void A_widget_sits_between_prose_as_its_own_block()
+    {
+        var result = Convert("Before.\n\n::: widget x-theme-toggle :::\n\nAfter.");
+
+        Assert.True(result.Ok);
+        Assert.Equal(3, result.Nodes.Count);
+        Assert.IsType<WidgetNode>(result.Nodes[1]);
+    }
+
+    [Theory]
+    // A custom element must contain a hyphen — without one it is an HTML tag name, and the
+    // browser will never upgrade it.
+    [InlineData("::: widget noHyphen :::", "hyphen")]
+    [InlineData("::: widget CAI-Score :::", "lower case")]
+    [InlineData("::: widget :::", "name")]
+    [InlineData("::: widget x-thing repo :::", "repo=value")]
+    public void A_malformed_widget_directive_is_reported(string markdown, string expected)
+    {
+        var result = Convert(markdown);
+
+        Assert.False(result.Ok);
+        Assert.Contains(expected, Assert.Single(result.Problems).Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     // --------------------------------------------------------------------- what it refuses
 
     [Theory]

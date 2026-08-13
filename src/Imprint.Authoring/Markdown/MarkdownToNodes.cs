@@ -82,6 +82,13 @@ public static class MarkdownToNodes
                 continue;
             }
 
+            if (IsWidgetDirective(line))
+            {
+                ReadWidget(line, i + 1, id, nodes, problems);
+                i++;
+                continue;
+            }
+
             if (IsThematicBreak(line))
             {
                 nodes.Add(new DividerNode { Id = id() });
@@ -122,6 +129,98 @@ public static class MarkdownToNodes
     }
 
     // ------------------------------------------------------------------ block readers
+
+    /// <summary>
+    /// <c>::: widget cai-score-card repo=acme/api :::</c> — the escape hatch from prose into an
+    /// island, so a post can carry a live score card without leaving markdown.
+    /// <para>Manifest-blind by design, exactly like <see cref="WidgetNode"/> itself: whether the
+    /// tag exists and its props are declared is a slice question (<c>IWidgetCatalog</c>), answered
+    /// where the catalog is visible. This checks only the SHAPE — that it is a usable custom
+    /// element name and that every prop is a pair.</para>
+    /// </summary>
+    private static void ReadWidget(
+        string line, int lineNumber, Func<NodeId> id, List<Node> nodes, List<MarkdownProblem> problems)
+    {
+        var body = line.Trim();
+        body = body[WidgetOpen.Length..^WidgetClose.Length].Trim();
+
+        var parts = SplitDirective(body);
+        if (parts.Count == 0)
+        {
+            problems.Add(new MarkdownProblem(lineNumber, "A widget directive needs a widget name: ::: widget my-widget :::"));
+            return;
+        }
+
+        var tag = parts[0];
+        if (tag != tag.ToLowerInvariant())
+        {
+            problems.Add(new MarkdownProblem(lineNumber, $"'{tag}' must be lower case — custom element names are case-sensitive and always lower case."));
+            return;
+        }
+
+        if (!tag.Contains('-', StringComparison.Ordinal) ||
+            !tag.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_'))
+        {
+            problems.Add(new MarkdownProblem(lineNumber, $"'{tag}' is not a custom element name — it must contain a hyphen (that is what makes the browser upgrade it)."));
+            return;
+        }
+
+        var props = new List<KeyValuePair<string, string>>();
+        foreach (var part in parts.Skip(1))
+        {
+            var eq = part.IndexOf('=', StringComparison.Ordinal);
+            if (eq <= 0)
+            {
+                problems.Add(new MarkdownProblem(lineNumber, $"'{part}' is not a widget setting — write repo=value, or repo=\"a value with spaces\"."));
+                return;
+            }
+
+            props.Add(new KeyValuePair<string, string>(part[..eq], Unquote(part[(eq + 1)..])));
+        }
+
+        nodes.Add(new WidgetNode { Id = id(), Tag = tag, Props = PropBag.Of(props) });
+    }
+
+    /// <summary>Splits on whitespace, but not inside double quotes — so a label may hold spaces.</summary>
+    private static List<string> SplitDirective(string body)
+    {
+        var parts = new List<string>();
+        var current = new StringBuilder();
+        var quoted = false;
+
+        foreach (var c in body)
+        {
+            if (c == '"')
+            {
+                quoted = !quoted;
+                current.Append(c);
+                continue;
+            }
+
+            if (char.IsWhiteSpace(c) && !quoted)
+            {
+                if (current.Length > 0)
+                {
+                    parts.Add(current.ToString());
+                    current.Clear();
+                }
+
+                continue;
+            }
+
+            current.Append(c);
+        }
+
+        if (current.Length > 0)
+        {
+            parts.Add(current.ToString());
+        }
+
+        return parts;
+    }
+
+    private static string Unquote(string value) =>
+        value.Length >= 2 && value[0] == '"' && value[^1] == '"' ? value[1..^1] : value;
 
     private static int ReadFencedCode(
         string[] lines, int start, string fence, string? language,
@@ -509,6 +608,17 @@ public static class MarkdownToNodes
         var trimmed = line.TrimStart();
         var space = trimmed.IndexOf(' ', StringComparison.Ordinal);
         return space < 0 ? "" : trimmed[(space + 1)..].Trim();
+    }
+
+    private const string WidgetOpen = "::: widget";
+    private const string WidgetClose = ":::";
+
+    private static bool IsWidgetDirective(string line)
+    {
+        var trimmed = line.Trim();
+        return trimmed.StartsWith(WidgetOpen, StringComparison.Ordinal) &&
+            trimmed.EndsWith(WidgetClose, StringComparison.Ordinal) &&
+            trimmed.Length >= WidgetOpen.Length + WidgetClose.Length;
     }
 
     private static bool IsThematicBreak(string line)
