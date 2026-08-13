@@ -861,3 +861,32 @@ button { font: inherit; color: inherit; }
 .ed-canvas[data-theme="light"] .ip-img-dark  { display: none; }
 .ed-canvas[data-theme="dark"]  .ip-img-light { display: none; }
 .ed-canvas[data-theme="dark"]  .ip-img-dark  { display: revert; }
+
+/* ── posts ─────────────────────────────────────────────────────────────────────────
+   Editor chrome only (ed-*/dash-*); the preview pane's INSIDE is published markup and
+   styles itself from the site stylesheet, which is the point of rendering it through
+   the real node views. Nothing here may reach into .ip-* — that boundary is what keeps
+   the preview honest. */
+.post-new { display: flex; gap: .5rem; align-items: center; margin: 0 0 1.5rem; flex-wrap: wrap; }
+.post-new-label { font-weight: 600; }
+.post-status { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; padding: .1rem .4rem; border-radius: 4px; }
+.post-status-draft { background: var(--ed-surface-alt); color: var(--ed-muted); }
+.post-status-published { background: #0e5c3a; color: #fff; }
+.post-status-modified { background: #8a5a00; color: #fff; }
+
+.post-editor { display: flex; flex-direction: column; height: 100vh; }
+.post-editor-head { display: flex; align-items: center; gap: .75rem; padding: .75rem 1rem; border-bottom: 1px solid var(--ed-border); flex-wrap: wrap; }
+.post-editor-title { font-size: 1.1rem; margin: 0; }
+.post-editor-actions { margin-left: auto; display: flex; gap: .5rem; }
+
+/* Two panes on a desktop, stacked on a narrow screen — the editor is a desktop tool, but
+   a stacked fallback beats a 300px-wide textarea. */
+.post-panes { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--ed-border); flex: 1; min-height: 0; }
+@media (max-width: 900px) { .post-panes { grid-template-columns: 1fr; } }
+.post-pane { background: var(--ed-surface); overflow: auto; min-height: 0; }
+.post-source { width: 100%; height: 100%; border: 0; resize: none; padding: 1rem; font-family: var(--ip-font-mono, ui-monospace, monospace); font-size: .9rem; line-height: 1.6; background: transparent; color: inherit; }
+.post-source:focus { outline: none; }
+.post-preview { padding: 1rem; }
+
+.post-problems { margin: 0; padding: .75rem 1rem; border-top: 1px solid var(--ed-border); background: var(--ed-surface-alt); list-style: none; font-size: .85rem; max-height: 8rem; overflow: auto; }
+.post-problems li { margin: .15rem 0; }

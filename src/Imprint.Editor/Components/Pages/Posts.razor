@@ -1,0 +1,165 @@
+@page "/site/{SiteIdValue}/posts"
+@using Imprint.Authoring.Domain
+@using Imprint.Authoring.Domain.Pages
+@using Imprint.Authoring.Features.Posts.CreatePost
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Auth
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject PostList Index
+@inject SiteOverview Sites
+@inject SiteAccess Access
+@inject CommandRunner Commands
+@inject NavigationManager Navigation
+
+<PageTitle>Posts · Imprint</PageTitle>
+
+<main class="dash">
+    <header class="dash-head">
+        <h1>Posts</h1>
+        <p class="dash-sub">
+            Written in markdown, published as static pages like everything else.
+            Drafts are yours alone until you publish them.
+        </p>
+    </header>
+
+    <form class="post-new" @onsubmit="Create" @onsubmit:preventDefault>
+        <label class="post-new-label" for="new-post-title">New post</label>
+        <input id="new-post-title" class="ed-input" @bind="_title" @bind:event="oninput"
+               placeholder="Post title" data-testid="new-post-title" />
+        <button type="submit" class="ed-btn ed-btn-primary" disabled="@(_title.Trim().Length == 0)"
+                data-testid="new-post-create">Create</button>
+    </form>
+
+    @if (_posts.Count == 0)
+    {
+        <p class="dash-sub" data-testid="posts-empty">No posts yet. The first one starts above.</p>
+    }
+    else
+    {
+        <ul class="dash-grid" aria-label="Posts" data-testid="post-list">
+            @foreach (var post in _posts)
+            {
+                <li class="dash-card">
+                    <button type="button" class="dash-open" data-testid="post-open"
+                            data-slug="@post.Slug.Value" @onclick="() => Open(post.Id)">
+                        <span class="dash-name">@Title(post)</span>
+                        <span class="dash-meta">
+                            <span class="post-status post-status-@post.Status.ToString().ToLowerInvariant()"
+                                  data-testid="post-status">@Label(post.Status)</span>
+                            · /@post.Slug.Value
+                            @if (post.PublishedAt is { } at)
+                            {
+                                <text> · @at.UtcDateTime.ToString("yyyy-MM-dd")</text>
+                            }
+                        </span>
+                    </button>
+                </li>
+            }
+        </ul>
+    }
+</main>
+
+@code {
+    [Parameter] public string SiteIdValue { get; set; } = "";
+
+    private SiteId _site;
+    private string _title = "";
+    private IReadOnlyList<PostSummary> _posts = [];
+
+    protected override void OnInitialized() => Index.Changed += OnChanged;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!Guid.TryParseExact(SiteIdValue, "N", out var guid) && !Guid.TryParse(SiteIdValue, out guid))
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        _site = SiteId.From(guid);
+
+        // A site id in a URL is guessable, so opening this list is an access check — the
+        // same treatment the page editor gives an id of a site you may not touch.
+        if (!await Access.CanAccessAsync(_site))
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        Reload();
+    }
+
+    private void Reload() => _posts = Index.All(_site);
+
+    private void OnChanged() => _ = InvokeAsync(() =>
+    {
+        Reload();
+        StateHasChanged();
+    });
+
+    private async Task Create()
+    {
+        var title = _title.Trim();
+        if (title.Length == 0)
+        {
+            return;
+        }
+
+        var id = PostId.New();
+        // Suggest() is the same slug derivation the page editor uses, so a title behaves the
+        // way an author has already learned it does elsewhere in the product.
+        var slug = UniqueSlug(Slug.Suggest(title));
+        var locale = Sites.Get(_site)?.DefaultLocale.Value ?? "en";
+
+        if (await Commands.Run(new CreatePost(id, _site, title, slug, locale)))
+        {
+            _title = "";
+            Navigation.NavigateTo($"/posts/{id.Compact}");
+        }
+    }
+
+    /// <summary>
+    /// Suffixes a duplicate title's slug rather than failing the create. Two posts called
+    /// "Notes" is an ordinary thing to want, and an error message about slugs is not a useful
+    /// answer to it — the author can still rename either one afterwards.
+    /// </summary>
+    private string UniqueSlug(string suggested)
+    {
+        if (!Slug.TryCreate(suggested, out var slug, out _))
+        {
+            return suggested;   // let the command's validator produce the real message
+        }
+
+        if (!Index.SlugTaken(_site, slug))
+        {
+            return slug.Value;
+        }
+
+        for (var n = 2; ; n++)
+        {
+            var candidate = $"{slug.Value}-{n}";
+            if (Slug.TryCreate(candidate, out var next, out _) && !Index.SlugTaken(_site, next))
+            {
+                return candidate;
+            }
+        }
+    }
+
+    private void Open(PostId id) => Navigation.NavigateTo($"/posts/{id.Compact}");
+
+    private string Title(PostSummary post)
+    {
+        var locale = Sites.Get(_site)?.DefaultLocale ?? new Locale("en");
+        return post.Title.Resolve(locale, locale);
+    }
+
+    private static string Label(PostStatus status) => status switch
+    {
+        PostStatus.Published => "Published",
+        PostStatus.Modified => "Unpublished changes",
+        _ => "Draft",
+    };
+
+    public void Dispose() => Index.Changed -= OnChanged;
+}

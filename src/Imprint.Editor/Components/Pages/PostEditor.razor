@@ -1,0 +1,208 @@
+@page "/posts/{PostIdValue}"
+@using Imprint.Authoring.Domain
+@using Imprint.Authoring.Domain.Posts
+@using Imprint.Authoring.Features.Posts.ChangePostBody
+@using Imprint.Authoring.Features.Posts.PublishPost
+@using Imprint.Authoring.Features.Posts.UnpublishPost
+@using Imprint.Authoring.Markdown
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Auth
+@using Imprint.Editor.Services
+@using Imprint.EventSourcing
+@using Imprint.Rendering
+@implements IDisposable
+@inject IAggregateStore Store
+@inject PostList Posts
+@inject SiteOverview Sites
+@inject SiteAccess Access
+@inject CommandRunner Commands
+@inject EditorRenderContextFactory ContextFactory
+@inject NavigationManager Navigation
+
+<PageTitle>@(_titleText is { Length: > 0 } t ? $"{t} · Imprint" : "Post · Imprint")</PageTitle>
+
+@if (_post is null)
+{
+    <main class="dash"><p class="dash-sub">Loading…</p></main>
+}
+else
+{
+    <main class="post-editor">
+        <header class="post-editor-head">
+            <a class="ed-btn ed-btn-ghost" href="/site/@_siteId.Compact/posts">← Posts</a>
+            <h1 class="post-editor-title" data-testid="post-title">@_titleText</h1>
+            <span class="post-status post-status-@_status.ToString().ToLowerInvariant()"
+                  data-testid="post-status">@Label(_status)</span>
+            <span class="post-editor-actions">
+                @if (_status == PostStatus.Published)
+                {
+                    <button type="button" class="ed-btn" data-testid="post-unpublish"
+                            @onclick="Unpublish">Unpublish</button>
+                }
+                else
+                {
+                    <button type="button" class="ed-btn ed-btn-primary" data-testid="post-publish"
+                            @onclick="Publish">Publish</button>
+                }
+            </span>
+        </header>
+
+        @* The two panes are the whole point: the same text, and what it will actually become.
+           The preview is rendered SERVER-SIDE through MarkdownToNodes and the ordinary node
+           views — the same path the publisher takes — so it cannot drift from the published
+           page the way a client-side markdown library would. *@
+        <div class="post-panes">
+            <section class="post-pane post-pane-source" aria-label="Markdown">
+                <textarea class="post-source" data-testid="post-body" spellcheck="true"
+                          @bind="Body" @bind:event="oninput"
+                          placeholder="# Your post&#10;&#10;Write in markdown."></textarea>
+            </section>
+
+            <section class="post-pane post-pane-preview" aria-label="Preview">
+                <div class="ed-canvas post-preview" data-testid="post-preview" inert>
+                    <CascadingValue Value="PreviewContext">
+                        <PageView Roots="_preview" />
+                    </CascadingValue>
+                </div>
+            </section>
+        </div>
+
+        @if (_problems.Count > 0)
+        {
+            @* Shown continuously, not only on a failed publish: the author finds out at the
+               line they are typing, rather than at the moment they wanted to be finished. *@
+            <ul class="post-problems" aria-label="Problems" data-testid="post-problems">
+                @foreach (var problem in _problems)
+                {
+                    <li><strong>Line @problem.Line</strong> — @problem.Message</li>
+                }
+            </ul>
+        }
+    </main>
+}
+
+@code {
+    [Parameter] public string PostIdValue { get; set; } = "";
+
+    private PostId _id;
+    private SiteId _siteId;
+    private Post? _post;
+    private Locale _locale = new("en");
+    private string _titleText = "";
+    private PostStatus _status = PostStatus.Draft;
+
+    private string _body = "";
+    private NodeList _preview = NodeList.Empty;
+    private IReadOnlyList<MarkdownProblem> _problems = [];
+
+    private RenderContext PreviewContext => ContextFactory.For(_locale, _locale);
+
+    private string Body
+    {
+        get => _body;
+        set
+        {
+            if (value == _body)
+            {
+                return;
+            }
+
+            _body = value;
+            Reconvert();
+            _ = SaveSoon();
+        }
+    }
+
+    protected override void OnInitialized() => Posts.Changed += OnChanged;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!Guid.TryParseExact(PostIdValue, "N", out var guid) && !Guid.TryParse(PostIdValue, out guid))
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        _id = PostId.From(guid);
+        _post = await Store.LoadOrDefault<Post>(_id.Stream);
+        if (_post is null)
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        _siteId = _post.SiteId;
+        if (!await Access.CanAccessAsync(_siteId))
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        _locale = Sites.Get(_siteId)?.DefaultLocale ?? new Locale("en");
+        _titleText = _post.Title.Resolve(_locale, _locale);
+        _body = _post.Body.Get(_locale) ?? "";
+        _status = Posts.Get(_id)?.Status ?? PostStatus.Draft;
+        Reconvert();
+    }
+
+    private void Reconvert()
+    {
+        var (roots, problems) = PostContent.Render(_body, _locale);
+        _preview = roots;
+        _problems = problems;
+    }
+
+    /// <summary>
+    /// Saves the body after a pause in typing. A command per keystroke would put one event per
+    /// character in the log — the history is meant to read like a person's edits, not a
+    /// keylogger — and the preview is already live without it, so nothing is lost by waiting.
+    /// </summary>
+    private async Task SaveSoon()
+    {
+        var mine = ++_saveToken;
+        await Task.Delay(SaveDebounce);
+        if (mine != _saveToken)
+        {
+            return;   // superseded by a later keystroke
+        }
+
+        await Commands.Run(new ChangePostBody(_id, _locale.Value, _body));
+    }
+
+    private const int SaveDebounce = 600;
+    private int _saveToken;
+
+    private async Task Publish()
+    {
+        // Flush whatever the debounce is still holding: publishing what is on screen is the
+        // only defensible reading of the button, and a pending save would otherwise publish
+        // the previous sentence.
+        _saveToken++;
+        await Commands.Run(new ChangePostBody(_id, _locale.Value, _body));
+        await Commands.Run(new PublishPost(_id, _locale.Value));
+        Refresh();
+    }
+
+    private async Task Unpublish()
+    {
+        await Commands.Run(new UnpublishPost(_id));
+        Refresh();
+    }
+
+    private void Refresh() => _status = Posts.Get(_id)?.Status ?? PostStatus.Draft;
+
+    private void OnChanged() => _ = InvokeAsync(() =>
+    {
+        Refresh();
+        StateHasChanged();
+    });
+
+    private static string Label(PostStatus status) => status switch
+    {
+        PostStatus.Published => "Published",
+        PostStatus.Modified => "Unpublished changes",
+        _ => "Draft",
+    };
+
+    public void Dispose() => Posts.Changed -= OnChanged;
+}
