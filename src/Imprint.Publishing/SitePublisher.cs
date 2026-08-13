@@ -32,6 +32,7 @@ public sealed class SitePublisher(
     PublishingOptions options,
     SiteOverview siteOverview,
     PublishedContent publishedContent,
+    PublishedPosts publishedPosts,
     SyndicatedPageStore syndicated,
     AssetLibrary assetLibrary,
     BlockLibrary blockLibrary,
@@ -63,7 +64,7 @@ public sealed class SitePublisher(
         gate.RunExclusive(async () =>
         {
             var pass = new Pass(
-                options, target.Site, target.OutputPath, target.BaseUrl, publishedContent, syndicated,
+                options, target.Site, target.OutputPath, target.BaseUrl, publishedContent, publishedPosts, syndicated,
                 assetLibrary, blockLibrary, widgetRegistry, mediaStore, loggerFactory, _logger);
             var report = await pass.Run(ct);
             status.Record(report);
@@ -83,6 +84,7 @@ public sealed class SitePublisher(
         string outputPath,
         string? baseUrl,
         PublishedContent publishedContent,
+        PublishedPosts publishedPosts,
         SyndicatedPageStore syndicated,
         AssetLibrary assetLibrary,
         BlockLibrary blockLibrary,
@@ -191,7 +193,13 @@ public sealed class SitePublisher(
             // syndicated from another system join them here and are otherwise indistinguishable:
             // same views, same chrome, same sitemap, same sweep. Everything the renderer learns,
             // they learn too, because there is only one renderer.
-            _pages = [.. publishedContent.AllForSite(site.Id), .. SyndicatedPagesOf(site.Id)];
+            _posts = publishedPosts.AllForSite(site.Id);
+            _pages =
+            [
+                .. publishedContent.AllForSite(site.Id),
+                .. SyndicatedPagesOf(site.Id),
+                .. PostPagesOf(),
+            ];
             _pageById = _pages.ToDictionary(page => page.Id);
 
             var oldManifest =
@@ -269,6 +277,12 @@ public sealed class SitePublisher(
             await WriteIfChanged(_cssFile, cssBytes, ct);
             await WriteIfChanged("sitemap.xml", Encoding.UTF8.GetBytes(BuildSitemap(plans)), ct);
             await WriteIfChanged("robots.txt", Encoding.UTF8.GetBytes(BuildRobots()), ct);
+            if (_posts.Count > 0)
+            {
+                // Only when there is something to syndicate: an empty feed is a broken promise a
+                // reader's aggregator would keep polling.
+                await WriteIfChanged("feed.xml", Encoding.UTF8.GetBytes(BuildFeed()), ct);
+            }
             await WriteIfChanged("llms.txt", Encoding.UTF8.GetBytes(BuildLlmsTxt(plans)), ct);
             await WriteIfChanged("llms-full.txt", Encoding.UTF8.GetBytes(BuildLlmsFullTxt(plans)), ct);
             await CopyFonts(ct);
@@ -1053,6 +1067,16 @@ public sealed class SitePublisher(
                 tokens.Add($"syndicated:{contentHash}");
             }
 
+            // Exactly the same problem, for the same reason: a post page is created with
+            // PublishedVersion 0 and stays there, so the version comparison is 0 < 0 for its whole
+            // life. Without this token a post renders once and every later re-publish is stored and
+            // never re-rendered — the editor would say "Published" over a page still showing the
+            // first draft. The publish instant is its version.
+            if (_postStamps.TryGetValue(page.Id, out var stamp))
+            {
+                tokens.Add($"post:{stamp}");
+            }
+
             foreach (var node in NodesOf(page))
             {
                 switch (node)
@@ -1256,6 +1280,174 @@ public sealed class SitePublisher(
         /// </para>
         /// </remarks>
         private readonly Dictionary<PageId, string> _syndicatedHashes = [];
+
+        /// <summary>
+        /// The blog's URL prefix. A post's slug is unique among POSTS only, so the prefix is what
+        /// keeps the two namespaces apart — an author may have both a page and a post called
+        /// "notes" without either of them noticing the other.
+        /// </summary>
+        public const string BlogPrefix = "blog";
+
+        private IReadOnlyList<PublishedPost> _posts = [];
+        private readonly Dictionary<PageId, string> _postStamps = [];
+
+        /// <summary>
+        /// Published posts, as pages. They join the ordinary page set and are then
+        /// indistinguishable to everything downstream — same views, same chrome, same sitemap,
+        /// same staleness sweep — for the reason syndicated pages are: there is only one
+        /// renderer, so anything given to it learns everything it knows.
+        /// <para>Each locale's tree is its own page, because a post's translation is written
+        /// independently and has no node-for-node correspondence to hang localized text off
+        /// (see <see cref="PublishedPost.RootsByLocale"/>). The default locale keeps the bare
+        /// path; the others take their locale prefix, exactly as an authored page's translations
+        /// do.</para>
+        /// </summary>
+        private IEnumerable<PublishedPage> PostPagesOf()
+        {
+            foreach (var post in _posts)
+            {
+                _postStamps[PostPageId(post.Id)] = post.UpdatedAt.UtcTicks.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                yield return new PublishedPage(
+                    PostPageId(post.Id),
+                    post.SiteId,
+                    default,   // addressed by PublicPath, like a syndicated page
+                    post.Title,
+                    post.MetaTitle,
+                    post.MetaDescription,
+                    new PageTree(post.RootsFor(_defaultLocale, _defaultLocale)),
+                    PublishedVersion: 0)
+                {
+                    PublicPath = $"{BlogPrefix}/{post.Slug.Value}",
+                };
+            }
+
+            if (_posts.Count > 0)
+            {
+                var listing = ListingPage();
+                // The index is derived from every post, so its version is all of theirs: adding,
+                // withdrawing or re-publishing any one of them must re-render it.
+                _postStamps[listing.Id] = string.Join(
+                    '|', _posts.Select(post => $"{post.Slug.Value}:{post.UpdatedAt.UtcTicks}"));
+                yield return listing;
+            }
+        }
+
+        /// <summary>
+        /// The blog index at <c>/blog/</c>, built as an ordinary page out of ordinary nodes — a
+        /// heading and one rich-text entry per post. Generating a NODE TREE rather than markup is
+        /// what keeps it inside the system: it gets the site's chrome, tokens, dark mode and
+        /// stylesheet for free, and there is still exactly one renderer.
+        /// <para>Only rendered when a post exists. An empty index page is a promise of content
+        /// that isn't there, and a link in the sitemap to it is worse.</para>
+        /// </summary>
+        private PublishedPage ListingPage()
+        {
+            var entries = new List<Node>();
+            foreach (var post in _posts)
+            {
+                var title = HtmlText.Encode(post.Title.Resolve(_defaultLocale, _defaultLocale));
+                var date = post.PublishedAt.UtcDateTime.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+                var summary = post.MetaDescription.Resolve(_defaultLocale, _defaultLocale);
+                // Absolute() so the href is a scheme the canonical inline grammar accepts. This
+                // html is generated rather than stored, so no validator sees it — which is exactly
+                // why it must not be the one place that quietly stops obeying the grammar.
+                var href = HtmlText.Encode(Absolute($"/{BlogPrefix}/{post.Slug.Value}/"));
+                var line = $"""<p><a href="{href}">{title}</a> — {date}</p>""";
+                if (!string.IsNullOrWhiteSpace(summary))
+                {
+                    line += $"<p>{HtmlText.Encode(summary)}</p>";
+                }
+
+                entries.Add(new RichTextNode
+                {
+                    Id = ListingNodeId(post.Id),
+                    Html = LocalizedText.Of(_defaultLocale, line),
+                });
+            }
+
+            var heading = new HeadingNode
+            {
+                Id = ListingNodeId(PostId.From(Guid.Empty)),
+                Level = 1,
+                Text = LocalizedText.Of(_defaultLocale, "Blog"),
+            };
+
+            var section = new SectionNode
+            {
+                Id = ListingNodeId(PostId.From(new Guid("00000000-0000-0000-0000-00000000feed"))),
+                Appearance = SectionAppearance.Doc,
+                Children = NodeList.Of([heading, .. entries]),
+            };
+
+            return new PublishedPage(
+                PostPageId(PostId.From(new Guid("00000000-0000-0000-0000-0000000000b1"))),
+                site.Id,
+                default,
+                LocalizedText.Of(_defaultLocale, "Blog"),
+                LocalizedText.Empty,
+                LocalizedText.Empty,
+                new PageTree(NodeList.Of(section)),
+                PublishedVersion: 0)
+            {
+                PublicPath = BlogPrefix,
+            };
+        }
+
+        /// <summary>Deterministic node ids for the generated index: the same posts must produce
+        /// byte-identical markup on every pass, and a fresh Guid would rewrite the file each time.</summary>
+        private static NodeId ListingNodeId(PostId post)
+        {
+            var seed = System.Security.Cryptography.SHA256.HashData(
+                Encoding.UTF8.GetBytes($"blog-index:{post.Compact}"));
+            return NodeId.From(new Guid(seed.AsSpan(0, 16)));
+        }
+
+        /// <summary>
+        /// RSS 2.0 for the published posts. A feed is the one part of a blog a reader takes away
+        /// with them, so it carries absolute links and the post's own publication date.
+        /// <para>Descriptions only, never the body: an escaped HTML body in a feed would be a
+        /// SECOND rendering of the post, drifting from the page — the failure this whole module is
+        /// built to avoid. The feed says what a post is and links to the one rendering there is.</para>
+        /// </summary>
+        private string BuildFeed()
+        {
+            var xml = new StringBuilder();
+            xml.Append("""<?xml version="1.0" encoding="utf-8"?>""").Append('\n');
+            xml.Append("<rss version=\"2.0\"><channel>\n");
+            xml.Append("<title>").Append(XmlEscape(_siteName)).Append("</title>\n");
+            xml.Append("<link>").Append(XmlEscape(Absolute($"/{BlogPrefix}/"))).Append("</link>\n");
+            xml.Append("<description>").Append(XmlEscape(_siteName)).Append("</description>\n");
+
+            foreach (var post in _posts)
+            {
+                var url = Absolute($"/{BlogPrefix}/{post.Slug.Value}/");
+                xml.Append("<item>\n");
+                xml.Append("<title>").Append(XmlEscape(post.Title.Resolve(_defaultLocale, _defaultLocale))).Append("</title>\n");
+                xml.Append("<link>").Append(XmlEscape(url)).Append("</link>\n");
+                // The URL is the identity: it is stable, unique, and the thing a reader would
+                // follow, so a reader that has already seen it recognises it after a re-publish.
+                xml.Append("<guid isPermaLink=\"true\">").Append(XmlEscape(url)).Append("</guid>\n");
+                xml.Append("<pubDate>").Append(post.PublishedAt.ToUniversalTime().ToString("r", System.Globalization.CultureInfo.InvariantCulture)).Append("</pubDate>\n");
+                if (post.MetaDescription.Resolve(_defaultLocale, _defaultLocale) is { Length: > 0 } description)
+                {
+                    xml.Append("<description>").Append(XmlEscape(description)).Append("</description>\n");
+                }
+
+                xml.Append("</item>\n");
+            }
+
+            xml.Append("</channel></rss>\n");
+            return xml.ToString();
+        }
+
+        /// <summary>A stable page id for a post — the same post always names the same page, so the
+        /// manifest can see it change rather than treating every pass as a new file.</summary>
+        private static PageId PostPageId(PostId id)
+        {
+            var seed = System.Security.Cryptography.SHA256.HashData(
+                Encoding.UTF8.GetBytes($"post:{id.Compact}"));
+            return PageId.From(new Guid(seed.AsSpan(0, 16)));
+        }
 
         private IEnumerable<PublishedPage> SyndicatedPagesOf(SiteId siteId) =>
             syndicated.AllForSite(siteId).Select(page => Remember(siteId, page)).Select(page => new PublishedPage(
@@ -1637,6 +1829,13 @@ public sealed class SitePublisher(
             Keep("sitemap.xml");
             Keep("robots.txt");
             Keep("llms.txt");
+            if (_posts.Count > 0)
+            {
+                // Written only when posts exist, so it may only be KEPT then — otherwise the
+                // first post-free publish would leave yesterday's feed on disk forever.
+                Keep("feed.xml");
+            }
+
             Keep("llms-full.txt");
             foreach (var plan in plans)
             {

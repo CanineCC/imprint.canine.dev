@@ -30,7 +30,11 @@ internal sealed class PublishingTestHost : IAsyncDisposable
     private readonly SqliteTestDatabase _database = new();
     private readonly DirectoryInfo _root;
 
-    public PublishingTestHost(string? baseUrl = null, bool sandboxDeploys = false)
+    /// <param name="configure">Extra registrations for a test that needs a port this host does
+    /// not wire by default — the widget catalog, for instance, which is deliberately not
+    /// registered by AddImprintAuthoring so every host has to choose one.</param>
+    public PublishingTestHost(
+        string? baseUrl = null, bool sandboxDeploys = false, Action<IServiceCollection>? configure = null)
     {
         _root = Directory.CreateTempSubdirectory("imprint-publish-");
         OutputPath = Path.Combine(_root.FullName, "output");
@@ -52,6 +56,7 @@ internal sealed class PublishingTestHost : IAsyncDisposable
             BaseUrl = baseUrl,
             DebounceMilliseconds = 50,
         });
+        configure?.Invoke(services);
         Services = services.BuildServiceProvider();
         Services.InitializeImprintEventSourcing().GetAwaiter().GetResult();
     }
