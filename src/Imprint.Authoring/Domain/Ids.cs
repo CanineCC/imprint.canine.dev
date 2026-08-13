@@ -32,6 +32,15 @@ public readonly record struct PageId(Guid Value) : IGuidId<PageId>
     public override string ToString() => Compact;
 }
 
+public readonly record struct PostId(Guid Value) : IGuidId<PostId>
+{
+    public static PostId New() => new(Guid.NewGuid());
+    public static PostId From(Guid value) => new(value);
+    public string Stream => $"post-{Value:N}";
+    public string Compact => Value.ToString("N");
+    public override string ToString() => Compact;
+}
+
 public readonly record struct AssetId(Guid Value) : IGuidId<AssetId>
 {
     public static AssetId New() => new(Guid.NewGuid());
