@@ -127,11 +127,11 @@ public sealed class Post : AggregateRoot
             throw new DomainException(Describe(conversion.Problems));
         }
 
-        if (IsPublished)
-        {
-            return;
-        }
-
+        // Raised on EVERY publish, including a re-publish after an edit — the event is what
+        // carries the new content to the published projection, so swallowing it would leave the
+        // live post stale forever while the editor cheerfully showed "Published". The DATE still
+        // does not move: the fold keeps the first one (see When), so re-publishing is an update
+        // and not a new post.
         Raise(new PostPublished(at));
     }
 
@@ -178,7 +178,9 @@ public sealed class Post : AggregateRoot
                 Body = Body.With(e.Locale, e.Markdown);
                 break;
             case PostPublished e:
-                PublishedAt = e.PublishedAt;
+                // First date wins. A reader sorts and cites by this, so it must not move because
+                // somebody fixed a typo and pressed Publish again.
+                PublishedAt ??= e.PublishedAt;
                 break;
             case PostUnpublished:
                 PublishedAt = null;

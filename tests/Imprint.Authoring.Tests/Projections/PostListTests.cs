@@ -82,6 +82,21 @@ public sealed class PostListTests
     }
 
     [Fact]
+    public void Republishing_clears_modified_without_moving_the_date()
+    {
+        var id = PostId.New();
+
+        var summary = Assert.Single(Fold(
+            Created(id, "hello", "Hello"),
+            Published(id, Day1),
+            ($"post-{id.Value:N}", new PostBodyChanged(En, "edited")),
+            Published(id, Day1.AddDays(4))).All(Site));
+
+        Assert.Equal(PostStatus.Published, summary.Status);
+        Assert.Equal(Day1, summary.PublishedAt);
+    }
+
+    [Fact]
     public void Unpublishing_returns_it_to_draft()
     {
         var id = PostId.New();

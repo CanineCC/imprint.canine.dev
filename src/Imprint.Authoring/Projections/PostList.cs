@@ -120,9 +120,12 @@ public sealed class PostList : ReadModel
             PostTitleChanged changed => entry with { Title = entry.Title.With(changed.Locale, changed.Title) },
             // PublishedVersion is the stream position of the publish event itself, so "any event
             // after it" is what makes the post Modified.
+            // The VERSION advances (that is what clears "Modified" after a re-publish) but the
+            // DATE keeps its first value — the same first-wins rule the aggregate folds by, and
+            // it has to be repeated here because a projection folds the log, not the aggregate.
             PostPublished published => entry with
             {
-                PublishedAt = published.PublishedAt,
+                PublishedAt = entry.PublishedAt ?? published.PublishedAt,
                 PublishedVersion = @event.StreamVersion,
             },
             PostUnpublished => entry with { PublishedAt = null, PublishedVersion = null },

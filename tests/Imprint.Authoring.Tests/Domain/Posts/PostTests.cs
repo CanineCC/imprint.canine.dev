@@ -136,16 +136,18 @@ public sealed class PostTests
         AggregateSpec.For<Post>().Given(Created()).When(p => p.Publish(En, Noon)).ThenFails("empty");
 
     [Fact]
-    public void Publishing_twice_keeps_the_first_date()
+    public void Publishing_again_raises_an_event_but_keeps_the_first_date()
     {
-        // Re-publishing after an edit is an update, not a new post: the date a reader sorts
-        // and cites by must not move because a typo was fixed.
+        // Both halves matter. The EVENT must be raised: it is what carries the edited content
+        // to the published projection, and swallowing it would leave the live post stale
+        // forever while the editor showed "Published". The DATE must not move: a reader sorts
+        // and cites by it, and fixing a typo is not a new post.
         var post = new Post();
         post.LoadFrom([Created(), new PostBodyChanged(En, "Prose."), new PostPublished(Noon)]);
 
         post.Publish(En, Noon.AddDays(3));
 
-        Assert.Empty(post.UncommittedEvents);
+        Assert.Equal(new PostPublished(Noon.AddDays(3)), Assert.Single(post.UncommittedEvents));
         Assert.Equal(Noon, post.PublishedAt);
     }
 
