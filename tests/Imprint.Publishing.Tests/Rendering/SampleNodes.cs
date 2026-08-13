@@ -100,6 +100,7 @@ internal static class SampleNodes
         Image(),
         Video(),
         Svg(alt: "Logo"),
+        new CodeNode { Id = NodeId.New(), Text = "var x = 1 < 2 && 3 > 2;", Language = "csharp" },
         new DividerNode { Id = NodeId.New() },
         new SpacerNode { Id = NodeId.New(), Size = SpacerSize.Large },
         Widget(new KeyValuePair<string, string>("until", "2027-01-01")),

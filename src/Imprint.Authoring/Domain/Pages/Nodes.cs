@@ -20,6 +20,7 @@ namespace Imprint.Authoring.Domain.Pages;
 [JsonDerivedType(typeof(ImageNode), "image")]
 [JsonDerivedType(typeof(VideoNode), "video")]
 [JsonDerivedType(typeof(SvgNode), "svg")]
+[JsonDerivedType(typeof(CodeNode), "code")]
 [JsonDerivedType(typeof(DividerNode), "divider")]
 [JsonDerivedType(typeof(SpacerNode), "spacer")]
 [JsonDerivedType(typeof(WidgetNode), "widget")]
@@ -212,6 +213,48 @@ public sealed record SvgNode : Node
     public int? MaxWidthPx { get; init; }
     public LocalizedText Alt { get; init; } = LocalizedText.Empty;
     public override string DisplayName => "Graphic";
+}
+
+/// <summary>
+/// A block of literal code, rendered verbatim in a monospace block.
+/// <para>
+/// The canonical inline subset (<see cref="CanonicalHtml"/>) has no <c>&lt;pre&gt;</c> or
+/// <c>&lt;code&gt;</c> and deliberately keeps none: it is a grammar for PROSE, where every
+/// character is markup or text. Code is the opposite — whitespace is significant, and
+/// <c>&lt;</c> and <c>&amp;</c> are ordinary characters a reader must see. Squeezing it into
+/// rich text would mean entity-encoding at write time and hoping every later consumer
+/// decodes identically. A node of its own stores the code as it was written.
+/// </para>
+/// <para>
+/// <b>Not localized, on purpose.</b> Every other text field on a page is
+/// <see cref="LocalizedText"/> because prose is written per language; a code sample is the
+/// same characters in every language, and giving it per-locale values would invite
+/// translations that drift from the program they claim to be. The surrounding prose
+/// explains it; the code itself is one artefact.
+/// </para>
+/// </summary>
+public sealed record CodeNode : Node
+{
+    /// <summary>The code exactly as authored: no trimming beyond the fence, no re-indentation.</summary>
+    public required string Text { get; init; }
+
+    /// <summary>
+    /// An informational language tag (<c>csharp</c>, <c>bash</c>, …) or null. It becomes a
+    /// <c>language-*</c> class so a future highlighting island can find it, and nothing more —
+    /// the delivery contract is zero framework JavaScript, so the published page never
+    /// highlights on its own. Constrained to <see cref="IsValidLanguage"/> because it is
+    /// written into a class attribute.
+    /// </summary>
+    public string? Language { get; init; }
+
+    public override string DisplayName => Language is { Length: > 0 } lang ? $"Code ({lang})" : "Code";
+
+    /// <summary>A conservative tag shape — letters, digits, <c>+</c>, <c>#</c>, <c>-</c> — so the
+    /// value can be emitted into <c>class="language-…"</c> without escaping questions.</summary>
+    public static bool IsValidLanguage(string? language) =>
+        language is null ||
+        (language.Length is > 0 and <= 24 &&
+         language.All(c => char.IsAsciiLetterOrDigit(c) || c is '+' or '#' or '-'));
 }
 
 public sealed record DividerNode : Node

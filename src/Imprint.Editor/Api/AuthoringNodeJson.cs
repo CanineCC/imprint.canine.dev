@@ -88,6 +88,12 @@ public static class AuthoringNodeJson
                 props["alt"] = Localized(svg.Alt);
                 break;
 
+            case CodeNode code:
+                // Plain strings, not Localized(): code is one artefact in every language.
+                props["text"] = code.Text;
+                props["language"] = code.Language;
+                break;
+
             case SpacerNode spacer:
                 props["size"] = spacer.Size.ToString();
                 break;
@@ -229,6 +235,12 @@ public static class AuthoringNodeJson
                 AssetId = Asset(spec, "assetId"),
                 MaxWidthPx = Int(spec, "maxWidthPx"),
                 Alt = LocalizedOf(spec, "alt", locale),
+            },
+            "code" => new CodeNode
+            {
+                Id = id,
+                Text = String(spec, "text") ?? "",
+                Language = ValidLanguage(String(spec, "language")),
             },
             "divider" => new DividerNode { Id = id },
             "spacer" => new SpacerNode { Id = id, Size = Enum(spec, "size", SpacerSize.Medium) },
@@ -424,6 +436,11 @@ public static class AuthoringNodeJson
                 // set-props semantics): an absent 'props' object clears them.
                 Props = ParseWidgetProps(WidgetBag(patch)),
             },
+            CodeNode code => code with
+            {
+                Text = Has(patch, "text") ? String(patch, "text") ?? "" : code.Text,
+                Language = Has(patch, "language") ? ValidLanguage(String(patch, "language")) : code.Language,
+            },
             DividerNode divider => divider,
             _ => throw new SpecException($"{current.DisplayName} has no editable props."),
         };
@@ -495,6 +512,22 @@ public static class AuthoringNodeJson
         spec.ValueKind == JsonValueKind.Object && spec.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString()
             : null;
+
+    /// <summary>A code node's language tag is emitted into a class attribute, so it is refused
+    /// here rather than sanitized — the same "reject, never fix" rule the canonical grammar follows.
+    /// Blank reads as absent.</summary>
+    private static string? ValidLanguage(string? language)
+    {
+        var trimmed = language?.Trim();
+        if (string.IsNullOrEmpty(trimmed))
+        {
+            return null;
+        }
+
+        return CodeNode.IsValidLanguage(trimmed)
+            ? trimmed
+            : throw new SpecException($"'{trimmed}' is not a valid code language tag (letters, digits, + # - only).");
+    }
 
     private static int? Int(JsonElement spec, string key) =>
         spec.ValueKind == JsonValueKind.Object && spec.TryGetProperty(key, out var value) && value.TryGetInt32(out var parsed)

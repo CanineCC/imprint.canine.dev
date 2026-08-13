@@ -147,6 +147,10 @@
 :root[data-theme="dark"]  .ip-img-light { display: none; }
 :root[data-theme="dark"]  .ip-img-dark  { display: revert; }
 
+/* ---- code (overflow-x: a long line is the one content an author cannot reflow) ---- */
+.ip-code { margin: 0; padding: var(--ip-space-4); overflow-x: auto; background: var(--ip-surface-alt); border: 1px solid var(--ip-border); border-radius: var(--ip-radius); font-family: var(--ip-font-mono); font-size: .875em; }
+.ip-code code { font-family: inherit; white-space: pre; }
+
 /* ---- divider & spacer ---- */
 .ip-divider { width: 100%; border: 0; border-top: 1px solid var(--ip-border); margin: 0; }
 .ip-spacer-s { height: var(--ip-space-3); }

@@ -1,0 +1,12 @@
+@namespace Imprint.Rendering
+@inherits NodeViewBase<CodeNode>
+@* No MarkupString anywhere near this: the text is emitted as CONTENT, so Blazor escapes
+   it and a code sample containing "<script>" is a code sample, not a script. The markup is
+   written on one line because <pre> preserves whitespace — a prettier template would put a
+   newline inside the element and change the published bytes. *@
+<pre class="ip-code" @attributes="NodeAttributes"><code class="@LanguageClass">@Node.Text</code></pre>
+
+@code {
+  private string? LanguageClass =>
+    CodeNode.IsValidLanguage(Node.Language) && Node.Language is { Length: > 0 } lang ? $"language-{lang}" : null;
+}
