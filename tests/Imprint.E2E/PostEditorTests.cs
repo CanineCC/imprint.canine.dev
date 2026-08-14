@@ -1,4 +1,6 @@
+using System.Text.RegularExpressions;
 using Microsoft.Playwright;
+using static Microsoft.Playwright.Assertions;
 
 namespace Imprint.E2E;
 
@@ -35,7 +37,7 @@ public sealed class PostEditorTests(EditorFixture fixture)
         var title = $"E2E post {Guid.NewGuid():N}"[..14];
         await page.FillAsync("[data-testid='new-post-title']", title);
         await page.ClickAsync("[data-testid='new-post-create']");
-        await page.WaitForURLAsync("**/posts/**", new PageWaitForURLOptions { Timeout = 30_000 });
+        await page.WaitForURLAsync("**/posts/**");
         await page.WaitForInteractive();
 
         // ---- type markdown; the preview is rendered server-side from the same converter
@@ -43,7 +45,7 @@ public sealed class PostEditorTests(EditorFixture fixture)
 
         var preview = page.Locator("[data-testid='post-preview']");
         await preview.Locator("h1:has-text('Hello from the editor')").WaitForAsync(
-            new LocatorWaitForOptions { Timeout = 15_000 });
+            );
 
         // Every construct, in the preview, as REAL nodes — not a markdown library's opinion.
         Assert.Equal(1, await preview.Locator("strong:has-text('bold')").CountAsync());
@@ -55,8 +57,7 @@ public sealed class PostEditorTests(EditorFixture fixture)
 
         // ---- publish
         await page.ClickAsync("[data-testid='post-publish']");
-        await page.WaitForSelectorAsync("[data-testid='post-status']:has-text('Published')",
-            new PageWaitForSelectorOptions { Timeout = 20_000 });
+        await page.WaitForSelectorAsync("[data-testid='post-status']:has-text('Published')");
 
         // ---- the static page appears, with the same rendered nodes the preview showed
         var slug = SlugOf(title);
@@ -90,22 +91,36 @@ public sealed class PostEditorTests(EditorFixture fixture)
         var page = await OpenPosts(fixture);
         await page.FillAsync("[data-testid='new-post-title']", $"Broken {Guid.NewGuid():N}"[..12]);
         await page.ClickAsync("[data-testid='new-post-create']");
-        await page.WaitForURLAsync("**/posts/**", new PageWaitForURLOptions { Timeout = 30_000 });
+        await page.WaitForURLAsync("**/posts/**");
         await page.WaitForInteractive();
 
         await page.FillAsync("[data-testid='post-body']", "Fine paragraph.\n\n> a blockquote\n");
 
         // The author is told at the line, while typing — not at the moment they wanted to finish.
         var problems = page.Locator("[data-testid='post-problems']");
-        await problems.WaitForAsync(new LocatorWaitForOptions { Timeout = 15_000 });
+        await problems.WaitForAsync();
         Assert.Contains("Line 3", await problems.InnerTextAsync(), StringComparison.OrdinalIgnoreCase);
 
-        // …and the gate holds: the post stays a draft.
+        // …and the gate holds. Proving that is harder than it looks: "still a draft" is also true
+        // BEFORE the click, so on its own it would pass even if the Publish button did nothing at
+        // all. Waiting for the error toast does not fix that either — it says a refusal was
+        // reported, not that publishing works when the body is fine.
+        //
+        // So the test does the one thing that separates "refused" from "broken": press Publish on
+        // the bad body, then FIX the body and press it again. The first must not publish and the
+        // second must, which can only both hold if the gate is what stopped it.
+        // Asserted on the CLASS, not the text: the chip's label is "Draft" but CSS uppercases it,
+        // so the visible string depends on where you read it from, while the class is built by
+        // ToLowerInvariant() and says exactly one thing.
         await page.ClickAsync("[data-testid='post-publish']");
-        await Task.Delay(1500);
-        // Case-insensitive: the chip is uppercased by CSS, so InnerText reads "DRAFT". What is
-        // being asserted is the state, not the letterforms.
-        Assert.Contains("draft", await page.Locator("[data-testid='post-status']").InnerTextAsync(), StringComparison.OrdinalIgnoreCase);
+        await Expect(page.Locator("[data-testid='post-status']")).ToHaveClassAsync(
+            new Regex(@"\bpost-status-draft\b"));
+
+        await page.FillAsync("[data-testid='post-body']", "Fine paragraph.\n\nAnd another one.\n");
+        await Expect(page.Locator("[data-testid='post-problems']")).ToHaveCountAsync(0);
+        await page.ClickAsync("[data-testid='post-publish']");
+        await Expect(page.Locator("[data-testid='post-status']")).ToHaveClassAsync(
+            new Regex(@"\bpost-status-published\b"));
     }
 
     [Fact]
@@ -114,14 +129,14 @@ public sealed class PostEditorTests(EditorFixture fixture)
         var page = await OpenPosts(fixture);
         await page.FillAsync("[data-testid='new-post-title']", $"Widget {Guid.NewGuid():N}"[..12]);
         await page.ClickAsync("[data-testid='new-post-create']");
-        await page.WaitForURLAsync("**/posts/**", new PageWaitForURLOptions { Timeout = 30_000 });
+        await page.WaitForURLAsync("**/posts/**");
         await page.WaitForInteractive();
 
         await page.FillAsync("[data-testid='post-body']", "Before.\n\n::: widget x-theme-toggle :::\n\nAfter.");
 
         var preview = page.Locator("[data-testid='post-preview']");
         await preview.Locator("[data-node-type='widget']").WaitForAsync(
-            new LocatorWaitForOptions { Timeout = 15_000 });
+            );
         Assert.Equal(2, await preview.Locator("p").CountAsync());
     }
 
@@ -133,7 +148,7 @@ public sealed class PostEditorTests(EditorFixture fixture)
         await page.GotoAsync("/");
         await page.WaitForInteractive();
         await page.ClickAsync("[data-testid='site-posts']");
-        await page.WaitForURLAsync("**/posts", new PageWaitForURLOptions { Timeout = 30_000 });
+        await page.WaitForURLAsync("**/posts");
         await page.WaitForInteractive();
         return page;
     }
@@ -146,7 +161,7 @@ public sealed class PostEditorTests(EditorFixture fixture)
     {
         // The publisher debounces (~2s) and writes a page before its precompressed sibling, so a
         // poll that stops at the first file can catch a pass mid-window.
-        var deadline = DateTime.UtcNow.AddSeconds(40);
+        var deadline = DateTime.UtcNow.AddSeconds(60);
         while (!File.Exists(path) && DateTime.UtcNow < deadline)
         {
             await Task.Delay(500);

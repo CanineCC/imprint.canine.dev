@@ -22,7 +22,7 @@ public sealed class WalkingSkeletonTests(EditorFixture fixture)
 
         // ---- publish everything
         await page.ClickAsync("button:has-text('Publish')");
-        await page.WaitForSelectorAsync("text=Published", new PageWaitForSelectorOptions { Timeout = 15_000 });
+        await page.WaitForSelectorAsync("text=Published");
 
         // ---- the file-system projection materializes (publisher debounce ≈ 2s).
         // Wait for the precompressed sibling, not just index.html: the pass writes the
@@ -31,7 +31,7 @@ public sealed class WalkingSkeletonTests(EditorFixture fixture)
         // sibling asserts below. The .br is written after its page, so once it exists
         // the html next to it is the fresh render.
         var indexPath = Path.Combine(fixture.PublishDirectory, "index.html");
-        var deadline = DateTime.UtcNow.AddSeconds(30);
+        var deadline = DateTime.UtcNow.AddSeconds(60);
         while (!(File.Exists(indexPath) && File.Exists(indexPath + ".br")) && DateTime.UtcNow < deadline)
         {
             await Task.Delay(500);

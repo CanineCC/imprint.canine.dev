@@ -35,7 +35,13 @@ public sealed class EditorScrollTests(EditorFixture fixture)
         // Wheel over the canvas scrolls the canvas viewport, not the document.
         await page.Locator(".ed-canvas-scroll").HoverAsync();
         await page.Mouse.WheelAsync(0, 600);
-        await page.WaitForTimeoutAsync(200);
+        // Wait for the scroll to have HAPPENED rather than for 200ms to have passed. The wheel is
+        // handled asynchronously, and a fixed pause is a bet on how fast the machine is — it
+        // asserts nothing when the box is idle and fails when it is busy. The assertion below is
+        // unchanged; this only stops it being read too early.
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector('.ed-canvas-scroll').scrollTop > 0",
+            null);
 
         var after = await page.EvaluateAsync<int[]>(
             "() => [Math.round(document.querySelector('.ed-canvas-scroll').scrollTop), Math.round(window.scrollY)]");

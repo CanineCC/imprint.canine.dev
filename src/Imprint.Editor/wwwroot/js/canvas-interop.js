@@ -697,10 +697,18 @@ function sync() {
     // The handle lives in the left gutter, but at the viewport edge the gutter is
     // clipped — tuck it just inside the node instead so it stays grabbable.
     state.ui.selection.classList.toggle('ed-handle-inside', rect.left < 40);
+    // WHICH node is outlined, published on the overlay itself. The overlay is drawn here
+    // and nowhere else, so this attribute changes exactly when the selection does — which
+    // makes "the selection has caught up with my click" an observable fact rather than a
+    // guess. Without it the only signal is "an outline is visible", which is already true
+    // of the PREVIOUS selection, so anything waiting on it proceeds against stale state
+    // the moment a round trip runs slow.
+    state.ui.selection.dataset.nodeId = state.selectionId;
     state.ui.selection.hidden = false;
     invoke('ReportSelectionRect', rect.left - base.left, rect.top - base.top, rect.width, rect.height);
   } else {
     state.ui.selection.hidden = true;
+    delete state.ui.selection.dataset.nodeId;
   }
 }
 

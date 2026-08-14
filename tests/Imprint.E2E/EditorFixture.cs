@@ -23,6 +23,10 @@ public sealed class EditorFixture : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
+        // Expect() keeps its OWN budget and ignores the context default set in NewPage(), so
+        // without this every retrying assertion silently runs on 5s while every other wait has 60.
+        Assertions.SetDefaultExpectTimeout(60_000);
+
         var port = FreePort();
         BaseUrl = $"http://127.0.0.1:{port}";
         _dataDirectory = Path.Combine(Path.GetTempPath(), $"imprint-e2e-{Guid.NewGuid():N}");
@@ -45,13 +49,28 @@ public sealed class EditorFixture : IAsyncLifetime
         // "the click did nothing" bugs live exactly there.
         startInfo.Environment["Logging__LogLevel__Microsoft.AspNetCore.Components"] = "Debug";
         startInfo.Environment["Logging__LogLevel__Microsoft.AspNetCore.SignalR"] = "Debug";
+        // Timestamps, because the question a red run asks is always "what happened during the
+        // 60 seconds the test spent waiting" — and that is unanswerable without a clock.
+        startInfo.Environment["Logging__Console__FormatterOptions__TimestampFormat"] = "HH:mm:ss.fff ";
+        startInfo.Environment["Logging__Console__FormatterOptions__UseUtcTimestamp"] = "true";
         _app = Process.Start(startInfo) ?? throw new InvalidOperationException("Failed to start the editor process.");
 
         // The app's console is the first place to look when an E2E step goes quiet.
         AppLogPath = Path.Combine(_dataDirectory, "editor-console.log");
         var log = new StreamWriter(AppLogPath) { AutoFlush = true };
-        _app.OutputDataReceived += (_, e) => { if (e.Data is not null) { lock (log) { log.WriteLine(e.Data); } } };
-        _app.ErrorDataReceived += (_, e) => { if (e.Data is not null) { lock (log) { log.WriteLine("ERR " + e.Data); } } };
+        // Stamped on arrival rather than by the app's logger: the question a red run asks is
+        // always "what was the server doing during the 60s the test spent waiting", and that is
+        // unanswerable without a clock. Doing it here also survives any logging configuration.
+        void Write(string line)
+        {
+            lock (log)
+            {
+                log.WriteLine($"{DateTime.UtcNow:HH:mm:ss.fff} {line}");
+            }
+        }
+
+        _app.OutputDataReceived += (_, e) => { if (e.Data is not null) { Write(e.Data); } };
+        _app.ErrorDataReceived += (_, e) => { if (e.Data is not null) { Write("ERR " + e.Data); } };
         _app.BeginOutputReadLine();
         _app.BeginErrorReadLine();
 
@@ -71,6 +90,19 @@ public sealed class EditorFixture : IAsyncLifetime
             ViewportSize = new ViewportSize { Width = 1440, Height = 900 },
             BaseURL = BaseUrl,
         });
+        // One generous default budget for every implicit wait, set in one place.
+        //
+        // This is NOT a way to paper over races — those are fixed at the source (a wait that a
+        // PREVIOUS state can satisfy is a bug, and the driver's waits now name the node or count
+        // the rows they expect). With those closed the suite finishes in ~20s and never comes near
+        // this ceiling; it exists only so a CI box that is genuinely busy does not fail a correct
+        // test. Playwright's 30s default is comfortable on an idle machine and marginal on a
+        // saturated one, and "the machine was busy" is not a defect worth a red build.
+        //
+        // Rendering PERFORMANCE is gated separately and precisely, by the publish-time budget test
+        // (page/stylesheet/JS byte ceilings), so nothing here is the thing that would catch a
+        // slow-down.
+        context.SetDefaultTimeout(60_000);
         var page = await context.NewPageAsync();
 
         // Browser-side failures otherwise vanish silently in headless runs.

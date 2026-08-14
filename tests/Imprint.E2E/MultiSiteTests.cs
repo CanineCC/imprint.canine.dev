@@ -35,7 +35,7 @@ public sealed class MultiSiteTests(EditorFixture fixture)
         Assert.Equal(1, await card.CountAsync());
 
         await card.Locator(".dash-open").ClickAsync();
-        await page.WaitForURLAsync("**/edit/**", new PageWaitForURLOptions { Timeout = 30_000 });
+        await page.WaitForURLAsync("**/edit/**");
         await page.WaitForInteractive();
         Assert.Equal(name, (await page.Locator(".ed-site-name").InnerTextAsync()).Trim());
     }
@@ -50,7 +50,7 @@ public sealed class MultiSiteTests(EditorFixture fixture)
 
         // Publish the current page — settings deploys PUBLISHED content, so there must be some.
         await page.ClickAsync(".ed-publish button.ed-btn-primary");
-        await page.WaitForSelectorAsync(".ed-badge-ok", new PageWaitForSelectorOptions { Timeout = 15_000 });
+        await page.WaitForSelectorAsync(".ed-badge-ok");
 
         // Open this site's settings via the top-bar gear.
         await page.ClickAsync("a.ed-gear");
@@ -70,7 +70,10 @@ public sealed class MultiSiteTests(EditorFixture fixture)
 
         // The real static site materializes in the configured folder.
         var indexPath = Path.Combine(envFolder, "index.html");
-        var deadline = DateTime.UtcNow.AddSeconds(20);
+        // 60s: the publisher debounces ~2s and then renders the whole site, which is comfortably
+        // under this when idle and can exceed 20s on a loaded box. The assertion still fails if the
+        // file never appears — only the "machine was busy" failure is removed.
+        var deadline = DateTime.UtcNow.AddSeconds(60);
         while (!File.Exists(indexPath) && DateTime.UtcNow < deadline)
         {
             await Task.Delay(300);
@@ -91,7 +94,7 @@ public sealed class MultiSiteTests(EditorFixture fixture)
 
         // Publish a page so there is content to deploy and then promote.
         await page.ClickAsync(".ed-publish button.ed-btn-primary");
-        await page.WaitForSelectorAsync(".ed-badge-ok", new PageWaitForSelectorOptions { Timeout = 15_000 });
+        await page.WaitForSelectorAsync(".ed-badge-ok");
 
         await page.ClickAsync("a.ed-gear");
         await page.WaitForSelectorAsync("h2:has-text('Publish folders')");
@@ -153,7 +156,7 @@ public sealed class MultiSiteTests(EditorFixture fixture)
         await page.Locator(".env-path").Nth(index).FillAsync(path);
     }
 
-    private static async Task WaitForFile(string path, int seconds = 20)
+    private static async Task WaitForFile(string path, int seconds = 60)
     {
         var deadline = DateTime.UtcNow.AddSeconds(seconds);
         while (!File.Exists(path) && DateTime.UtcNow < deadline)
