@@ -59,6 +59,16 @@ else
             </section>
 
             <section class="post-pane post-pane-preview" aria-label="Preview">
+                @* The canvas paints itself from the PUBLISHED site's tokens (--ip-background and
+                   friends), which only exist where something emits them — the page editor does it
+                   in Canvas.razor. Without this the preview fell back to a bare white box and text
+                   whose colour token resolved to nothing: unreadable, and nothing like the page it
+                   claims to be a preview of. Scoped to .post-preview, which is the same element
+                   carrying .ed-canvas, so its own declarations can see the variables. *@
+                @if (Sites.Get(_siteId) is { } previewSite)
+                {
+                    <style>@((MarkupString)ThemeCss.EmitScoped(previewSite.Theme, ".post-preview"))</style>
+                }
                 <div class="ed-canvas post-preview" data-testid="post-preview" inert>
                     <CascadingValue Value="PreviewContext">
                         <PageView Roots="_preview" />
