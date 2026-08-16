@@ -108,6 +108,62 @@ public sealed class BlogCreationTests(EditorFixture fixture)
     }
 
     [Fact]
+    public async Task An_svg_dropped_into_a_post_is_referenced_previewed_and_published()
+    {
+        // The test the first pass should have been. Publishing "Hello from a blog of its
+        // own." proved a path and nothing about a post anyone would write: an SVG uploads as
+        // a VECTOR with no raster variants, which the image view treated as unpublishable and
+        // rendered as nothing — silently, on a post that reported success.
+        var page = await OpenDashboard(fixture);
+        var folder = Path.Combine(fixture.DataDirectory, $"svg-{Guid.NewGuid():N}"[..12]);
+
+        await page.ClickAsync("[data-testid='new-blog']");
+        await page.WaitForURLAsync("**/blogs/new");
+        await page.WaitForInteractive();
+        await page.FillAsync("[data-testid='new-blog-name']", $"Figures {Guid.NewGuid():N}"[..14]);
+        await page.FillAsync("[data-testid='new-blog-folder']", folder);
+        await page.ClickAsync("[data-testid='new-blog-create']");
+        await page.WaitForURLAsync("**/posts");
+        await page.WaitForInteractive();
+
+        var title = $"Figured {Guid.NewGuid():N}"[..14];
+        await page.FillAsync("[data-testid='new-post-title']", title);
+        await page.ClickAsync("[data-testid='new-post-create']");
+        await page.WaitForURLAsync("**/posts/**");
+        await page.WaitForInteractive();
+        await page.FillAsync("[data-testid='post-body']", "# Figured\n\nThe prose above the figure.\n");
+
+        // Uploaded through the shelf's own input — the same element file-drop.js hands a
+        // drop to, so this exercises the drop path without synthesising a DataTransfer.
+        var svgPath = Path.Combine(Path.GetTempPath(), $"e2e-{Guid.NewGuid():N}"[..12] + ".svg");
+        await File.WriteAllTextAsync(svgPath,
+            """<svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="112" height="52" fill="#0e7c6b"/></svg>""");
+        await page.SetInputFilesAsync("[data-testid='post-media-input']", svgPath);
+
+        // It lands on the shelf, and it lands in the BODY — the author does not go hunting
+        // for an id, which is the whole reason the shelf exists.
+        await page.WaitForSelectorAsync("[data-testid='post-media-tile']");
+        var body = await page.InputValueAsync("[data-testid='post-body']");
+        Assert.Matches(@"!\[[^\]]*\]\(media:[0-9a-fA-F]{32}\)", body);
+        Assert.Contains("The prose above the figure.", body, StringComparison.Ordinal);
+
+        // The preview shows the graphic itself, not a placeholder standing in for one.
+        await page.Locator("[data-testid='post-preview'] .ip-svg svg").WaitForAsync();
+
+        await page.ClickAsync("[data-testid='post-publish']");
+        await page.WaitForSelectorAsync("[data-testid='post-status']:has-text('Published')");
+
+        // And the published file carries the drawing. This is the assertion that matters:
+        // the old behaviour published a post with the figure simply absent.
+        var postPath = Path.Combine(folder, "blog", SlugOf(title), "index.html");
+        await WaitForFile(postPath);
+        var html = await File.ReadAllTextAsync(postPath);
+        Assert.Contains("The prose above the figure.", html, StringComparison.Ordinal);
+        Assert.Contains("<svg", html, StringComparison.Ordinal);
+        Assert.Contains("#0e7c6b", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task A_blog_has_the_same_settings_surface_a_site_has()
     {
         var page = await OpenDashboard(fixture);

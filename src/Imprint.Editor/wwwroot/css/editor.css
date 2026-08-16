@@ -909,5 +909,26 @@ button { font: inherit; color: inherit; }
 .post-source:focus { outline: none; }
 .post-preview { padding: 1rem; }
 
+/* The source pane stacks the writing surface over the media shelf, so the shelf is always
+   in view while writing — the whole point is that an author can SEE what they can insert. */
+.post-pane-source { display: flex; flex-direction: column; }
+.post-pane-source .post-source { flex: 1 1 auto; height: auto; min-height: 12rem; }
+
+.post-media { flex: 0 0 auto; border-top: 1px solid var(--ed-border); background: var(--ed-surface-alt); padding: .6rem 1rem .8rem; }
+.post-media-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.post-media-head h2 { margin: 0; font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--ed-text-muted); }
+.post-media-upload { cursor: pointer; }
+.post-media-hint, .post-media-empty, .post-media-uploading { margin: .25rem 0 .5rem; font-size: .78rem; color: var(--ed-text-muted); }
+.post-media-grid { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+.post-media-tile { display: grid; gap: .25rem; width: 5.75rem; padding: .35rem; border: 1px solid var(--ed-border); border-radius: var(--ed-radius-sm); background: var(--ed-surface); cursor: pointer; text-align: center; }
+.post-media-tile:hover { border-color: var(--ed-accent); }
+.post-media-thumb { width: 100%; height: 3rem; object-fit: contain; background: #fff; border-radius: 3px; }
+.post-media-name { font-size: .7rem; color: var(--ed-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.post-media-badge { font-size: .62rem; color: var(--ed-text-muted); }
+
+/* file-drop.js toggles this while files are over the pane. Without a visible response a
+   drag reads as "this is not a drop target" and the author gives up before letting go. */
+.post-pane-source.ed-drop-target { outline: 2px dashed var(--ed-accent); outline-offset: -4px; }
+
 .post-problems { margin: 0; padding: .75rem 1rem; border-top: 1px solid var(--ed-border); background: var(--ed-surface-alt); list-style: none; font-size: .85rem; max-height: 8rem; overflow: auto; }
 .post-problems li { margin: .15rem 0; }

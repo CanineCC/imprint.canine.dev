@@ -1,5 +1,6 @@
 @page "/posts/{PostIdValue}"
 @using Imprint.Authoring.Domain
+@using Imprint.Authoring.Domain.Assets
 @using Imprint.Authoring.Domain.Posts
 @using Imprint.Authoring.Features.Posts.ChangePostBody
 @using Imprint.Authoring.Features.Posts.PublishPost
@@ -11,6 +12,7 @@
 @using Imprint.EventSourcing
 @using Imprint.Rendering
 @implements IDisposable
+@implements IAsyncDisposable
 @inject IAggregateStore Store
 @inject PostList Posts
 @inject SiteOverview Sites
@@ -18,6 +20,9 @@
 @inject CommandRunner Commands
 @inject EditorRenderContextFactory ContextFactory
 @inject NavigationManager Navigation
+@inject AssetLibrary Library
+@inject ToastService Toasts
+@inject IJSRuntime Js
 
 <PageTitle>@(_titleText is { Length: > 0 } t ? $"{t} · Imprint" : "Post · Imprint")</PageTitle>
 
@@ -52,10 +57,63 @@ else
            views — the same path the publisher takes — so it cannot drift from the published
            page the way a client-side markdown library would. *@
         <div class="post-panes">
-            <section class="post-pane post-pane-source" aria-label="Markdown">
-                <textarea class="post-source" data-testid="post-body" spellcheck="true"
+            <section class="post-pane post-pane-source" aria-label="Markdown" @ref="_sourcePane">
+                <textarea class="post-source" data-testid="post-body" spellcheck="true" @ref="_sourceBox"
                           @bind="Body" @bind:event="oninput"
                           placeholder="# Your post&#10;&#10;Write in markdown."></textarea>
+
+                @* The media shelf. It exists because the image rule and the UI used to
+                   contradict each other: a post may only reference the library, as
+                   media:{id}, and the library lived in a panel only the PAGE editor draws —
+                   so from a blog there was no way to obtain an id, and no way to see that
+                   anything had been uploaded at all. Drop a file anywhere on this pane and
+                   it is uploaded and referenced where the caret was; click a tile to
+                   reference one you already have. *@
+                <div class="post-media" data-testid="post-media">
+                    <div class="post-media-head">
+                        <h2>Media</h2>
+                        <label class="ed-btn ed-btn-ghost post-media-upload">
+                            @(_uploading.Count > 0 ? "Uploading…" : "Upload")
+                            <InputFile OnChange="OnFiles" multiple class="ed-visually-hidden"
+                                       data-testid="post-media-input" aria-label="Upload images" />
+                        </label>
+                    </div>
+                    <p class="post-media-hint">…or drop files onto this pane. They are inserted where the caret is.</p>
+
+                    @foreach (var name in _uploading)
+                    {
+                        <div class="post-media-uploading" role="status">Uploading @name…</div>
+                    }
+
+                    @{ var shelf = Library.All(); }
+                    @if (shelf.Count == 0 && _uploading.Count == 0)
+                    {
+                        <p class="post-media-empty" data-testid="post-media-empty">
+                            Nothing uploaded yet. Drop an image here and it lands in the post.
+                        </p>
+                    }
+                    else
+                    {
+                        <ul class="post-media-grid" data-testid="post-media-grid">
+                            @foreach (var asset in shelf)
+                            {
+                                var candidate = asset;
+                                <li>
+                                    <button type="button" class="post-media-tile" data-testid="post-media-tile"
+                                            data-asset="@candidate.Id.Compact" title="@candidate.Name"
+                                            @onclick="() => InsertAsset(candidate)">
+                                        <img class="post-media-thumb" src="@ThumbUrl(candidate)" alt="" loading="lazy" />
+                                        <span class="post-media-name">@candidate.Name</span>
+                                        @if (candidate.Status != AssetStatus.Ready)
+                                        {
+                                            <span class="post-media-badge">@candidate.Status</span>
+                                        }
+                                    </button>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
             </section>
 
             <section class="post-pane post-pane-preview" aria-label="Preview">
@@ -107,6 +165,104 @@ else
 
     private RenderContext PreviewContext => ContextFactory.For(_locale, _locale);
 
+    // ----------------------------------------------------------------- media
+
+    private const long MaxUploadBytes = 500L * 1024 * 1024;
+
+    private ElementReference _sourcePane;
+    private ElementReference _sourceBox;
+    private IJSObjectReference? _dropModule;
+    private IJSObjectReference? _caretModule;
+    private readonly List<string> _uploading = [];
+
+    private static string ThumbUrl(Asset asset) => asset switch
+    {
+        { Kind: AssetKind.Image, Variants.Count: > 0 } => $"/media/{asset.Variants[0].StorageKey}",
+        { Kind: AssetKind.Vector, DerivedStorageKey: { } key } => $"/media/{key}",
+        _ => $"/media/{asset.OriginalStorageKey}",
+    };
+
+    private async Task OnFiles(InputFileChangeEventArgs args)
+    {
+        foreach (var file in args.GetMultipleFiles(50))
+        {
+            if (file.Size > MaxUploadBytes)
+            {
+                Toasts.Error($"'{file.Name}' is larger than the 500 MB upload limit.");
+                continue;
+            }
+
+            if (file.Size == 0)
+            {
+                Toasts.Error($"'{file.Name}' is empty, so there is nothing to upload.");
+                continue;
+            }
+
+            var assetId = AssetId.New();
+            _uploading.Add(file.Name);
+            StateHasChanged();
+            try
+            {
+                // Same in-process, read-once stream contract the assets panel uses.
+                await using var content = file.OpenReadStream(maxAllowedSize: MaxUploadBytes);
+                if (await Commands.Run(new Authoring.Features.Assets.UploadAsset.UploadAsset(
+                        assetId, file.Name, ContentTypeOf(file), file.Size, content)))
+                {
+                    // Referenced immediately, while it is still processing: the reference is
+                    // the id, and the id is final the moment the upload lands. Waiting for
+                    // Ready would mean dropping a file and watching nothing happen.
+                    await InsertReference(Path.GetFileNameWithoutExtension(file.Name), assetId);
+                }
+            }
+            catch (Exception)
+            {
+                Toasts.Error($"Reading '{file.Name}' from the browser failed — please try again.");
+            }
+            finally
+            {
+                _uploading.Remove(file.Name);
+                StateHasChanged();
+            }
+        }
+    }
+
+    private static string ContentTypeOf(IBrowserFile file) =>
+        string.IsNullOrWhiteSpace(file.ContentType) || !file.ContentType.Contains('/')
+            ? "application/octet-stream"
+            : file.ContentType;
+
+    private Task InsertAsset(Asset asset) => InsertReference(asset.Name, asset.Id);
+
+    /// <summary>
+    /// Splices an image reference into the body at the caret. The splice happens HERE, on the
+    /// bound value, rather than in JS writing .value — Blazor would keep the old string and
+    /// throw the insert away on the next render.
+    /// </summary>
+    private async Task InsertReference(string alt, AssetId assetId)
+    {
+        var caret = _caretModule is null ? _body.Length : await _caretModule.InvokeAsync<int>("caretOf", _sourceBox);
+        caret = Math.Clamp(caret, 0, _body.Length);
+
+        // An image is only an image node when it is alone in its paragraph (TryImageOnly), so
+        // the blank lines are not cosmetic — without them the reference becomes body text in
+        // the surrounding paragraph and publishes as literal characters.
+        var before = _body[..caret].TrimEnd();
+        var after = _body[caret..].TrimStart();
+        var reference = $"![{alt}](media:{assetId.Compact})";
+        var text = (before.Length > 0 ? before + "\n\n" : string.Empty)
+                   + reference
+                   + (after.Length > 0 ? "\n\n" + after : "\n");
+
+        Body = text;
+        StateHasChanged();
+
+        if (_caretModule is not null)
+        {
+            var caretAfter = (before.Length > 0 ? before.Length + 2 : 0) + reference.Length;
+            await _caretModule.InvokeVoidAsync("focusAt", _sourceBox, caretAfter);
+        }
+    }
+
     private string Body
     {
         get => _body;
@@ -123,7 +279,29 @@ else
         }
     }
 
-    protected override void OnInitialized() => Posts.Changed += OnChanged;
+    protected override void OnInitialized()
+    {
+        Posts.Changed += OnChanged;
+
+        // The shelf redraws as uploads land and as processing flips them to Ready, so a file
+        // you just dropped visibly becomes a real asset instead of sitting there as a guess.
+        Library.Changed += OnChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        // file-drop.js only turns "files dropped on this element" into "the hidden InputFile
+        // changed" — Blazor still owns the streaming. Wired to the whole source pane, so the
+        // drop target is the thing an author is looking at while writing.
+        _dropModule = await Js.InvokeAsync<IJSObjectReference>("import", "./js/file-drop.js");
+        await _dropModule.InvokeVoidAsync("init", _sourcePane);
+        _caretModule = await Js.InvokeAsync<IJSObjectReference>("import", "./js/post-caret.js");
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -214,5 +392,33 @@ else
         _ => "Draft",
     };
 
-    public void Dispose() => Posts.Changed -= OnChanged;
+    public void Dispose()
+    {
+        Posts.Changed -= OnChanged;
+        Library.Changed -= OnChanged;
+    }
+
+    // The JS modules need an async teardown of their own: a circuit that reconnects must not
+    // leave the previous drop listeners bound to a detached element.
+    public async ValueTask DisposeAsync()
+    {
+        Dispose();
+
+        foreach (var module in new[] { _dropModule, _caretModule })
+        {
+            if (module is null)
+            {
+                continue;
+            }
+
+            try
+            {
+                await module.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // The circuit is already gone; there is nothing on the other side to release.
+            }
+        }
+    }
 }

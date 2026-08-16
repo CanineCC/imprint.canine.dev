@@ -12,6 +12,18 @@
   private void RenderImage(RenderTreeBuilder builder)
   {
     var info = Node.AssetId is { } assetId ? Ctx.ResolveAsset(assetId) : null;
+
+    // A vector reached through an IMAGE node. Markdown can only say ![alt](media:{id}) and
+    // the converter is deliberately blind to the library, so it cannot know whether an id
+    // names a raster or an SVG — which meant every markdown-authored SVG fell into the
+    // branch below and published as NOTHING, silently, on a post that reported success.
+    // Rendered here the way SvgView renders one: inlined, so strokes follow the theme.
+    if (info is { Kind: AssetKind.Vector, InlineSvg: { } vector })
+    {
+        RenderInlineSvg(builder, vector, info, info.DarkInlineSvg);
+        return;
+    }
+
     if (info is not { Kind: AssetKind.Image } || info.ImageVariants.Count == 0)
     {
       // Static: an unpublishable image renders nothing — a broken <img> on a visitor's
@@ -101,6 +113,51 @@
       builder.AddMultipleAttributes(seq + 12, NodeAttributes);
     }
 
+    builder.CloseElement();
+  }
+
+  /// <summary>
+  /// The inline-SVG rendition, matching SvgView's markup so the published stylesheet treats
+  /// both the same. The alt text becomes an accessible name on the wrapper, because the
+  /// sanitized markup itself carries no name the author controls.
+  /// </summary>
+  private void RenderInlineSvg(RenderTreeBuilder builder, string svg, AssetRenderInfo info, string? darkSvg)
+  {
+    if (darkSvg is not null)
+    {
+      // Both renditions inline; the published CSS reveals exactly one by colour scheme.
+      // The dark copy is aria-hidden so assistive tech announces the graphic once.
+      RenderSvgElement(builder, 0, svg, info, "ip-svg ip-img-light", isDark: false);
+      RenderSvgElement(builder, 10, darkSvg, info, "ip-svg ip-img-dark", isDark: true);
+      return;
+    }
+
+    RenderSvgElement(builder, 0, svg, info, "ip-svg", isDark: false);
+  }
+
+  private void RenderSvgElement(
+    RenderTreeBuilder builder, int seq, string svg, AssetRenderInfo info, string css, bool isDark)
+  {
+    builder.OpenElement(seq, "div");
+    builder.AddAttribute(seq + 1, "class", Classes(css, AspectClass, RoundedClass));
+
+    if (isDark)
+    {
+      builder.AddAttribute(seq + 2, "aria-hidden", "true");
+    }
+    else
+    {
+      if (AltText(info) is { Length: > 0 } alt)
+      {
+        builder.AddAttribute(seq + 3, "role", "img");
+        builder.AddAttribute(seq + 4, "aria-label", alt);
+      }
+
+      // Selection attributes ride the light rendition only — one hit-target per node.
+      builder.AddMultipleAttributes(seq + 5, NodeAttributes);
+    }
+
+    builder.AddContent(seq + 6, (MarkupString)svg);
     builder.CloseElement();
   }
 
