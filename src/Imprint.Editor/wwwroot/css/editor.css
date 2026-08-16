@@ -654,6 +654,11 @@ button { font: inherit; color: inherit; }
 .dash-head h1 { font-size: 1.9rem; margin: 0 0 6px; }
 .dash-sub { color: var(--ed-text-muted); max-width: 60ch; margin: 0; }
 
+/* A second shelf on the dashboard (blogs, under sites): enough air above it that the two
+   grids read as separate collections rather than one grid that wrapped. */
+.dash-head-section { margin-top: 44px; }
+.dash-head-section h2 { font-size: 1.35rem; margin: 0 0 6px; }
+
 /* Signed-in identity + sign-out, top-right of the dashboard header. */
 .dash-head { position: relative; }
 .dash-user {

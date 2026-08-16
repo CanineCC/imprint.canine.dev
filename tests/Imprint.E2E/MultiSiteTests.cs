@@ -19,7 +19,9 @@ public sealed class MultiSiteTests(EditorFixture fixture)
         // Reach the dashboard via the editor's "← All sites" back link.
         await page.ClickAsync("a.ed-back");
         await page.WaitForSelectorAsync(".dash-grid");
-        Assert.Equal(1, await page.Locator(".dash-open-new").CountAsync());
+        // One create-card per shelf: the Sites shelf owns "New site", the Blogs shelf below
+        // owns "New blog". Scoped, so this stays an assertion about sites.
+        Assert.Equal(1, await page.Locator("ul[aria-label='Sites'] .dash-open-new").CountAsync());
         Assert.True(await page.Locator(".dash-card:not(.dash-card-new)").CountAsync() >= 1);
 
         // Create a uniquely-named site and confirm the editor opened onto IT.

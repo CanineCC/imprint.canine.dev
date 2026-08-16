@@ -1,0 +1,109 @@
+@page "/blogs/new"
+@using Imprint.Authoring.Domain
+@using Imprint.Authoring.Features.Sites.CreateBlog
+@using Imprint.Editor.Services
+@inject CommandRunner Commands
+@inject NavigationManager Navigation
+
+<PageTitle>New blog · Imprint</PageTitle>
+
+<div class="dash-new-wrap">
+    <a class="dash-back" href="/">← All sites</a>
+
+    <main class="ed-onboarding ob">
+        <h1>New blog</h1>
+        <p class="ob-lede">
+            A blog publishes a dated stream of posts, with its own index and feed, at its own
+            address.
+        </p>
+
+        <section class="ob-step" aria-labelledby="nb-step-name">
+            <h2 id="nb-step-name"><span class="ob-step-no" aria-hidden="true">1</span> Name it</h2>
+
+            <div class="ed-field">
+                <label for="nb-name">Name</label>
+                <input id="nb-name" class="ed-input" @bind="_name" @bind:event="oninput"
+                       placeholder="Canine blog" data-testid="new-blog-name" />
+            </div>
+
+            <div class="ed-field">
+                <label for="nb-locale">Language</label>
+                <input id="nb-locale" class="ed-input" @bind="_locale" @bind:event="oninput"
+                       placeholder="en" data-testid="new-blog-locale" />
+            </div>
+        </section>
+
+        <section class="ob-step" aria-labelledby="nb-step-address">
+            <h2 id="nb-step-address">
+                <span class="ob-step-no" aria-hidden="true">2</span>
+                Give it an address <span class="ob-optional">(optional)</span>
+            </h2>
+
+            <div class="ed-field">
+                <label for="nb-url">Address</label>
+                <input id="nb-url" class="ed-input" @bind="_url" @bind:event="oninput"
+                       placeholder="https://blog.canine.dev" data-testid="new-blog-url" />
+            </div>
+            <p class="ob-hint">The origin this blog is served from. Canonical links, the sitemap and the feed are written against it.</p>
+
+            <div class="ed-field">
+                <label for="nb-folder">Publish folder</label>
+                <input id="nb-folder" class="ed-input" @bind="_folder" @bind:event="oninput"
+                       placeholder="/srv/www/blog.canine.dev" data-testid="new-blog-folder" />
+            </div>
+            <p class="ob-hint">Where the published files are written. An address needs one, because a folder is what a web server actually serves.</p>
+
+            <p class="ob-hint">Leave both blank to decide later — they live in this blog's settings, beside its languages and people.</p>
+        </section>
+
+        <button type="button" class="ed-btn ed-btn-primary" disabled="@(_busy || _name.Trim().Length == 0)"
+                data-testid="new-blog-create" @onclick="Create">Create blog</button>
+    </main>
+</div>
+
+@code {
+    private string _name = "";
+    private string _locale = "en";
+    private string _url = "";
+    private string _folder = "";
+    private bool _busy;
+
+    private async Task Create()
+    {
+        var name = _name.Trim();
+        if (name.Length == 0 || _busy)
+        {
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            var id = SiteId.New();
+            var locale = _locale.Trim();
+
+            // A failed command has already told the author what is wrong, through the same
+            // toast every other command in the editor uses — including the one that says an
+            // address needs a folder. Staying on the form leaves what they typed intact.
+            if (!await Commands.Run(new CreateBlog(
+                    id,
+                    name,
+                    locale.Length > 0 ? locale : "en",
+                    PublishFolder: Blank(_folder),
+                    PublicUrl: Blank(_url))))
+            {
+                return;
+            }
+
+            // Straight into the posts index: a new blog is one waiting for its first post,
+            // and there is no page tree to land in.
+            Navigation.NavigateTo($"/site/{id.Compact}/posts");
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private static string? Blank(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}

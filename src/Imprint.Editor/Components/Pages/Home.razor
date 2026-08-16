@@ -8,14 +8,15 @@
 @inject SiteOverview Sites
 @inject SiteAccess Access
 @inject PageList Pages
+@inject PostList Posts
 @inject SiteDeployService Deploy
 @inject NavigationManager Navigation
 
 <PageTitle>Your sites · Imprint</PageTitle>
 
-@if (_sites.Count == 0)
+@if (_sites.Count == 0 && _blogs.Count == 0)
 {
-    @* First run — or a signed-in user with no sites yet: create one, then drop
+    @* First run — or a signed-in user with nothing yet: create one, then drop
        straight into its editor. *@
     <Onboarding OnCreated="OpenSite" />
 }
@@ -69,10 +70,61 @@ else
             }
 
             <li class="dash-card dash-card-new">
-                <a class="dash-open dash-open-new" href="/sites/new">
+                <a class="dash-open dash-open-new" href="/sites/new" data-testid="new-site">
                     <span class="dash-plus" aria-hidden="true">＋</span>
                     <span class="dash-name">New site</span>
                     <span class="dash-meta">Start from a template</span>
+                </a>
+            </li>
+        </ul>
+
+        @* Blogs get their own shelf, and their own way in. A blog is a site by every
+           structural measure — one origin, one settings surface, one publish pipeline —
+           but an author does not think "site, then posts", they think "a blog at
+           blog.canine.dev". The shelf is drawn even when it is empty: the previous design
+           reached posts through a small link on a site card, and a feature you have to
+           already know about is one nobody finds. *@
+        <header class="dash-head dash-head-section">
+            <h2>Your blogs</h2>
+            <p class="dash-sub">A blog publishes a dated stream of posts, with its own index and feed, at its own address.</p>
+        </header>
+
+        <ul class="dash-grid" aria-label="Blogs">
+            @foreach (var blog in _blogs)
+            {
+                <li class="dash-card">
+                    <button type="button" class="dash-open" @onclick="() => OpenBlog(blog.Id)">
+                        <span class="dash-name">@blog.Name</span>
+                        <span class="dash-meta">@PostCount(blog.Id) @Plural(PostCount(blog.Id), "post") · @blog.DefaultLocale.Value</span>
+                        <span class="dash-envs">
+                            @if (BlogOrigin(blog) is { Length: > 0 } origin)
+                            {
+                                <span class="dash-env is-live" title="Published to @origin">@origin</span>
+                            }
+                            else if (Deploy.StatusOf(blog.Id) is { Count: > 0 } envs)
+                            {
+                                @foreach (var env in envs)
+                                {
+                                    <span class="dash-env @(env.Deployed ? "is-live" : "is-idle")"
+                                          title="@EnvTitle(env)">@env.Name</span>
+                                }
+                            }
+                            else
+                            {
+                                <span class="dash-env is-none" title="No address yet — set a publish folder in this blog's settings.">No address yet</span>
+                            }
+                        </span>
+                    </button>
+                    <a class="dash-gear" href="@SettingsHref(blog.Id)"
+                       title="Blog settings" aria-label="@($"Settings for {blog.Name}")">⚙</a>
+                </li>
+            }
+
+            <li class="dash-card dash-card-new">
+                <a class="dash-open dash-open-new" href="/blogs/new" data-testid="new-blog">
+                    <span class="dash-plus" aria-hidden="true">＋</span>
+                    <span class="dash-name">New blog</span>
+                    <span class="dash-meta">Name it and give it an address</span>
                 </a>
             </li>
         </ul>
@@ -81,23 +133,42 @@ else
 
 @code {
     private IReadOnlyList<Site> _sites = [];
+    private IReadOnlyList<Site> _blogs = [];
     private string? _user;
 
     protected override async Task OnInitializedAsync()
     {
         Sites.Changed += OnChanged;
         _user = await Access.UserAsync();
-        _sites = await Access.SitesAsync();
+        await LoadAsync();
     }
 
     // Re-filter, not just re-render: a change may add or remove a site this user can see.
     private void OnChanged() => _ = InvokeAsync(async () =>
     {
-        _sites = await Access.SitesAsync();
+        await LoadAsync();
         StateHasChanged();
     });
 
+    // One access query, split by kind. Access is a property of the site, never of what it
+    // publishes, so the permission check stays in one place and each shelf is a filter.
+    private async Task LoadAsync()
+    {
+        var accessible = await Access.SitesAsync();
+        _sites = [.. accessible.Where(s => s.Kind == SiteKind.Site)];
+        _blogs = [.. accessible.Where(s => s.Kind == SiteKind.Blog)];
+    }
+
     private int PageCount(SiteId id) => Pages.All(id).Count;
+
+    private int PostCount(SiteId id) => Posts.All(id).Count;
+
+    /// <summary>
+    /// The blog's public address, when it has one — the thing an author identifies a blog
+    /// by. Falls back to the environment chips a site shows when no origin is set.
+    /// </summary>
+    private static string BlogOrigin(Site blog) =>
+        blog.Environments.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.BaseUrl))?.BaseUrl ?? string.Empty;
 
     private static string Plural(int n, string word) => n == 1 ? word : word + "s";
 
@@ -115,6 +186,10 @@ else
         var target = Pages.HomeOf(id) ?? Pages.All(id).FirstOrDefault();
         Navigation.NavigateTo(target is not null ? $"/edit/{target.Id.Compact}" : SettingsHref(id));
     }
+
+    // Opening a blog opens its posts. That is the whole reason kind exists: the content
+    // IS the stream, so there is no page tree to land in.
+    private void OpenBlog(SiteId id) => Navigation.NavigateTo($"/site/{id.Compact}/posts");
 
     public void Dispose() => Sites.Changed -= OnChanged;
 }

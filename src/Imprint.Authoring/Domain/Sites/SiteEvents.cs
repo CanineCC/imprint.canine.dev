@@ -6,8 +6,16 @@ namespace Imprint.Authoring.Domain.Sites.Events;
 // the concept). Stable names follow docs/domain-model.md §1; the store persists those,
 // never the CLR names.
 
+// Kind is additive on the stored payload, the same contract BaseUrl has on
+// site.environments-changed: every site.created written before blogs existed carries no
+// Kind and folds to SiteKind.Site, so existing sites keep their identity with no
+// migration and no upcaster.
 [EventType("site.created", 1)]
-public sealed record SiteCreated(SiteId SiteId, string Name, Locale DefaultLocale);
+public sealed record SiteCreated(
+    SiteId SiteId,
+    string Name,
+    Locale DefaultLocale,
+    SiteKind Kind = SiteKind.Site);
 
 [EventType("site.renamed", 1)]
 public sealed record SiteRenamed(string Name);

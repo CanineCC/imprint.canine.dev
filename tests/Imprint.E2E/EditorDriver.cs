@@ -30,8 +30,11 @@ public static class EditorDriver
         else
         {
             // Dashboard with existing sites (shared fixture, later tests): open the first
-            // site's card — the "New site" card is excluded by class.
-            await page.ClickAsync(".dash-open:not(.dash-open-new)");
+            // site's card — the "New site" card is excluded by class, and the whole query is
+            // scoped to the Sites shelf because the Blogs shelf below it draws the same card
+            // markup. An unscoped selector would open a blog here and then wait forever for
+            // an /edit/ URL that a blog never navigates to.
+            await page.ClickAsync("ul[aria-label='Sites'] .dash-open:not(.dash-open-new)");
         }
 
         await page.WaitForURLAsync("**/edit/**");

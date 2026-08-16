@@ -46,6 +46,10 @@ public sealed class Site : AggregateRoot
     public SiteId Id { get; private set; }
     public string Name { get; private set; } = string.Empty;
 
+    // What this site publishes, and therefore how an author enters it — a page tree or a
+    // stream of posts. Everything else on this aggregate applies to both.
+    public SiteKind Kind { get; private set; } = SiteKind.Site;
+
     // Insertion order is preserved deliberately: the first locale is the created
     // default, and the editor lists locales in the order editors added them.
     public IReadOnlyList<Locale> Locales => _locales;
@@ -93,10 +97,10 @@ public sealed class Site : AggregateRoot
 
     public override string StreamId => Id.Stream;
 
-    public static Site Create(SiteId id, string name, Locale defaultLocale)
+    public static Site Create(SiteId id, string name, Locale defaultLocale, SiteKind kind = SiteKind.Site)
     {
         var site = new Site();
-        site.Raise(new SiteCreated(id, ValidName(name), defaultLocale));
+        site.Raise(new SiteCreated(id, ValidName(name), defaultLocale, kind));
         return site;
     }
 
@@ -720,6 +724,7 @@ public sealed class Site : AggregateRoot
             case SiteCreated e:
                 Id = e.SiteId;
                 Name = e.Name;
+                Kind = e.Kind;
                 DefaultLocale = e.DefaultLocale;
                 _locales.Add(e.DefaultLocale);
                 Theme = Theme.Default;
