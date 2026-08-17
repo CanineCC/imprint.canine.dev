@@ -1,3 +1,4 @@
+using Imprint.Authoring.Domain.Sites;
 using Imprint.Authoring.Domain;
 using Imprint.Authoring.Features.Posts.ChangePostBody;
 using Imprint.Authoring.Features.Posts.ChangePostMeta;
@@ -205,6 +206,108 @@ public sealed class PostPublishingTests
 
     /// <summary>A host with a widget catalog: PublishPost needs one to answer "is this widget
     /// installed", and no host wires one by default (each must choose its own).</summary>
+    // ── A blog SITE: the blog is the whole site, so it owns the root ───────────────────────
+
+    [Fact]
+    public async Task A_blog_sites_index_is_its_root_not_a_blog_subfolder()
+    {
+        // blog.example/blog/a-post repeats the hostname back at the reader. On a site whose KIND
+        // is Blog the prefix earns nothing, and the root is what someone typing the domain gets.
+        await using var host = NewHost();
+        var site = await host.CreateSite("The Kennel Log", kind: SiteKind.Blog);
+        await Publish(host, site, "first-post", "First post");
+
+        await host.Publisher.Synchronize();
+
+        Assert.True(host.FileExists("index.html"));
+        Assert.True(host.FileExists("first-post/index.html"));
+        Assert.False(host.FileExists("blog/index.html"));
+        Assert.False(host.FileExists("blog/first-post/index.html"));
+    }
+
+    [Fact]
+    public async Task A_blog_site_with_no_posts_still_answers_at_its_root()
+    {
+        // The case this exists for: a subdomain is announced before the first post clears review.
+        // An empty blog is a normal state; a 404 on the domain you just announced is not.
+        await using var host = NewHost();
+        await host.CreateSite("The Kennel Log", kind: SiteKind.Blog);
+
+        await host.Publisher.Synchronize();
+
+        Assert.True(host.FileExists("index.html"));
+        var html = host.ReadText("index.html");
+        Assert.Contains("No posts published yet", html, StringComparison.Ordinal);
+        // Its own name, not the word "Blog" — the reader already knows what site they are on.
+        Assert.Contains("The Kennel Log", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task An_empty_blog_index_links_nowhere_it_cannot_serve()
+    {
+        // The feed is only written when there is something to syndicate, so an empty state that
+        // advertised it would make its one link a 404.
+        await using var host = NewHost();
+        await host.CreateSite("The Kennel Log", kind: SiteKind.Blog);
+
+        await host.Publisher.Synchronize();
+
+        Assert.False(host.FileExists("feed.xml"));
+        Assert.DoesNotContain("feed.xml", host.ReadText("index.html"), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Withdrawing_the_last_post_returns_the_blog_to_its_empty_state()
+    {
+        // The index is generated from the post set, so it has to re-render when that set empties —
+        // otherwise the blog keeps advertising a post it no longer serves.
+        await using var host = NewHost();
+        var site = await host.CreateSite("The Kennel Log", kind: SiteKind.Blog);
+        var id = await Publish(host, site, "only-post", "Only post");
+        await host.Publisher.Synchronize();
+        Assert.Contains("Only post", host.ReadText("index.html"), StringComparison.Ordinal);
+
+        await host.Ok(new UnpublishPost(id));
+        await host.Publisher.Synchronize();
+
+        Assert.False(host.FileExists("only-post/index.html"));
+        var html = host.ReadText("index.html");
+        Assert.Contains("No posts published yet", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Only post", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_blog_sites_feed_points_at_the_prefix_free_urls()
+    {
+        await using var host = NewHost();
+        var site = await host.CreateSite("The Kennel Log", kind: SiteKind.Blog);
+        await Publish(host, site, "first-post", "First post");
+
+        await host.Publisher.Synchronize();
+
+        var feed = host.ReadText("feed.xml");
+        Assert.Contains($"{Base}/first-post/", feed, StringComparison.Ordinal);
+        Assert.DoesNotContain("/blog/", feed, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task An_ordinary_site_keeps_the_blog_prefix_and_shows_no_empty_index()
+    {
+        // The old rule, unchanged: /blog/ hanging off a marketing site with nothing behind it is a
+        // promise of content that is not there.
+        await using var host = NewHost();
+        var site = await host.CreateSite();
+
+        await host.Publisher.Synchronize();
+        Assert.False(host.FileExists("blog/index.html"));
+
+        await Publish(host, site, "a-post", "A post");
+        await host.Publisher.Synchronize();
+
+        Assert.True(host.FileExists("blog/index.html"));
+        Assert.True(host.FileExists("blog/a-post/index.html"));
+    }
+
     private static PublishingTestHost NewHost() =>
         new(Base, configure: services => services.AddSingleton<IWidgetCatalog>(new EmptyWidgetCatalog()));
 

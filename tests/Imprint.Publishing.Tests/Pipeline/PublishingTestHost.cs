@@ -135,10 +135,11 @@ internal sealed class PublishingTestHost : IAsyncDisposable
         await Projections.CatchUp();
     }
 
-    public async Task<SiteId> CreateSite(string name = "Acme Studio", string defaultLocale = "en")
+    public async Task<SiteId> CreateSite(
+        string name = "Acme Studio", string defaultLocale = "en", SiteKind kind = SiteKind.Site)
     {
         var id = SiteId.New();
-        await Commit(Site.Create(id, name, new Locale(defaultLocale)));
+        await Commit(Site.Create(id, name, new Locale(defaultLocale), kind));
         return id;
     }
 

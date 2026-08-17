@@ -134,6 +134,7 @@ public sealed class SitePublisher(
         // Snapshot state, filled by Run before any file is touched.
         private long _siteVersion;
         private string _siteName = "";
+        private SiteKind _siteKind;
         private Locale _defaultLocale;
         private IReadOnlyList<Locale> _locales = [];
         private IReadOnlyList<NavigationItem> _navigation = [];
@@ -177,6 +178,7 @@ public sealed class SitePublisher(
             // Version FIRST, data after (see the class comment for why that order matters).
             _siteVersion = site.Version;
             _siteName = site.Name;
+            _siteKind = site.Kind;
             var theme = site.Theme;
             _defaultLocale = site.DefaultLocale;
             _locales = [.. site.Locales];
@@ -1296,6 +1298,20 @@ public sealed class SitePublisher(
         /// </summary>
         public const string BlogPrefix = "blog";
 
+        /// <summary>
+        /// Where the posts live, relative to the origin. On a <see cref="SiteKind.Blog"/> the site
+        /// IS the blog — its origin was chosen to say so (<c>blog.canine.dev</c>) — so the prefix
+        /// would only repeat the hostname back at the reader: <c>blog.canine.dev/blog/a-post</c>.
+        /// A blog SECTION of an ordinary site still needs it, for the namespace reason above.
+        /// </summary>
+        private string PostPrefix => _siteKind == SiteKind.Blog ? "" : BlogPrefix + "/";
+
+        /// <summary>The index's own public path: the root of a blog site, <c>/blog/</c> inside a site.</summary>
+        private string IndexPath => _siteKind == SiteKind.Blog ? "" : BlogPrefix;
+
+        /// <summary>The index's href, for the feed and the entries that point back at it.</summary>
+        private string IndexHref => _siteKind == SiteKind.Blog ? "/" : $"/{BlogPrefix}/";
+
         private IReadOnlyList<PublishedPost> _posts = [];
         private readonly Dictionary<PageId, string> _postStamps = [];
 
@@ -1325,79 +1341,108 @@ public sealed class SitePublisher(
                     new PageTree(WithDateline(post, post.RootsFor(_defaultLocale, _defaultLocale))),
                     PublishedVersion: 0)
                 {
-                    PublicPath = $"{BlogPrefix}/{post.Slug.Value}",
+                    PublicPath = $"{PostPrefix}{post.Slug.Value}",
                 };
             }
 
-            if (_posts.Count > 0)
+            // A blog site ALWAYS has an index, empty or not: it is the site's root, and a root that
+            // 404s is not an empty blog, it is a broken domain. Inside an ordinary site the old rule
+            // still holds — see ListingPage.
+            if (_posts.Count > 0 || _siteKind == SiteKind.Blog)
             {
                 var listing = ListingPage();
                 // The index is derived from every post, so its version is all of theirs: adding,
-                // withdrawing or re-publishing any one of them must re-render it.
-                _postStamps[listing.Id] = string.Join(
+                // withdrawing or re-publishing any one of them must re-render it. The count is in
+                // the stamp too, so going from one post to none re-renders it into its empty state
+                // instead of leaving the last post listed on a blog that no longer has it.
+                _postStamps[listing.Id] = $"{_posts.Count}:" + string.Join(
                     '|', _posts.Select(post => $"{post.Slug.Value}:{post.UpdatedAt.UtcTicks}"));
                 yield return listing;
             }
         }
 
         /// <summary>
-        /// The blog index at <c>/blog/</c>, built as an ordinary page out of ordinary nodes — a
-        /// heading and one rich-text entry per post. Generating a NODE TREE rather than markup is
-        /// what keeps it inside the system: it gets the site's chrome, tokens, dark mode and
-        /// stylesheet for free, and there is still exactly one renderer.
-        /// <para>Only rendered when a post exists. An empty index page is a promise of content
-        /// that isn't there, and a link in the sitemap to it is worse.</para>
+        /// The blog index, built as an ordinary page out of ordinary nodes — a masthead and one
+        /// rich-text entry per post. Generating a NODE TREE rather than markup is what keeps it
+        /// inside the system: it gets the site's chrome, tokens, dark mode and stylesheet for free,
+        /// and there is still exactly one renderer.
+        /// <para>Inside an ordinary site it is rendered only when a post exists: an empty
+        /// <c>/blog/</c> hanging off a marketing site is a promise of content that isn't there, and
+        /// a link in the sitemap to it is worse. A blog SITE is the opposite case — the index is
+        /// its root, so it is always rendered and says plainly that nothing has been published
+        /// yet. A reader who typed the domain gets an answer either way; the failure mode that
+        /// matters is a bare 404 on a domain someone just announced.</para>
         /// </summary>
         private PublishedPage ListingPage()
         {
-            var entries = new List<Node>();
+            // On a blog site the masthead IS the site's name — a heading reading "Blog" on
+            // blog.canine.dev tells the reader something they knew before they arrived.
+            var isBlogSite = _siteKind == SiteKind.Blog;
+            var heading = new HeadingNode
+            {
+                Id = ListingNodeId(PostId.From(Guid.Empty)),
+                Level = 1,
+                Text = LocalizedText.Of(_defaultLocale, isBlogSite ? _siteName : "Blog"),
+            };
+
+            var body = new List<Node> { heading };
+
+            if (_posts.Count == 0)
+            {
+                // The empty state. Deliberately not an apology, and with no link to the feed: the
+                // feed is only written when there is something to syndicate, so pointing at it
+                // here would make the empty state's one link a 404 — a worse first impression than
+                // the emptiness it is trying to dress up.
+                body.Add(new RichTextNode
+                {
+                    Id = ListingNodeId(PostId.From(new Guid("00000000-0000-0000-0000-0000000e0000"))),
+                    Html = LocalizedText.Of(_defaultLocale, "<p>No posts published yet.</p>"),
+                });
+            }
+
             foreach (var post in _posts)
             {
                 var title = HtmlText.Encode(post.Title.Resolve(_defaultLocale, _defaultLocale));
-                var date = post.PublishedAt.UtcDateTime.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
                 var summary = post.MetaDescription.Resolve(_defaultLocale, _defaultLocale);
                 // Absolute() so the href is a scheme the canonical inline grammar accepts. This
                 // html is generated rather than stored, so no validator sees it — which is exactly
                 // why it must not be the one place that quietly stops obeying the grammar.
-                var href = HtmlText.Encode(Absolute($"/{BlogPrefix}/{post.Slug.Value}/"));
-                var line = $"""<p><a href="{href}">{title}</a> — {date}</p>""";
+                var href = HtmlText.Encode(Absolute($"/{PostPrefix}{post.Slug.Value}/"));
+                // The reader's date, matching the dateline on the post itself — the index and the
+                // page disagreeing about when something was written is the kind of small
+                // contradiction that costs a reader their trust in both.
+                var date = HtmlText.Encode(EditorialTime.ForReader(post.PublishedAt));
+                var line = $"""<p><a href="{href}">{title}</a></p><p>{date}</p>""";
                 if (!string.IsNullOrWhiteSpace(summary))
                 {
                     line += $"<p>{HtmlText.Encode(summary)}</p>";
                 }
 
-                entries.Add(new RichTextNode
+                body.Add(new RichTextNode
                 {
                     Id = ListingNodeId(post.Id),
                     Html = LocalizedText.Of(_defaultLocale, line),
                 });
             }
 
-            var heading = new HeadingNode
-            {
-                Id = ListingNodeId(PostId.From(Guid.Empty)),
-                Level = 1,
-                Text = LocalizedText.Of(_defaultLocale, "Blog"),
-            };
-
             var section = new SectionNode
             {
                 Id = ListingNodeId(PostId.From(new Guid("00000000-0000-0000-0000-00000000feed"))),
                 Appearance = SectionAppearance.Doc,
-                Children = NodeList.Of([heading, .. entries]),
+                Children = NodeList.Of(body),
             };
 
             return new PublishedPage(
                 PostPageId(PostId.From(new Guid("00000000-0000-0000-0000-0000000000b1"))),
                 site.Id,
                 default,
-                LocalizedText.Of(_defaultLocale, "Blog"),
+                LocalizedText.Of(_defaultLocale, isBlogSite ? _siteName : "Blog"),
                 LocalizedText.Empty,
                 LocalizedText.Empty,
                 new PageTree(NodeList.Of(section)),
                 PublishedVersion: 0)
             {
-                PublicPath = BlogPrefix,
+                PublicPath = IndexPath,
             };
         }
 
@@ -1441,12 +1486,12 @@ public sealed class SitePublisher(
             xml.Append("""<?xml version="1.0" encoding="utf-8"?>""").Append('\n');
             xml.Append("<rss version=\"2.0\"><channel>\n");
             xml.Append("<title>").Append(XmlEscape(_siteName)).Append("</title>\n");
-            xml.Append("<link>").Append(XmlEscape(Absolute($"/{BlogPrefix}/"))).Append("</link>\n");
+            xml.Append("<link>").Append(XmlEscape(Absolute(IndexHref))).Append("</link>\n");
             xml.Append("<description>").Append(XmlEscape(_siteName)).Append("</description>\n");
 
             foreach (var post in _posts)
             {
-                var url = Absolute($"/{BlogPrefix}/{post.Slug.Value}/");
+                var url = Absolute($"/{PostPrefix}{post.Slug.Value}/");
                 xml.Append("<item>\n");
                 xml.Append("<title>").Append(XmlEscape(post.Title.Resolve(_defaultLocale, _defaultLocale))).Append("</title>\n");
                 xml.Append("<link>").Append(XmlEscape(url)).Append("</link>\n");
