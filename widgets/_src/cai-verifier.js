@@ -1,4 +1,4 @@
-// <cai-verifier api-base="https://cai.canine.dev" kicker="…" heading="…" lede="…" brand="cai">
+// <cai-verifier api-base="https://codeassuranceindex.info" kicker="…" heading="…" lede="…" brand="cai">
 //
 // Paste a signed CAI delivery package; get the two answers that matter, kept apart:
 //   1. Is it authentically ours and unedited?  (Ed25519 over the canonical payload)
@@ -9,7 +9,7 @@
 // BEFORE the number was edited — and that case is reported as "signed, but does not reproduce",
 // never as trustworthy. A signature attests the author, never the arithmetic.
 //
-// Why this is an island rather than an iframe of the app's own /verify page: cai.canine.dev is
+// Why this is an island rather than an iframe of the app's own /verify page: the CAI site is
 // served by the CMS, so the app's pages are not reachable there, and the app sets
 // frame-ancestors 'self' — deliberately, because a page whose job is verifying signatures is
 // exactly the wrong page to let a stranger frame. Calling the open API from a widget keeps the
@@ -146,7 +146,7 @@ class CaiVerifier extends CaiIsland {
       body = this.#message(
         "bad",
         "✗ Not authentic",
-        `${esc(d.reason || "the signature did not verify")} — treat this document as unattributed. Either it was not issued by cai.canine.dev, or it has been edited since it was signed.`,
+        `${esc(d.reason || "the signature did not verify")} — treat this document as unattributed. Either it was not issued by codeassuranceindex.info, or it has been edited since it was signed.`,
       );
     } else {
       body = this.#message(

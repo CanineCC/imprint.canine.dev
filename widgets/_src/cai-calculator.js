@@ -1,4 +1,4 @@
-// <cai-calculator api-base="https://cai.canine.dev" kicker="…" heading="…" lede="…" brand="cai">
+// <cai-calculator api-base="https://codeassuranceindex.info" kicker="…" heading="…" lede="…" brand="cai">
 //
 // Paste an evidence bundle; the open scorer folds it into the ten lens scores and the 0–100 CAI,
 // in front of the reader. When the bundle also carries a published `headlineScore`, the result is

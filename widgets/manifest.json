@@ -967,7 +967,7 @@
         "name": "api-base",
         "label": "CAI API base URL (required — the verifier calls it)",
         "type": "url",
-        "default": "https://cai.canine.dev"
+        "default": "https://codeassuranceindex.info"
       },
       {
         "name": "kicker",
@@ -1011,7 +1011,7 @@
         "name": "api-base",
         "label": "CAI API base URL (required — the scorer calls it)",
         "type": "url",
-        "default": "https://cai.canine.dev"
+        "default": "https://codeassuranceindex.info"
       },
       {
         "name": "kicker",

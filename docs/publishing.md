@@ -85,7 +85,7 @@ other text output.
 
 **SEO-only paths.** A site can serve thousands of generated pages that are perfectly
 good search-engine content and pure noise to a model trying to learn what the site
-is. Nothing about how a page was produced says which it is — on cai.canine.dev the
+is. Nothing about how a page was produced says which it is — on the CAI site the
 rubric catalogues are syndicated exactly like the survey long tail — so the site
 declares the paths: `Site.SetLlmsExcludedPaths(["surveys", "dimensions/rubric*"])`,
 MCP tool `set_llms_excluded_paths`. Each prefix covers itself and everything under it,

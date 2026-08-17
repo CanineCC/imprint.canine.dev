@@ -87,7 +87,7 @@ public static class Sites
             AssayNav, AssayCta, AssayQuiet, AssayFooter, AssayCopy,
             // "Dal": the warm-paper neutrals + copper accent + editorial serif voice.
             Themes.Assay, Themes.AssayPaper, Themes.Editorial),
-        new SiteDef("cai", "CAI", "https://cai.canine.dev",
+        new SiteDef("cai", "CAI", "https://codeassuranceindex.info",
             Path.Combine(cmsRoot, "sites", "cai", "content"),
             CaiSite, CaiHome,
             CaiNav, CaiCta, CaiQuiet, CaiFooter, CaiCopy,
@@ -161,12 +161,12 @@ public static class Sites
         ]),
         new("The CAI standard",
         [
-            new("cai.canine.dev", "https://cai.canine.dev"),
-            new("The standard", "https://cai.canine.dev/spec"),
-            new("Dimensions & lenses", "https://cai.canine.dev/dimensions"),
-            new("Verify a survey", "https://cai.canine.dev/verify"),
-            new("The registry", "https://cai.canine.dev/registry"),
-            new("Reference scorer / CLI", "https://cai.canine.dev/cli"),
+            new("codeassuranceindex.info", "https://codeassuranceindex.info"),
+            new("The standard", "https://codeassuranceindex.info/spec"),
+            new("Dimensions & lenses", "https://codeassuranceindex.info/dimensions"),
+            new("Verify a survey", "https://codeassuranceindex.info/verify"),
+            new("The registry", "https://codeassuranceindex.info/registry"),
+            new("Reference scorer / CLI", "https://codeassuranceindex.info/cli"),
         ]),
         new("For buyers",
         [
@@ -237,9 +237,9 @@ public static class Sites
         [
             new("The evidence flow", "/how-it-works"),
             new("Compliance & audit", "/compliance"),
-            new("Verify any number", "https://cai.canine.dev/verify"),
-            new("The registry", "https://cai.canine.dev/registry"),
-            new("The CAI standard", "https://cai.canine.dev"),
+            new("Verify any number", "https://codeassuranceindex.info/verify"),
+            new("The registry", "https://codeassuranceindex.info/registry"),
+            new("The CAI standard", "https://codeassuranceindex.info"),
         ]),
         new("Producers",
         [
@@ -332,7 +332,7 @@ public static class Sites
         new("Products",
         [
             new("Watchdog", "https://watchdog.canine.dev"),
-            new("CAI standard", "https://cai.canine.dev"),
+            new("CAI standard", "https://codeassuranceindex.info"),
             new("Unfold", "https://unfold.canine.dev"),
             new("Assay", "https://assay.canine.dev"),
         ]),

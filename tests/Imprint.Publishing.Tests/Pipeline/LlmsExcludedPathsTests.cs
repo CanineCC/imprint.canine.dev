@@ -8,7 +8,7 @@ namespace Imprint.Publishing.Tests.Pipeline;
 /// <summary>
 /// A site can publish thousands of generated pages that are entirely legitimate SEO and
 /// pure noise to a model trying to learn what the site is. The dividing line is not how a
-/// page was produced — on cai.canine.dev the rubric catalogues are syndicated exactly like
+/// page was produced — on the CAI site the rubric catalogues are syndicated exactly like
 /// the survey pages, and one is the standard while the other is a long tail. So the site
 /// declares the paths, and the LLM files honour them while the sitemap does not.
 /// </summary>

@@ -45,7 +45,7 @@ The target is **A (93)**; `--min-score 93` is the gate.
 
 ## Template classes
 
-`cai.canine.dev` publishes ~2,700 survey pages from one template. Every page shares the
+`codeassuranceindex.info` publishes ~2,700 survey pages from one template. Every page shares the
 template's virtues and defects, so auditing it whole is 2,700 fetches to learn one thing.
 The tool samples it — **evenly spaced and deterministic, never random**, so two runs audit
 the same pages and the scores stay comparable. `--full` overrides this.

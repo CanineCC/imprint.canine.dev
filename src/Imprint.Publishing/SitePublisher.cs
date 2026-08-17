@@ -1651,7 +1651,7 @@ public sealed class SitePublisher(
         /// A site can publish thousands of generated pages that are entirely legitimate SEO
         /// and pure noise to a model trying to learn what the site is — and nothing about how
         /// a page was produced says which it is. Syndicated pages are not the dividing line:
-        /// on cai.canine.dev the rubric catalogues arrive the same way the survey pages do,
+        /// on the CAI site the rubric catalogues arrive the same way the survey pages do,
         /// and one is the standard while the other is a long tail. So the site declares the
         /// paths (<see cref="Site.SetLlmsExcludedPaths"/>) rather than the publisher guessing.
         /// <para>

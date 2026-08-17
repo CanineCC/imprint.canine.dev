@@ -85,7 +85,9 @@ builder.Services.AddScoped<CanvasBridge>();
 builder.Services.AddCors(cors => cors.AddPolicy("contact", policy => policy
     .WithOrigins(
         "https://canine.dev", "https://www.canine.dev",
-        "https://watchdog.canine.dev", "https://assay.canine.dev", "https://cai.canine.dev")
+        "https://watchdog.canine.dev", "https://assay.canine.dev",
+        // CAI moved off cai.canine.dev onto its own domain; the old host only 301s now.
+        "https://codeassuranceindex.info", "https://www.codeassuranceindex.info")
     .WithMethods("POST")
     .WithHeaders("Content-Type")));
 builder.Services.AddRateLimiter(limiter =>

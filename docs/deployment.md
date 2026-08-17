@@ -33,8 +33,9 @@ the actual topology of that estate rather than a generic cloud setup.
                           ▼                  ▼
                      wrx1 web roots     canine-ultra1 (Caddy)      ← per-site deploy targets
                      (marketing:        (other Imprint-maintained  (see docs/multi-site-saas.md)
-                      watchdog/assay/     sites)
-                      cai.canine.dev)
+                      watchdog/assay,     sites)
+                      canine.dev,
+                      codeassuranceindex.info)
 ```
 
 The estate convention (same as watchdog/cai/assay): **`imprint.canine.dev` is the marketing
@@ -139,17 +140,27 @@ Manual deploy / rollback: re-run the workflow (`workflow_dispatch`), or on the b
 > Editing `.github/workflows/deploy.yml` needs a token with `workflow` scope — push it with a
 > normal git push, not a deploy/checkout token.
 
-## 5. Deploy targets (prepared, not yet publishing)
+## 5. Deploy targets (live)
 
 The editor's per-site **deploy environments** (see [multi-site-saas.md](multi-site-saas.md))
-point each site at a folder. For this estate:
+point each site at a folder. Each site's `Production` environment publishes into
+`/home/jimmy/imprint-data/publish-sites/<site>` on wrx1, which the host nginx serves on its
+own port; the dgx1 TLS edge proxies the public hostname at that port:
 
-- **wrx1 marketing** — `watchdog.canine.dev`, `assay.canine.dev`, `cai.canine.dev` are today
-  served by the `cms-*` Node containers. Imprint is being prepared to take these over, but
-  **publishes nothing yet** and does not touch those containers or their vhosts.
+| Site | Public origin | wrx1 port |
+| --- | --- | --- |
+| watchdog | `watchdog.canine.dev` | 8151 |
+| assay | `assay.canine.dev` | 8152 |
+| cai | `codeassuranceindex.info` | 8153 |
+| canine | `canine.dev` | 8154 |
+
 - **canine-ultra1** — a deploy target (Caddy) for other Imprint-maintained sites.
 
+An environment's `BaseUrl` is the site's canonical origin: it is what canonical links,
+`og:url`, hreflang and the sitemap say, so **moving a site to a new domain is a `BaseUrl`
+change plus a republish**, then repointing the dgx1 vhost. That is how the CAI standard moved
+from `cai.canine.dev` to `codeassuranceindex.info` — the old hostname is kept as a 301-only
+vhost, never deleted, so the absolute links already published into the corpus keep resolving.
+
 `PublishingOptions.DeployRoot` sandboxes tenant-typed folders; leave it null only while a
-single trusted operator manages every site. The go-live switch for each marketing site is a
-later, deliberate step: point its environment at the real web root, publish, then repoint the
-dgx1/Caddy vhost from the old container to the published folder.
+single trusted operator manages every site.

@@ -1,4 +1,4 @@
-// <cai-dimensions api-base="https://cai.canine.dev" kicker="…" heading="…" lede="…">
+// <cai-dimensions api-base="https://codeassuranceindex.info" kicker="…" heading="…" lede="…">
 //
 // The rubric catalogue, read LIVE from the archive, with a version picker.
 //

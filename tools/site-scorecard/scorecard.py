@@ -35,7 +35,7 @@ TIMEOUT = 20
 SITES = {
     "watchdog": "https://watchdog.canine.dev/",
     "assay": "https://assay.canine.dev/",
-    "cai": "https://cai.canine.dev/",
+    "cai": "https://codeassuranceindex.info/",
     "www": "https://canine.dev/",
 }
 
