@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 using static Microsoft.Playwright.Assertions;
 
@@ -133,22 +134,31 @@ public sealed class BlogCreationTests(EditorFixture fixture)
         await page.WaitForInteractive();
         await page.FillAsync("[data-testid='post-body']", "# Figured\n\nThe prose above the figure.\n");
 
-        // Uploaded through the shelf's own input — the same element file-drop.js hands a
-        // drop to, so this exercises the drop path without synthesising a DataTransfer.
+        // Uploaded through the markdown pane's own drop input — the same element file-drop.js
+        // hands a drop to, so this exercises the drop path without synthesising a DataTransfer.
+        // It is the pane the author is looking at, and it works whichever view the right pane
+        // happens to be showing.
         var svgPath = Path.Combine(Path.GetTempPath(), $"e2e-{Guid.NewGuid():N}"[..12] + ".svg");
         await File.WriteAllTextAsync(svgPath,
             """<svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="112" height="52" fill="#0e7c6b"/></svg>""");
-        await page.SetInputFilesAsync("[data-testid='post-media-input']", svgPath);
+        await page.SetInputFilesAsync("[data-testid='post-source-drop']", svgPath);
 
-        // It lands on the shelf, and it lands in the BODY — the author does not go hunting
-        // for an id, which is the whole reason the shelf exists.
-        await page.WaitForSelectorAsync("[data-testid='post-media-tile']");
+        // It lands in the BODY — the author does not go hunting for an id, which is the whole
+        // reason the shelf exists.
+        await Expect(page.Locator("[data-testid='post-body']"))
+            .ToHaveValueAsync(new Regex(@"!\[[^\]]*\]\(media:[0-9a-fA-F]{32}\)"));
         var body = await page.InputValueAsync("[data-testid='post-body']");
-        Assert.Matches(@"!\[[^\]]*\]\(media:[0-9a-fA-F]{32}\)", body);
         Assert.Contains("The prose above the figure.", body, StringComparison.Ordinal);
 
         // The preview shows the graphic itself, not a placeholder standing in for one.
         await page.Locator("[data-testid='post-preview'] .ip-svg svg").WaitForAsync();
+
+        // …and it is on the shelf, which is now a view of the right pane rather than a slab
+        // under the text: the markdown stays on screen while you look at the library.
+        await page.ClickAsync("[data-testid='post-view-media']");
+        await page.WaitForSelectorAsync("[data-testid='post-media-tile']");
+        await Expect(page.Locator("[data-testid='post-body']")).ToBeVisibleAsync();
+        await page.ClickAsync("[data-testid='post-view-preview']");
 
         await page.ClickAsync("[data-testid='post-publish']");
         await page.WaitForSelectorAsync("[data-testid='post-status']:has-text('Published')");

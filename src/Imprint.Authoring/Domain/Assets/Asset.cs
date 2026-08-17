@@ -16,6 +16,10 @@ public sealed class Asset : AggregateRoot
     private const int MaxNameLength = 200;
     private const int MaxAltLength = 500;
 
+    // A filing system, not a taxonomy: enough tags for one asset to belong to several
+    // posts and a theme or two, few enough that a runaway loop cannot grow the stream.
+    private const int MaxTags = 25;
+
     public AssetId Id { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public string FileName { get; private set; } = string.Empty;
@@ -47,6 +51,10 @@ public sealed class Asset : AggregateRoot
     public bool HasDarkVariant => DarkStatus is DarkVariantStatus.Ready;
 
     public LocalizedText DefaultAlt { get; private set; } = LocalizedText.Empty;
+
+    /// <summary>The author's own filing labels, in the order they were applied.</summary>
+    public IReadOnlyList<string> Tags { get; private set; } = [];
+
     public bool IsDeleted { get; private set; }
 
     public override string StreamId => Id.Stream;
@@ -256,6 +264,57 @@ public sealed class Asset : AggregateRoot
         Raise(new AssetRenamed(name));
     }
 
+    /// <summary>
+    /// Files the asset under a tag. Applying one it already carries is a no-op rather than
+    /// an error: the editor tags on upload, and re-tagging a file that is already in the
+    /// group is the author repeating themselves, not making a mistake.
+    /// </summary>
+    public void Tag(string tag)
+    {
+        EnsureNotDeleted();
+        var name = AssetTag.Normalize(tag);
+        if (name.Length == 0)
+        {
+            throw new DomainException("A tag needs a name.");
+        }
+
+        if (name.Length > AssetTag.MaxLength)
+        {
+            throw new DomainException($"Tags are limited to {AssetTag.MaxLength} characters.");
+        }
+
+        if (Tags.Contains(name, AssetTag.Comparer))
+        {
+            return;
+        }
+
+        if (Tags.Count >= MaxTags)
+        {
+            throw new DomainException($"'{Name}' already carries {MaxTags} tags, which is the limit.");
+        }
+
+        Raise(new AssetTagged(name));
+    }
+
+    /// <summary>
+    /// Removes a tag. Silent when the asset never carried it — untagging is idempotent for
+    /// the same reason tagging is.
+    /// </summary>
+    public void Untag(string tag)
+    {
+        EnsureNotDeleted();
+        var name = AssetTag.Normalize(tag);
+
+        // Raise the spelling that is actually stored, so the event says what was removed
+        // rather than how the caller happened to capitalise it.
+        if (Tags.FirstOrDefault(existing => AssetTag.Comparer.Equals(existing, name)) is not { } stored)
+        {
+            return;
+        }
+
+        Raise(new AssetUntagged(stored));
+    }
+
     public void Delete()
     {
         EnsureNotDeleted();
@@ -329,6 +388,12 @@ public sealed class Asset : AggregateRoot
                 break;
             case AssetRenamed e:
                 Name = e.Name;
+                break;
+            case AssetTagged e:
+                Tags = [.. Tags, e.Tag];
+                break;
+            case AssetUntagged e:
+                Tags = [.. Tags.Where(tag => !AssetTag.Comparer.Equals(tag, e.Tag))];
                 break;
             case AssetDeleted:
                 IsDeleted = true;

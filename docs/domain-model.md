@@ -173,7 +173,7 @@ attributes re-emitted from parse at render).
 
 The media lifecycle as an explicit state machine. Stream: `asset-{id}`.
 State: name, kind, content type, original storage key, processing status
-(`Pending | Ready | Failed | ReadyDegraded`), variants, default alt.
+(`Pending | Ready | Failed | ReadyDegraded`), variants, default alt, tags.
 
 `AssetKind`: `Image` (raster → WebP variants), `Vector` (SVG → sanitized),
 `Video` (→ WebM), `File` (passthrough download).
@@ -190,7 +190,14 @@ State: name, kind, content type, original storage key, processing status
 | `asset.processing-skipped` | `string Reason` → status `ReadyDegraded` (e.g. ffmpeg absent: original file is published as-is with a visible editor warning) |
 | `asset.alt-changed` | `Locale, string Alt` (default alt; `ImageNode.Alt` overrides per placement) |
 | `asset.renamed` | `string Name` |
+| `asset.tagged` | `string Tag` (max 25 per asset; whitespace-collapsed, ≤ 60 chars, casing preserved but identity case-insensitive — see `AssetTag`) |
+| `asset.untagged` | `string Tag` (the *stored* spelling, not the caller's) |
 | `asset.deleted` | — (slice forbids deletion while referenced; the `ContentUsage` query service tracks references) |
+
+Tags are the author's filing system over the library ("Blog-entry-20"): there is no tag
+aggregate and no registry — the tags that *exist* are the tags in use, so `AssetLibrary`
+derives the list and a tag disappears when its last asset drops it. Tagging and untagging
+are each other's exact inverse, so the editor runs both as undoable commands.
 
 Processing runs on an in-process `Channel<AssetId>` background worker
 (`ProcessUploadedAsset` slice): it reads the original from the media store, produces
@@ -231,7 +238,7 @@ live UI updates).
 | `PageList` | page.created/title/slug/published/unpublished/deleted, site.navigation | dashboard, nav picker, slug-uniqueness check, publish badges (`Draft`, `Published`, `Modified` = published but currentVersion > publishedVersion) |
 | `PageDrafts` | all page.* | the editor canvas: current tree + all locale values per page |
 | `PublishedContent` | all page.* | the publisher's page source: folds each page through its aggregate and **snapshots** the state at every `page.published` — because the global sequence is ordered, the folded state at that moment IS the published state, so no stream re-reading is needed |
-| `AssetLibrary` | asset.* | asset panel: status, variants, sizes |
+| `AssetLibrary` | asset.* | asset panel: status, variants, sizes; the tag list in use (`Tags`), and the shelf narrowed to one (`Tagged`/`Untagged`) |
 | `ContentUsage` | *(computed over `PageDrafts`/`BlockLibrary`, not folded)* | asset/block reference tracking: delete protection; republish pages when a referenced asset, block or linked page changes |
 | `BlockLibrary` | block.*, page.* (instance counts) | blocks panel, delete protection |
 | `TranslationCoverage` | page.text/title/meta, site locales | translation panel: per page × locale, missing/total field counts and the field list |
@@ -253,7 +260,8 @@ through read models (each such check carries a comment naming the accepted race)
   `RemoveNode`, `DuplicateNode`, `ChangeNodeProps`, `EditText`, `SetBlockOverride`,
   `DetachBlockInstance`, `PublishPage`, `UnpublishPage`.
 - **Assets/**: `UploadAsset` (streams to media store, then command), `ProcessUploadedAsset`
-  (internal, worker-invoked), `SetAssetAlt`, `RenameAsset`, `DeleteAsset`.
+  (internal, worker-invoked), `SetAssetAlt`, `RenameAsset`, `TagAsset`, `UntagAsset`,
+  `DeleteAsset`.
 - **Blocks/**: `DefineBlockFromNode` (creates definition from a page node's subtree and
   replaces the node with an instance — one logical operation, two aggregates, **two
   transactions**: definition first, then page; the handler compensates by deleting the

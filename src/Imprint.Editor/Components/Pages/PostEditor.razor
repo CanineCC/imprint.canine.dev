@@ -8,6 +8,7 @@
 @using Imprint.Authoring.Markdown
 @using Imprint.Authoring.Projections
 @using Imprint.Editor.Auth
+@using Imprint.Editor.Components.Posts
 @using Imprint.Editor.Services
 @using Imprint.EventSourcing
 @using Imprint.Rendering
@@ -20,7 +21,6 @@
 @inject CommandRunner Commands
 @inject EditorRenderContextFactory ContextFactory
 @inject NavigationManager Navigation
-@inject AssetLibrary Library
 @inject ToastService Toasts
 @inject IJSRuntime Js
 
@@ -55,83 +55,68 @@ else
         @* The two panes are the whole point: the same text, and what it will actually become.
            The preview is rendered SERVER-SIDE through MarkdownToNodes and the ordinary node
            views — the same path the publisher takes — so it cannot drift from the published
-           page the way a client-side markdown library would. *@
+           page the way a client-side markdown library would.
+
+           The markdown pane is now nothing but markdown. The media shelf used to sit under
+           it and, once a few files were on it, left a couple of visible lines of the thing
+           the author came here to write. Media is a WAY OF LOOKING at the right-hand pane —
+           the same real estate the preview occupies, which is the pane you can afford to
+           stop looking at while you pick a picture. *@
         <div class="post-panes">
             <section class="post-pane post-pane-source" aria-label="Markdown" @ref="_sourcePane">
                 <textarea class="post-source" data-testid="post-body" spellcheck="true" @ref="_sourceBox"
                           @bind="Body" @bind:event="oninput"
                           placeholder="# Your post&#10;&#10;Write in markdown."></textarea>
 
-                @* The media shelf. It exists because the image rule and the UI used to
-                   contradict each other: a post may only reference the library, as
-                   media:{id}, and the library lived in a panel only the PAGE editor draws —
-                   so from a blog there was no way to obtain an id, and no way to see that
-                   anything had been uploaded at all. Drop a file anywhere on this pane and
-                   it is uploaded and referenced where the caret was; click a tile to
-                   reference one you already have. *@
-                <div class="post-media" data-testid="post-media">
-                    <div class="post-media-head">
-                        <h2>Media</h2>
-                        <label class="ed-btn ed-btn-ghost post-media-upload">
-                            @(_uploading.Count > 0 ? "Uploading…" : "Upload")
-                            <InputFile OnChange="OnFiles" multiple class="ed-visually-hidden"
-                                       data-testid="post-media-input" aria-label="Upload images" />
-                        </label>
-                    </div>
-                    <p class="post-media-hint">…or drop files onto this pane. They are inserted where the caret is.</p>
-
-                    @foreach (var name in _uploading)
-                    {
-                        <div class="post-media-uploading" role="status">Uploading @name…</div>
-                    }
-
-                    @{ var shelf = Library.All(); }
-                    @if (shelf.Count == 0 && _uploading.Count == 0)
-                    {
-                        <p class="post-media-empty" data-testid="post-media-empty">
-                            Nothing uploaded yet. Drop an image here and it lands in the post.
-                        </p>
-                    }
-                    else
-                    {
-                        <ul class="post-media-grid" data-testid="post-media-grid">
-                            @foreach (var asset in shelf)
-                            {
-                                var candidate = asset;
-                                <li>
-                                    <button type="button" class="post-media-tile" data-testid="post-media-tile"
-                                            data-asset="@candidate.Id.Compact" title="@candidate.Name"
-                                            @onclick="() => InsertAsset(candidate)">
-                                        <img class="post-media-thumb" src="@ThumbUrl(candidate)" alt="" loading="lazy" />
-                                        <span class="post-media-name">@candidate.Name</span>
-                                        @if (candidate.Status != AssetStatus.Ready)
-                                        {
-                                            <span class="post-media-badge">@candidate.Status</span>
-                                        }
-                                    </button>
-                                </li>
-                            }
-                        </ul>
-                    }
-                </div>
+                @* file-drop.js hands a drop to the first file input inside the element it was
+                   wired to, and the shelf's input now lives in the other pane — so dropping on
+                   the text needs an input of its own here, or the gesture the hint promises
+                   would quietly do nothing. *@
+                <InputFile OnChange="OnFiles" multiple class="ed-visually-hidden"
+                           data-testid="post-source-drop" aria-label="Upload images into the post" />
             </section>
 
-            <section class="post-pane post-pane-preview" aria-label="Preview">
-                @* The canvas paints itself from the PUBLISHED site's tokens (--ip-background and
-                   friends), which only exist where something emits them — the page editor does it
-                   in Canvas.razor. Without this the preview fell back to a bare white box and text
-                   whose colour token resolved to nothing: unreadable, and nothing like the page it
-                   claims to be a preview of. Scoped to .post-preview, which is the same element
-                   carrying .ed-canvas, so its own declarations can see the variables. *@
-                @if (Sites.Get(_siteId) is { } previewSite)
-                {
-                    <style>@((MarkupString)ThemeCss.EmitScoped(previewSite.Theme, ".post-preview"))</style>
-                }
-                <div class="ed-canvas post-preview" data-testid="post-preview" inert>
-                    <CascadingValue Value="PreviewContext">
-                        <PageView Roots="_preview" />
-                    </CascadingValue>
+            <section class="post-pane post-pane-side" aria-label="Preview and media" @ref="_sidePane">
+                <div class="post-views" role="tablist" aria-label="Right pane">
+                    <button type="button" role="tab" class="post-view @(_view == SideView.Preview ? "is-on" : null)"
+                            aria-selected="@(_view == SideView.Preview ? "true" : "false")"
+                            data-testid="post-view-preview"
+                            @onclick="() => _view = SideView.Preview">Preview</button>
+                    <button type="button" role="tab" class="post-view @(_view == SideView.Media ? "is-on" : null)"
+                            aria-selected="@(_view == SideView.Media ? "true" : "false")"
+                            data-testid="post-view-media"
+                            @onclick="() => _view = SideView.Media">Media</button>
                 </div>
+
+                @* The pane's own drop input, outside the view switch: dropping a file while the
+                   preview is showing must still upload — the author aimed at the window, not at
+                   a tab. It comes first in the DOM, so it is the one file-drop.js finds. *@
+                <InputFile OnChange="OnFiles" multiple class="ed-visually-hidden"
+                           data-testid="post-side-drop" aria-label="Upload images into the post" />
+
+                @if (_view == SideView.Preview)
+                {
+                    @* The canvas paints itself from the PUBLISHED site's tokens (--ip-background and
+                       friends), which only exist where something emits them — the page editor does it
+                       in Canvas.razor. Without this the preview fell back to a bare white box and text
+                       whose colour token resolved to nothing: unreadable, and nothing like the page it
+                       claims to be a preview of. Scoped to .post-preview, which is the same element
+                       carrying .ed-canvas, so its own declarations can see the variables. *@
+                    @if (Sites.Get(_siteId) is { } previewSite)
+                    {
+                        <style>@((MarkupString)ThemeCss.EmitScoped(previewSite.Theme, ".post-preview"))</style>
+                    }
+                    <div class="ed-canvas post-preview" data-testid="post-preview" inert>
+                        <CascadingValue Value="PreviewContext">
+                            <PageView Roots="_preview" />
+                        </CascadingValue>
+                    </div>
+                }
+                else
+                {
+                    <PostMediaShelf Uploading="_uploading" @bind-ActiveTag="_uploadTag"
+                                    OnPick="InsertAsset" OnFiles="OnFiles" />
+                }
             </section>
         </div>
 
@@ -169,18 +154,24 @@ else
 
     private const long MaxUploadBytes = 500L * 1024 * 1024;
 
+    private enum SideView { Preview, Media }
+
+    private SideView _view = SideView.Preview;
+
     private ElementReference _sourcePane;
+    private ElementReference _sidePane;
     private ElementReference _sourceBox;
     private IJSObjectReference? _dropModule;
     private IJSObjectReference? _caretModule;
     private readonly List<string> _uploading = [];
 
-    private static string ThumbUrl(Asset asset) => asset switch
-    {
-        { Kind: AssetKind.Image, Variants.Count: > 0 } => $"/media/{asset.Variants[0].StorageKey}",
-        { Kind: AssetKind.Vector, DerivedStorageKey: { } key } => $"/media/{key}",
-        _ => $"/media/{asset.OriginalStorageKey}",
-    };
+    /// <summary>
+    /// The tag the media view is currently pointed at, and therefore the tag anything
+    /// uploaded from here is filed under — including files dropped on the markdown pane
+    /// while the preview is showing. Null when the shelf is on "All" or "Untagged": an
+    /// upload made with no group chosen belongs to no group.
+    /// </summary>
+    private string? _uploadTag;
 
     private async Task OnFiles(InputFileChangeEventArgs args)
     {
@@ -208,6 +199,15 @@ else
                 if (await Commands.Run(new Authoring.Features.Assets.UploadAsset.UploadAsset(
                         assetId, file.Name, ContentTypeOf(file), file.Size, content)))
                 {
+                    // Filed as it lands, which is the only moment the author's intent is known
+                    // without asking: they chose the group before dropping the file. A separate
+                    // command rather than a field on the upload — the upload slice streams bytes
+                    // and knows nothing of the library's filing.
+                    if (_uploadTag is { Length: > 0 } tag)
+                    {
+                        await Commands.Run(new Authoring.Features.Assets.TagAsset.TagAsset(assetId, tag));
+                    }
+
                     // Referenced immediately, while it is still processing: the reference is
                     // the id, and the id is final the moment the upload lands. Waiting for
                     // Ready would mean dropping a file and watching nothing happen.
@@ -279,14 +279,9 @@ else
         }
     }
 
-    protected override void OnInitialized()
-    {
-        Posts.Changed += OnChanged;
-
-        // The shelf redraws as uploads land and as processing flips them to Ready, so a file
-        // you just dropped visibly becomes a real asset instead of sitting there as a guess.
-        Library.Changed += OnChanged;
-    }
+    // The shelf keeps its own subscription to the library — it is the only part of this page
+    // that redraws when an upload lands or processing flips a file to Ready.
+    protected override void OnInitialized() => Posts.Changed += OnChanged;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -296,10 +291,12 @@ else
         }
 
         // file-drop.js only turns "files dropped on this element" into "the hidden InputFile
-        // changed" — Blazor still owns the streaming. Wired to the whole source pane, so the
-        // drop target is the thing an author is looking at while writing.
+        // changed" — Blazor still owns the streaming. Both panes are targets: the source pane
+        // because it is what an author is looking at while writing, the side pane because a
+        // shelf you can see is a shelf you will aim at.
         _dropModule = await Js.InvokeAsync<IJSObjectReference>("import", "./js/file-drop.js");
         await _dropModule.InvokeVoidAsync("init", _sourcePane);
+        await _dropModule.InvokeVoidAsync("init", _sidePane);
         _caretModule = await Js.InvokeAsync<IJSObjectReference>("import", "./js/post-caret.js");
     }
 
@@ -392,17 +389,28 @@ else
         _ => "Draft",
     };
 
-    public void Dispose()
-    {
-        Posts.Changed -= OnChanged;
-        Library.Changed -= OnChanged;
-    }
+    public void Dispose() => Posts.Changed -= OnChanged;
 
     // The JS modules need an async teardown of their own: a circuit that reconnects must not
     // leave the previous drop listeners bound to a detached element.
     public async ValueTask DisposeAsync()
     {
         Dispose();
+
+        if (_dropModule is not null)
+        {
+            try
+            {
+                // Unbind both targets: the module object is shared per URL, so disposing the
+                // reference alone would leave listeners on elements this circuit no longer owns.
+                await _dropModule.InvokeVoidAsync("dispose", _sourcePane);
+                await _dropModule.InvokeVoidAsync("dispose", _sidePane);
+            }
+            catch (JSDisconnectedException)
+            {
+                // The circuit is already gone; the elements went with it.
+            }
+        }
 
         foreach (var module in new[] { _dropModule, _caretModule })
         {

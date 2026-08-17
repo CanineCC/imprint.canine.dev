@@ -31,6 +31,8 @@ public sealed class AssetEventSamples : IEventSampleProvider
         new DarkVariantRemoved(),
         new AssetAltChanged(new Locale("da-DK"), "En solnedgang over havnen"),
         new AssetRenamed("Harbour sunset"),
+        new AssetTagged("Blog-entry-20"),
+        new AssetUntagged("Blog-entry-20"),
         new AssetDeleted(),
     ];
 }

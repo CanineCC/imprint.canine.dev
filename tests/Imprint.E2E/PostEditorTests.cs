@@ -140,6 +140,79 @@ public sealed class PostEditorTests(EditorFixture fixture)
         Assert.Equal(2, await preview.Locator("p").CountAsync());
     }
 
+    [Fact]
+    public async Task Media_is_a_view_of_the_right_pane_and_uploads_are_filed_under_the_chosen_tag()
+    {
+        // What this asserts, in order, is the complaint that produced the feature: the markdown
+        // never leaves the screen; a tag chosen before an upload files that upload; the shelf
+        // narrows to one tag; and a tag can be taken off again afterwards.
+        var page = await OpenPosts(fixture);
+        await page.FillAsync("[data-testid='new-post-title']", $"Tagged {Guid.NewGuid():N}"[..12]);
+        await page.ClickAsync("[data-testid='new-post-create']");
+        await page.WaitForURLAsync("**/posts/**");
+        await page.WaitForInteractive();
+        await page.FillAsync("[data-testid='post-body']", "# Tagged\n\nProse above the figure.\n");
+
+        await page.ClickAsync("[data-testid='post-view-media']");
+        await Expect(page.Locator("[data-testid='post-body']")).ToBeVisibleAsync();
+        await Expect(page.Locator("[data-testid='post-preview']")).ToHaveCountAsync(0);
+
+        // The library is shared by every test in this collection, so the group is named for
+        // this run — which is also how an author uses it: one tag per post.
+        var tag = $"Blog-entry-{Guid.NewGuid():N}"[..18];
+        await page.FillAsync("[data-testid='post-tag-choose']", tag);
+        await page.ClickAsync("[data-testid='post-tag-use']");
+        await Expect(page.Locator("[data-testid='post-media-empty']")).ToBeVisibleAsync();
+
+        var figure = await WriteSvg("#0e7c6b");
+        await page.SetInputFilesAsync("[data-testid='post-media-input']", figure);
+
+        // Filed on the way in: the shelf is showing exactly this tag, and the file is on it.
+        var tiles = page.Locator("[data-testid='post-media-tile']");
+        await Expect(tiles).ToHaveCountAsync(1);
+        await Expect(page.Locator("[data-testid='post-body']"))
+            .ToHaveValueAsync(new Regex(@"!\[[^\]]*\]\(media:[0-9a-fA-F]{32}\)"));
+
+        // The picture is in the post the moment it is uploaded, and the preview — one tab away,
+        // with the markdown still on screen — shows the graphic itself.
+        await page.ClickAsync("[data-testid='post-view-preview']");
+        await page.Locator("[data-testid='post-preview'] .ip-svg svg").WaitForAsync();
+        await page.ClickAsync("[data-testid='post-view-media']");
+
+        // Coming back finds the same group open. The chosen tag is what the next drop is filed
+        // under, so a shelf that quietly reset to "All" would keep filing files while showing
+        // the author no sign of it.
+        await Expect(page.Locator($"[data-testid='post-tag'][data-tag='{tag}']"))
+            .ToHaveClassAsync(new Regex(@"\bis-on\b"));
+        await Expect(tiles).ToHaveCountAsync(1);
+
+        // A second file uploaded with no group chosen joins no group…
+        await page.ClickAsync("[data-testid='post-tag-all']");
+        await page.SetInputFilesAsync("[data-testid='post-media-input']", await WriteSvg("#8a5a00"));
+        await Expect(page.Locator($"[data-testid='post-tag'][data-tag='{tag}']")).ToHaveTextAsync($"{tag} (1)");
+
+        // …and choosing the tag again narrows the shelf back to the one file that carries it.
+        await page.ClickAsync($"[data-testid='post-tag'][data-tag='{tag}']");
+        await Expect(tiles).ToHaveCountAsync(1);
+
+        // Taking the tag off empties the group without touching the file itself — and the group
+        // then ceases to exist, because a tag is nothing but a label something carries.
+        await page.ClickAsync("[data-testid='post-media-tagbtn']");
+        await page.Locator("[data-testid='post-media-detail']").WaitForAsync();
+        await page.ClickAsync("[data-testid='post-tag-remove']");
+        await Expect(tiles).ToHaveCountAsync(0);
+        await Expect(page.Locator("[data-testid='post-media-empty']")).ToBeVisibleAsync();
+        await Expect(page.Locator($"[data-testid='post-tag'][data-tag='{tag}']")).ToHaveCountAsync(0);
+    }
+
+    private static async Task<string> WriteSvg(string fill)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"e2e-{Guid.NewGuid():N}"[..12] + ".svg");
+        await File.WriteAllTextAsync(path,
+            $"""<svg viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="112" height="52" fill="{fill}"/></svg>""");
+        return path;
+    }
+
     /// <summary>Reaches the posts index the way a person does — from the site card on the
     /// dashboard — which also keeps the test honest that the feature is navigable at all.</summary>
     private static async Task<IPage> OpenPosts(EditorFixture fixture)

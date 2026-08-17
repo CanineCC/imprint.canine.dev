@@ -88,5 +88,15 @@ public sealed record AssetAltChanged(Locale Locale, string Alt);
 [EventType("asset.renamed")]
 public sealed record AssetRenamed(string Name);
 
+// Tags are the author's filing system over the library: one asset can sit under several,
+// and the set of tags that exists is simply the set in use — there is no tag aggregate to
+// keep in step, and none to leave behind empty when the last asset drops one.
+
+[EventType("asset.tagged")]
+public sealed record AssetTagged(string Tag);
+
+[EventType("asset.untagged")]
+public sealed record AssetUntagged(string Tag);
+
 [EventType("asset.deleted")]
 public sealed record AssetDeleted;

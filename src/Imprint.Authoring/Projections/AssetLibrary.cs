@@ -21,6 +21,29 @@ public sealed class AssetLibrary : ReadModel
 
     public DateTimeOffset UpdatedAt(AssetId id) => _updated.GetValueOrDefault(id);
 
+    /// <summary>
+    /// Every tag currently in use, alphabetically. There is no tag registry — a tag exists
+    /// exactly as long as an asset carries it — so this IS the list the editor offers.
+    /// Two spellings of one tag collapse to the most recently applied one, because
+    /// <see cref="All"/> is newest-first and the author's latest keystrokes are the ones
+    /// they will recognise.
+    /// </summary>
+    public IReadOnlyList<string> Tags() =>
+    [
+        .. All()
+            .SelectMany(asset => asset.Tags)
+            .GroupBy(tag => tag, AssetTag.Comparer)
+            .Select(group => group.First())
+            .OrderBy(tag => tag, AssetTag.Comparer),
+    ];
+
+    /// <summary>The assets filed under <paramref name="tag"/>, newest first.</summary>
+    public IReadOnlyList<Asset> Tagged(string tag) =>
+        [.. All().Where(asset => asset.Tags.Contains(tag, AssetTag.Comparer))];
+
+    /// <summary>The assets no tag reaches — the bucket that would otherwise become invisible.</summary>
+    public IReadOnlyList<Asset> Untagged() => [.. All().Where(asset => asset.Tags.Count == 0)];
+
     public override void Apply(StoredEvent @event)
     {
         if (StreamIds.IdOf(@event.StreamId, "asset-") is not { } guid)

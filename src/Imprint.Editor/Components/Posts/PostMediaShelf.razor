@@ -1,0 +1,311 @@
+@* The post editor's media view: the library, narrowed to one tag at a time.
+
+   Tags exist because the shelf was a single undifferentiated pile — by the twentieth post
+   the picture you wanted was thirty tiles down. A tag is nothing but a label an asset
+   carries (there is no tag aggregate, and no registry: the tags that EXIST are the tags in
+   use), so choosing one here does two things at once — it filters the shelf, and it becomes
+   the tag anything uploaded next is filed under. That is what makes "tag as you upload"
+   free rather than a second chore after the drop. *@
+@using Imprint.Authoring.Domain.Assets
+@using Imprint.Authoring.Features.Assets.TagAsset
+@using Imprint.Authoring.Features.Assets.UntagAsset
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject AssetLibrary Library
+@inject CommandRunner Commands
+
+<div class="post-media" data-testid="post-media">
+    <div class="post-media-head">
+        <h2>Media</h2>
+        <label class="ed-btn ed-btn-ghost post-media-upload">
+            @(Uploading.Count > 0 ? "Uploading…" : "Upload")
+            <InputFile OnChange="OnFiles" multiple class="ed-visually-hidden"
+                       data-testid="post-media-input" aria-label="Upload images" />
+        </label>
+    </div>
+
+    @{ var tags = Library.Tags(); }
+    <ul class="post-tag-bar" data-testid="post-tag-bar" aria-label="Tags">
+        <li>
+            <button type="button" class="post-tag @(_scope == Scope.All ? "is-on" : null)"
+                    data-testid="post-tag-all" @onclick="ShowAll">All (@Library.All().Count)</button>
+        </li>
+        @foreach (var name in tags)
+        {
+            var tag = name;
+            <li>
+                <button type="button" class="post-tag @(IsActive(tag) ? "is-on" : null)"
+                        data-testid="post-tag" data-tag="@tag"
+                        @onclick="() => Choose(tag)">@tag (@Library.Tagged(tag).Count)</button>
+            </li>
+        }
+        @* A tag typed but not yet applied to anything is real enough to upload into — it is
+           how a tag is born. It is shown so the author can see what the next drop is filed as. *@
+        @if (_scope == Scope.Tag && ActiveTag is { Length: > 0 } fresh && !tags.Contains(fresh, AssetTag.Comparer))
+        {
+            <li>
+                <button type="button" class="post-tag is-on is-new" data-testid="post-tag-new"
+                        title="Nothing carries this tag yet — click to leave it"
+                        @onclick="ShowAll">@fresh (new)</button>
+            </li>
+        }
+        <li>
+            <button type="button" class="post-tag @(_scope == Scope.Untagged ? "is-on" : null)"
+                    data-testid="post-tag-untagged" @onclick="ShowUntagged">Untagged (@Library.Untagged().Count)</button>
+        </li>
+    </ul>
+
+    <div class="post-tag-pick">
+        <input class="ed-input post-tag-input" list="post-tag-options" placeholder="New or existing tag…"
+               aria-label="Choose a tag for new uploads" data-testid="post-tag-choose"
+               value="@_tagDraft" @oninput="args => _tagDraft = args.Value?.ToString() ?? string.Empty"
+               @onkeydown="OnChooseKey" />
+        <button type="button" class="ed-btn ed-btn-ghost" data-testid="post-tag-use"
+                @onclick="UseDraft">Use tag</button>
+    </div>
+
+    <p class="post-media-hint">
+        @if (_scope == Scope.Tag && ActiveTag is { Length: > 0 } active)
+        {
+            <text>Showing <strong>@active</strong>. Anything you upload or drop is tagged <strong>@active</strong> and inserted where the caret is.</text>
+        }
+        else
+        {
+            <text>Drop files on either pane — they are inserted where the caret is. Choose a tag first and uploads are filed under it.</text>
+        }
+    </p>
+
+    @foreach (var name in Uploading)
+    {
+        <div class="post-media-uploading" role="status">Uploading @name…</div>
+    }
+
+    @{ var shelf = Shelf(); }
+    @if (shelf.Count == 0 && Uploading.Count == 0)
+    {
+        <p class="post-media-empty" data-testid="post-media-empty">@EmptyText()</p>
+    }
+    else
+    {
+        <ul class="post-media-grid" data-testid="post-media-grid">
+            @foreach (var asset in shelf)
+            {
+                var candidate = asset;
+                <li @key="candidate.Id" class="post-media-item">
+                    <button type="button" class="post-media-tile" data-testid="post-media-tile"
+                            data-asset="@candidate.Id.Compact" title="Insert @candidate.Name"
+                            @onclick="() => OnPick.InvokeAsync(candidate)">
+                        <img class="post-media-thumb" src="@ThumbUrl(candidate)" alt="" loading="lazy" />
+                        <span class="post-media-name">@candidate.Name</span>
+                        @if (candidate.Status != AssetStatus.Ready)
+                        {
+                            <span class="post-media-badge">@candidate.Status</span>
+                        }
+                    </button>
+                    <button type="button" class="post-media-tagbtn @(_openId == candidate.Id ? "is-on" : null)"
+                            data-testid="post-media-tagbtn" data-asset="@candidate.Id.Compact"
+                            aria-expanded="@(_openId == candidate.Id ? "true" : "false")"
+                            title="Tags on @candidate.Name"
+                            @onclick="() => Toggle(candidate.Id)">#@candidate.Tags.Count</button>
+                </li>
+            }
+        </ul>
+    }
+
+    @* Looked up in the library rather than in the filtered shelf on purpose: removing the
+       tag you are filtering by drops the asset out of the grid, and the panel staying put is
+       what lets you fix a mis-tag in one place instead of hunting the file down again. *@
+    @if (_openId is { } openId && Library.Get(openId) is { } open)
+    {
+        <div class="post-media-detail" data-testid="post-media-detail">
+            <h3 class="post-media-detail-name">@open.Name</h3>
+            <ul class="post-tag-chips">
+                @foreach (var name in open.Tags)
+                {
+                    var tag = name;
+                    <li class="post-tag-chip" data-tag="@tag">
+                        <span>@tag</span>
+                        <button type="button" aria-label="Remove tag @tag" title="Remove tag"
+                                data-testid="post-tag-remove" @onclick="() => Untag(open, tag)">×</button>
+                    </li>
+                }
+                @if (open.Tags.Count == 0)
+                {
+                    <li class="post-tag-none">No tags yet.</li>
+                }
+            </ul>
+
+            <div class="post-tag-add">
+                <input class="ed-input post-tag-input" list="post-tag-options" placeholder="Add a tag…"
+                       aria-label="Add a tag to @open.Name" data-testid="post-tag-add"
+                       value="@_addDraft" @oninput="args => _addDraft = args.Value?.ToString() ?? string.Empty"
+                       @onkeydown="args => OnAddKey(args, open)" />
+                <button type="button" class="ed-btn ed-btn-ghost" data-testid="post-tag-add-go"
+                        @onclick="() => AddDraft(open)">Add</button>
+                @if (ActiveTag is { Length: > 0 } quick && !open.Tags.Contains(quick, AssetTag.Comparer))
+                {
+                    <button type="button" class="ed-btn ed-btn-ghost" data-testid="post-tag-add-active"
+                            @onclick="() => Tag(open, quick)">Add “@quick”</button>
+                }
+            </div>
+        </div>
+    }
+
+    <datalist id="post-tag-options">
+        @foreach (var name in tags)
+        {
+            <option value="@name"></option>
+        }
+    </datalist>
+</div>
+
+@code {
+    /// <summary>Names of files currently streaming up, owned by the editor that does the upload.</summary>
+    [Parameter] public IReadOnlyList<string> Uploading { get; set; } = [];
+
+    /// <summary>
+    /// The tag new uploads are filed under, and the one the shelf is narrowed to. Null means
+    /// no filing — "All" or "Untagged" — which is also the honest answer for what an upload
+    /// made from those views should be tagged with: nothing.
+    /// </summary>
+    [Parameter] public string? ActiveTag { get; set; }
+
+    [Parameter] public EventCallback<string?> ActiveTagChanged { get; set; }
+
+    /// <summary>A tile was clicked: reference this asset in the post.</summary>
+    [Parameter] public EventCallback<Asset> OnPick { get; set; }
+
+    /// <summary>Files chosen through the shelf's own button; the editor uploads them.</summary>
+    [Parameter] public EventCallback<InputFileChangeEventArgs> OnFiles { get; set; }
+
+    private enum Scope { All, Untagged, Tag }
+
+    private Scope _scope = Scope.All;
+    private string _tagDraft = "";
+    private string _addDraft = "";
+    private AssetId? _openId;
+
+    protected override void OnInitialized()
+    {
+        // The chosen tag lives in the editor so it survives a trip to the preview tab — and the
+        // scope has to come back with it, or the shelf would say "All" while uploads were still
+        // being filed under the tag the author picked before switching away.
+        _scope = ActiveTag is { Length: > 0 } ? Scope.Tag : Scope.All;
+        Library.Changed += Refresh;
+    }
+
+    private void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    // --------------------------------------------------------------- filtering
+
+    private IReadOnlyList<Asset> Shelf() => _scope switch
+    {
+        Scope.Untagged => Library.Untagged(),
+        Scope.Tag when ActiveTag is { Length: > 0 } tag => Library.Tagged(tag),
+        _ => Library.All(),
+    };
+
+    private bool IsActive(string tag) =>
+        _scope == Scope.Tag && ActiveTag is { } active && AssetTag.Comparer.Equals(active, tag);
+
+    private string EmptyText() => _scope switch
+    {
+        Scope.Untagged => "Every file carries a tag.",
+        Scope.Tag when ActiveTag is { Length: > 0 } tag =>
+            $"Nothing tagged '{tag}' yet. Drop a file here and it lands in the post with that tag.",
+        _ => "Nothing uploaded yet. Drop an image here and it lands in the post.",
+    };
+
+    private Task ShowAll() => Select(Scope.All, null);
+
+    private Task ShowUntagged() => Select(Scope.Untagged, null);
+
+    private Task Choose(string tag) => Select(Scope.Tag, tag);
+
+    private async Task Select(Scope scope, string? tag)
+    {
+        _scope = scope;
+        _openId = null;
+        ActiveTag = tag;
+        await ActiveTagChanged.InvokeAsync(tag);
+    }
+
+    private async Task UseDraft()
+    {
+        var tag = AssetTag.Normalize(_tagDraft);
+        if (tag.Length == 0)
+        {
+            await ShowAll();
+            return;
+        }
+
+        _tagDraft = "";
+        await Select(Scope.Tag, tag);
+    }
+
+    private async Task OnChooseKey(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            await UseDraft();
+        }
+        else if (args.Key == "Escape")
+        {
+            _tagDraft = "";
+        }
+    }
+
+    // ------------------------------------------------------------------ tagging
+
+    private void Toggle(AssetId id)
+    {
+        _openId = _openId == id ? null : id;
+        _addDraft = "";
+    }
+
+    // Run without an inverse, like every other command the post editor sends. The undo stack is
+    // per circuit and its UI is the PAGE editor's toolbar — an undoable tag would survive the
+    // navigation and turn a later Ctrl+Z on some page into "untag a file you cannot see". The
+    // remedy for a mis-tag is right here anyway: the chip, and the × on it.
+    private Task Tag(Asset asset, string tag) => Commands.Run(new TagAsset(asset.Id, tag));
+
+    private Task Untag(Asset asset, string tag) => Commands.Run(new UntagAsset(asset.Id, tag));
+
+    private async Task AddDraft(Asset asset)
+    {
+        var tag = AssetTag.Normalize(_addDraft);
+        if (tag.Length == 0)
+        {
+            return;
+        }
+
+        _addDraft = "";
+        await Tag(asset, tag);
+    }
+
+    private async Task OnAddKey(KeyboardEventArgs args, Asset asset)
+    {
+        if (args.Key == "Enter")
+        {
+            await AddDraft(asset);
+        }
+        else if (args.Key == "Escape")
+        {
+            _addDraft = "";
+        }
+    }
+
+    // ------------------------------------------------------------------ display
+
+    // The real picture where there is one: a vector's sanitized rendition draws itself, and
+    // a raster's smallest variant is already the right size for a tile.
+    private static string ThumbUrl(Asset asset) => asset switch
+    {
+        { Kind: AssetKind.Image, Variants.Count: > 0 } => $"/media/{asset.Variants[0].StorageKey}",
+        { Kind: AssetKind.Vector, DerivedStorageKey: { } key } => $"/media/{key}",
+        _ => $"/media/{asset.OriginalStorageKey}",
+    };
+
+    public void Dispose() => Library.Changed -= Refresh;
+}
