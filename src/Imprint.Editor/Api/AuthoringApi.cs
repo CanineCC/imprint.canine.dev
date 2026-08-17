@@ -32,6 +32,8 @@ using SetCopyLineCmd = Imprint.Authoring.Features.Sites.SetCopyLine.SetCopyLine;
 using SetFaviconCmd = Imprint.Authoring.Features.Sites.SetFavicon.SetFavicon;
 using SetSocialImageCmd = Imprint.Authoring.Features.Sites.SetSocialImage.SetSocialImage;
 using SetHeaderLogoCmd = Imprint.Authoring.Features.Sites.SetHeaderLogo.SetHeaderLogo;
+using TagAssetCmd = Imprint.Authoring.Features.Assets.TagAsset.TagAsset;
+using UntagAssetCmd = Imprint.Authoring.Features.Assets.UntagAsset.UntagAsset;
 using UploadAssetCmd = Imprint.Authoring.Features.Assets.UploadAsset.UploadAsset;
 using UploadAssetDarkVariantCmd = Imprint.Authoring.Features.Assets.UploadAssetDarkVariant.UploadAssetDarkVariant;
 
@@ -769,6 +771,17 @@ public static class AuthoringApi
             return Results.Ok(assets.All().Select(AssetView));
         });
 
+        // Filing, in bulk. The shelf is one shared library, so "which post is this figure from?"
+        // is a question only tags answer — and a caller putting a post's figures in order would
+        // otherwise make one round trip per (file, tag) pair. Both directions take a set of assets
+        // and a set of tags and apply the cross product; each is idempotent in the aggregate, so
+        // re-running a script is not an error.
+        api.MapPost("/assets/tags/add", (AssetTagsRequest? body, ICommandDispatcher dispatcher, AssetLibrary assets, CancellationToken ct) =>
+            ApplyTags(body, add: true, dispatcher, assets, actor, ct));
+
+        api.MapPost("/assets/tags/remove", (AssetTagsRequest? body, ICommandDispatcher dispatcher, AssetLibrary assets, CancellationToken ct) =>
+            ApplyTags(body, add: false, dispatcher, assets, actor, ct));
+
         // ── brand imagery ───────────────────────────────────────────────────────────────────────
         api.MapPut("/sites/{siteId}/favicon", async (string siteId, SetAssetRefRequest? body, ICommandDispatcher dispatcher, CancellationToken ct) =>
         {
@@ -801,6 +814,74 @@ public static class AuthoringApi
         });
     }
 
+    /// <summary>
+    /// Applies (or removes) every tag on every named asset. Shared by the two endpoints and the
+    /// MCP tools. Unknown ids and blank tags are rejected up front rather than half-applied — a
+    /// caller fixing a typo should not have to work out which half of its batch already landed.
+    /// </summary>
+    internal static async Task<IResult> ApplyTags(
+        AssetTagsRequest? body, bool add, ICommandDispatcher dispatcher, AssetLibrary assets, string actor, CancellationToken ct)
+    {
+        var (ids, tags, error) = ReadTagBatch(body?.AssetIds, body?.Tags, assets);
+        if (error is not null) return Results.BadRequest(new { error });
+
+        var failures = new List<string>();
+        foreach (var id in ids)
+        {
+            foreach (var tag in tags)
+            {
+                ICommand command = add ? new TagAssetCmd(id, tag) : new UntagAssetCmd(id, tag);
+                var result = await DispatchAs(dispatcher, actor, command, ct);
+                if (!result.Succeeded)
+                {
+                    failures.AddRange(result.Errors.Select(message => $"{id.Compact} / '{tag}': {message}"));
+                }
+            }
+        }
+
+        return failures.Count > 0
+            ? Results.BadRequest(new { error = add ? "tagging failed" : "untagging failed", details = failures })
+            : Results.Ok(new
+            {
+                assets = ids.Select(id => AssetView(assets.Get(id)!)).ToList(),
+                tags,
+            });
+    }
+
+    /// <summary>Validates a tag batch: every asset must exist, and at least one non-blank tag.</summary>
+    internal static (IReadOnlyList<AssetId> Ids, IReadOnlyList<string> Tags, string? Error) ReadTagBatch(
+        IEnumerable<string>? assetIds, IEnumerable<string>? tags, AssetLibrary assets)
+    {
+        var ids = new List<AssetId>();
+        foreach (var candidate in assetIds ?? [])
+        {
+            if (!TryAssetId(candidate, out var aid))
+            {
+                return ([], [], $"invalid assetId '{candidate}'");
+            }
+
+            if (assets.Get(aid) is null)
+            {
+                return ([], [], $"unknown asset '{candidate}'");
+            }
+
+            ids.Add(aid);
+        }
+
+        if (ids.Count == 0)
+        {
+            return ([], [], "assetIds is required");
+        }
+
+        var names = (tags ?? [])
+            .Select(AssetTag.Normalize)
+            .Where(tag => tag.Length > 0)
+            .Distinct(AssetTag.Comparer)
+            .ToList();
+
+        return names.Count == 0 ? ([], [], "tags is required") : (ids, names, null);
+    }
+
     /// <summary>A caller-facing asset view: identity, processing status and resolved /media URLs.</summary>
     internal static object AssetView(Asset asset) => new
     {
@@ -809,6 +890,9 @@ public static class AuthoringApi
         kind = asset.Kind.ToString(),
         status = asset.Status.ToString(),
         contentType = asset.ContentType,
+        // The filing labels. Present on every asset view so a caller can see what a shelf is
+        // already organised by before adding to it.
+        tags = asset.Tags,
         variants = asset.Variants.Select(v => new { url = $"/media/{v.StorageKey}", v.Width, v.Height }).ToList(),
         // A single representative URL: the largest raster variant, else the sanitized SVG, else
         // the original file.
@@ -1206,6 +1290,9 @@ public static class AuthoringApi
 
     /// <summary>Request body for setting a brand asset reference — null/absent clears it.</summary>
     public sealed record SetAssetRefRequest(string? AssetId);
+
+    /// <summary>Request body for tagging or untagging a batch: every tag is applied to every asset.</summary>
+    public sealed record AssetTagsRequest(string[]? AssetIds, string[]? Tags);
 }
 
 /// <summary>
