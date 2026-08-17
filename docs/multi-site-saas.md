@@ -37,14 +37,21 @@ sit in the editor top bar.
 ## Per-site deploy: environments and promotion
 
 Each site owns an **ordered list of deploy environments** (`Site.SetEnvironments`, event
-`site.environments-changed`), configured in the site's settings. An environment is just
-a **name** and a **folder**:
+`site.environments-changed`), configured in the site's settings or through the authoring
+API (`GET /api/authoring/sites/{id}` to read, `PUT …/environments` to write — the whole
+ordered list travels in one call, like navigation and the footer). An environment is just
+a **name**, a **folder** and an optional **canonical origin**:
 
 ```
 Test        →  /var/www/acme/test
 Staging     →  /var/www/acme/staging
-Production  →  /var/www/acme
+Production  →  /var/www/acme        https://acme.example
 ```
+
+An environment's `BaseUrl` is what its canonical links, `og:url`, hreflang and sitemap
+entries name. **Moving a site to a new domain is therefore a `BaseUrl` change plus a
+republish** — nothing is re-authored, and the old host keeps 301ing for the absolute links
+already published into the world.
 
 Order is the promotion pipeline. Two rules make it work:
 
@@ -81,7 +88,7 @@ always the truth.
 | --- | --- |
 | `OutputPath` | Default output folder for the single-site (no-environments) fallback. |
 | `DeployRoot` | **Sandbox root.** When set, every environment folder is a path *relative to this root*, and anything resolving outside it (via `..` or an absolute-looking value) is rejected. When null, folders are used as absolute paths as typed. |
-| `BaseUrl` | Absolute site origin for canonical URLs / sitemap, applied **only** to the single-site `OutputPath` fallback. Environment-folder output is always rendered **portable** (root-relative, no absolute origin) — a single global origin would be wrong for every site but one, and root-relative links are what make byte-copy promotion valid across domains. Per-environment canonical origins are a documented follow-up. |
+| `BaseUrl` | Absolute site origin for canonical URLs / sitemap, applied **only** to the single-site `OutputPath` fallback. A global origin would be wrong for every site but one, so environment-folder output uses **the environment's own `BaseUrl`** (see below), and renders **portable** (root-relative, no absolute origin) when that is unset — which is what makes byte-copy promotion valid across domains. |
 | `WidgetsDirectory` | Built-in widget manifest + bundles. |
 
 **`DeployRoot` is the multi-tenant safety switch.** With it null (trust mode) a single

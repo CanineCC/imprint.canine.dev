@@ -17,6 +17,7 @@ using RemoveLocaleCmd = Imprint.Authoring.Features.Sites.RemoveLocale.RemoveLoca
 using SeedLocaleCmd = Imprint.Authoring.Features.Sites.SeedLocale.SeedLocale;
 using SetHeaderActionsCmd = Imprint.Authoring.Features.Sites.SetHeaderActions.SetHeaderActions;
 using ChangeNodePropsCmd = Imprint.Authoring.Features.Pages.ChangeNodeProps.ChangeNodeProps;
+using ConfigureEnvironmentsCmd = Imprint.Authoring.Features.Sites.ConfigureEnvironments.ConfigureEnvironments;
 using ChangePageMetaCmd = Imprint.Authoring.Features.Pages.ChangePageMeta.ChangePageMeta;
 using ChangePageSlugCmd = Imprint.Authoring.Features.Pages.ChangeSlug.ChangeSlug;
 using ChangePageTitleCmd = Imprint.Authoring.Features.Pages.ChangePageTitle.ChangePageTitle;
@@ -171,6 +172,14 @@ public static class AuthoringApi
                 defaultLocale = site.DefaultLocale.Value,
                 locales = site.Locales.Select(l => l.Value).ToList(),
                 copyLine = site.CopyLine is null ? null : Localized(site.CopyLine.Text),
+                // The read a caller needs before PUTting /environments back, and the one place the
+                // site's canonical origin is visible to a machine.
+                environments = site.Environments.Select(environment => (object)new
+                {
+                    name = environment.Name,
+                    path = environment.Path,
+                    baseUrl = environment.BaseUrl,
+                }).ToList(),
                 navigation = site.Navigation.Select(item => (object)new
                 {
                     label = item.Label is null ? null : Localized(item.Label),
@@ -709,6 +718,37 @@ public static class AuthoringApi
                 : Results.BadRequest(new { error = "copy line change failed", details = result.Errors });
         });
 
+        // The site's ordered deploy environments. Like navigation and the footer, the whole list
+        // travels in one call — the settings gear edits them as a unit and the aggregate validates
+        // them as a set (unique names, folder shape). Read /sites/{id} first and PUT back the shape
+        // you want.
+        //
+        // This exists because an environment's BaseUrl is the site's canonical origin — what every
+        // canonical link, og:url, hreflang and sitemap entry names — so MOVING A SITE TO A NEW
+        // DOMAIN is a BaseUrl change plus a republish. Without this endpoint that move was reachable
+        // only by hand in the interactive editor, which is exactly the surface an off-network or
+        // scripted operator does not have.
+        api.MapPut("/sites/{siteId}/environments", async (
+            string siteId, JsonElement body, ICommandDispatcher dispatcher, SiteOverview sites, CancellationToken ct) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            if (sites.Get(sid) is null) return Results.NotFound(new { error = "unknown site" });
+            if (!body.TryGetProperty("environments", out var environments) || environments.ValueKind != JsonValueKind.Array)
+            {
+                return Results.BadRequest(new { error = "an 'environments' array is required" });
+            }
+
+            if (!TryParseEnvironments(environments, out var parsed, out var environmentsError))
+            {
+                return Results.BadRequest(new { error = environmentsError });
+            }
+
+            var result = await DispatchAs(dispatcher, actor, new ConfigureEnvironmentsCmd(sid, parsed), ct);
+            return result.Succeeded
+                ? Results.Ok(new { siteId = sid.Compact, environments = parsed.Count })
+                : Results.BadRequest(new { error = "environments change failed", details = result.Errors });
+        });
+
         // ── assets ──────────────────────────────────────────────────────────────────────────────
         // Upload a file. Two accepted shapes: a multipart form-file (field "file", the primary
         // path), or a raw request body with an X-Filename header and a Content-Type. Processing
@@ -1075,6 +1115,57 @@ public static class AuthoringApi
                 };
             })],
         })];
+    }
+
+    /// <summary>
+    /// Reads the wire shape of the deploy-environment list. Name and folder uniqueness are the
+    /// aggregate's business — this only refuses what would reach it malformed, and normalises the
+    /// one field with a shape the domain does not constrain: <c>baseUrl</c> is an ORIGIN, so a
+    /// relative value is refused and a trailing slash is trimmed rather than left to double up
+    /// against the paths the publisher concatenates onto it.
+    /// </summary>
+    internal static bool TryParseEnvironments(
+        JsonElement environments, out List<DeployEnvironment> parsed, out string? error)
+    {
+        parsed = [];
+        foreach (var environment in environments.EnumerateArray())
+        {
+            if (environment.ValueKind != JsonValueKind.Object)
+            {
+                error = "each environment must be a JSON object";
+                return false;
+            }
+
+            if (Text(environment, "name") is not { Length: > 0 } name)
+            {
+                error = "each environment needs a 'name'";
+                return false;
+            }
+
+            if (Text(environment, "path") is not { Length: > 0 } path)
+            {
+                error = $"environment '{name}' needs a 'path'";
+                return false;
+            }
+
+            var baseUrl = Text(environment, "baseUrl");
+            if (baseUrl is { Length: > 0 })
+            {
+                if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var origin)
+                    || (origin.Scheme != Uri.UriSchemeHttps && origin.Scheme != Uri.UriSchemeHttp))
+                {
+                    error = $"'{baseUrl}' is not an absolute http(s) origin";
+                    return false;
+                }
+
+                baseUrl = baseUrl.TrimEnd('/');
+            }
+
+            parsed.Add(new DeployEnvironment(name, path, string.IsNullOrWhiteSpace(baseUrl) ? null : baseUrl));
+        }
+
+        error = null;
+        return true;
     }
 
     /// <inheritdoc cref="CarryOtherLocales(List{NavigationItem}, IReadOnlyList{NavigationItem}, Locale)"/>
