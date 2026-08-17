@@ -921,7 +921,9 @@ button { font: inherit; color: inherit; }
 .post-view { border: 1px solid transparent; border-bottom: 0; background: transparent; color: var(--ed-text-muted); cursor: pointer; padding: .3rem .8rem; border-radius: var(--ed-radius-sm) var(--ed-radius-sm) 0 0; font: inherit; font-size: .8rem; }
 .post-view:hover { color: inherit; }
 .post-view.is-on { background: var(--ed-surface); border-color: var(--ed-border); color: inherit; margin-bottom: -1px; }
-.post-pane-side .post-preview, .post-pane-side .post-media { flex: 1 1 auto; overflow: auto; min-height: 0; }
+/* The one scroller in this pane, and deliberately NOT the preview element: that one is inert,
+   and an inert subtree is not hit-tested, so a wheel over it scrolls nothing at all. */
+.post-view-body { flex: 1 1 auto; overflow: auto; min-height: 0; }
 
 .post-media { background: var(--ed-surface-alt); padding: .6rem 1rem .8rem; }
 .post-media-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }

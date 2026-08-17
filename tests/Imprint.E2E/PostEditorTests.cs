@@ -141,6 +141,42 @@ public sealed class PostEditorTests(EditorFixture fixture)
     }
 
     [Fact]
+    public async Task A_post_longer_than_the_preview_pane_can_be_scrolled()
+    {
+        // The preview element carries `inert`, and an inert subtree is not hit-tested — so when it
+        // was itself the scroll container, a wheel over it scrolled nothing and a long post could
+        // only ever be read from the top. Asserted by actually scrolling and reading scrollTop
+        // back: "the CSS says overflow:auto" would have been true of the broken version too.
+        var page = await OpenPosts(fixture);
+        await page.FillAsync("[data-testid='new-post-title']", $"Long {Guid.NewGuid():N}"[..12]);
+        await page.ClickAsync("[data-testid='new-post-create']");
+        await page.WaitForURLAsync("**/posts/**");
+        await page.WaitForInteractive();
+
+        var body = string.Join("\n\n", Enumerable.Range(1, 60).Select(i => $"Paragraph {i} of a post that is taller than any pane."));
+        await page.FillAsync("[data-testid='post-body']", body);
+        await page.Locator("[data-testid='post-preview'] p").Last.WaitForAsync();
+
+        var pane = page.Locator("[data-testid='post-view-body']");
+        Assert.True(
+            await pane.EvaluateAsync<int>("el => el.scrollHeight - el.clientHeight") > 0,
+            "the preview pane should overflow for a 60-paragraph post");
+
+        await pane.EvaluateAsync("el => el.scrollTo(0, 400)");
+        Assert.True(await pane.EvaluateAsync<int>("el => el.scrollTop") > 0, "the preview pane did not scroll");
+
+        // The mouse wheel over the preview must reach that scroller too — the failure was a wheel
+        // landing on an inert element, which scrollTo() alone would not have caught. Hovered via
+        // the wrapper because hit-testing over an inert subtree lands there by definition: that
+        // redirection IS the fix, and Playwright refuses to hover the inert element for the same
+        // reason ("post-view-body intercepts pointer events").
+        await pane.EvaluateAsync("el => el.scrollTo(0, 0)");
+        await pane.HoverAsync();
+        await page.Mouse.WheelAsync(0, 600);
+        await Expect(pane).Not.ToHaveJSPropertyAsync("scrollTop", 0);
+    }
+
+    [Fact]
     public async Task An_upload_is_tagged_with_the_post_by_default_and_its_tags_are_editable_on_the_tile()
     {
         // The complaint this answers, in order: the markdown never leaves the screen; an upload

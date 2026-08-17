@@ -94,6 +94,12 @@ else
                 <InputFile OnChange="OnFiles" multiple class="ed-visually-hidden"
                            data-testid="post-side-drop" aria-label="Upload images into the post" />
 
+                @* The scroller is this wrapper, never the preview itself: the preview carries
+                   `inert`, and inert disables hit-testing for its whole subtree — so a wheel over
+                   an inert scroll container finds nothing to scroll and the author is stuck at the
+                   top of their own post. The page editor has always done it this way
+                   (.ed-canvas-scroll around .ed-canvas); this pane simply forgot to. *@
+                <div class="post-view-body" data-testid="post-view-body">
                 @if (_view == SideView.Preview)
                 {
                     @* The canvas paints itself from the PUBLISHED site's tokens (--ip-background and
@@ -120,6 +126,7 @@ else
                                     @bind-UploadTags="_uploadTags"
                                     OnPick="InsertAsset" OnFiles="OnFiles" />
                 }
+                </div>
             </section>
         </div>
 
