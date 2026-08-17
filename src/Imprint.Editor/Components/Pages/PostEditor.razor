@@ -114,7 +114,10 @@ else
                 }
                 else
                 {
-                    <PostMediaShelf Uploading="_uploading" @bind-ActiveTag="_uploadTag"
+                    @* DefaultTag is a string parameter, so it needs @ — without it Razor passes
+                       the literal text "DefaultTag" and every upload is filed under that. *@
+                    <PostMediaShelf Uploading="_uploading" DefaultTag="@DefaultTag"
+                                    @bind-UploadTags="_uploadTags"
                                     OnPick="InsertAsset" OnFiles="OnFiles" />
                 }
             </section>
@@ -166,12 +169,41 @@ else
     private readonly List<string> _uploading = [];
 
     /// <summary>
-    /// The tag the media view is currently pointed at, and therefore the tag anything
-    /// uploaded from here is filed under — including files dropped on the markdown pane
-    /// while the preview is showing. Null when the shelf is on "All" or "Untagged": an
-    /// upload made with no group chosen belongs to no group.
+    /// What new uploads are tagged with — comma-separated, editable, and pre-filled with
+    /// <see cref="DefaultTag"/>. It is *not* the shelf's filter: browsing another group must
+    /// not quietly re-file the next drop somewhere the author was only looking.
     /// </summary>
-    private string? _uploadTag;
+    private string _uploadTags = "";
+
+    /// <summary>
+    /// The post's own name as a tag. "Every upload carries at least one tag" is a rule the
+    /// product keeps rather than a form the author fills: a file dropped into a post belongs
+    /// to that post, and nothing uploaded here can land in the library unfiled. The author can
+    /// still type other tags before dropping, and take this one off the file afterwards.
+    /// </summary>
+    private string DefaultTag => TagFrom(_titleText);
+
+    private static string TagFrom(string title)
+    {
+        var tag = AssetTag.Normalize(title);
+        return tag.Length <= AssetTag.MaxLength ? tag : tag[..AssetTag.MaxLength].TrimEnd();
+    }
+
+    /// <summary>
+    /// The tags an upload gets: what the author typed, or the post's own tag when they typed
+    /// nothing. Duplicates and stray commas are the author's shorthand, not an error.
+    /// </summary>
+    private IReadOnlyList<string> UploadTags()
+    {
+        var typed = _uploadTags
+            .Split(',')
+            .Select(AssetTag.Normalize)
+            .Where(tag => tag.Length > 0)
+            .Distinct(AssetTag.Comparer)
+            .ToList();
+
+        return typed.Count > 0 ? typed : DefaultTag is { Length: > 0 } fallback ? [fallback] : [];
+    }
 
     private async Task OnFiles(InputFileChangeEventArgs args)
     {
@@ -200,10 +232,9 @@ else
                         assetId, file.Name, ContentTypeOf(file), file.Size, content)))
                 {
                     // Filed as it lands, which is the only moment the author's intent is known
-                    // without asking: they chose the group before dropping the file. A separate
-                    // command rather than a field on the upload — the upload slice streams bytes
-                    // and knows nothing of the library's filing.
-                    if (_uploadTag is { Length: > 0 } tag)
+                    // without asking. Separate commands rather than a field on the upload — the
+                    // upload slice streams bytes and knows nothing of the library's filing.
+                    foreach (var tag in UploadTags())
                     {
                         await Commands.Run(new Authoring.Features.Assets.TagAsset.TagAsset(assetId, tag));
                     }

@@ -141,13 +141,14 @@ public sealed class PostEditorTests(EditorFixture fixture)
     }
 
     [Fact]
-    public async Task Media_is_a_view_of_the_right_pane_and_uploads_are_filed_under_the_chosen_tag()
+    public async Task An_upload_is_tagged_with_the_post_by_default_and_its_tags_are_editable_on_the_tile()
     {
-        // What this asserts, in order, is the complaint that produced the feature: the markdown
-        // never leaves the screen; a tag chosen before an upload files that upload; the shelf
-        // narrows to one tag; and a tag can be taken off again afterwards.
+        // The complaint this answers, in order: the markdown never leaves the screen; an upload
+        // is never unfiled, without the author being asked anything; the tags are ON the tile,
+        // so adding and removing one are visible affordances rather than a discovery problem.
         var page = await OpenPosts(fixture);
-        await page.FillAsync("[data-testid='new-post-title']", $"Tagged {Guid.NewGuid():N}"[..12]);
+        var title = $"Tagged {Guid.NewGuid():N}"[..14];
+        await page.FillAsync("[data-testid='new-post-title']", title);
         await page.ClickAsync("[data-testid='new-post-create']");
         await page.WaitForURLAsync("**/posts/**");
         await page.WaitForInteractive();
@@ -157,52 +158,51 @@ public sealed class PostEditorTests(EditorFixture fixture)
         await Expect(page.Locator("[data-testid='post-body']")).ToBeVisibleAsync();
         await Expect(page.Locator("[data-testid='post-preview']")).ToHaveCountAsync(0);
 
-        // The library is shared by every test in this collection, so the group is named for
-        // this run — which is also how an author uses it: one tag per post.
-        var tag = $"Blog-entry-{Guid.NewGuid():N}"[..18];
-        await page.FillAsync("[data-testid='post-tag-choose']", tag);
-        await page.ClickAsync("[data-testid='post-tag-use']");
-        await Expect(page.Locator("[data-testid='post-media-empty']")).ToBeVisibleAsync();
+        // The post's own name is what the next upload is filed under, and the field says so
+        // before anything is dropped — the author never has to know the rule to benefit from it.
+        await Expect(page.Locator("[data-testid='post-tag-choose']")).ToHaveAttributeAsync("placeholder", title);
 
-        var figure = await WriteSvg("#0e7c6b");
-        await page.SetInputFilesAsync("[data-testid='post-media-input']", figure);
-
-        // Filed on the way in: the shelf is showing exactly this tag, and the file is on it.
         var tiles = page.Locator("[data-testid='post-media-tile']");
-        await Expect(tiles).ToHaveCountAsync(1);
+        await page.SetInputFilesAsync("[data-testid='post-media-input']", await WriteSvg("#0e7c6b"));
+
+        // Tagged with the post, with nothing asked of the author…
+        await Expect(page.Locator($"[data-testid='post-tag'][data-tag='{title}']")).ToHaveTextAsync($"{title} (1)");
         await Expect(page.Locator("[data-testid='post-body']"))
             .ToHaveValueAsync(new Regex(@"!\[[^\]]*\]\(media:[0-9a-fA-F]{32}\)"));
 
-        // The picture is in the post the moment it is uploaded, and the preview — one tab away,
-        // with the markdown still on screen — shows the graphic itself.
+        // …and the group is one click away, which is the point of filing it at all.
+        await page.ClickAsync($"[data-testid='post-tag'][data-tag='{title}']");
+        await Expect(tiles).ToHaveCountAsync(1);
+
+        // The picture is in the post already, and the preview — one tab away, with the markdown
+        // still on screen — shows the graphic itself.
         await page.ClickAsync("[data-testid='post-view-preview']");
         await page.Locator("[data-testid='post-preview'] .ip-svg svg").WaitForAsync();
         await page.ClickAsync("[data-testid='post-view-media']");
 
-        // Coming back finds the same group open. The chosen tag is what the next drop is filed
-        // under, so a shelf that quietly reset to "All" would keep filing files while showing
-        // the author no sign of it.
-        await Expect(page.Locator($"[data-testid='post-tag'][data-tag='{tag}']"))
-            .ToHaveClassAsync(new Regex(@"\bis-on\b"));
-        await Expect(tiles).ToHaveCountAsync(1);
+        // A second tag, added from the tile: the button says "+ Tag" and the input is right there.
+        var second = $"Portraits-{Guid.NewGuid():N}"[..16];
+        await page.ClickAsync("[data-testid='post-tag-add-open']");
+        await page.FillAsync("[data-testid='post-tag-add']", second);
+        await page.ClickAsync("[data-testid='post-tag-add-go']");
+        await Expect(page.Locator($"[data-testid='post-tag'][data-tag='{second}']")).ToHaveTextAsync($"{second} (1)");
+        await Expect(page.Locator($".post-media-tags .post-tag-chip[data-tag='{second}']")).ToHaveCountAsync(1);
 
-        // A second file uploaded with no group chosen joins no group…
-        await page.ClickAsync("[data-testid='post-tag-all']");
+        // Typing over the upload field files the NEXT upload elsewhere, and only the next one.
+        var chosen = $"Blog-entry-{Guid.NewGuid():N}"[..18];
+        await page.FillAsync("[data-testid='post-tag-choose']", chosen);
         await page.SetInputFilesAsync("[data-testid='post-media-input']", await WriteSvg("#8a5a00"));
-        await Expect(page.Locator($"[data-testid='post-tag'][data-tag='{tag}']")).ToHaveTextAsync($"{tag} (1)");
+        await Expect(page.Locator($"[data-testid='post-tag'][data-tag='{chosen}']")).ToHaveTextAsync($"{chosen} (1)");
+        await Expect(page.Locator($"[data-testid='post-tag'][data-tag='{title}']")).ToHaveTextAsync($"{title} (1)");
 
-        // …and choosing the tag again narrows the shelf back to the one file that carries it.
-        await page.ClickAsync($"[data-testid='post-tag'][data-tag='{tag}']");
+        // Removing a tag is the × on the chip, on the tile, without opening anything first —
+        // and the group ceases to exist, because a tag is only a label something carries.
+        await page.ClickAsync($"[data-testid='post-tag'][data-tag='{second}']");
         await Expect(tiles).ToHaveCountAsync(1);
-
-        // Taking the tag off empties the group without touching the file itself — and the group
-        // then ceases to exist, because a tag is nothing but a label something carries.
-        await page.ClickAsync("[data-testid='post-media-tagbtn']");
-        await page.Locator("[data-testid='post-media-detail']").WaitForAsync();
-        await page.ClickAsync("[data-testid='post-tag-remove']");
+        await page.ClickAsync($"[data-testid='post-tag-remove'][data-tag='{second}']");
+        await Expect(page.Locator($"[data-testid='post-tag'][data-tag='{second}']")).ToHaveCountAsync(0);
         await Expect(tiles).ToHaveCountAsync(0);
         await Expect(page.Locator("[data-testid='post-media-empty']")).ToBeVisibleAsync();
-        await Expect(page.Locator($"[data-testid='post-tag'][data-tag='{tag}']")).ToHaveCountAsync(0);
     }
 
     private static async Task<string> WriteSvg(string fill)
