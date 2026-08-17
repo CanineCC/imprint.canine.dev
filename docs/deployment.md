@@ -174,6 +174,13 @@ own port; the dgx1 TLS edge proxies the public hostname at that port:
 | assay | `assay.canine.dev` | 8152 |
 | cai | `codeassuranceindex.info` | 8153 |
 | canine | `canine.dev` | 8154 |
+| blog *(kind: Blog)* | `blog.canine.dev` | 8155 |
+
+A **blog** is a site like any other here — one origin, one publish pipeline — but its content is
+a dated stream rather than a page tree, so it owns its root: the index is `/` and posts are
+`/<slug>/`, with no `/blog/` prefix repeating the hostname. The index is published even with no
+posts, because a blog whose subdomain is announced before the first post clears review still has
+to answer at its address.
 
 - **canine-ultra1** — a deploy target (Caddy) for other Imprint-maintained sites.
 
