@@ -35,6 +35,11 @@ using SetSocialImageCmd = Imprint.Authoring.Features.Sites.SetSocialImage.SetSoc
 using SetLlmsExcludedPathsCmd = Imprint.Authoring.Features.Sites.SetLlmsExcludedPaths.SetLlmsExcludedPaths;
 using SetLlmsPreambleCmd = Imprint.Authoring.Features.Sites.SetLlmsPreamble.SetLlmsPreamble;
 using SetHeaderLogoCmd = Imprint.Authoring.Features.Sites.SetHeaderLogo.SetHeaderLogo;
+using ChangePostBodyCmd = Imprint.Authoring.Features.Posts.ChangePostBody.ChangePostBody;
+using ChangePostMetaCmd = Imprint.Authoring.Features.Posts.ChangePostMeta.ChangePostMeta;
+using CreatePostCmd = Imprint.Authoring.Features.Posts.CreatePost.CreatePost;
+using SetSiteReviewerCmd = Imprint.Authoring.Features.Sites.SetSiteReviewer.SetSiteReviewer;
+using SubmitPostForReviewCmd = Imprint.Authoring.Features.Posts.SubmitPostForReview.SubmitPostForReview;
 using TagAssetCmd = Imprint.Authoring.Features.Assets.TagAsset.TagAsset;
 using UntagAssetCmd = Imprint.Authoring.Features.Assets.UntagAsset.UntagAsset;
 using UploadAssetCmd = Imprint.Authoring.Features.Assets.UploadAsset.UploadAsset;
@@ -681,6 +686,115 @@ public sealed class ImprintAuthoringMcpTools
         await using var stream = new MemoryStream(bytes);
         return await Dispatch(dispatcher, config, new UploadAssetDarkVariantCmd(aid, fileName, type, bytes.Length, stream), ct,
             () => new { ok = true, assetId = aid.Compact, status = "Pending", dark = true });
+    }
+
+    [McpServerTool(Name = "list_posts")]
+    [Description("List a site's blog posts: id, slug, title, status (Draft/InReview/ChangesRequested/Approved/Scheduled/Published/Modified), the reviewer's note if it was sent back, the go-live date and the published date.")]
+    public static object ListPosts(
+        [Description("The site id (compact or dashed GUID).")] string siteId,
+        SiteOverview sites, PostList posts)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        if (sites.Get(sid) is not { } site) return Fail("unknown site");
+        return new { ok = true, posts = posts.All(sid).Select(post => AuthoringApi.PostView(post, site)).ToList() };
+    }
+
+    [McpServerTool(Name = "create_post")]
+    [Description("Create a blog post and return its id. The body is markdown, set separately with set_post_body. The slug is derived from the title unless given.")]
+    public static async Task<object> CreatePost(
+        [Description("The site id the post belongs to.")] string siteId,
+        [Description("The post title.")] string title,
+        [Description("Optional URL slug; derived from the title when omitted.")] string? slug,
+        [Description("Optional locale tag; the site's default when omitted.")] string? locale,
+        ICommandDispatcher dispatcher, IConfiguration config, SiteOverview sites, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        if (sites.Get(sid) is not { } site) return Fail("unknown site");
+        if (string.IsNullOrWhiteSpace(title)) return Fail("title is required");
+
+        var postId = PostId.New();
+        var tag = locale is { Length: > 0 } given ? given : site.DefaultLocale.Value;
+        var address = slug is { Length: > 0 } chosen ? chosen : Slug.Suggest(title);
+        return await Dispatch(dispatcher, config, new CreatePostCmd(postId, sid, title, address, tag), ct,
+            () => new { ok = true, postId = postId.Compact, slug = address, locale = tag });
+    }
+
+    [McpServerTool(Name = "set_post_body")]
+    [Description("Replace a post's markdown body for one locale. Markdown is the authored truth — the node tree is rebuilt from it at publish, so a later converter fix reaches posts already written. Images are referenced as ![alt](media:{assetId}) and must stand alone in their paragraph.")]
+    public static async Task<object> SetPostBody(
+        [Description("The post id.")] string postId,
+        [Description("The markdown body.")] string markdown,
+        [Description("Optional locale tag; the site's default when omitted.")] string? locale,
+        ICommandDispatcher dispatcher, IConfiguration config, PostList posts, SiteOverview sites, CancellationToken ct = default)
+    {
+        if (!AuthoringApi.TryPostIdPublic(postId, out var pid)) return Fail("invalid postId");
+        if (posts.Get(pid) is not { } post) return Fail("unknown post");
+        var tag = locale is { Length: > 0 } given ? given : sites.Get(post.SiteId)?.DefaultLocale.Value ?? "en";
+        return await Dispatch(dispatcher, config, new ChangePostBodyCmd(pid, tag, markdown ?? ""), ct,
+            () => new { ok = true, postId = pid.Compact, locale = tag });
+    }
+
+    [McpServerTool(Name = "set_post_meta")]
+    [Description("Set a post's SEO meta title and description for one locale.")]
+    public static async Task<object> SetPostMeta(
+        [Description("The post id.")] string postId,
+        [Description("Meta title, or null to leave it.")] string? metaTitle,
+        [Description("Meta description, or null to leave it.")] string? metaDescription,
+        [Description("Optional locale tag; the site's default when omitted.")] string? locale,
+        ICommandDispatcher dispatcher, IConfiguration config, PostList posts, SiteOverview sites, CancellationToken ct = default)
+    {
+        if (!AuthoringApi.TryPostIdPublic(postId, out var pid)) return Fail("invalid postId");
+        if (posts.Get(pid) is not { } post) return Fail("unknown post");
+        var tag = locale is { Length: > 0 } given ? given : sites.Get(post.SiteId)?.DefaultLocale.Value ?? "en";
+        return await Dispatch(dispatcher, config, new ChangePostMetaCmd(pid, tag, metaTitle, metaDescription), ct,
+            () => new { ok = true, postId = pid.Compact, locale = tag });
+    }
+
+    [McpServerTool(Name = "submit_post_for_review")]
+    [Description("Hand a post to the site's reviewer, with a proposed go-live date they may change (ISO 8601 with offset, e.g. 2026-09-01T09:00:00+02:00). Omit the date for 'to be decided'. Fails when the site has no reviewer configured — set one with set_site_reviewer. The reviewer is emailed if a mail relay is configured.")]
+    public static async Task<object> SubmitPostForReview(
+        [Description("The post id.")] string postId,
+        [Description("Proposed go-live instant, ISO 8601 with offset; omit for 'to be decided'.")] string? proposedPublishAt,
+        [Description("Optional note for the reviewer.")] string? note,
+        ICommandDispatcher dispatcher, IConfiguration config, PostList posts, SiteOverview sites, CancellationToken ct = default)
+    {
+        if (!AuthoringApi.TryPostIdPublic(postId, out var pid)) return Fail("invalid postId");
+        if (posts.Get(pid) is not { } post) return Fail("unknown post");
+        if (!TryInstant(proposedPublishAt, out var at)) return Fail($"'{proposedPublishAt}' is not an ISO 8601 instant");
+        var tag = sites.Get(post.SiteId)?.DefaultLocale.Value ?? "en";
+        return await Dispatch(dispatcher, config, new SubmitPostForReviewCmd(pid, tag, at, note), ct,
+            () => new { ok = true, postId = pid.Compact, status = "InReview", proposedPublishAt = at });
+    }
+
+    [McpServerTool(Name = "set_site_reviewer")]
+    [Description("Name (or clear, with a blank email) the site's public-relations reviewer. With one set, posts on that site cannot be published directly: they are submitted, and the reviewer approves the words and the date. Naming someone does NOT grant them editor access — add them as a collaborator too.")]
+    public static async Task<object> SetSiteReviewer(
+        [Description("The site id.")] string siteId,
+        [Description("The reviewer's name, e.g. 'Lasse'.")] string? name,
+        [Description("The reviewer's email; blank clears the role.")] string? email,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        return await Dispatch(dispatcher, config, new SetSiteReviewerCmd(sid, name, email), ct,
+            () => new { ok = true, siteId = sid.Compact, reviewer = email });
+    }
+
+    private static bool TryInstant(string? text, out DateTimeOffset? instant)
+    {
+        instant = null;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return true;   // absent is "to be decided", not a parse failure
+        }
+
+        if (!DateTimeOffset.TryParse(text, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var parsed))
+        {
+            return false;
+        }
+
+        instant = parsed;
+        return true;
     }
 
     [McpServerTool(Name = "tag_assets")]

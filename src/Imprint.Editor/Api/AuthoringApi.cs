@@ -33,6 +33,15 @@ using SetCopyLineCmd = Imprint.Authoring.Features.Sites.SetCopyLine.SetCopyLine;
 using SetFaviconCmd = Imprint.Authoring.Features.Sites.SetFavicon.SetFavicon;
 using SetSocialImageCmd = Imprint.Authoring.Features.Sites.SetSocialImage.SetSocialImage;
 using SetHeaderLogoCmd = Imprint.Authoring.Features.Sites.SetHeaderLogo.SetHeaderLogo;
+using ApprovePostReviewCmd = Imprint.Authoring.Features.Posts.ApprovePostReview.ApprovePostReview;
+using ChangePostBodyCmd = Imprint.Authoring.Features.Posts.ChangePostBody.ChangePostBody;
+using ChangePostMetaCmd = Imprint.Authoring.Features.Posts.ChangePostMeta.ChangePostMeta;
+using CreatePostCmd = Imprint.Authoring.Features.Posts.CreatePost.CreatePost;
+using PublishPostCmd = Imprint.Authoring.Features.Posts.PublishPost.PublishPost;
+using RequestPostChangesCmd = Imprint.Authoring.Features.Posts.RequestPostChanges.RequestPostChanges;
+using SchedulePostCmd = Imprint.Authoring.Features.Posts.SchedulePost.SchedulePost;
+using SetSiteReviewerCmd = Imprint.Authoring.Features.Sites.SetSiteReviewer.SetSiteReviewer;
+using SubmitPostForReviewCmd = Imprint.Authoring.Features.Posts.SubmitPostForReview.SubmitPostForReview;
 using TagAssetCmd = Imprint.Authoring.Features.Assets.TagAsset.TagAsset;
 using UntagAssetCmd = Imprint.Authoring.Features.Assets.UntagAsset.UntagAsset;
 using UploadAssetCmd = Imprint.Authoring.Features.Assets.UploadAsset.UploadAsset;
@@ -749,6 +758,136 @@ public static class AuthoringApi
                 : Results.BadRequest(new { error = "environments change failed", details = result.Errors });
         });
 
+        // ── posts ───────────────────────────────────────────────────────────────────────────────
+        // The blog, headless. Posts were reachable only through the Blazor editor, which meant a
+        // prepared post — drafted elsewhere, with its figures — had to be retyped by a person.
+        // The review workflow is here too, because "prepare it and put it in front of the
+        // reviewer" is one job, and stopping at "draft" would leave the last step manual.
+        api.MapGet("/sites/{siteId}/posts", (string siteId, SiteOverview sites, PostList posts) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            if (sites.Get(sid) is not { } site) return Results.NotFound(new { error = "unknown site" });
+            return Results.Ok(posts.All(sid).Select(post => PostView(post, site)));
+        });
+
+        api.MapGet("/posts/{postId}", (string postId, SiteOverview sites, PostList posts) =>
+        {
+            if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
+            if (posts.Get(pid) is not { } post) return Results.NotFound(new { error = "unknown post" });
+            return Results.Ok(PostView(post, sites.Get(post.SiteId)));
+        });
+
+        api.MapPost("/sites/{siteId}/posts", async (
+            string siteId, CreatePostRequest? body, ICommandDispatcher dispatcher, SiteOverview sites, CancellationToken ct) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            if (sites.Get(sid) is not { } site) return Results.NotFound(new { error = "unknown site" });
+            if (body is null || string.IsNullOrWhiteSpace(body.Title)) return Results.BadRequest(new { error = "title is required" });
+
+            var postId = PostId.New();
+            var locale = body.Locale is { Length: > 0 } tag ? tag : site.DefaultLocale.Value;
+            // A slug is derived from the title when none is given — the same courtesy the editor's
+            // "New post" box does, so a caller does not have to know the slug rules to create one.
+            var slug = body.Slug is { Length: > 0 } given ? given : Slug.Suggest(body.Title);
+            var result = await DispatchAs(dispatcher, actor, new CreatePostCmd(postId, sid, body.Title, slug, locale), ct);
+            return result.Succeeded
+                ? Results.Ok(new { postId = postId.Compact, slug, locale })
+                : Results.BadRequest(new { error = "create post failed", details = result.Errors });
+        });
+
+        api.MapPut("/posts/{postId}/body", async (
+            string postId, PostBodyRequest? body, ICommandDispatcher dispatcher, PostList posts, SiteOverview sites, CancellationToken ct) =>
+        {
+            if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
+            if (posts.Get(pid) is not { } post) return Results.NotFound(new { error = "unknown post" });
+            var locale = LocaleFor(body?.Locale, post, sites);
+            var result = await DispatchAs(dispatcher, actor, new ChangePostBodyCmd(pid, locale, body?.Markdown ?? ""), ct);
+            return result.Succeeded
+                ? Results.Ok(new { postId = pid.Compact, locale, length = (body?.Markdown ?? "").Length })
+                : Results.BadRequest(new { error = "change body failed", details = result.Errors });
+        });
+
+        api.MapPut("/posts/{postId}/meta", async (
+            string postId, PostMetaRequest2? body, ICommandDispatcher dispatcher, PostList posts, SiteOverview sites, CancellationToken ct) =>
+        {
+            if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
+            if (posts.Get(pid) is not { } post) return Results.NotFound(new { error = "unknown post" });
+            var locale = LocaleFor(body?.Locale, post, sites);
+            var result = await DispatchAs(dispatcher, actor, new ChangePostMetaCmd(pid, locale, body?.MetaTitle, body?.MetaDescription), ct);
+            return result.Succeeded
+                ? Results.Ok(new { postId = pid.Compact, locale })
+                : Results.BadRequest(new { error = "change meta failed", details = result.Errors });
+        });
+
+        // The go-live instant, absolute (ISO 8601 with an offset). Null clears it to "to be
+        // decided" — which is a decision to wait, not a decision to publish now.
+        api.MapPut("/posts/{postId}/schedule", async (
+            string postId, PostScheduleRequest? body, ICommandDispatcher dispatcher, CancellationToken ct) =>
+        {
+            if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
+            var result = await DispatchAs(dispatcher, actor, new SchedulePostCmd(pid, body?.PublishAt), ct);
+            return result.Succeeded
+                ? Results.Ok(new { postId = pid.Compact, publishAt = body?.PublishAt })
+                : Results.BadRequest(new { error = "schedule failed", details = result.Errors });
+        });
+
+        api.MapPost("/posts/{postId}/submit-review", async (
+            string postId, PostSubmitRequest? body, ICommandDispatcher dispatcher, PostList posts, SiteOverview sites, CancellationToken ct) =>
+        {
+            if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
+            if (posts.Get(pid) is not { } post) return Results.NotFound(new { error = "unknown post" });
+            var locale = LocaleFor(body?.Locale, post, sites);
+            var result = await DispatchAs(dispatcher, actor,
+                new SubmitPostForReviewCmd(pid, locale, body?.ProposedPublishAt, body?.Note), ct);
+            return result.Succeeded
+                ? Results.Ok(new { postId = pid.Compact, status = "InReview" })
+                : Results.BadRequest(new { error = "submit failed", details = result.Errors });
+        });
+
+        api.MapPost("/posts/{postId}/approve", async (
+            string postId, PostApproveRequest? body, ICommandDispatcher dispatcher, CancellationToken ct) =>
+        {
+            if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
+            var result = await DispatchAs(dispatcher, actor, new ApprovePostReviewCmd(pid, body?.PublishAt), ct);
+            return result.Succeeded
+                ? Results.Ok(new { postId = pid.Compact, publishAt = body?.PublishAt })
+                : Results.BadRequest(new { error = "approve failed", details = result.Errors });
+        });
+
+        api.MapPost("/posts/{postId}/request-changes", async (
+            string postId, PostChangesRequest? body, ICommandDispatcher dispatcher, CancellationToken ct) =>
+        {
+            if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
+            var result = await DispatchAs(dispatcher, actor, new RequestPostChangesCmd(pid, body?.Reason ?? ""), ct);
+            return result.Succeeded
+                ? Results.Ok(new { postId = pid.Compact, status = "ChangesRequested" })
+                : Results.BadRequest(new { error = "request changes failed", details = result.Errors });
+        });
+
+        api.MapPost("/posts/{postId}/publish", async (
+            string postId, ICommandDispatcher dispatcher, PostList posts, SiteOverview sites, CancellationToken ct) =>
+        {
+            if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
+            if (posts.Get(pid) is not { } post) return Results.NotFound(new { error = "unknown post" });
+            var result = await DispatchAs(dispatcher, actor, new PublishPostCmd(pid, LocaleFor(null, post, sites)), ct);
+            return result.Succeeded
+                ? Results.Ok(new { postId = pid.Compact, status = "Published" })
+                : Results.BadRequest(new { error = "publish failed", details = result.Errors });
+        });
+
+        // Naming the reviewer is what turns publishing on this site into a two-person job, so it
+        // is reachable here too — a script that prepares posts for review should be able to say
+        // who they are for.
+        api.MapPut("/sites/{siteId}/reviewer", async (
+            string siteId, SiteReviewerRequest? body, ICommandDispatcher dispatcher, CancellationToken ct) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            var result = await DispatchAs(dispatcher, actor, new SetSiteReviewerCmd(sid, body?.Name, body?.Email), ct);
+            return result.Succeeded
+                ? Results.Ok(new { siteId = sid.Compact, reviewer = body?.Email })
+                : Results.BadRequest(new { error = "set reviewer failed", details = result.Errors });
+        });
+
         // ── assets ──────────────────────────────────────────────────────────────────────────────
         // Upload a file. Two accepted shapes: a multipart form-file (field "file", the primary
         // path), or a raw request body with an X-Filename header and a Content-Type. Processing
@@ -921,6 +1060,29 @@ public static class AuthoringApi
 
         return names.Count == 0 ? ([], [], "tags is required") : (ids, names, null);
     }
+
+    /// <summary>
+    /// A caller-facing post view. The status is computed against the SITE's review policy, so a
+    /// future date on a reviewed site reads as a proposal rather than as "Scheduled" — the same
+    /// distinction the editor draws, because a caller scripting the workflow needs it more.
+    /// </summary>
+    internal static object PostView(PostSummary post, Site? site) => new
+    {
+        id = post.Id.Compact,
+        siteId = post.SiteId.Compact,
+        slug = post.Slug.Value,
+        title = Localized(post.Title),
+        status = post.StatusAt(DateTimeOffset.UtcNow, site?.HasReviewer ?? false).ToString(),
+        review = post.Review.ToString(),
+        reviewNote = post.ReviewNote,
+        publishAt = post.PublishAt,
+        publishedAt = post.PublishedAt,
+        updatedAt = post.UpdatedAt,
+    };
+
+    /// <summary>The locale a post command should use: the one asked for, else the site's default.</summary>
+    private static string LocaleFor(string? requested, PostSummary post, SiteOverview sites) =>
+        requested is { Length: > 0 } tag ? tag : sites.Get(post.SiteId)?.DefaultLocale.Value ?? "en";
 
     /// <summary>A caller-facing asset view: identity, processing status and resolved /media URLs.</summary>
     internal static object AssetView(Asset asset) => new
@@ -1277,6 +1439,16 @@ public static class AuthoringApi
         return false;
     }
 
+    /// <summary>The MCP tools parse the same ids as the endpoints; one parser, one accepted shape.</summary>
+    internal static bool TryPostIdPublic(string? s, out PostId id) => TryPostId(s, out id);
+
+    private static bool TryPostId(string? s, out PostId id)
+    {
+        if (Guid.TryParseExact(s, "N", out var g) || Guid.TryParse(s, out g)) { id = PostId.From(g); return true; }
+        id = default;
+        return false;
+    }
+
     internal static bool TryAssetId(string? s, out AssetId id)
     {
         if (Guid.TryParseExact(s, "N", out var g) || Guid.TryParse(s, out g)) { id = AssetId.From(g); return true; }
@@ -1381,6 +1553,30 @@ public static class AuthoringApi
 
     /// <summary>Request body for setting a brand asset reference — null/absent clears it.</summary>
     public sealed record SetAssetRefRequest(string? AssetId);
+
+    /// <summary>Create a post. The slug is derived from the title when absent; locale defaults to the site's.</summary>
+    public sealed record CreatePostRequest(string Title, string? Slug, string? Locale);
+
+    /// <summary>The post's markdown for one locale — the authored truth, converted at publish.</summary>
+    public sealed record PostBodyRequest(string? Locale, string Markdown);
+
+    /// <summary>SEO meta for one locale (null leaves a field as it is).</summary>
+    public sealed record PostMetaRequest2(string? Locale, string? MetaTitle, string? MetaDescription);
+
+    /// <summary>The go-live instant, or null for "to be decided".</summary>
+    public sealed record PostScheduleRequest(DateTimeOffset? PublishAt);
+
+    /// <summary>Hand a post to the site's reviewer, with a date they may overrule.</summary>
+    public sealed record PostSubmitRequest(string? Locale, DateTimeOffset? ProposedPublishAt, string? Note);
+
+    /// <summary>The reviewer's sign-off, carrying the date they settled on (null = still to be decided).</summary>
+    public sealed record PostApproveRequest(DateTimeOffset? PublishAt);
+
+    /// <summary>Send a post back with a reason the author can act on.</summary>
+    public sealed record PostChangesRequest(string Reason);
+
+    /// <summary>Name (or clear, with a blank email) the site's public-relations reviewer.</summary>
+    public sealed record SiteReviewerRequest(string? Name, string? Email);
 
     /// <summary>Request body for tagging or untagging a batch: every tag is applied to every asset.</summary>
     public sealed record AssetTagsRequest(string[]? AssetIds, string[]? Tags);
