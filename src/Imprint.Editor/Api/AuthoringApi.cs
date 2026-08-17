@@ -4,6 +4,7 @@ using System.Text.Json;
 using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Assets;
 using Imprint.Authoring.Domain.Pages;
+using Imprint.Authoring.Domain.Posts;
 using Imprint.Authoring.Domain.Sites;
 using Imprint.Authoring.Projections;
 using Imprint.Authoring.Syndication;
@@ -181,6 +182,12 @@ public static class AuthoringApi
                 defaultLocale = site.DefaultLocale.Value,
                 locales = site.Locales.Select(l => l.Value).ToList(),
                 copyLine = site.CopyLine is null ? null : Localized(site.CopyLine.Text),
+                // Who has to clear a post before it goes public, and therefore whether posts on
+                // this site can be published directly at all. Readable because it is settable:
+                // a caller that can name a reviewer and not confirm one is flying blind.
+                reviewer = site.ReviewerEmail is { Length: > 0 }
+                    ? (object)new { name = site.ReviewerName, email = site.ReviewerEmail }
+                    : null,
                 // The read a caller needs before PUTting /environments back, and the one place the
                 // site's canonical origin is visible to a machine.
                 environments = site.Environments.Select(environment => (object)new
@@ -770,11 +777,20 @@ public static class AuthoringApi
             return Results.Ok(posts.All(sid).Select(post => PostView(post, site)));
         });
 
-        api.MapGet("/posts/{postId}", (string postId, SiteOverview sites, PostList posts) =>
+        // The body comes from the aggregate rather than a read model: markdown is the authored
+        // truth and no projection carries it, which is the honest reason a read model is the wrong
+        // place to look for it. One stream read, on a single-post request.
+        api.MapGet("/posts/{postId}", async (
+            string postId, SiteOverview sites, PostList posts, IAggregateStore store, CancellationToken ct) =>
         {
             if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
-            if (posts.Get(pid) is not { } post) return Results.NotFound(new { error = "unknown post" });
-            return Results.Ok(PostView(post, sites.Get(post.SiteId)));
+            if (posts.Get(pid) is not { } summary) return Results.NotFound(new { error = "unknown post" });
+            if (await store.LoadOrDefault<Post>(pid.Stream, ct) is not { } post)
+            {
+                return Results.NotFound(new { error = "unknown post" });
+            }
+
+            return Results.Ok(PostDetailView(summary, sites.Get(summary.SiteId), post));
         });
 
         api.MapPost("/sites/{siteId}/posts", async (
@@ -1066,19 +1082,38 @@ public static class AuthoringApi
     /// future date on a reviewed site reads as a proposal rather than as "Scheduled" — the same
     /// distinction the editor draws, because a caller scripting the workflow needs it more.
     /// </summary>
-    internal static object PostView(PostSummary post, Site? site) => new
+    /// <summary>
+    /// A dictionary rather than the anonymous objects the rest of this file uses, for one reason:
+    /// the detail endpoint adds the body to exactly this shape, and an anonymous type cannot be
+    /// extended. One field list, two callers, no chance of the list and the detail drifting apart.
+    /// </summary>
+    internal static Dictionary<string, object?> PostView(PostSummary post, Site? site) => new()
     {
-        id = post.Id.Compact,
-        siteId = post.SiteId.Compact,
-        slug = post.Slug.Value,
-        title = Localized(post.Title),
-        status = post.StatusAt(DateTimeOffset.UtcNow, site?.HasReviewer ?? false).ToString(),
-        review = post.Review.ToString(),
-        reviewNote = post.ReviewNote,
-        publishAt = post.PublishAt,
-        publishedAt = post.PublishedAt,
-        updatedAt = post.UpdatedAt,
+        ["id"] = post.Id.Compact,
+        ["siteId"] = post.SiteId.Compact,
+        ["slug"] = post.Slug.Value,
+        ["title"] = Localized(post.Title),
+        ["status"] = post.StatusAt(DateTimeOffset.UtcNow, site?.HasReviewer ?? false).ToString(),
+        ["review"] = post.Review.ToString(),
+        ["reviewNote"] = post.ReviewNote,
+        ["publishAt"] = post.PublishAt,
+        ["publishedAt"] = post.PublishedAt,
+        ["updatedAt"] = post.UpdatedAt,
     };
+
+    /// <summary>
+    /// One post, with the markdown that IS the post. The list deliberately omits it — a list of
+    /// full bodies is a payload nobody asked for — which left the API able to write a post and
+    /// never read it back, and a caller unable to check what it had actually stored.
+    /// </summary>
+    internal static Dictionary<string, object?> PostDetailView(PostSummary summary, Site? site, Post post)
+    {
+        var view = PostView(summary, site);
+        view["body"] = Localized(post.Body);
+        view["metaTitle"] = Localized(post.MetaTitle);
+        view["metaDescription"] = Localized(post.MetaDescription);
+        return view;
+    }
 
     /// <summary>The locale a post command should use: the one asked for, else the site's default.</summary>
     private static string LocaleFor(string? requested, PostSummary post, SiteOverview sites) =>

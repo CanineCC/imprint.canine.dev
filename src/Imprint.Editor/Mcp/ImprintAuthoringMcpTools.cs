@@ -3,6 +3,7 @@ using System.Text.Json;
 using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Assets;
 using Imprint.Authoring.Domain.Pages;
+using Imprint.Authoring.Domain.Posts;
 using Imprint.Authoring.Domain.Sites;
 using Imprint.Authoring.Projections;
 using Imprint.Authoring.Syndication;
@@ -697,6 +698,18 @@ public sealed class ImprintAuthoringMcpTools
         if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
         if (sites.Get(sid) is not { } site) return Fail("unknown site");
         return new { ok = true, posts = posts.All(sid).Select(post => AuthoringApi.PostView(post, site)).ToList() };
+    }
+
+    [McpServerTool(Name = "get_post")]
+    [Description("One post in full, INCLUDING its markdown body and meta per locale — what list_posts deliberately leaves out. Use it to read back what was stored before editing it, so an edit replaces prose you have actually seen.")]
+    public static async Task<object> GetPost(
+        [Description("The post id (compact or dashed GUID).")] string postId,
+        SiteOverview sites, PostList posts, IAggregateStore store, CancellationToken ct = default)
+    {
+        if (!AuthoringApi.TryPostIdPublic(postId, out var pid)) return Fail("invalid postId");
+        if (posts.Get(pid) is not { } summary) return Fail("unknown post");
+        if (await store.LoadOrDefault<Post>(pid.Stream, ct) is not { } post) return Fail("unknown post");
+        return new { ok = true, post = AuthoringApi.PostDetailView(summary, sites.Get(summary.SiteId), post) };
     }
 
     [McpServerTool(Name = "create_post")]
