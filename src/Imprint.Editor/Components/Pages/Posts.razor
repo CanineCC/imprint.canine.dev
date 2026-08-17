@@ -1,6 +1,7 @@
 @page "/site/{SiteIdValue}/posts"
 @using Imprint.Authoring.Domain
 @using Imprint.Authoring.Domain.Pages
+@using Imprint.Authoring.Domain.Posts
 @using Imprint.Authoring.Features.Posts.CreatePost
 @using Imprint.Authoring.Projections
 @using Imprint.Editor.Auth
@@ -99,7 +100,14 @@
         Reload();
     }
 
-    private void Reload() => _posts = Index.All(_site);
+    /// <summary>
+    /// The editorial queue: a plan's own order, not "most recently touched". A post numbered
+    /// "(2)" answers the one numbered "(1)", and the projection's date ordering — right for the
+    /// published index and the feed — scatters that completely. Posts with no number keep the
+    /// projection's order, after the numbered ones.
+    /// </summary>
+    private void Reload() =>
+        _posts = [.. Index.All(_site).OrderBy(post => PostSequence.SortKey(Title(post)))];
 
     private void OnChanged() => _ = InvokeAsync(() =>
     {

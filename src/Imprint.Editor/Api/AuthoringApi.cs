@@ -37,6 +37,7 @@ using SetHeaderLogoCmd = Imprint.Authoring.Features.Sites.SetHeaderLogo.SetHeade
 using ApprovePostReviewCmd = Imprint.Authoring.Features.Posts.ApprovePostReview.ApprovePostReview;
 using ChangePostBodyCmd = Imprint.Authoring.Features.Posts.ChangePostBody.ChangePostBody;
 using ChangePostMetaCmd = Imprint.Authoring.Features.Posts.ChangePostMeta.ChangePostMeta;
+using ChangePostTitleCmd = Imprint.Authoring.Features.Posts.ChangePostTitle.ChangePostTitle;
 using CreatePostCmd = Imprint.Authoring.Features.Posts.CreatePost.CreatePost;
 using PublishPostCmd = Imprint.Authoring.Features.Posts.PublishPost.PublishPost;
 using RequestPostChangesCmd = Imprint.Authoring.Features.Posts.RequestPostChanges.RequestPostChanges;
@@ -823,6 +824,23 @@ public static class AuthoringApi
                 : Results.BadRequest(new { error = "change body failed", details = result.Errors });
         });
 
+        // Renaming was the one thing create could do and nothing could undo. It is also how a
+        // post's editorial sequence number is set, since the number lives at the front of the
+        // title (PostSequence) rather than in a field of its own.
+        api.MapPut("/posts/{postId}/title", async (
+            string postId, PostTitleRequest2? body, ICommandDispatcher dispatcher, PostList posts, SiteOverview sites, CancellationToken ct) =>
+        {
+            if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
+            if (posts.Get(pid) is not { } post) return Results.NotFound(new { error = "unknown post" });
+            if (string.IsNullOrWhiteSpace(body?.Title)) return Results.BadRequest(new { error = "title is required" });
+
+            var locale = LocaleFor(body.Locale, post, sites);
+            var result = await DispatchAs(dispatcher, actor, new ChangePostTitleCmd(pid, locale, body.Title), ct);
+            return result.Succeeded
+                ? Results.Ok(new { postId = pid.Compact, title = body.Title, locale })
+                : Results.BadRequest(new { error = "rename failed", details = result.Errors });
+        });
+
         api.MapPut("/posts/{postId}/meta", async (
             string postId, PostMetaRequest2? body, ICommandDispatcher dispatcher, PostList posts, SiteOverview sites, CancellationToken ct) =>
         {
@@ -1597,6 +1615,9 @@ public static class AuthoringApi
 
     /// <summary>SEO meta for one locale (null leaves a field as it is).</summary>
     public sealed record PostMetaRequest2(string? Locale, string? MetaTitle, string? MetaDescription);
+
+    /// <summary>A post's title for one locale. A leading "(n)" is its editorial sequence number.</summary>
+    public sealed record PostTitleRequest2(string? Locale, string Title);
 
     /// <summary>The go-live instant, or null for "to be decided".</summary>
     public sealed record PostScheduleRequest(DateTimeOffset? PublishAt);
