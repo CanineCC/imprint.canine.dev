@@ -141,6 +141,32 @@ public sealed class PostEditorTests(EditorFixture fixture)
     }
 
     [Fact]
+    public async Task The_posts_index_reads_in_plan_order_not_in_the_order_they_were_written()
+    {
+        // A content plan has an order that has nothing to do with dates, and the number an author
+        // puts at the front of a title is how they express it. Created deliberately out of order,
+        // and numerically rather than lexicographically: "(10)" sorts before "(2)" as text.
+        var page = await OpenPosts(fixture);
+        var run = Guid.NewGuid().ToString("N")[..6];
+
+        foreach (var (number, word) in new[] { (10, "ten"), (2, "two"), (1, "one") })
+        {
+            await page.FillAsync("[data-testid='new-post-title']", $"({number}) {run} {word}");
+            await page.ClickAsync("[data-testid='new-post-create']");
+            await page.WaitForURLAsync("**/posts/**");
+            await page.WaitForInteractive();
+            await page.GoBackAsync();
+            await page.WaitForInteractive();
+        }
+
+        var mine = page.Locator($"[data-testid='post-list'] .dash-name:has-text('{run}')");
+        await Expect(mine).ToHaveCountAsync(3);
+        Assert.Equal(
+            [$"(1) {run} one", $"(2) {run} two", $"(10) {run} ten"],
+            (await mine.AllInnerTextsAsync()).Select(text => text.Trim()).ToArray());
+    }
+
+    [Fact]
     public async Task A_site_with_a_reviewer_publishes_through_them_and_the_date_they_set()
     {
         // The workflow as the people live it: an author cannot publish, sends it instead, the
