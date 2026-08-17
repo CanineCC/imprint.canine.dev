@@ -758,7 +758,14 @@ public sealed class SitePublisher(
         private string DocumentTitle(PublishedPage page, Locale locale)
         {
             var title = PageTitle(page, locale);
-            return title.Length > 0 ? $"{title} · {_siteName}" : _siteName;
+            if (title.Length == 0 || string.Equals(title, _siteName, StringComparison.OrdinalIgnoreCase))
+            {
+                // "Canine Blog · Canine Blog" — what a blog site's index produced, because its
+                // heading IS the site's name. A page named after its site is titled once.
+                return _siteName;
+            }
+
+            return $"{title} · {_siteName}";
         }
 
         /// <summary>

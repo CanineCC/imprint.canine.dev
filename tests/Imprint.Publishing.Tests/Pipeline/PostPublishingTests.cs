@@ -308,6 +308,21 @@ public sealed class PostPublishingTests
         Assert.True(host.FileExists("blog/a-post/index.html"));
     }
 
+    [Fact]
+    public async Task A_page_named_after_its_site_is_titled_once()
+    {
+        // The blog index's heading IS the site's name, which produced "Canine Blog · Canine Blog"
+        // in the browser tab and in every search result.
+        await using var host = NewHost();
+        await host.CreateSite("The Kennel Log", kind: SiteKind.Blog);
+
+        await host.Publisher.Synchronize();
+
+        var html = host.ReadText("index.html");
+        Assert.Contains("<title>The Kennel Log</title>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("The Kennel Log · The Kennel Log", html, StringComparison.Ordinal);
+    }
+
     private static PublishingTestHost NewHost() =>
         new(Base, configure: services => services.AddSingleton<IWidgetCatalog>(new EmptyWidgetCatalog()));
 
