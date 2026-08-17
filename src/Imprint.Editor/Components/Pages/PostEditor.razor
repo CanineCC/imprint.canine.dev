@@ -2,6 +2,7 @@
 @using Imprint.Authoring.Domain
 @using Imprint.Authoring.Domain.Assets
 @using Imprint.Authoring.Domain.Posts
+@using Imprint.Authoring.Domain.Sites
 @using Imprint.Authoring.Features.Posts.ApprovePostReview
 @using Imprint.Authoring.Features.Posts.ChangePostBody
 @using Imprint.Authoring.Features.Posts.RequestPostChanges
@@ -15,6 +16,7 @@
 @using Imprint.Editor.Components.Posts
 @using Imprint.Editor.Services
 @using Imprint.EventSourcing
+@using Imprint.Publishing
 @using Imprint.Rendering
 @implements IDisposable
 @implements IAsyncDisposable
@@ -137,7 +139,7 @@ else
            the author came here to write. Media is a WAY OF LOOKING at the right-hand pane —
            the same real estate the preview occupies, which is the pane you can afford to
            stop looking at while you pick a picture. *@
-        <div class="post-panes">
+        <div class="post-panes" @ref="_panes">
             <section class="post-pane post-pane-source" aria-label="Markdown" @ref="_sourcePane">
                 <textarea class="post-source" data-testid="post-body" spellcheck="true" @ref="_sourceBox"
                           @bind="Body" @bind:event="oninput"
@@ -150,6 +152,14 @@ else
                 <InputFile OnChange="OnFiles" multiple class="ed-visually-hidden"
                            data-testid="post-source-drop" aria-label="Upload images into the post" />
             </section>
+
+            @* The divider. A real separator control rather than a decorative bar: it drags with a
+               pointer, moves with the arrow keys, snaps back to even on a double-click, and
+               remembers where it was left. *@
+            <div class="post-split" data-split-handle role="separator" aria-orientation="vertical"
+                 tabindex="0" aria-label="Resize the markdown and preview panes"
+                 aria-valuemin="15" aria-valuemax="85" aria-valuenow="50"
+                 title="Drag to resize · double-click to even them up" data-testid="post-split"></div>
 
             <section class="post-pane post-pane-side" aria-label="Preview and media" @ref="_sidePane">
                 <div class="post-views" role="tablist" aria-label="Right pane">
@@ -337,9 +347,11 @@ else
     /// <summary>
     /// This post on the /preview plane, which renders the site the way it will be published and
     /// (uniquely) includes drafts. Addressed by the site's compact id, which never changes, and
-    /// by the post's slug — the same public path the publisher will write.
+    /// by the path the PUBLISHER will write — asked of BlogPaths rather than assumed here, which
+    /// is how this link came to 404: it hard-coded /blog/, and a blog site's posts sit at its root.
     /// </summary>
-    private string PreviewHref => $"/preview/{_siteId.Compact}/blog/{_slug}/";
+    private string PreviewHref =>
+        $"/preview/{_siteId.Compact}{BlogPaths.PostPath(Sites.Get(_siteId)?.Kind ?? SiteKind.Site, _slug)}";
 
     // Sites / <blog> / Posts / <this post>. The post editor used to offer "← Posts" and nothing
     // else: from here the dashboard was unreachable except by editing the URL.
@@ -362,10 +374,12 @@ else
 
     private SideView _view = SideView.Preview;
 
+    private ElementReference _panes;
     private ElementReference _sourcePane;
     private ElementReference _sidePane;
     private ElementReference _sourceBox;
     private IJSObjectReference? _dropModule;
+    private IJSObjectReference? _splitModule;
     private IJSObjectReference? _caretModule;
     private readonly List<string> _uploading = [];
 
@@ -530,6 +544,11 @@ else
         await _dropModule.InvokeVoidAsync("init", _sourcePane);
         await _dropModule.InvokeVoidAsync("init", _sidePane);
         _caretModule = await Js.InvokeAsync<IJSObjectReference>("import", "./js/post-caret.js");
+
+        // The split is remembered across posts and sessions, so it is restored here rather than
+        // rendered: the pane must not flash to half its width and then jump.
+        _splitModule = await Js.InvokeAsync<IJSObjectReference>("import", "./js/post-split.js");
+        await _splitModule.InvokeVoidAsync("init", _panes);
     }
 
     protected override async Task OnParametersSetAsync()
@@ -695,7 +714,19 @@ else
             }
         }
 
-        foreach (var module in new[] { _dropModule, _caretModule })
+        if (_splitModule is not null)
+        {
+            try
+            {
+                await _splitModule.InvokeVoidAsync("dispose", _panes);
+            }
+            catch (JSDisconnectedException)
+            {
+                // The circuit is already gone; the element went with it.
+            }
+        }
+
+        foreach (var module in new[] { _dropModule, _caretModule, _splitModule })
         {
             if (module is null)
             {

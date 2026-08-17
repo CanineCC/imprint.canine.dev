@@ -1298,26 +1298,14 @@ public sealed class SitePublisher(
         /// </remarks>
         private readonly Dictionary<PageId, string> _syndicatedHashes = [];
 
-        /// <summary>
-        /// The blog's URL prefix. A post's slug is unique among POSTS only, so the prefix is what
-        /// keeps the two namespaces apart — an author may have both a page and a post called
-        /// "notes" without either of them noticing the other.
-        /// </summary>
-        public const string BlogPrefix = "blog";
+        // The three shapes of a blog's public paths now live in BlogPaths, because the EDITOR
+        // needs the same answer to offer a working preview link — and got it wrong the moment a
+        // blog site's posts moved to its root.
+        private string PostPrefix => BlogPaths.PostPrefix(_siteKind);
 
-        /// <summary>
-        /// Where the posts live, relative to the origin. On a <see cref="SiteKind.Blog"/> the site
-        /// IS the blog — its origin was chosen to say so (<c>blog.canine.dev</c>) — so the prefix
-        /// would only repeat the hostname back at the reader: <c>blog.canine.dev/blog/a-post</c>.
-        /// A blog SECTION of an ordinary site still needs it, for the namespace reason above.
-        /// </summary>
-        private string PostPrefix => _siteKind == SiteKind.Blog ? "" : BlogPrefix + "/";
+        private string IndexPath => BlogPaths.IndexPath(_siteKind);
 
-        /// <summary>The index's own public path: the root of a blog site, <c>/blog/</c> inside a site.</summary>
-        private string IndexPath => _siteKind == SiteKind.Blog ? "" : BlogPrefix;
-
-        /// <summary>The index's href, for the feed and the entries that point back at it.</summary>
-        private string IndexHref => _siteKind == SiteKind.Blog ? "/" : $"/{BlogPrefix}/";
+        private string IndexHref => BlogPaths.IndexHref(_siteKind);
 
         private IReadOnlyList<PublishedPost> _posts = [];
         private readonly Dictionary<PageId, string> _postStamps = [];

@@ -298,6 +298,53 @@ public sealed class PostEditorTests(EditorFixture fixture)
     }
 
     [Fact]
+    public async Task The_panes_can_be_resized_and_the_split_survives_a_reload()
+    {
+        var page = await OpenPosts(fixture);
+        await page.FillAsync("[data-testid='new-post-title']", $"Split {Guid.NewGuid():N}"[..12]);
+        await page.ClickAsync("[data-testid='new-post-create']");
+        await page.WaitForURLAsync("**/posts/**");
+        await page.WaitForInteractive();
+
+        // The divider is wired by a JS module imported after the first render, so "the element is
+        // there" is not "the element works". Waiting for the readiness mark is the difference
+        // between a test that passes alone and one that passes on a busy machine.
+        await page.Locator(".post-panes[data-split-ready]").WaitForAsync();
+
+        // The split is remembered per browser, so a previous test in this context may have left it
+        // anywhere. Recentre first: this test is about the drag, not about where it started.
+        var handle = page.Locator("[data-testid='post-split']");
+        await handle.DblClickAsync();
+
+        var source = page.Locator("[data-testid='post-body']");
+        var before = (await source.BoundingBoxAsync())!.Width;
+
+        // Dragged with the pointer, the way a person does it — the drag is what the feature IS,
+        // and setting the CSS variable directly would test nothing but CSS.
+        var grip = (await handle.BoundingBoxAsync())!;
+        await page.Mouse.MoveAsync(grip.X + grip.Width / 2, grip.Y + grip.Height / 2);
+        await page.Mouse.DownAsync();
+        await page.Mouse.MoveAsync(grip.X + grip.Width / 2 - 200, grip.Y + grip.Height / 2, new MouseMoveOptions { Steps = 8 });
+        await page.Mouse.UpAsync();
+
+        var after = (await source.BoundingBoxAsync())!.Width;
+        Assert.True(after < before - 100, $"the markdown pane should have narrowed: {before} -> {after}");
+
+        // …and it is remembered. An author who widened the markdown wants it wide next time, so
+        // the split is stored rather than reset to half on every navigation.
+        await page.ReloadAsync();
+        await page.WaitForInteractive();
+        await page.Locator(".post-panes[data-split-ready]").WaitForAsync();
+        var restored = (await page.Locator("[data-testid='post-body']").BoundingBoxAsync())!.Width;
+        Assert.True(Math.Abs(restored - after) < 20, $"the split should have been restored: {after} -> {restored}");
+
+        // Double-click evens them up, which is what a divider does everywhere else.
+        await handle.DblClickAsync();
+        var evened = (await page.Locator("[data-testid='post-body']").BoundingBoxAsync())!.Width;
+        Assert.True(evened > restored + 100, $"a double-click should recentre: {restored} -> {evened}");
+    }
+
+    [Fact]
     public async Task A_post_longer_than_the_preview_pane_can_be_scrolled()
     {
         // The preview element carries `inert`, and an inert subtree is not hit-tested — so when it

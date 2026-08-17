@@ -892,8 +892,21 @@ button { font: inherit; color: inherit; }
 
 /* Two panes on a desktop, stacked on a narrow screen — the editor is a desktop tool, but
    a stacked fallback beats a 300px-wide textarea. */
-.post-panes { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--ed-border); flex: 1; min-height: 0; }
-@media (max-width: 900px) { .post-panes { grid-template-columns: 1fr; } }
+/* The split is a variable so the divider can move it without JS touching the layout rules. The
+   minmax(0,…) matters: a grid track defaults to min-content, and a wide line of markdown would
+   otherwise refuse to let the pane shrink past it. */
+.post-panes { display: grid; grid-template-columns: minmax(0, var(--post-split, 50%)) auto minmax(0, 1fr); background: var(--ed-border); flex: 1; min-height: 0; }
+@media (max-width: 900px) { .post-panes { grid-template-columns: 1fr; } .post-split { display: none; } }
+
+/* Wider than it looks: the visible line is 1px but the grab target is 9px, because a 1px target
+   is a test of patience. */
+.post-split { width: 9px; margin: 0 -4px; cursor: col-resize; background: transparent; position: relative; z-index: 2; }
+.post-split::before { content: ""; position: absolute; inset-block: 0; left: 4px; width: 1px; background: var(--ed-border); }
+.post-split:hover::before, .post-split:focus-visible::before, .is-splitting .post-split::before { background: var(--ed-accent); width: 3px; left: 3px; }
+.post-split:focus-visible { outline: none; }
+/* While dragging, the panes must not swallow the pointer or select their own text. */
+.is-splitting { cursor: col-resize; user-select: none; }
+.is-splitting .post-pane { pointer-events: none; }
 .post-pane { background: var(--ed-surface); overflow: auto; min-height: 0; }
 .post-source { width: 100%; height: 100%; border: 0; resize: none; padding: 1rem; font-family: var(--ip-font-mono, ui-monospace, monospace); font-size: .9rem; line-height: 1.6; background: transparent; color: inherit; }
 .post-source:focus { outline: none; }
