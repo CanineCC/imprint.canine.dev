@@ -9,6 +9,7 @@
 @using Imprint.Authoring.Features.Sites.ChangeNavigation
 @using Imprint.Authoring.Features.Sites.ClaimSite
 @using Imprint.Authoring.Features.Sites.RemoveCollaborator
+@using Imprint.Authoring.Features.Sites.SetSiteReviewer
 @using Imprint.Authoring.Features.Sites.SetCopyLine
 @using Imprint.Authoring.Features.Sites.SetFavicon
 @using Imprint.Authoring.Features.Sites.SetFooter
@@ -34,7 +35,7 @@
 
 <div class="settings">
     <header class="settings-head">
-        <a class="dash-back" href="/">← All sites</a>
+        <Breadcrumbs Trail="@Trail" />
     </header>
 
     @if (_site is not { } site || !_canAccess)
@@ -320,6 +321,38 @@
             {
                 <p class="settings-hint">Only the site's owner can add or remove people.</p>
             }
+
+            @* ---- Public relations review ----
+               Naming a reviewer changes what publishing MEANS on this site: the author's Publish
+               button becomes "Send for review", and nothing reaches the public until the reviewer
+               approves it. That is why the consequence is spelled out here rather than left to be
+               discovered on the first post. *@
+            <h3 class="settings-subhead" id="set-review">Public relations review</h3>
+            <p class="settings-hint">
+                Name someone here and posts on this site stop publishing directly: the author sends
+                them for review, the reviewer is emailed, and they approve the words <em>and</em> the
+                go-live date before anything appears. Leave it empty to publish without review.
+                @if (site.ReviewerEmail is { Length: > 0 } current && !site.Collaborators.Contains(current, StringComparer.OrdinalIgnoreCase) && !string.Equals(Sites.OwnerOf(site.Id), current, StringComparison.OrdinalIgnoreCase))
+                {
+                    <text>
+                        <strong>@current cannot open this site yet</strong> — add them as an editor above,
+                        or they will have nothing to approve with.
+                    </text>
+                }
+            </p>
+
+            <div class="settings-row">
+                <input class="ed-input" placeholder="Name (e.g. Lasse)" aria-label="Reviewer name"
+                       data-testid="site-reviewer-name" disabled="@(!_interactive || _busy || !_isOwner)"
+                       @bind="_reviewerName" @bind:event="oninput" />
+                <input class="ed-input" type="email" placeholder="reviewer@example.com" aria-label="Reviewer email"
+                       data-testid="site-reviewer-email" disabled="@(!_interactive || _busy || !_isOwner)"
+                       @bind="_reviewerEmail" @bind:event="oninput" />
+                <button type="button" class="ed-btn ed-btn-primary" data-testid="site-reviewer-save"
+                        disabled="@(!_interactive || _busy || !_isOwner)" @onclick="() => SaveReviewer(site)">
+                    @(_reviewerEmail.Trim().Length == 0 ? "Clear reviewer" : "Save reviewer")
+                </button>
+            </div>
         </section>
 
         @* ---- Publish folders + deploy (owner-only: where bytes land is administration) ---- *@
@@ -494,6 +527,13 @@
     }
 
     private Site? _site;
+    private string _reviewerName = "";
+    private string _reviewerEmail = "";
+
+    private IReadOnlyList<Breadcrumbs.Crumb> Trail =>
+        _site is { } site
+            ? [Breadcrumbs.Sites, Breadcrumbs.Of(site, Pages.HomeOf(site.Id)?.Id), new Breadcrumbs.Crumb("Settings")]
+            : [Breadcrumbs.Sites, new Breadcrumbs.Crumb("Settings")];
     private SiteId? _loadedId;
     private string _name = "";
     private string _newPerson = "";
@@ -566,6 +606,8 @@
 
         _loadedId = id;
         _name = _site?.Name ?? "";
+        _reviewerName = _site?.ReviewerName ?? "";
+        _reviewerEmail = _site?.ReviewerEmail ?? "";
         SeedEnvs();
         SeedChrome();
     }
@@ -1007,6 +1049,16 @@
         if (await Commands.Run(new ClaimSite(site.Id)))
         {
             Toasts.Show($"You are now the owner of {site.Name}.");
+        }
+    }
+
+    private async Task SaveReviewer(Site site)
+    {
+        if (await Commands.Run(new SetSiteReviewer(site.Id, _reviewerName, _reviewerEmail)))
+        {
+            Toasts.Show(_reviewerEmail.Trim().Length == 0
+                ? "Reviewer cleared — posts publish directly again."
+                : $"{(_reviewerName.Trim().Length > 0 ? _reviewerName.Trim() : _reviewerEmail.Trim())} reviews posts on this site.");
         }
     }
 

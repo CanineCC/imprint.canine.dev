@@ -1,13 +1,12 @@
-using System.Net;
-using System.Net.Mail;
 using System.Text.Json;
+using Imprint.Editor.Notifications;
 
 namespace Imprint.Editor.Contact;
 
 /// <summary>
 /// Handles a public contact-form submission end to end: honeypot drop, shape validation,
-/// then delivery. Delivery mirrors the estate's existing contact idiom (watchdog's
-/// <c>SmtpContactNotifier</c>): the BCL <see cref="SmtpClient"/> against the
+/// then delivery. Delivery goes through <see cref="SmtpRelay"/> — the estate's existing contact
+/// idiom (watchdog's <c>SmtpContactNotifier</c>): the BCL SMTP client against the
 /// <c>Contact:Smtp:*</c> relay config, a plain-text body, Reply-To the submitter — no
 /// third-party mail SaaS. Recipients are resolved per submission by
 /// <see cref="ContactRecipientResolver"/> — the submitting site's private contact-form
@@ -22,6 +21,7 @@ public sealed class ContactIntake(
     IConfiguration configuration,
     string dataDirectory,
     ILogger<ContactIntake> logger,
+    SmtpRelay relay,
     ContactRecipientResolver? recipientResolver = null)
 {
     // Config-only resolution when no widget-prop lookup is wired (tests, minimal hosts).
@@ -69,12 +69,11 @@ public sealed class ContactIntake(
         return [];
     }
 
-    /// <summary>Attempts SMTP delivery. False means "not emailed" — unconfigured relay or
-    /// an active failure — and the caller stores the lead locally instead.</summary>
+    /// <summary>Attempts delivery through the shared relay. False means "not emailed" —
+    /// unconfigured relay or an active failure — and the caller stores the lead instead.</summary>
     private async Task<bool> TrySend(ContactSubmission submission, IReadOnlyList<string> recipients, CancellationToken ct)
     {
-        var host = configuration["Contact:Smtp:Host"];
-        if (string.IsNullOrWhiteSpace(host) || recipients.Count == 0)
+        if (recipients.Count == 0 || !relay.Configured)
         {
             logger.LogWarning(
                 "Contact submission stored, not emailed — no Contact:Smtp:Host, or no recipients (widget prop / Contact:Recipients). site={Site} topic={Topic} email={Email}",
@@ -82,49 +81,13 @@ public sealed class ContactIntake(
             return false;
         }
 
-        try
-        {
-            var port = int.TryParse(configuration["Contact:Smtp:Port"], out var p) ? p : 587;
-            using var client = new SmtpClient(host, port)
-            {
-                // SSL on by default; Contact:Smtp:UseSsl=false only for a plaintext relay
-                // on a trusted internal network (same knob as the watchdog notifier).
-                EnableSsl = !string.Equals(configuration["Contact:Smtp:UseSsl"], "false", StringComparison.OrdinalIgnoreCase),
-            };
-
-            var user = configuration["Contact:Smtp:User"];
-            if (!string.IsNullOrWhiteSpace(user))
-            {
-                client.Credentials = new NetworkCredential(user, configuration["Contact:Smtp:Password"]);
-            }
-
-            using var mail = new MailMessage
-            {
-                From = new MailAddress(configuration["Contact:From"] ?? recipients[0]),
-                Subject = $"[{submission.Site ?? "contact"} · {submission.Topic}] {submission.Name}",
-                Body = BuildBody(submission),
-                IsBodyHtml = false,
-            };
-            foreach (var recipient in recipients)
-            {
-                mail.To.Add(new MailAddress(recipient));
-            }
-
-            // Reply-To the submitter so a one-click reply reaches them, not the From mailbox.
-            mail.ReplyToList.Add(new MailAddress(submission.Email));
-
-            await client.SendMailAsync(mail, ct);
-            logger.LogInformation("Contact submission emailed (site={Site} topic={Topic}).", submission.Site ?? "—", submission.Topic);
-            return true;
-        }
-        catch (Exception ex) when (ex is SmtpException or InvalidOperationException or FormatException or IOException)
-        {
-            // A configured relay actively failed — the local store below keeps the lead.
-            logger.LogError(ex,
-                "Contact email delivery failed — storing locally. site={Site} topic={Topic} email={Email}",
-                submission.Site ?? "—", submission.Topic, submission.Email);
-            return false;
-        }
+        // Reply-To the submitter so a one-click reply reaches them, not the From mailbox.
+        return await relay.Send(
+            recipients,
+            $"[{submission.Site ?? "contact"} · {submission.Topic}] {submission.Name}",
+            BuildBody(submission),
+            replyTo: submission.Email,
+            ct);
     }
 
     /// <summary>Appends the lead as one JSON line to <c>contact-submissions.jsonl</c> in the

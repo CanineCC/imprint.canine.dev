@@ -8,7 +8,7 @@
 <PageTitle>New site · Imprint</PageTitle>
 
 <div class="dash-new-wrap">
-    <a class="dash-back" href="/">← All sites</a>
+    <Breadcrumbs Trail="@([Breadcrumbs.Sites, new Breadcrumbs.Crumb("New site")])" />
     <Onboarding OnCreated="OpenNewSite" />
 </div>
 

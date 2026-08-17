@@ -23,7 +23,7 @@
     <main class="aw-page">
         <h1 class="aw-title">Not available</h1>
         <p class="aw-empty">The admin surface is disabled (<code>ImprintAdmin=false</code>).</p>
-        <a class="aw-back" href="/">← Back to the editor</a>
+        <Breadcrumbs Trail="@([Breadcrumbs.Sites, new Breadcrumbs.Crumb("Widget review")])" />
     </main>
 }
 else
@@ -31,7 +31,7 @@ else
     <main class="aw-page">
         <header class="aw-head">
             <h1 class="aw-title">Widget review</h1>
-            <a class="aw-back" href="/">← Back to the editor</a>
+            <Breadcrumbs Trail="@([Breadcrumbs.Sites, new Breadcrumbs.Crumb("Widget review")])" />
         </header>
 
         <div class="aw-warning" role="note">

@@ -3,12 +3,14 @@ using System.Threading.RateLimiting;
 using Imprint.Authoring;
 using Imprint.Authoring.Features.Assets;
 using Imprint.Authoring.Features.Pages;
+using Imprint.Authoring.Features.Posts.PublishDuePosts;
 using Imprint.Authoring.Projections;
 using Imprint.Editor.Api;
 using Imprint.Editor.Auth;
 using Imprint.Editor.Components;
 using Imprint.Editor.Contact;
 using Imprint.Editor.Mcp;
+using Imprint.Editor.Notifications;
 using Imprint.Editor.Services;
 using Imprint.EventSourcing;
 using Imprint.Media;
@@ -46,6 +48,13 @@ builder.Services.AddImprintMedia(new MediaOptions
     FfmpegPath = builder.Configuration["Ffmpeg"] ?? "ffmpeg",
 });
 builder.Services.AddImprintAssetProcessing();
+
+// Scheduling and review notices. The scheduler publishes due posts through the ordinary command
+// (gate included); the mailer tells a site's reviewer that something is waiting. Both are
+// background workers because both must happen with nobody at a keyboard.
+builder.Services.AddHostedService<DuePostPublisher>();
+builder.Services.AddSingleton<SmtpRelay>();
+builder.Services.AddHostedService<ReviewMailer>();
 builder.Services.AddImprintPublishing(new PublishingOptions
 {
     OutputPath = Path.Combine(dataDirectory, "publish"),
@@ -101,6 +110,7 @@ builder.Services.AddSingleton(provider => new ContactIntake(
     provider.GetRequiredService<IConfiguration>(),
     dataDirectory,
     provider.GetRequiredService<ILogger<ContactIntake>>(),
+    provider.GetRequiredService<SmtpRelay>(),
     // Recipients resolve per submission: the submitting site's private contact-form
     // widget prop (live from the read models — an editor change needs no republish),
     // then Contact:Recipients config, then journal-only. See ContactRecipientResolver.

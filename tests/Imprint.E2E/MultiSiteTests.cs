@@ -17,7 +17,7 @@ public sealed class MultiSiteTests(EditorFixture fixture)
         var page = await fixture.OpenEditor(); // ensures ≥1 site, lands in an editor
 
         // Reach the dashboard via the editor's "← All sites" back link.
-        await page.ClickAsync("a.ed-back");
+        await page.ClickAsync("[data-testid='breadcrumbs'] a:text-is('Sites')");
         await page.WaitForSelectorAsync(".dash-grid");
         // One create-card per shelf: the Sites shelf owns "New site", the Blogs shelf below
         // owns "New blog". Scoped, so this stays an assertion about sites.
@@ -27,11 +27,11 @@ public sealed class MultiSiteTests(EditorFixture fixture)
         // Create a uniquely-named site and confirm the editor opened onto IT.
         var name = "E2E Site " + Guid.NewGuid().ToString("N")[..6];
         await page.CreateSiteViaDashboard(name);
-        Assert.Equal(name, (await page.Locator(".ed-site-name").InnerTextAsync()).Trim());
+        Assert.Equal(name, (await page.Locator("[data-testid='breadcrumbs'] [data-testid='breadcrumb-link']").Last.InnerTextAsync()).Trim());
 
         // Back on the dashboard, the new site now has a card; clicking it re-opens that
         // exact site (per-site editing, not "always the first site").
-        await page.ClickAsync("a.ed-back");
+        await page.ClickAsync("[data-testid='breadcrumbs'] a:text-is('Sites')");
         await page.WaitForSelectorAsync(".dash-grid");
         var card = page.Locator(".dash-card", new PageLocatorOptions { HasTextString = name });
         Assert.Equal(1, await card.CountAsync());
@@ -39,7 +39,7 @@ public sealed class MultiSiteTests(EditorFixture fixture)
         await card.Locator(".dash-open").ClickAsync();
         await page.WaitForURLAsync("**/edit/**");
         await page.WaitForInteractive();
-        Assert.Equal(name, (await page.Locator(".ed-site-name").InnerTextAsync()).Trim());
+        Assert.Equal(name, (await page.Locator("[data-testid='breadcrumbs'] [data-testid='breadcrumb-link']").Last.InnerTextAsync()).Trim());
     }
 
     [Fact]

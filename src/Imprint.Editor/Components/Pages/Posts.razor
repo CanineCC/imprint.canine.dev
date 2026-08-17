@@ -8,6 +8,7 @@
 @implements IDisposable
 @inject PostList Index
 @inject SiteOverview Sites
+@inject PageList Pages
 @inject SiteAccess Access
 @inject CommandRunner Commands
 @inject NavigationManager Navigation
@@ -15,6 +16,7 @@
 <PageTitle>Posts · Imprint</PageTitle>
 
 <main class="dash">
+    <Breadcrumbs Trail="@Trail" />
     <header class="dash-head">
         <h1>Posts</h1>
         <p class="dash-sub">
@@ -64,6 +66,13 @@
     [Parameter] public string SiteIdValue { get; set; } = "";
 
     private SiteId _site;
+
+    // Sites / <blog> / Posts. Built here rather than in the component so the trail is the
+    // page's own statement about where it sits, not a guess made from the URL.
+    private IReadOnlyList<Breadcrumbs.Crumb> Trail =>
+        Sites.Get(_site) is { } site
+            ? [Breadcrumbs.Sites, Breadcrumbs.Of(site, Pages.HomeOf(site.Id)?.Id), new Breadcrumbs.Crumb("Posts")]
+            : [Breadcrumbs.Sites, new Breadcrumbs.Crumb("Posts")];
     private string _title = "";
     private IReadOnlyList<PostSummary> _posts = [];
 

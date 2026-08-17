@@ -16,8 +16,9 @@
 
 <div class="ed-app">
     <header class="ed-topbar">
-        <a class="ed-btn ed-btn-ghost ed-back" href="/" title="All sites" aria-label="Back to all sites">←</a>
-        <span class="ed-site-name">@(Session.ActiveSite?.Name ?? "Imprint")</span>
+        @* The trail replaces a bare ← and the site name beside it: same escape hatch, but it
+           also says where you are, which the arrow never did. *@
+        <Breadcrumbs Trail="@Trail" />
         @if (Session.ActiveSiteId is { } activeId)
         {
             <a class="ed-btn ed-btn-ghost ed-gear" href="@($"/sites/{activeId.Compact}/settings")"
@@ -152,6 +153,25 @@
         (EditorPanel.Theme, "◐", "Theme"),
         (EditorPanel.Translations, "文", "Translations"),
     ];
+
+    // Sites / <site> / <open page>. The site crumb points at the site's front door, which for a
+    // page-editing session is the home page — so it is a real move, not a reload of this screen.
+    private IReadOnlyList<Breadcrumbs.Crumb> Trail
+    {
+        get
+        {
+            if (Session.ActiveSite is not { } site)
+            {
+                return [Breadcrumbs.Sites];
+            }
+
+            var page = Session.CurrentPageId is { } id ? Pages.Get(id) : null;
+            var title = page?.Title.Resolve(site.DefaultLocale, site.DefaultLocale);
+            return page is null || string.IsNullOrWhiteSpace(title)
+                ? [Breadcrumbs.Sites, Breadcrumbs.Of(site, Pages.HomeOf(site.Id)?.Id)]
+                : [Breadcrumbs.Sites, Breadcrumbs.Of(site, Pages.HomeOf(site.Id)?.Id), new Breadcrumbs.Crumb(title)];
+        }
+    }
 
     // The reachable published-style preview (/preview/{site}) of the active site, at the
     // open page when that page has been published, else the site root. The preview plane

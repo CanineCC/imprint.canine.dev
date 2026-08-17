@@ -60,6 +60,25 @@ public sealed class PublishedPosts : ReadModel
 
     public PublishedPost? Get(PostId id) => _published.GetValueOrDefault(id);
 
+    /// <summary>
+    /// The published posts of one site PLUS its unpublished ones, each rendered from the markdown
+    /// as it stands right now — the preview plane's source, and nobody else's.
+    /// <para>This is the one place a post's tree is built from CURRENT markdown rather than from
+    /// the snapshot taken at publish time, and that is the entire point: "see it before you
+    /// publish it" cannot be answered by a projection whose rule is "only what was approved". A
+    /// draft that does not convert is skipped rather than shown broken — the editor already lists
+    /// its problems line by line, and half a post in a preview reads as a rendering bug.</para>
+    /// </summary>
+    public IReadOnlyList<PublishedPost> AllForSiteWithDrafts(SiteId site, DateTimeOffset draftDate) =>
+    [
+        .. _drafts.Values
+            .Where(post => post.SiteId == site && !post.IsDeleted)
+            .Select(post => _published.GetValueOrDefault(post.Id) ?? DraftSnapshot(post, draftDate))
+            .Where(post => post.RootsByLocale.Count > 0)
+            .OrderByDescending(post => post.PublishedAt)
+            .ThenBy(post => post.Slug.Value, StringComparer.Ordinal),
+    ];
+
     public override void Apply(StoredEvent @event)
     {
         if (@event.Event is PostCreated created)
@@ -111,6 +130,34 @@ public sealed class PublishedPosts : ReadModel
     {
         _drafts.Clear();
         _published.Clear();
+    }
+
+    /// <summary>
+    /// A not-yet-published post as the preview should show it. Unlike <see cref="Snapshot"/> this
+    /// runs against markdown nothing has vetted, so a locale whose body does not convert is left
+    /// out entirely: the aggregate would have refused to publish it, and a preview that renders
+    /// half of a broken post teaches the author the wrong thing about what they are about to ship.
+    /// </summary>
+    private static PublishedPost DraftSnapshot(Post post, DateTimeOffset at)
+    {
+        var roots = new Dictionary<Locale, NodeList>();
+        foreach (var (locale, markdown) in post.Body.Values)
+        {
+            if (string.IsNullOrWhiteSpace(markdown))
+            {
+                continue;
+            }
+
+            var (rendered, problems) = PostContent.Render(markdown, locale);
+            if (problems.Count == 0)
+            {
+                roots[locale] = rendered;
+            }
+        }
+
+        return new PublishedPost(
+            post.Id, post.SiteId, post.Slug, post.Title, post.MetaTitle, post.MetaDescription,
+            roots, post.PublishedAt ?? at, at);
     }
 
     private static PublishedPost Snapshot(Post post, DateTimeOffset at)

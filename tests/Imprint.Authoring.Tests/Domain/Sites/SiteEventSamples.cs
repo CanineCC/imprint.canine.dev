@@ -88,6 +88,9 @@ public sealed class SiteEventSamples : IEventSampleProvider
             // payload's sequence value-equality on round trip — with and without the
             // optional public origin (BaseUrl), so both shapes of the additive property
             // round-trip.
+            yield return new SiteReviewerSet("Lasse", "lasse@example.com");
+            yield return new SiteReviewerSet(null, null);
+
             yield return new SiteEnvironmentsChanged([
                 new DeployEnvironment("Test", "/srv/www/acme/test"),
                 new DeployEnvironment("Staging", "staging"),

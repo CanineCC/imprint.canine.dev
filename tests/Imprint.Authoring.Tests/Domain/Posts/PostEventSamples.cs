@@ -29,6 +29,20 @@ public sealed class PostEventSamples : IEventSampleProvider
 
             yield return new PostPublished(new DateTimeOffset(2026, 8, 14, 12, 0, 0, TimeSpan.Zero));
             yield return new PostUnpublished();
+
+            // Review and scheduling. Both shapes of every optional date, because "no date" is a
+            // real answer here ("to be decided") and a null that fails to round-trip would read
+            // back as "publish immediately".
+            yield return new PostPublishDateSet(new DateTimeOffset(2026, 9, 1, 7, 0, 0, TimeSpan.FromHours(2)));
+            yield return new PostPublishDateSet(null);
+            yield return new PostSubmittedForReview(
+                new DateTimeOffset(2026, 9, 1, 7, 0, 0, TimeSpan.FromHours(2)), "Cleared with legal on the 28th.");
+            yield return new PostSubmittedForReview(null, null);
+            yield return new PostReviewApproved(new DateTimeOffset(2026, 9, 2, 6, 0, 0, TimeSpan.FromHours(2)));
+            yield return new PostReviewApproved(null);
+            yield return new PostChangesRequested("The second paragraph names a customer we cannot name.");
+            yield return new PostApprovalLapsed();
+
             yield return new PostDeleted();
         }
     }

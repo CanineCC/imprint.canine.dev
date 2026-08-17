@@ -137,7 +137,11 @@ public sealed class SitePreview(
             await projections.CatchUp();
             if (siteOverview.Get(siteId) is { } aggregate)
             {
-                var target = new PublishTarget(aggregate, Path.Combine(previewRoot, slug), BaseUrl: null);
+                // IncludeDrafts is what makes this a preview rather than a mirror: an author asking
+                // "how will this look" is asking about the post they have NOT published yet, and
+                // every real deploy target still renders only what was approved.
+                var target = new PublishTarget(
+                    aggregate, Path.Combine(previewRoot, slug), BaseUrl: null, IncludeDrafts: true);
                 var report = await publisher.Synchronize(target);
                 if (report.Errors.Count > 0)
                 {

@@ -158,6 +158,12 @@ public sealed record SiteLlmsExcludedPathsChanged(IReadOnlyList<string> Paths)
 [EventType("site.ownership-claimed", 1)]
 public sealed record SiteOwnershipClaimed;
 
+// The person who has to clear a post before it reaches the public — "Public Relations Review".
+// Per site, because one blog's reviewer is not another's. Null clears the role, and with no
+// reviewer a site publishes exactly as it always did.
+[EventType("site.reviewer-set", 1)]
+public sealed record SiteReviewerSet(string? Name, string? Email);
+
 [EventType("site.collaborator-added", 1)]
 public sealed record SiteCollaboratorAdded(string Email);
 

@@ -615,7 +615,6 @@ button { font: inherit; color: inherit; }
 .ed-rail-btn { width: 40px; height: 40px; font-size: 17px; }
 .ed-rail-btn[aria-pressed='true'] { background: var(--ed-surface-2); color: var(--ed-accent-strong); }
 
-.ed-site-name { font-weight: 700; margin-inline-end: 8px; }
 .ed-page-switcher .ed-select, .ed-locale .ed-select { width: auto; min-width: 160px; }
 
 .ed-onboarding {
@@ -769,14 +768,6 @@ button { font: inherit; color: inherit; }
 .dash-plus { font-size: 1.8rem; line-height: 1; }
 
 .dash-new-wrap { max-width: 460px; margin: 6vh auto 0; padding: 0 24px; }
-.dash-back {
-  display: inline-block;
-  margin-bottom: 12px;
-  color: var(--ed-text-muted);
-  text-decoration: none;
-  font-size: .9rem;
-}
-.dash-back:hover { color: var(--ed-accent); }
 
 /* ---- Settings page ---- */
 
@@ -867,7 +858,6 @@ button { font: inherit; color: inherit; }
 .deploy-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* Back/gear affordances in the editor top bar. */
-.ed-back { font-size: 1.1rem; text-decoration: none; }
 .ed-gear { font-size: 1rem; text-decoration: none; }
 
 
@@ -969,3 +959,32 @@ button { font: inherit; color: inherit; }
 
 .post-problems { margin: 0; padding: .75rem 1rem; border-top: 1px solid var(--ed-border); background: var(--ed-surface-alt); list-style: none; font-size: .85rem; max-height: 8rem; overflow: auto; }
 .post-problems li { margin: .15rem 0; }
+
+/* ── Breadcrumbs ───────────────────────────────────────────────────────────────────────────
+   One trail component, used by every screen that is not the dashboard. It replaced a set of
+   one-off back links ("← Posts", "← All sites", "← Back to the editor") that each went
+   exactly one place and never said where you were. */
+.ed-crumbs ol { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem; list-style: none; margin: 0; padding: 0; font-size: .82rem; }
+.ed-crumbs li { display: flex; align-items: center; gap: .25rem; min-width: 0; }
+/* The separator is generated, so the markup carries only the crumbs themselves. */
+.ed-crumbs li + li::before { content: "/"; color: var(--ed-text-muted); opacity: .6; }
+.ed-crumb { color: var(--ed-text-muted); text-decoration: none; border-radius: var(--ed-radius-sm); padding: .1rem .25rem; }
+.ed-crumb:hover { color: inherit; text-decoration: underline; }
+.ed-crumb-here { color: inherit; font-weight: 600; padding: .1rem .25rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 22rem; }
+.dash .ed-crumbs, .settings .ed-crumbs, .dash-new-wrap .ed-crumbs, .aw-page .ed-crumbs { margin: 0 0 1rem; }
+.post-editor-head .ed-crumbs, .ed-topbar .ed-crumbs { margin: 0; }
+
+/* Review + scheduling on the post editor. The chip colours say the same thing the words do:
+   amber while a person is holding it, blue while a clock is. */
+.post-status-inreview { background: #8a5a00; color: #fff; }
+.post-status-changesrequested { background: #8a2b2b; color: #fff; }
+.post-status-approved { background: #0e5c3a; color: #fff; }
+.post-status-scheduled { background: #1e4d8f; color: #fff; }
+.post-when { display: inline-flex; align-items: center; gap: .35rem; }
+.post-when-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; color: var(--ed-text-muted); }
+.post-when-input { font-size: .8rem; padding: .2rem .35rem; }
+.post-when-clear { font-size: .7rem; padding: .1rem .35rem; }
+.post-review-line { margin: 0; padding: .4rem 1rem; border-bottom: 1px solid var(--ed-border); background: var(--ed-surface-alt); font-size: .82rem; color: var(--ed-text-muted); }
+.post-sendback { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; padding: .5rem 1rem; border-bottom: 1px solid var(--ed-border); background: var(--ed-surface-alt); }
+.post-sendback label { font-size: .78rem; color: var(--ed-text-muted); }
+.post-sendback textarea { flex: 1 1 18rem; font-size: .85rem; }

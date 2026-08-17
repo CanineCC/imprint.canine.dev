@@ -77,6 +77,27 @@ The editor disables Pushed Authorization Requests (PAR) to match the rest of the
 (post-logout). Google's OAuth client lists the realm broker endpoint
 `https://auth.canine.dev/realms/imprint/broker/google/endpoint` as an authorized redirect URI.
 
+## 1a. Outgoing mail (contact form + review notices)
+
+Two things send mail, both through `SmtpRelay` and both configured by the same keys — set them
+in `~/.config/imprint/imprint.env` as `Contact__Smtp__*`:
+
+| Setting | Meaning |
+| --- | --- |
+| `Contact__Smtp__Host` | The relay. **Nothing is emailed until this is set.** |
+| `Contact__Smtp__Port` | Defaults to 587. |
+| `Contact__Smtp__User` / `Contact__Smtp__Password` | Optional credentials. |
+| `Contact__Smtp__UseSsl` | `false` only for a plaintext relay on a trusted network. |
+| `Contact__From` | Envelope sender; falls back to the first recipient. |
+
+With no relay configured the editor keeps working and says so in the log: a contact submission is
+appended to `contact-submissions.jsonl` instead of lost, and a "please review this post" notice is
+skipped — **the post still shows as waiting for review in the editor**, which is the durable half
+of the notification. The mail is a convenience; the workflow does not depend on it.
+
+`ImprintBaseUrl` doubles as the link root in review notices, so the reviewer's mail contains a
+working URL to the post.
+
 ## 2. The editor on wrx1 — blue/green pair
 
 The editor runs as a **published artifact** in a zero-downtime **blue/green** pair, the same

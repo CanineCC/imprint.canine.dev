@@ -3,6 +3,7 @@ using Imprint.Authoring.Features.Posts.ChangePostBody;
 using Imprint.Authoring.Features.Posts.ChangePostMeta;
 using Imprint.Authoring.Features.Posts.CreatePost;
 using Imprint.Authoring.Features.Posts.PublishPost;
+using Imprint.Authoring.Features.Posts.SchedulePost;
 using Imprint.Authoring.Features.Posts.UnpublishPost;
 using Imprint.Authoring.Features.Pages;
 using Imprint.EventSourcing;
@@ -36,6 +37,27 @@ public sealed class PostPublishingTests
         // The code block rendered through the real node view, escaped as content.
         Assert.Contains("class=\"ip-code\"", html, StringComparison.Ordinal);
         Assert.Contains("ls -la", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_published_post_carries_its_date_on_the_page_not_only_in_the_index()
+    {
+        // The index has always been dated; the post itself was not, so the two disagreed about
+        // whether this was a dated stream of writing at all.
+        await using var host = NewHost();
+        var (_, id) = await NewPost(host, "dated");
+        await host.Ok(new ChangePostBody(id, En, "# Dated\n\nProse.\n"));
+        // A date in the PAST: publishing then keeps the agreed instant (the scheduler wakes up
+        // after the moment it was told about), which is also what makes this assertion a constant
+        // rather than a reading of today's clock.
+        await host.Ok(new SchedulePost(id, new DateTimeOffset(2026, 1, 5, 9, 0, 0, TimeSpan.FromHours(1))));
+        await host.Ok(new PublishPost(id, En));
+
+        await host.Publisher.Synchronize();
+
+        var html = host.ReadText("blog/dated/index.html");
+        // Written in the editorial zone, in the form a reader reads rather than an ISO stamp.
+        Assert.Contains("5 January 2026", html, StringComparison.Ordinal);
     }
 
     [Fact]

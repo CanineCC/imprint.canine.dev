@@ -2,7 +2,11 @@
 @using Imprint.Authoring.Domain
 @using Imprint.Authoring.Domain.Assets
 @using Imprint.Authoring.Domain.Posts
+@using Imprint.Authoring.Features.Posts.ApprovePostReview
 @using Imprint.Authoring.Features.Posts.ChangePostBody
+@using Imprint.Authoring.Features.Posts.RequestPostChanges
+@using Imprint.Authoring.Features.Posts.SchedulePost
+@using Imprint.Authoring.Features.Posts.SubmitPostForReview
 @using Imprint.Authoring.Features.Posts.PublishPost
 @using Imprint.Authoring.Features.Posts.UnpublishPost
 @using Imprint.Authoring.Markdown
@@ -34,23 +38,94 @@ else
 {
     <main class="post-editor">
         <header class="post-editor-head">
-            <a class="ed-btn ed-btn-ghost" href="/site/@_siteId.Compact/posts">← Posts</a>
+            <Breadcrumbs Trail="@Trail" />
             <h1 class="post-editor-title" data-testid="post-title">@_titleText</h1>
             <span class="post-status post-status-@_status.ToString().ToLowerInvariant()"
                   data-testid="post-status">@Label(_status)</span>
             <span class="post-editor-actions">
+                @* The same escape hatch a page has: the real thing, in a real browser tab, with
+                   the site's chrome and stylesheet around it — and for a post it works BEFORE
+                   publishing, because the preview plane renders drafts from current markdown.
+                   The pane on the right shows the nodes; only this shows the page. *@
+                <a class="ed-btn ed-btn-ghost" href="@PreviewHref" target="_blank" rel="noopener"
+                   data-testid="post-preview-link" title="Open this post in a new tab, as a page">Preview&nbsp;↗</a>
+
+                @* One date field, shared by author and reviewer: the author proposes with it, the
+                   reviewer overrules with it, and an empty box is a real answer ("to be decided")
+                   rather than "now". Wall-clock time in the editorial zone — an author schedules
+                   a post for nine in the morning where they live, not nine UTC. *@
+                <label class="post-when">
+                    <span class="post-when-label">Go live</span>
+                    <input type="datetime-local" class="ed-input post-when-input" data-testid="post-publish-at"
+                           value="@_publishAtLocal" @onchange="OnPublishAtChanged"
+                           disabled="@(_status == PostStatus.Published)"
+                           title="@($"Wall-clock time in {EditorialTime.Zone.Id}. Leave empty for 'to be decided'.")" />
+                    @if (_publishAtLocal.Length > 0 && _status != PostStatus.Published)
+                    {
+                        <button type="button" class="ed-btn ed-btn-ghost post-when-clear" data-testid="post-publish-at-clear"
+                                title="Clear the date — the post waits until someone sets one"
+                                @onclick="() => SetPublishAt(null)">TBD</button>
+                    }
+                </label>
+
+                @* Which button you get is decided by where the POST stands, not by who you are —
+                   the two only diverge while the reviewer holds it. Offering Publish on a site
+                   that publishes through review would be offering something the command refuses,
+                   which is how a workflow teaches people to distrust its buttons. *@
                 @if (_status == PostStatus.Published)
                 {
                     <button type="button" class="ed-btn" data-testid="post-unpublish"
                             @onclick="Unpublish">Unpublish</button>
                 }
+                else if (_status == PostStatus.InReview)
+                {
+                    @if (_isReviewer)
+                    {
+                        @* Approve takes whatever is in the date box, which is how "change the date
+                           to your liking" happens without a second control. *@
+                        <button type="button" class="ed-btn ed-btn-primary" data-testid="post-approve"
+                                title="Approve the content and the date" @onclick="Approve">Approve</button>
+                        <button type="button" class="ed-btn" data-testid="post-request-changes"
+                                @onclick="() => _askingChanges = !_askingChanges">Send back…</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="ed-btn" data-testid="post-submit-review" disabled
+                                title="@($"{Reviewer} has it")">With @Reviewer</button>
+                    }
+                }
+                else if (Reviewer is { } reviewer && _status is not (PostStatus.Approved or PostStatus.Scheduled))
+                {
+                    <button type="button" class="ed-btn ed-btn-primary" data-testid="post-submit-review"
+                            title="@($"Send to {reviewer} for public relations review")"
+                            @onclick="SubmitForReview">Send for review</button>
+                }
                 else
                 {
                     <button type="button" class="ed-btn ed-btn-primary" data-testid="post-publish"
-                            @onclick="Publish">Publish</button>
+                            title="@(IsFuture ? "Publish now, ignoring the scheduled date" : "Publish this post")"
+                            @onclick="Publish">@(IsFuture ? "Publish now" : "Publish")</button>
                 }
             </span>
         </header>
+
+        @if (StatusLine is { Length: > 0 } line)
+        {
+            <p class="post-review-line" data-testid="post-review-line">@line</p>
+        }
+
+        @if (_askingChanges)
+        {
+            <div class="post-sendback" data-testid="post-sendback">
+                <label for="post-sendback-reason">What needs changing?</label>
+                <textarea id="post-sendback-reason" class="ed-input" rows="2" data-testid="post-sendback-reason"
+                          @bind="_changesReason" @bind:event="oninput"
+                          placeholder="The author sees this — say what to fix."></textarea>
+                <button type="button" class="ed-btn ed-btn-primary" data-testid="post-sendback-send"
+                        disabled="@(_changesReason.Trim().Length == 0)" @onclick="RequestChanges">Send back</button>
+                <button type="button" class="ed-btn ed-btn-ghost" @onclick="() => _askingChanges = false">Cancel</button>
+            </div>
+        }
 
         @* The two panes are the whole point: the same text, and what it will actually become.
            The preview is rendered SERVER-SIDE through MarkdownToNodes and the ordinary node
@@ -152,6 +227,7 @@ else
     private Post? _post;
     private Locale _locale = new("en");
     private string _titleText = "";
+    private string _slug = "";
     private PostStatus _status = PostStatus.Draft;
 
     private string _body = "";
@@ -159,6 +235,124 @@ else
     private IReadOnlyList<MarkdownProblem> _problems = [];
 
     private RenderContext PreviewContext => ContextFactory.For(_locale, _locale);
+
+    // ------------------------------------------------------------- review & date
+
+    /// <summary>The date box's value, wall-clock in the editorial zone; empty means "to be decided".</summary>
+    private string _publishAtLocal = "";
+
+    private DateTimeOffset? _publishAt;
+    private PostReview _review;
+    private string? _reviewNote;
+    private bool _isReviewer;
+    private bool _askingChanges;
+    private string _changesReason = "";
+
+    /// <summary>The site's reviewer, if it has one — the whole review flow hangs off this being non-null.</summary>
+    private string? Reviewer =>
+        Sites.Get(_siteId) is { ReviewerEmail: { Length: > 0 } email } site
+            ? site.ReviewerName is { Length: > 0 } name ? name : email
+            : null;
+
+    private bool IsFuture => _publishAt is { } at && at > DateTimeOffset.UtcNow;
+
+    /// <summary>
+    /// The one sentence that says what is actually going on — who is waiting for whom, or when
+    /// this goes out. A status chip has room for one word, and "Approved" alone does not tell an
+    /// author whether anything will ever happen next.
+    /// </summary>
+    private string? StatusLine => _status switch
+    {
+        PostStatus.InReview when Reviewer is { } who =>
+            $"With {who} for review{Scheduled()}. Nothing publishes until they approve it.",
+        PostStatus.ChangesRequested =>
+            $"Sent back{(Reviewer is { } who ? $" by {who}" : "")}: {_reviewNote}",
+        PostStatus.Approved =>
+            "Approved, with no date yet — it stays here until someone sets one.",
+        PostStatus.Scheduled =>
+            $"Publishes by itself{Scheduled()}.",
+        PostStatus.Published when _publishAt is not null =>
+            $"Live{Scheduled(" since ")}.",
+        _ => null,
+    };
+
+    private string Scheduled(string prefix = " on ") =>
+        _publishAt is { } at ? $"{prefix}{EditorialTime.ForAuthor(at)} ({EditorialTime.Zone.Id})" : "";
+
+    private async Task OnPublishAtChanged(ChangeEventArgs args)
+    {
+        var text = args.Value?.ToString() ?? "";
+        // The browser hands back "yyyy-MM-ddTHH:mm" in the user's own reading of local time; it is
+        // interpreted in the editorial zone, which is the zone the label promises.
+        DateTimeOffset? at = DateTime.TryParse(text, System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out var local)
+            ? EditorialTime.FromLocal(local)
+            : null;
+
+        await SetPublishAt(at);
+    }
+
+    private async Task SetPublishAt(DateTimeOffset? at)
+    {
+        if (await Commands.Run(new SchedulePost(_id, at)))
+        {
+            ApplyPost(await Store.LoadOrDefault<Post>(_id.Stream) ?? _post!);
+        }
+    }
+
+    private async Task SubmitForReview()
+    {
+        // The date in the box travels with the submission as the author's proposal — the reviewer
+        // sees it in the mail and can change it before approving.
+        // The reviewer must read what is on screen, not what the autosave last managed.
+        await FlushBody();
+        if (await Commands.Run(new SubmitPostForReview(_id, _locale.Value, _publishAt, null)))
+        {
+            Toasts.Show($"Sent to {Reviewer} for review.");
+            ApplyPost(await Store.LoadOrDefault<Post>(_id.Stream) ?? _post!);
+        }
+    }
+
+    private async Task Approve()
+    {
+        if (await Commands.Run(new ApprovePostReview(_id, _publishAt)))
+        {
+            Toasts.Show(_publishAt is { } at
+                ? $"Approved — it goes live {EditorialTime.ForAuthor(at)}."
+                : "Approved. It waits until a date is set.");
+            ApplyPost(await Store.LoadOrDefault<Post>(_id.Stream) ?? _post!);
+        }
+    }
+
+    private async Task RequestChanges()
+    {
+        if (await Commands.Run(new RequestPostChanges(_id, _changesReason)))
+        {
+            _askingChanges = false;
+            _changesReason = "";
+            ApplyPost(await Store.LoadOrDefault<Post>(_id.Stream) ?? _post!);
+        }
+    }
+
+    /// <summary>
+    /// This post on the /preview plane, which renders the site the way it will be published and
+    /// (uniquely) includes drafts. Addressed by the site's compact id, which never changes, and
+    /// by the post's slug — the same public path the publisher will write.
+    /// </summary>
+    private string PreviewHref => $"/preview/{_siteId.Compact}/blog/{_slug}/";
+
+    // Sites / <blog> / Posts / <this post>. The post editor used to offer "← Posts" and nothing
+    // else: from here the dashboard was unreachable except by editing the URL.
+    private IReadOnlyList<Breadcrumbs.Crumb> Trail =>
+        Sites.Get(_siteId) is { } site
+            ?
+            [
+                Breadcrumbs.Sites,
+                Breadcrumbs.Of(site),
+                new Breadcrumbs.Crumb("Posts", $"/site/{_siteId.Compact}/posts"),
+                new Breadcrumbs.Crumb(_titleText),
+            ]
+            : [Breadcrumbs.Sites, new Breadcrumbs.Crumb("Posts", $"/site/{_siteId.Compact}/posts")];
 
     // ----------------------------------------------------------------- media
 
@@ -363,9 +557,32 @@ else
 
         _locale = Sites.Get(_siteId)?.DefaultLocale ?? new Locale("en");
         _titleText = _post.Title.Resolve(_locale, _locale);
+        _slug = _post.Slug.Value;
         _body = _post.Body.Get(_locale) ?? "";
-        _status = Posts.Get(_id)?.Status ?? PostStatus.Draft;
+
+        // Whether the signed-in user IS the reviewer decides which half of the workflow this
+        // screen shows. With auth off (dev, tests, trusted LAN) there is nobody to be, and the
+        // reviewing controls are the ones that appear — the same "open install" reading the rest
+        // of the editor takes.
+        var me = await Access.UserAsync();
+        _isReviewer = Sites.Get(_siteId) is { ReviewerEmail: { Length: > 0 } reviewer }
+            && (me is null || string.Equals(me, reviewer, StringComparison.OrdinalIgnoreCase));
+
+        ApplyPost(_post);
         Reconvert();
+    }
+
+    /// <summary>Pulls the review-and-schedule state off the aggregate and onto the screen.</summary>
+    private void ApplyPost(Post post)
+    {
+        _post = post;
+        _review = post.Review;
+        _reviewNote = post.ReviewNote;
+        _publishAt = post.PublishAt;
+        _publishAtLocal = post.PublishAt is { } at
+            ? EditorialTime.ToLocal(at).ToString("yyyy-MM-dd'T'HH:mm", System.Globalization.CultureInfo.InvariantCulture)
+            : "";
+        Refresh();
     }
 
     private void Reconvert()
@@ -395,13 +612,20 @@ else
     private const int SaveDebounce = 600;
     private int _saveToken;
 
+    /// <summary>
+    /// Writes whatever the debounce is still holding, now. Every action that acts on the body —
+    /// publishing it, sending it to a reviewer, or simply leaving the page — has to see the words
+    /// on screen rather than the ones from a second ago.
+    /// </summary>
+    private Task FlushBody()
+    {
+        _saveToken++;   // cancel the pending timer; this save supersedes it
+        return Commands.Run(new ChangePostBody(_id, _locale.Value, _body));
+    }
+
     private async Task Publish()
     {
-        // Flush whatever the debounce is still holding: publishing what is on screen is the
-        // only defensible reading of the button, and a pending save would otherwise publish
-        // the previous sentence.
-        _saveToken++;
-        await Commands.Run(new ChangePostBody(_id, _locale.Value, _body));
+        await FlushBody();
         await Commands.Run(new PublishPost(_id, _locale.Value));
         Refresh();
     }
@@ -412,7 +636,8 @@ else
         Refresh();
     }
 
-    private void Refresh() => _status = Posts.Get(_id)?.Status ?? PostStatus.Draft;
+    private void Refresh() =>
+        _status = Posts.Get(_id)?.StatusAt(DateTimeOffset.UtcNow, Reviewer is not null) ?? PostStatus.Draft;
 
     private void OnChanged() => _ = InvokeAsync(() =>
     {
@@ -424,6 +649,10 @@ else
     {
         PostStatus.Published => "Published",
         PostStatus.Modified => "Unpublished changes",
+        PostStatus.InReview => "In review",
+        PostStatus.ChangesRequested => "Changes requested",
+        PostStatus.Approved => "Approved",
+        PostStatus.Scheduled => "Scheduled",
         _ => "Draft",
     };
 
@@ -434,6 +663,22 @@ else
     public async ValueTask DisposeAsync()
     {
         Dispose();
+
+        // The last sentence someone typed before navigating away is still sitting in the
+        // debounce. Losing it is silent, which is the worst kind of losing — so the save is
+        // flushed on the way out. Best effort by nature: the circuit may already be gone, and a
+        // failure here must not stop the rest of the teardown.
+        try
+        {
+            if (_post is not null && _body != (_post.Body.Get(_locale) ?? ""))
+            {
+                await FlushBody();
+            }
+        }
+        catch (Exception)
+        {
+            // Nothing left to save it with — the circuit or its scope is already disposing.
+        }
 
         if (_dropModule is not null)
         {

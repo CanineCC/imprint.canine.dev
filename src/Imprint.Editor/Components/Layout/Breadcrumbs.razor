@@ -1,0 +1,53 @@
+@* Where you are, and every way back from it.
+
+   The editor used to hand out one-off escape hatches — "← Posts" on a post, "← All sites" on
+   settings, "← Back to the editor" on the admin page — each written by whoever built that
+   screen and each going exactly one place. From a post you could reach the post list and
+   nowhere else: not the site, not the dashboard. A trail says the same thing the back link
+   said AND says where you are, which is the part a lone arrow never tells you. *@
+
+<nav class="ed-crumbs" aria-label="Breadcrumb" data-testid="breadcrumbs">
+    <ol>
+        @for (var i = 0; i < Trail.Count; i++)
+        {
+            var crumb = Trail[i];
+            var isLast = i == Trail.Count - 1;
+            <li>
+                @* The last crumb is where you already are: rendered as text, and marked
+                   aria-current so a screen reader says so rather than offering a link to here. *@
+                @if (isLast || crumb.Href is null)
+                {
+                    <span class="ed-crumb-here" aria-current="page" data-testid="breadcrumb-current">@crumb.Label</span>
+                }
+                else
+                {
+                    <a class="ed-crumb" href="@crumb.Href" data-testid="breadcrumb-link">@crumb.Label</a>
+                }
+            </li>
+        }
+    </ol>
+</nav>
+
+@code {
+    /// <summary>One step of the trail. A null <paramref name="Href"/> is a step you cannot go to
+    /// (an unnamed grouping), rendered as plain text like the final crumb.</summary>
+    public sealed record Crumb(string Label, string? Href = null);
+
+    [Parameter, EditorRequired] public IReadOnlyList<Crumb> Trail { get; set; } = [];
+
+    /// <summary>The root every trail starts from, so no screen has to remember what it is called.</summary>
+    public static Crumb Sites => new("Sites", "/");
+
+    /// <summary>
+    /// A site's own crumb, pointing at its front door — the posts index for a blog, the home
+    /// page's editor for a site. Centralized because "what does clicking a site mean" is one
+    /// decision, and the dashboard, the settings page and the post editor were each about to
+    /// answer it separately.
+    /// </summary>
+    public static Crumb Of(Authoring.Domain.Sites.Site site, Authoring.Domain.PageId? home = null) =>
+        new(site.Name, site.Kind == Authoring.Domain.Sites.SiteKind.Blog
+            ? $"/site/{site.Id.Compact}/posts"
+            : home is { } page
+                ? $"/edit/{page.Compact}"
+                : $"/sites/{site.Id.Compact}/settings");
+}

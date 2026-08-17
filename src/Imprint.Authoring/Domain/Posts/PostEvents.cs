@@ -30,5 +30,31 @@ public sealed record PostPublished(DateTimeOffset PublishedAt);
 [EventType("post.unpublished")]
 public sealed record PostUnpublished;
 
+// Review and scheduling. A post is written by one person and cleared by another, and the two
+// decisions it carries are separable: WHETHER the words may go out, and WHEN. They are separate
+// events for that reason — a reviewer moving the date is not a re-approval of the prose, and an
+// author moving it before submitting is not a review at all.
+
+/// <summary>The intended go-live instant, absolute. Null is a deliberate "to be decided": a post
+/// can be approved without a date and simply wait for one.</summary>
+[EventType("post.publish-date-set")]
+public sealed record PostPublishDateSet(DateTimeOffset? PublishAt);
+
+[EventType("post.submitted-for-review")]
+public sealed record PostSubmittedForReview(DateTimeOffset? ProposedPublishAt, string? Note);
+
+/// <summary>Sign-off. Carries the date the reviewer settled on, which may be neither the proposed
+/// one nor any date at all.</summary>
+[EventType("post.review-approved")]
+public sealed record PostReviewApproved(DateTimeOffset? PublishAt);
+
+[EventType("post.changes-requested")]
+public sealed record PostChangesRequested(string Reason);
+
+/// <summary>Approval withdrawn by an edit: the words that were cleared are no longer the words on
+/// the page, so the sign-off cannot still stand.</summary>
+[EventType("post.approval-lapsed")]
+public sealed record PostApprovalLapsed;
+
 [EventType("post.deleted")]
 public sealed record PostDeleted;

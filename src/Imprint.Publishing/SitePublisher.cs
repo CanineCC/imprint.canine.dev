@@ -3,6 +3,7 @@ using System.Text;
 using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Assets;
 using Imprint.Authoring.Domain.Pages;
+using Imprint.Authoring.Domain.Posts;
 using Imprint.Authoring.Domain.Sites;
 using Imprint.Authoring.Features.Assets;
 using Imprint.Authoring.Projections;
@@ -17,7 +18,10 @@ using RenderMode = Imprint.Rendering.RenderMode;
 namespace Imprint.Publishing;
 
 /// <summary>One site rendered to one output folder, addressed by one base URL — the unit a publish pass acts on.</summary>
-public sealed record PublishTarget(Site Site, string OutputPath, string? BaseUrl);
+/// <param name="IncludeDrafts">Render unpublished posts too, from their current markdown. Only
+/// the /preview plane sets this: a preview exists to answer "how will this look" BEFORE the
+/// decision to publish, and every real deploy target must show exactly what was approved.</param>
+public sealed record PublishTarget(Site Site, string OutputPath, string? BaseUrl, bool IncludeDrafts = false);
 
 /// <summary>
 /// The file-system projection: keeps an output folder equal to "the published state of
@@ -64,7 +68,8 @@ public sealed class SitePublisher(
         gate.RunExclusive(async () =>
         {
             var pass = new Pass(
-                options, target.Site, target.OutputPath, target.BaseUrl, publishedContent, publishedPosts, syndicated,
+                options, target.Site, target.OutputPath, target.BaseUrl, target.IncludeDrafts,
+                publishedContent, publishedPosts, syndicated,
                 assetLibrary, blockLibrary, widgetRegistry, mediaStore, loggerFactory, _logger);
             var report = await pass.Run(ct);
             status.Record(report);
@@ -83,6 +88,7 @@ public sealed class SitePublisher(
         Site site,
         string outputPath,
         string? baseUrl,
+        bool includeDrafts,
         PublishedContent publishedContent,
         PublishedPosts publishedPosts,
         SyndicatedPageStore syndicated,
@@ -193,7 +199,9 @@ public sealed class SitePublisher(
             // syndicated from another system join them here and are otherwise indistinguishable:
             // same views, same chrome, same sitemap, same sweep. Everything the renderer learns,
             // they learn too, because there is only one renderer.
-            _posts = publishedPosts.AllForSite(site.Id);
+            _posts = includeDrafts
+                ? publishedPosts.AllForSiteWithDrafts(site.Id, DateTimeOffset.UtcNow)
+                : publishedPosts.AllForSite(site.Id);
             _pages =
             [
                 .. publishedContent.AllForSite(site.Id),
@@ -1314,7 +1322,7 @@ public sealed class SitePublisher(
                     post.Title,
                     post.MetaTitle,
                     post.MetaDescription,
-                    new PageTree(post.RootsFor(_defaultLocale, _defaultLocale)),
+                    new PageTree(WithDateline(post, post.RootsFor(_defaultLocale, _defaultLocale))),
                     PublishedVersion: 0)
                 {
                     PublicPath = $"{BlogPrefix}/{post.Slug.Value}",
@@ -1391,6 +1399,24 @@ public sealed class SitePublisher(
             {
                 PublicPath = BlogPrefix,
             };
+        }
+
+        /// <summary>
+        /// The post's own date, above its first line. A dated stream of writing that does not say
+        /// when anything was written is asking the reader to take its word for how current it is —
+        /// and the index has always shown a date, so the page not showing one made the two
+        /// disagree. Generated as a NODE, like the index itself, so it gets the site's typography.
+        /// </summary>
+        private NodeList WithDateline(PublishedPost post, NodeList body)
+        {
+            var line = HtmlText.Encode(EditorialTime.ForReader(post.PublishedAt));
+            var dateline = new RichTextNode
+            {
+                Id = ListingNodeId(post.Id),
+                Html = LocalizedText.Of(_defaultLocale, $"<p>{line}</p>"),
+            };
+
+            return NodeList.Of([dateline, .. body]);
         }
 
         /// <summary>Deterministic node ids for the generated index: the same posts must produce

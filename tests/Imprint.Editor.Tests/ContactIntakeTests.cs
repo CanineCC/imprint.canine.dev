@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Imprint.Editor.Contact;
+using Imprint.Editor.Notifications;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -17,9 +18,18 @@ public sealed class ContactIntakeTests : IDisposable
 
     private string StorePath => Path.Combine(_dataDir.FullName, "contact-submissions.jsonl");
 
-    private ContactIntake NewIntake() =>
-        // No Contact:Smtp:Host / Contact:Recipients ⇒ the not-configured path under test.
-        new(new ConfigurationBuilder().Build(), _dataDir.FullName, NullLogger<ContactIntake>.Instance);
+    private ContactIntake NewIntake()
+    {
+        // No Contact:Smtp:Host / Contact:Recipients ⇒ the not-configured path under test. The
+        // relay is real and equally unconfigured, which is what makes "stored, not emailed" the
+        // outcome rather than a mock's opinion of it.
+        var config = new ConfigurationBuilder().Build();
+        return new ContactIntake(
+            config,
+            _dataDir.FullName,
+            NullLogger<ContactIntake>.Instance,
+            new SmtpRelay(config, NullLogger<SmtpRelay>.Instance));
+    }
 
     private static ContactFields ValidFields(
         string? name = "Ada", string? email = "ada@example.com", string? message = "We would like an appraisal.",

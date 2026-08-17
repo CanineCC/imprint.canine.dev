@@ -1,5 +1,6 @@
 using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Pages;
+using Imprint.Authoring.Domain.Posts;
 using Imprint.Authoring.Domain.Posts.Events;
 using Imprint.EventSourcing;
 
@@ -9,6 +10,18 @@ public enum PostStatus
 {
     /// <summary>Never published, or withdrawn.</summary>
     Draft,
+
+    /// <summary>With the reviewer, waiting for an answer.</summary>
+    InReview,
+
+    /// <summary>The reviewer sent it back with a reason.</summary>
+    ChangesRequested,
+
+    /// <summary>Cleared, but with no date — "yes, but not yet".</summary>
+    Approved,
+
+    /// <summary>Cleared with a date in the future: waiting for its moment, not for a person.</summary>
+    Scheduled,
 
     /// <summary>Published and unchanged since.</summary>
     Published,
@@ -29,16 +42,44 @@ public sealed record PostSummary(
     DateTimeOffset? PublishedAt,
     long Version,
     long? PublishedVersion,
-    DateTimeOffset UpdatedAt)
+    DateTimeOffset UpdatedAt,
+    PostReview Review = PostReview.None,
+    DateTimeOffset? PublishAt = null,
+    string? ReviewNote = null)
 {
-    public PostStatus Status => PublishedVersion switch
+    /// <summary>
+    /// One word for where the post stands. Live beats everything — a published post that is
+    /// waiting on a re-review is still on the internet, and saying "In review" about it would be
+    /// a lie a reader could disprove. Below that, the review states come before the scheduling
+    /// ones, because a post waiting on a PERSON is not waiting on a clock.
+    ///
+    /// <para><paramref name="siteRequiresReview"/> is why this takes the site's policy: a future
+    /// date on a site that reviews is a PROPOSAL, and calling it "Scheduled" would promise the
+    /// author something no clock will deliver — nothing publishes it until a person says so.</para>
+    /// </summary>
+    public PostStatus StatusAt(DateTimeOffset now, bool siteRequiresReview = false) => (PublishedVersion, Review) switch
     {
-        null => PostStatus.Draft,
-        var published when Version > published => PostStatus.Modified,
+        (null, PostReview.Pending) => PostStatus.InReview,
+        (null, PostReview.ChangesRequested) => PostStatus.ChangesRequested,
+        (null, PostReview.Approved) when PublishAt is { } at && at > now => PostStatus.Scheduled,
+        (null, PostReview.Approved) => PostStatus.Approved,
+        (null, _) when !siteRequiresReview && PublishAt is { } future && future > now => PostStatus.Scheduled,
+        (null, _) => PostStatus.Draft,
+        (var published, _) when Version > published => PostStatus.Modified,
         _ => PostStatus.Published,
     };
 
+    /// <summary>The status now, on a site that does not review. For callers with no clock or policy to offer.</summary>
+    public PostStatus Status => StatusAt(DateTimeOffset.UtcNow);
+
     public bool IsLive => PublishedAt is not null;
+
+    /// <summary>Ready to go out on its own, with no further human step — what the scheduler looks for.</summary>
+    public bool IsDueAt(DateTimeOffset now, bool siteRequiresReview) =>
+        !IsLive
+        && PublishAt is { } at
+        && at <= now
+        && (!siteRequiresReview || Review is PostReview.Approved);
 }
 
 /// <summary>
@@ -55,7 +96,10 @@ public sealed class PostList : ReadModel
         DateTimeOffset? PublishedAt,
         long Version,
         long? PublishedVersion,
-        DateTimeOffset UpdatedAt);
+        DateTimeOffset UpdatedAt,
+        PostReview Review = PostReview.None,
+        DateTimeOffset? PublishAt = null,
+        string? ReviewNote = null);
 
     private readonly Dictionary<PostId, Entry> _posts = [];
 
@@ -129,6 +173,25 @@ public sealed class PostList : ReadModel
                 PublishedVersion = @event.StreamVersion,
             },
             PostUnpublished => entry with { PublishedAt = null, PublishedVersion = null },
+            PostPublishDateSet dated => entry with { PublishAt = dated.PublishAt },
+            PostSubmittedForReview submitted => entry with
+            {
+                Review = PostReview.Pending,
+                PublishAt = submitted.ProposedPublishAt,
+                ReviewNote = submitted.Note,
+            },
+            PostReviewApproved approved => entry with
+            {
+                Review = PostReview.Approved,
+                PublishAt = approved.PublishAt,
+                ReviewNote = null,
+            },
+            PostChangesRequested sentBack => entry with
+            {
+                Review = PostReview.ChangesRequested,
+                ReviewNote = sentBack.Reason,
+            },
+            PostApprovalLapsed => entry with { Review = PostReview.None },
             _ => entry,
         };
 
@@ -146,5 +209,6 @@ public sealed class PostList : ReadModel
     ];
 
     private static PostSummary Summarize(PostId id, Entry entry) =>
-        new(id, entry.SiteId, entry.Slug, entry.Title, entry.PublishedAt, entry.Version, entry.PublishedVersion, entry.UpdatedAt);
+        new(id, entry.SiteId, entry.Slug, entry.Title, entry.PublishedAt, entry.Version, entry.PublishedVersion,
+            entry.UpdatedAt, entry.Review, entry.PublishAt, entry.ReviewNote);
 }

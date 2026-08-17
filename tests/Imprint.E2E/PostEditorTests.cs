@@ -141,6 +141,137 @@ public sealed class PostEditorTests(EditorFixture fixture)
     }
 
     [Fact]
+    public async Task A_site_with_a_reviewer_publishes_through_them_and_the_date_they_set()
+    {
+        // The workflow as the people live it: an author cannot publish, sends it instead, the
+        // reviewer moves the date and approves, and only then can it go out. Auth is off in this
+        // fixture, so the one browser plays both parts — which is the "open install" reading the
+        // rest of the editor takes, and it still exercises every command and every gate.
+        var page = await OpenPosts(fixture);
+        var siteId = new Regex(@"/site/([0-9a-f]{32})/posts").Match(page.Url).Groups[1].Value;
+
+        var title = $"Review {Guid.NewGuid():N}"[..13];
+        await page.FillAsync("[data-testid='new-post-title']", title);
+        await page.ClickAsync("[data-testid='new-post-create']");
+        await page.WaitForURLAsync("**/posts/**");
+        await page.WaitForInteractive();
+        var postUrl = page.Url;
+        await page.FillAsync("[data-testid='post-body']", $"# {title}\n\nProse that needs clearing.\n");
+        await page.Locator("[data-testid='post-preview'] h1").WaitForAsync();
+
+        // Leaving the page is what flushes the debounced save — asserted here because everything
+        // below depends on the body having survived, and because it used not to: a body typed and
+        // navigated away from inside the debounce window was silently lost.
+        await page.ReloadAsync();
+        await page.WaitForInteractive();
+        await Expect(page.Locator("[data-testid='post-body']")).ToHaveValueAsync(new Regex("Prose that needs clearing"));
+
+        // ---- name a reviewer in the site's settings
+        await page.GotoAsync($"/sites/{siteId}/settings");
+        await page.WaitForInteractive();
+        await page.FillAsync("[data-testid='site-reviewer-name']", "Lasse");
+        await page.FillAsync("[data-testid='site-reviewer-email']", "lasse@example.test");
+        await page.ClickAsync("[data-testid='site-reviewer-save']");
+        await Expect(page.Locator(".ed-toast").First).ToContainTextAsync("Lasse");
+
+        // ---- back on the post: Publish is gone, because it would only be refused
+        await page.GotoAsync(postUrl);
+        await page.WaitForInteractive();
+        await Expect(page.Locator("[data-testid='post-publish']")).ToHaveCountAsync(0);
+
+        // The author proposes a date and sends it. datetime-local takes the wall clock; the
+        // editor reads it in the editorial zone.
+        await page.FillAsync("[data-testid='post-publish-at']", "2027-03-01T09:00");
+        await page.ClickAsync("[data-testid='post-submit-review']");
+        await Expect(page.Locator("[data-testid='post-status']")).ToHaveTextAsync("In review");
+        await Expect(page.Locator("[data-testid='post-review-line']")).ToContainTextAsync("Lasse");
+
+        // ---- the reviewer sends it back, and the author sees why
+        await page.ClickAsync("[data-testid='post-request-changes']");
+        await page.FillAsync("[data-testid='post-sendback-reason']", "Name the customer more carefully.");
+        await page.ClickAsync("[data-testid='post-sendback-send']");
+        await Expect(page.Locator("[data-testid='post-status']")).ToHaveTextAsync("Changes requested");
+        await Expect(page.Locator("[data-testid='post-review-line']")).ToContainTextAsync("Name the customer more carefully.");
+
+        // ---- resubmitted, then approved with a date of the reviewer's own choosing
+        await page.ClickAsync("[data-testid='post-submit-review']");
+        await Expect(page.Locator("[data-testid='post-status']")).ToHaveTextAsync("In review");
+        await page.FillAsync("[data-testid='post-publish-at']", "2027-04-15T08:30");
+        await page.ClickAsync("[data-testid='post-approve']");
+
+        // Approved with a FUTURE date: scheduled, and nothing published it in the meantime.
+        await Expect(page.Locator("[data-testid='post-status']")).ToHaveTextAsync("Scheduled");
+        await Expect(page.Locator("[data-testid='post-review-line']")).ToContainTextAsync("15 Apr 2027, 08:30");
+
+        // ---- and only now is publishing on offer at all
+        await Expect(page.Locator("[data-testid='post-publish']")).ToHaveTextAsync("Publish now");
+        await page.ClickAsync("[data-testid='post-publish']");
+        await Expect(page.Locator("[data-testid='post-status']")).ToHaveTextAsync("Published");
+
+        // Leave the fixture's shared site as it was for every other test in the collection.
+        await page.GotoAsync($"/sites/{siteId}/settings");
+        await page.WaitForInteractive();
+        await page.FillAsync("[data-testid='site-reviewer-email']", "");
+        await page.FillAsync("[data-testid='site-reviewer-name']", "");
+        await page.ClickAsync("[data-testid='site-reviewer-save']");
+        await Expect(page.Locator(".ed-toast").First).ToContainTextAsync("publish directly");
+    }
+
+    [Fact]
+    public async Task An_unpublished_post_can_be_opened_as_a_real_page_and_the_trail_leads_back()
+    {
+        // Two complaints, one journey: there was no way to see a post as a PAGE before deciding
+        // to publish it, and no way out of the post editor except a lone "← Posts".
+        var page = await OpenPosts(fixture);
+        var title = $"Trail {Guid.NewGuid():N}"[..12];
+        await page.FillAsync("[data-testid='new-post-title']", title);
+        await page.ClickAsync("[data-testid='new-post-create']");
+        await page.WaitForURLAsync("**/posts/**");
+        await page.WaitForInteractive();
+        await page.FillAsync("[data-testid='post-body']", $"# {title}\n\nProse nobody has published yet.\n");
+        await page.Locator("[data-testid='post-preview'] h1").WaitForAsync();
+
+        // The preview link points at the /preview plane, and the post is still a DRAFT: the
+        // status chip says so while the page renders in full site chrome.
+        await Expect(page.Locator("[data-testid='post-status']")).ToHaveClassAsync(new Regex(@"\bpost-status-draft\b"));
+        var href = await page.Locator("[data-testid='post-preview-link']").GetAttributeAsync("href");
+        Assert.Matches(@"^/preview/[0-9a-f]{32}/blog/[a-z0-9-]+/$", href);
+
+        // Polled with real navigations, not a locator wait: the body save is debounced and the
+        // preview plane caches each render for a few seconds, so the first hit can legitimately
+        // 404 — and a 404 is a page that never changes no matter how long a locator waits on it.
+        var previewPage = await page.Context.NewPageAsync();
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (true)
+        {
+            await previewPage.GotoAsync(fixture.BaseUrl + href);
+            if (await previewPage.Locator($"h1:has-text('{title}')").CountAsync() > 0 || DateTime.UtcNow > deadline)
+            {
+                break;
+            }
+
+            await Task.Delay(1000);
+        }
+
+        // The real page: the post's own words, inside the published stylesheet's markup — not
+        // the editor's node pane. An unpublished post reaching this plane is the whole feature.
+        await previewPage.Locator($"h1:has-text('{title}')").WaitForAsync();
+        Assert.Contains("Prose nobody has published yet.", await previewPage.Locator("body").InnerTextAsync(), StringComparison.Ordinal);
+        Assert.Equal(1, await previewPage.Locator("link[rel='stylesheet']").CountAsync());
+        await previewPage.CloseAsync();
+
+        // …and the trail goes back, one step at a time, all the way to the dashboard.
+        var crumbs = page.Locator("[data-testid='breadcrumbs']");
+        await Expect(crumbs.Locator("[data-testid='breadcrumb-current']")).ToHaveTextAsync(title);
+        await crumbs.GetByText("Posts", new LocatorGetByTextOptions { Exact = true }).ClickAsync();
+        await page.WaitForURLAsync("**/posts");
+        await page.WaitForInteractive();
+        await page.Locator("[data-testid='breadcrumbs']").GetByText("Sites", new LocatorGetByTextOptions { Exact = true }).ClickAsync();
+        await page.WaitForURLAsync(url => !url.Contains("/posts", StringComparison.Ordinal));
+        await Expect(page.Locator("[data-testid='new-site']")).ToBeVisibleAsync();
+    }
+
+    [Fact]
     public async Task A_post_longer_than_the_preview_pane_can_be_scrolled()
     {
         // The preview element carries `inert`, and an inert subtree is not hit-tested — so when it

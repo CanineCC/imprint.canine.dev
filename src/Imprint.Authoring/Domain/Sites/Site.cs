@@ -90,6 +90,15 @@ public sealed class Site : AggregateRoot
     // actor (see SiteOverview), so the two never drift.
     public IReadOnlyList<string> Collaborators => _collaborators;
 
+    /// <summary>The reviewer who signs posts off before they go public; null when the site has none.</summary>
+    public string? ReviewerName { get; private set; }
+
+    /// <summary>Where the "please review this" mail goes. Null when the site has no reviewer.</summary>
+    public string? ReviewerEmail { get; private set; }
+
+    /// <summary>Whether posts on this site need a sign-off at all.</summary>
+    public bool HasReviewer => ReviewerEmail is { Length: > 0 };
+
     // The site's deploy targets, in promotion order (e.g. Test → Staging → Production).
     // A site with none has never been given a publish destination; the dashboard's gear
     // is where they are configured.
@@ -679,6 +688,29 @@ public sealed class Site : AggregateRoot
         Raise(new SiteCollaboratorAdded(address));
     }
 
+    /// <summary>
+    /// Names the person who reviews posts before they go public, or clears the role when the
+    /// email is blank. Validates shape only, like <see cref="AddCollaborator"/> — and note that
+    /// naming a reviewer does NOT grant them access: they need to be a collaborator too, which is
+    /// a separate, visible decision rather than a side effect of filling in a field.
+    /// </summary>
+    public void SetReviewer(string? name, string? email)
+    {
+        var address = string.IsNullOrWhiteSpace(email) ? null : ValidCollaboratorEmail(email);
+        var person = string.IsNullOrWhiteSpace(name) ? null : name.Trim();
+        if (address is null)
+        {
+            person = null;   // a name with nobody to mail is not a reviewer
+        }
+
+        if (string.Equals(address, ReviewerEmail, StringComparison.OrdinalIgnoreCase) && person == ReviewerName)
+        {
+            return;
+        }
+
+        Raise(new SiteReviewerSet(person, address));
+    }
+
     public void RemoveCollaborator(string email)
     {
         var address = ValidCollaboratorEmail(email);
@@ -780,6 +812,10 @@ public sealed class Site : AggregateRoot
                 break;
             case SiteOwnershipClaimed:
                 break; // ownership lives in the envelope actor; no aggregate state changes
+            case SiteReviewerSet e:
+                ReviewerName = e.Name;
+                ReviewerEmail = e.Email;
+                break;
             case SiteCollaboratorAdded e:
                 _collaborators.Add(e.Email);
                 break;

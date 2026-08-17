@@ -19,13 +19,7 @@
     font-weight: 700;
 }
 
-.aw-back {
-    color: var(--ed-text-muted);
-    text-decoration: none;
-    font-weight: 600;
-}
 
-.aw-back:hover { color: var(--ed-text); text-decoration: underline; }
 
 .aw-warning {
     padding: 12px 14px;

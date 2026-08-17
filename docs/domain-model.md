@@ -65,6 +65,7 @@ navigation items, deleted flag. Stream: `site-{id}`.
 | `site.theme-token-changed` | `string Token, string Light, string Dark` | Invariant: token ∈ closed set; values are valid CSS colors (validated syntactically). |
 | `site.typography-changed` | `Typography Typography` | Whole value object — typography options are chosen together. |
 | `site.navigation-changed` | `IReadOnlyList<NavigationItem> Items` | Full list; nav is small and reordered as a unit. |
+| `site.reviewer-set` | `string? Name, string? Email` | The public-relations reviewer. Naming one changes what publishing MEANS on the site: posts go through them (§3a). Null clears the role. Naming someone does **not** grant them access — they must also be a collaborator. |
 
 `Site.Version` (stream version) doubles as the **chrome version** used by the publish
 manifest for staleness (nav or theme change ⇒ all published pages stale).
@@ -206,6 +207,41 @@ infrastructure; only the *aggregate* records truth.
 
 ---
 
+## 3a. Post aggregate (blog entries)
+
+Stream: `post-{id}`. State: slug, title/meta (localized), **markdown body per locale**, publish
+date, review state, scheduled instant. The authored state is markdown, not a node tree: the tree
+is a projection of it, so a later fix to the converter reaches posts already written.
+Representability is enforced at *publish* (and at *submit for review*), never while typing.
+
+| Stable name | Payload |
+|---|---|
+| `post.created` | `PostId, SiteId, string Slug, Locale InitialLocale, string Title` |
+| `post.title-changed` / `post.slug-changed` / `post.meta-changed` | as their names |
+| `post.body-changed` | `Locale, string Markdown` (a no-op save raises nothing) |
+| `post.published` | `DateTimeOffset PublishedAt` — first date wins; a post published *on a schedule* is dated by the schedule, not by the moment the worker woke |
+| `post.unpublished` | — |
+| `post.publish-date-set` | `DateTimeOffset? PublishAt` — null is "to be decided", which is a decision to wait, not to publish now |
+| `post.submitted-for-review` | `DateTimeOffset? ProposedPublishAt, string? Note` |
+| `post.review-approved` | `DateTimeOffset? PublishAt` (the reviewer's date, which may not be the proposal) |
+| `post.changes-requested` | `string Reason` (required — a rejection nobody can act on is not a review) |
+| `post.approval-lapsed` | — raised by an edit to an approved post: sign-off is on words, not on a post |
+| `post.deleted` | — |
+
+**Review is a site policy, not a post rule.** `Site.ReviewerEmail` decides whether posts on that
+site need a sign-off; the *post* only knows its own `PostReview` state
+(`None | Pending | ChangesRequested | Approved`). So the cross-aggregate check lives in
+`PublishPostHandler` (with the accepted race named there), and a site with nobody configured
+publishes exactly as it always did.
+
+**Scheduling** is not a second way to publish: `DuePostPublisher` (a background worker) dispatches
+the ordinary `PublishPost` command once `PublishAt` has passed, so the review gate, the widget
+check and the markdown verdict all apply to a scheduled publish too. A post on a reviewed site is
+not *due* until it is approved — the clock never overrules the reviewer. Wall-clock times are read
+in `EditorialTime.Zone` (Europe/Copenhagen); instants are stored absolute.
+
+---
+
 ## 4. BlockDefinition aggregate ("symbols")
 
 Stream: `block-{id}`. State: name, `NodeSpec Spec` (a subtree; same placement grammar
@@ -267,6 +303,10 @@ through read models (each such check carries a comment naming the accepted race)
   transactions**: definition first, then page; the handler compensates by deleting the
   definition if the page append fails), `RenameBlock`, `UpdateBlockFromInstance`
   (pushes an instance's resolved subtree back to the definition), `DeleteBlock`.
+- **Posts/**: `CreatePost`, `ChangePostTitle`, `ChangePostSlug`, `ChangePostMeta`,
+  `ChangePostBody`, `SchedulePost` (sets/clears the go-live date), `SubmitPostForReview`,
+  `ApprovePostReview`, `RequestPostChanges`, `PublishPost` (review-gated), `UnpublishPost`,
+  `DeletePost`.
 - **Publishing/**: `PublishAllStale` (fan-out of `PublishPage` over stale pages).
 
 ---
