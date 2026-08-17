@@ -35,6 +35,8 @@ using SetSocialImageCmd = Imprint.Authoring.Features.Sites.SetSocialImage.SetSoc
 using SetLlmsExcludedPathsCmd = Imprint.Authoring.Features.Sites.SetLlmsExcludedPaths.SetLlmsExcludedPaths;
 using SetLlmsPreambleCmd = Imprint.Authoring.Features.Sites.SetLlmsPreamble.SetLlmsPreamble;
 using SetHeaderLogoCmd = Imprint.Authoring.Features.Sites.SetHeaderLogo.SetHeaderLogo;
+using TagAssetCmd = Imprint.Authoring.Features.Assets.TagAsset.TagAsset;
+using UntagAssetCmd = Imprint.Authoring.Features.Assets.UntagAsset.UntagAsset;
 using UploadAssetCmd = Imprint.Authoring.Features.Assets.UploadAsset.UploadAsset;
 using UploadAssetDarkVariantCmd = Imprint.Authoring.Features.Assets.UploadAssetDarkVariant.UploadAssetDarkVariant;
 
@@ -679,6 +681,56 @@ public sealed class ImprintAuthoringMcpTools
         await using var stream = new MemoryStream(bytes);
         return await Dispatch(dispatcher, config, new UploadAssetDarkVariantCmd(aid, fileName, type, bytes.Length, stream), ct,
             () => new { ok = true, assetId = aid.Compact, status = "Pending", dark = true });
+    }
+
+    [McpServerTool(Name = "tag_assets")]
+    [Description("File assets under one or more tags — the library is a single shared shelf, and tags are what make a group findable again (e.g. all the figures of one post). Every tag is applied to every asset id given, so a whole group is one call. Already-carried tags are a no-op, not an error. Tags are compared case-insensitively; see the current ones in list_assets.")]
+    public static Task<object> TagAssets(
+        [Description("The asset ids to file (compact or dashed GUIDs).")] string[]? assetIds,
+        [Description("The tags to apply, e.g. ['B20','Blog']. Each is trimmed; max 60 chars, 25 per asset.")] string[]? tags,
+        ICommandDispatcher dispatcher, IConfiguration config, AssetLibrary assets, CancellationToken ct = default) =>
+        ApplyTags(assetIds, tags, add: true, dispatcher, config, assets, ct);
+
+    [McpServerTool(Name = "untag_assets")]
+    [Description("Remove one or more tags from assets. Every tag is removed from every asset id given. A tag the asset never carried is a no-op, not an error. A tag stops existing when its last asset drops it.")]
+    public static Task<object> UntagAssets(
+        [Description("The asset ids to unfile (compact or dashed GUIDs).")] string[]? assetIds,
+        [Description("The tags to remove.")] string[]? tags,
+        ICommandDispatcher dispatcher, IConfiguration config, AssetLibrary assets, CancellationToken ct = default) =>
+        ApplyTags(assetIds, tags, add: false, dispatcher, config, assets, ct);
+
+    private static async Task<object> ApplyTags(
+        string[]? assetIds, string[]? tags, bool add,
+        ICommandDispatcher dispatcher, IConfiguration config, AssetLibrary assets, CancellationToken ct)
+    {
+        // Validated as a batch first: a half-applied call would leave the caller working out which
+        // pairs landed before the typo'd id.
+        var (ids, names, error) = AuthoringApi.ReadTagBatch(assetIds, tags, assets);
+        if (error is not null) return Fail(error);
+
+        foreach (var id in ids)
+        {
+            foreach (var tag in names)
+            {
+                ICommand command = add
+                    ? new TagAssetCmd(id, tag)
+                    : new UntagAssetCmd(id, tag);
+
+                using var _ = EditorActor.BeginScope(ActorOf(config));
+                var result = await dispatcher.Dispatch(command, ct);
+                if (!result.Succeeded)
+                {
+                    return FailResult($"{(add ? "tag" : "untag")} '{tag}' on {id.Compact} failed", result);
+                }
+            }
+        }
+
+        return new
+        {
+            ok = true,
+            tags = names,
+            assets = ids.Select(id => AuthoringApi.AssetView(assets.Get(id)!)).ToList(),
+        };
     }
 
     [McpServerTool(Name = "set_favicon")]
