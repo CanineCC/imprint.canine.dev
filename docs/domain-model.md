@@ -234,6 +234,14 @@ site need a sign-off; the *post* only knows its own `PostReview` state
 `PublishPostHandler` (with the accepted race named there), and a site with nobody configured
 publishes exactly as it always did.
 
+**Both review events carry the resulting date** — `post.submitted-for-review` and
+`post.review-approved` each set `PublishAt`, which is right for a log (an event should state what
+it decided) but makes an *omitted* field destructive over HTTP. So the authoring API resolves the
+omission before dispatching: no date on submit or approve means "the date it already has", never
+"unschedule it". Clearing a date is `PUT /posts/{id}/schedule` with null — asked for, never a side
+effect of submitting or agreeing. The editor is unaffected: its date box always dispatches
+`SchedulePost` first, so what it sends already matches the aggregate.
+
 **Scheduling** is not a second way to publish: `DuePostPublisher` (a background worker) dispatches
 the ordinary `PublishPost` command once `PublishAt` has passed, so the review gate, the widget
 check and the markdown verdict all apply to a scheduled publish too. A post on a reviewed site is

@@ -18,4 +18,10 @@
     <ProjectReference Include="../../src/Imprint.Editor/Imprint.Editor.csproj" />
   </ItemGroup>
 
+  <!-- The API tests host the authoring endpoints in-process (WebApplication + real HTTP), which
+       needs the ASP.NET Core framework assemblies in this test assembly, not just transitively. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
 </Project>

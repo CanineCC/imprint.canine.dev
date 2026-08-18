@@ -894,20 +894,35 @@ public static class AuthoringApi
             if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
             if (posts.Get(pid) is not { } post) return Results.NotFound(new { error = "unknown post" });
             var locale = LocaleFor(body?.Locale, post, sites);
+
+            // Both review events carry the RESULTING date (post.submitted-for-review sets it, and
+            // so does post.review-approved), which is right for the log — an event should state
+            // what it decided. It makes an omitted field destructive over HTTP though, so the
+            // omission is resolved HERE: no proposal means "the date it already has", never
+            // "unschedule it". Clearing stays an explicit PUT /posts/{id}/schedule with null.
+            var proposed = body?.ProposedPublishAt ?? post.PublishAt;
             var result = await DispatchAs(dispatcher, actor,
-                new SubmitPostForReviewCmd(pid, locale, body?.ProposedPublishAt, body?.Note), ct);
+                new SubmitPostForReviewCmd(pid, locale, proposed, body?.Note), ct);
             return result.Succeeded
-                ? Results.Ok(new { postId = pid.Compact, status = "InReview" })
+                ? Results.Ok(new { postId = pid.Compact, status = "InReview", proposedPublishAt = proposed })
                 : Results.BadRequest(new { error = "submit failed", details = result.Errors });
         });
 
         api.MapPost("/posts/{postId}/approve", async (
-            string postId, PostApproveRequest? body, ICommandDispatcher dispatcher, CancellationToken ct) =>
+            string postId, PostApproveRequest? body, ICommandDispatcher dispatcher, PostList posts,
+            CancellationToken ct) =>
         {
             if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
-            var result = await DispatchAs(dispatcher, actor, new ApprovePostReviewCmd(pid, body?.PublishAt), ct);
+            if (posts.Get(pid) is not { } post) return Results.NotFound(new { error = "unknown post" });
+
+            // An omitted date means "approve it as it stands", never "unschedule it" — the same
+            // rule submit-review follows above, and for the same reason. Approving used to pass
+            // the request's null straight through, so saying yes silently dropped a go-live the
+            // author had already set.
+            var publishAt = body?.PublishAt ?? post.PublishAt;
+            var result = await DispatchAs(dispatcher, actor, new ApprovePostReviewCmd(pid, publishAt), ct);
             return result.Succeeded
-                ? Results.Ok(new { postId = pid.Compact, publishAt = body?.PublishAt })
+                ? Results.Ok(new { postId = pid.Compact, publishAt })
                 : Results.BadRequest(new { error = "approve failed", details = result.Errors });
         });
 
