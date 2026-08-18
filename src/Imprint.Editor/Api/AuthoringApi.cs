@@ -5,6 +5,7 @@ using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Assets;
 using Imprint.Authoring.Domain.Pages;
 using Imprint.Authoring.Domain.Posts;
+using Imprint.Authoring.Domain.Posts.Events;
 using Imprint.Authoring.Domain.Sites;
 using Imprint.Authoring.Projections;
 using Imprint.Authoring.Syndication;
@@ -794,6 +795,28 @@ public static class AuthoringApi
             return Results.Ok(PostDetailView(summary, sites.Get(summary.SiteId), post));
         });
 
+        // A post's history, straight off its event stream. An event-sourced CMS keeps every
+        // revision by construction, and until now nothing could read them: recovering a body that
+        // an editor bug (or a person) overwrote meant shell access to the SQLite file on the box.
+        // Read-only, and strictly narrower than what this token already grants — the same secret
+        // can rewrite any post's body outright.
+        //
+        // ?body=true includes the markdown of each revision, which is what makes recovery possible;
+        // without it the response is a compact log (who changed what, when) and stays small.
+        api.MapGet("/posts/{postId}/history", async (
+            string postId, bool? body, IEventStore events, PostList posts, CancellationToken ct) =>
+        {
+            if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
+            if (posts.Get(pid) is null) return Results.NotFound(new { error = "unknown post" });
+
+            var stream = await events.ReadStream(pid.Stream, ct: ct);
+            return Results.Ok(new
+            {
+                postId = pid.Compact,
+                revisions = stream.Select(e => PostRevisionView(e, body ?? false)).ToList(),
+            });
+        });
+
         api.MapPost("/sites/{siteId}/posts", async (
             string siteId, CreatePostRequest? body, ICommandDispatcher dispatcher, SiteOverview sites, CancellationToken ct) =>
         {
@@ -1131,6 +1154,51 @@ public static class AuthoringApi
         view["metaTitle"] = Localized(post.MetaTitle);
         view["metaDescription"] = Localized(post.MetaDescription);
         return view;
+    }
+
+    /// <summary>
+    /// One entry in a post's history: the envelope (which version, when, and who) plus what that
+    /// event actually changed. Every body revision is here, which is what makes an overwritten
+    /// post recoverable without touching the event store on disk.
+    /// </summary>
+    private static object PostRevisionView(StoredEvent stored, bool includeBody)
+    {
+        object Entry(string change, object? detail = null) => new
+        {
+            version = stored.StreamVersion,
+            at = stored.Metadata.TimestampUtc,
+            actor = stored.Metadata.Actor,
+            change,
+            detail,
+        };
+
+        return stored.Event switch
+        {
+            PostCreated e => Entry("created", new
+            {
+                siteId = e.SiteId.Compact, slug = e.Slug, locale = e.InitialLocale.Value, title = e.Title,
+            }),
+            PostTitleChanged e => Entry("title", new { locale = e.Locale.Value, title = e.Title }),
+            PostSlugChanged e => Entry("slug", new { slug = e.Slug }),
+            PostMetaChanged e => Entry("meta", new
+            {
+                locale = e.Locale.Value, metaTitle = e.MetaTitle, metaDescription = e.MetaDescription,
+            }),
+            // The length is always present so a blanking shows up in the compact log too — that is
+            // the shape of the damage, and you should not need the full text to spot it.
+            PostBodyChanged e => Entry("body", includeBody
+                ? new { locale = e.Locale.Value, length = e.Markdown.Length, markdown = e.Markdown }
+                : (object)new { locale = e.Locale.Value, length = e.Markdown.Length }),
+            PostPublishDateSet e => Entry("scheduled", new { publishAt = e.PublishAt }),
+            PostSubmittedForReview e => Entry("submitted", new { proposedPublishAt = e.ProposedPublishAt, note = e.Note }),
+            PostReviewApproved e => Entry("approved", new { publishAt = e.PublishAt }),
+            PostChangesRequested e => Entry("changes-requested", new { reason = e.Reason }),
+            PostApprovalLapsed => Entry("approval-lapsed"),
+            PostPublished e => Entry("published", new { publishedAt = e.PublishedAt }),
+            PostUnpublished => Entry("unpublished"),
+            PostDeleted => Entry("deleted"),
+            _ => Entry(stored.StableId),
+        };
     }
 
     /// <summary>The locale a post command should use: the one asked for, else the site's default.</summary>

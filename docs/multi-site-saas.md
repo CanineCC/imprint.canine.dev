@@ -142,6 +142,21 @@ Ownership exists and is now **enforced** whenever auth is enabled:
   opening the settings URL gets the same "not found" card as an unknown id. With auth
   off the list is kept but not enforced.
 
+- **The reviewer's pass.** A site's reviewer is not a collaborator (naming one grants no
+  site access, on purpose), but they are mailed a link to a single post and asked to act
+  on it — so `SiteAccess.PassForAsync(siteId, review)` answers per *post* rather than per
+  site. It returns `Edit` for owners and collaborators, `Review` for the site's reviewer
+  on a post that has been **handed to them** (any review state other than `None`), and
+  `None` otherwise. A `Review` pass reads the post, sets or clears the go-live date, and
+  approves or sends back; it renders no textarea it can write to, no media shelf, no
+  publish controls, and no breadcrumbs into the site. It does not open the site's other
+  drafts, and when an approval lapses (the author edited) the post returns to the author
+  and the pass closes with it.
+
+  Until this existed the review mail linked somewhere its recipient was bounced from —
+  and, worse, the post editor's flush-on-teardown wrote the reviewer's unloaded (empty)
+  body over the post on the way out. See `ReviewerPostPassTests`.
+
 > **Blazor Server trap.** The interactive circuit has **no `HttpContext`**, so the
 > forwarded identity header is unreadable from inside a component the normal way, and the
 > command dispatcher runs on the *root* provider (it cannot see per-circuit scope).
@@ -161,5 +176,8 @@ Ownership exists and is now **enforced** whenever auth is enabled:
   storage key can fetch any site's media bytes.
 - Owner-only management of the People card is enforced in the UI, not in the command
   handler — fine while every dispatch path runs behind the gated components.
-- There are no roles beyond owner/editor: a collaborator can edit, publish and change
-  settings, but not manage access.
+- There are no roles beyond owner/editor/reviewer: a collaborator can edit, publish and
+  change settings, but not manage access; a reviewer acts on submitted posts only.
+- The reviewer's pass is enforced in the component, like every other access decision here
+  — the command dispatcher is still not access-checked, so a control that must not be
+  used is not rendered rather than merely disabled.

@@ -65,7 +65,7 @@ navigation items, deleted flag. Stream: `site-{id}`.
 | `site.theme-token-changed` | `string Token, string Light, string Dark` | Invariant: token ∈ closed set; values are valid CSS colors (validated syntactically). |
 | `site.typography-changed` | `Typography Typography` | Whole value object — typography options are chosen together. |
 | `site.navigation-changed` | `IReadOnlyList<NavigationItem> Items` | Full list; nav is small and reordered as a unit. |
-| `site.reviewer-set` | `string? Name, string? Email` | The public-relations reviewer. Naming one changes what publishing MEANS on the site: posts go through them (§3a). Null clears the role. Naming someone does **not** grant them access — they must also be a collaborator. |
+| `site.reviewer-set` | `string? Name, string? Email` | The public-relations reviewer. Naming one changes what publishing MEANS on the site: posts go through them (§3a). Null clears the role. Naming someone grants no **site** access; it grants a post-scoped reviewer's pass (read, date, approve/send back) on posts that have been submitted to them. Make them a collaborator to let them edit. |
 
 `Site.Version` (stream version) doubles as the **chrome version** used by the publish
 manifest for staleness (nav or theme change ⇒ all published pages stale).

@@ -74,27 +74,29 @@ else
                    the two only diverge while the reviewer holds it. Offering Publish on a site
                    that publishes through review would be offering something the command refuses,
                    which is how a workflow teaches people to distrust its buttons. *@
-                @if (_status == PostStatus.Published)
+                @if (_status == PostStatus.InReview && _isReviewer)
+                {
+                    @* Approve takes whatever is in the date box, which is how "change the date
+                       to your liking" happens without a second control. *@
+                    <button type="button" class="ed-btn ed-btn-primary" data-testid="post-approve"
+                            title="Approve the content and the date" @onclick="Approve">Approve</button>
+                    <button type="button" class="ed-btn" data-testid="post-request-changes"
+                            @onclick="() => _askingChanges = !_askingChanges">Send back…</button>
+                }
+                else if (!CanEdit)
+                {
+                    @* A review pass carries nothing else: approving or sending back is the whole
+                       of this visitor's authority, and every control below writes to the post. *@
+                }
+                else if (_status == PostStatus.Published)
                 {
                     <button type="button" class="ed-btn" data-testid="post-unpublish"
                             @onclick="Unpublish">Unpublish</button>
                 }
                 else if (_status == PostStatus.InReview)
                 {
-                    @if (_isReviewer)
-                    {
-                        @* Approve takes whatever is in the date box, which is how "change the date
-                           to your liking" happens without a second control. *@
-                        <button type="button" class="ed-btn ed-btn-primary" data-testid="post-approve"
-                                title="Approve the content and the date" @onclick="Approve">Approve</button>
-                        <button type="button" class="ed-btn" data-testid="post-request-changes"
-                                @onclick="() => _askingChanges = !_askingChanges">Send back…</button>
-                    }
-                    else
-                    {
-                        <button type="button" class="ed-btn" data-testid="post-submit-review" disabled
-                                title="@($"{Reviewer} has it")">With @Reviewer</button>
-                    }
+                    <button type="button" class="ed-btn" data-testid="post-submit-review" disabled
+                            title="@($"{Reviewer} has it")">With @Reviewer</button>
                 }
                 else if (Reviewer is { } reviewer && _status is not (PostStatus.Approved or PostStatus.Scheduled))
                 {
@@ -142,15 +144,18 @@ else
         <div class="post-panes" @ref="_panes">
             <section class="post-pane post-pane-source" aria-label="Markdown" @ref="_sourcePane">
                 <textarea class="post-source" data-testid="post-body" spellcheck="true" @ref="_sourceBox"
-                          @bind="Body" @bind:event="oninput"
+                          @bind="Body" @bind:event="oninput" readonly="@(!CanEdit)"
                           placeholder="# Your post&#10;&#10;Write in markdown."></textarea>
 
                 @* file-drop.js hands a drop to the first file input inside the element it was
                    wired to, and the shelf's input now lives in the other pane — so dropping on
                    the text needs an input of its own here, or the gesture the hint promises
                    would quietly do nothing. *@
-                <InputFile OnChange="OnFiles" multiple class="ed-visually-hidden"
-                           data-testid="post-source-drop" aria-label="Upload images into the post" />
+                @if (CanEdit)
+                {
+                    <InputFile OnChange="OnFiles" multiple class="ed-visually-hidden"
+                               data-testid="post-source-drop" aria-label="Upload images into the post" />
+                }
             </section>
 
             @* The divider. A real separator control rather than a decorative bar: it drags with a
@@ -162,22 +167,27 @@ else
                  title="Drag to resize · double-click to even them up" data-testid="post-split"></div>
 
             <section class="post-pane post-pane-side" aria-label="Preview and media" @ref="_sidePane">
-                <div class="post-views" role="tablist" aria-label="Right pane">
-                    <button type="button" role="tab" class="post-view @(_view == SideView.Preview ? "is-on" : null)"
-                            aria-selected="@(_view == SideView.Preview ? "true" : "false")"
-                            data-testid="post-view-preview"
-                            @onclick="() => _view = SideView.Preview">Preview</button>
-                    <button type="button" role="tab" class="post-view @(_view == SideView.Media ? "is-on" : null)"
-                            aria-selected="@(_view == SideView.Media ? "true" : "false")"
-                            data-testid="post-view-media"
-                            @onclick="() => _view = SideView.Media">Media</button>
-                </div>
+                @* The media half of this pane is an editing tool, so a review pass gets no switch
+                   to reach it — one pane, showing the post. *@
+                @if (CanEdit)
+                {
+                    <div class="post-views" role="tablist" aria-label="Right pane">
+                        <button type="button" role="tab" class="post-view @(_view == SideView.Preview ? "is-on" : null)"
+                                aria-selected="@(_view == SideView.Preview ? "true" : "false")"
+                                data-testid="post-view-preview"
+                                @onclick="() => _view = SideView.Preview">Preview</button>
+                        <button type="button" role="tab" class="post-view @(_view == SideView.Media ? "is-on" : null)"
+                                aria-selected="@(_view == SideView.Media ? "true" : "false")"
+                                data-testid="post-view-media"
+                                @onclick="() => _view = SideView.Media">Media</button>
+                    </div>
 
-                @* The pane's own drop input, outside the view switch: dropping a file while the
-                   preview is showing must still upload — the author aimed at the window, not at
-                   a tab. It comes first in the DOM, so it is the one file-drop.js finds. *@
-                <InputFile OnChange="OnFiles" multiple class="ed-visually-hidden"
-                           data-testid="post-side-drop" aria-label="Upload images into the post" />
+                    @* The pane's own drop input, outside the view switch: dropping a file while the
+                       preview is showing must still upload — the author aimed at the window, not at
+                       a tab. It comes first in the DOM, so it is the one file-drop.js finds. *@
+                    <InputFile OnChange="OnFiles" multiple class="ed-visually-hidden"
+                               data-testid="post-side-drop" aria-label="Upload images into the post" />
+                }
 
                 @* The scroller is this wrapper, never the preview itself: the preview carries
                    `inert`, and inert disables hit-testing for its whole subtree — so a wheel over
@@ -185,7 +195,7 @@ else
                    top of their own post. The page editor has always done it this way
                    (.ed-canvas-scroll around .ed-canvas); this pane simply forgot to. *@
                 <div class="post-view-body" data-testid="post-view-body">
-                @if (_view == SideView.Preview)
+                @if (_view == SideView.Preview || !CanEdit)
                 {
                     @* The canvas paints itself from the PUBLISHED site's tokens (--ip-background and
                        friends), which only exist where something emits them — the page editor does it
@@ -255,6 +265,19 @@ else
     private PostReview _review;
     private string? _reviewNote;
     private bool _isReviewer;
+
+    /// <summary>
+    /// What this visitor may do here. It gates every command this page can dispatch, because the
+    /// dispatcher itself is not access-checked — on this screen the UI IS the boundary, so a
+    /// control that must not be used is not rendered rather than merely disabled.
+    /// </summary>
+    /// Starts closed and is opened by the load, which sets it before <c>_post</c> — so the
+    /// only state that renders any control is one that has been through PassForAsync.
+    private PostPass _pass = PostPass.None;
+
+    /// <summary>Whether the words may be changed. False for a reviewer, who clears them as written.</summary>
+    private bool CanEdit => _pass is PostPass.Edit;
+
     private bool _askingChanges;
     private string _changesReason = "";
 
@@ -312,6 +335,11 @@ else
 
     private async Task SubmitForReview()
     {
+        if (!CanEdit)
+        {
+            return;
+        }
+
         // The date in the box travels with the submission as the author's proposal — the reviewer
         // sees it in the mail and can change it before approving.
         // The reviewer must read what is on screen, not what the autosave last managed.
@@ -356,15 +384,19 @@ else
     // Sites / <blog> / Posts / <this post>. The post editor used to offer "← Posts" and nothing
     // else: from here the dashboard was unreachable except by editing the URL.
     private IReadOnlyList<Breadcrumbs.Crumb> Trail =>
-        Sites.Get(_siteId) is { } site
-            ?
-            [
-                Breadcrumbs.Sites,
-                Breadcrumbs.Of(site),
-                new Breadcrumbs.Crumb("Posts", $"/site/{_siteId.Compact}/posts"),
-                new Breadcrumbs.Crumb(_titleText),
-            ]
-            : [Breadcrumbs.Sites, new Breadcrumbs.Crumb("Posts", $"/site/{_siteId.Compact}/posts")];
+        // A review pass reaches exactly one post, so the trail names where they are and offers no
+        // links: every rung above this one redirects a reviewer straight back out.
+        !CanEdit
+            ? [new Breadcrumbs.Crumb(Sites.Get(_siteId)?.Name ?? "Posts"), new Breadcrumbs.Crumb(_titleText)]
+            : Sites.Get(_siteId) is { } site
+                ?
+                [
+                    Breadcrumbs.Sites,
+                    Breadcrumbs.Of(site),
+                    new Breadcrumbs.Crumb("Posts", $"/site/{_siteId.Compact}/posts"),
+                    new Breadcrumbs.Crumb(_titleText),
+                ]
+                : [Breadcrumbs.Sites, new Breadcrumbs.Crumb("Posts", $"/site/{_siteId.Compact}/posts")];
 
     // ----------------------------------------------------------------- media
 
@@ -422,6 +454,11 @@ else
 
     private async Task OnFiles(InputFileChangeEventArgs args)
     {
+        if (!CanEdit)
+        {
+            return;
+        }
+
         foreach (var file in args.GetMultipleFiles(50))
         {
             if (file.Size > MaxUploadBytes)
@@ -514,12 +551,16 @@ else
         get => _body;
         set
         {
-            if (value == _body)
+            if (value == _body || !CanEdit)
             {
+                // readonly on the textarea is the visible half; this is the half that holds if a
+                // value arrives anyway. The binding is the only route from a keystroke to the
+                // store, so refusing here refuses the whole path.
                 return;
             }
 
             _body = value;
+            _savePending = true;
             Reconvert();
             _ = SaveSoon();
         }
@@ -540,10 +581,13 @@ else
         // changed" — Blazor still owns the streaming. Both panes are targets: the source pane
         // because it is what an author is looking at while writing, the side pane because a
         // shelf you can see is a shelf you will aim at.
-        _dropModule = await Js.InvokeAsync<IJSObjectReference>("import", "./js/file-drop.js");
-        await _dropModule.InvokeVoidAsync("init", _sourcePane);
-        await _dropModule.InvokeVoidAsync("init", _sidePane);
-        _caretModule = await Js.InvokeAsync<IJSObjectReference>("import", "./js/post-caret.js");
+        if (CanEdit)
+        {
+            _dropModule = await Js.InvokeAsync<IJSObjectReference>("import", "./js/file-drop.js");
+            await _dropModule.InvokeVoidAsync("init", _sourcePane);
+            await _dropModule.InvokeVoidAsync("init", _sidePane);
+            _caretModule = await Js.InvokeAsync<IJSObjectReference>("import", "./js/post-caret.js");
+        }
 
         // The split is remembered across posts and sessions, so it is restored here rather than
         // rendered: the pane must not flash to half its width and then jump.
@@ -559,35 +603,51 @@ else
             return;
         }
 
-        _id = PostId.From(guid);
-        _post = await Store.LoadOrDefault<Post>(_id.Stream);
-        if (_post is null)
+        // Loaded into LOCALS, and published to the fields only once this component has committed
+        // to showing the post. Assigning _post up front left every bail-out below holding a post
+        // whose body had not been read yet — and that half-loaded pair is exactly what the flush
+        // in DisposeAsync reads. A reviewer who is not a collaborator is bounced to "/" here, and
+        // used to take the post's text with them on the way out.
+        var id = PostId.From(guid);
+        var post = await Store.LoadOrDefault<Post>(id.Stream);
+        if (post is null)
         {
             Navigation.NavigateTo("/");
             return;
         }
 
-        _siteId = _post.SiteId;
-        if (!await Access.CanAccessAsync(_siteId))
+        // Site access is the wrong question for this page: the reviewer is mailed a link to ONE
+        // post and is deliberately not a collaborator, so asking "may you touch this site" refused
+        // the only person the mail was addressed to. PassForAsync answers per post instead.
+        var pass = await Access.PassForAsync(post.SiteId, post.Review);
+        if (pass is PostPass.None)
         {
             Navigation.NavigateTo("/");
             return;
         }
 
-        _locale = Sites.Get(_siteId)?.DefaultLocale ?? new Locale("en");
-        _titleText = _post.Title.Resolve(_locale, _locale);
-        _slug = _post.Slug.Value;
-        _body = _post.Body.Get(_locale) ?? "";
+        var locale = Sites.Get(post.SiteId)?.DefaultLocale ?? new Locale("en");
 
         // Whether the signed-in user IS the reviewer decides which half of the workflow this
         // screen shows. With auth off (dev, tests, trusted LAN) there is nobody to be, and the
         // reviewing controls are the ones that appear — the same "open install" reading the rest
         // of the editor takes.
         var me = await Access.UserAsync();
-        _isReviewer = Sites.Get(_siteId) is { ReviewerEmail: { Length: > 0 } reviewer }
+        var isReviewer = Sites.Get(post.SiteId) is { ReviewerEmail: { Length: > 0 } reviewer }
             && (me is null || string.Equals(me, reviewer, StringComparison.OrdinalIgnoreCase));
 
-        ApplyPost(_post);
+        // Published together, with no await in between, so no interleaving can observe a post
+        // that is loaded and a body that is not.
+        _id = id;
+        _pass = pass;
+        _siteId = post.SiteId;
+        _locale = locale;
+        _isReviewer = isReviewer;
+        _titleText = post.Title.Resolve(locale, locale);
+        _slug = post.Slug.Value;
+        _body = post.Body.Get(locale) ?? "";
+
+        ApplyPost(post);
         Reconvert();
     }
 
@@ -625,11 +685,22 @@ else
             return;   // superseded by a later keystroke
         }
 
+        _savePending = false;
         await Commands.Run(new ChangePostBody(_id, _locale.Value, _body));
     }
 
+
     private const int SaveDebounce = 600;
     private int _saveToken;
+
+    /// <summary>
+    /// Whether the author has typed something the store has not been told about yet. It is set by
+    /// the binding and cleared by whoever writes, which makes it the ONLY honest answer to "is
+    /// there anything to save on the way out" — and the reason DisposeAsync no longer guesses by
+    /// comparing strings. That comparison could not tell an author who emptied the body from a
+    /// screen that never loaded one, and read the second as the first.
+    /// </summary>
+    private bool _savePending;
 
     /// <summary>
     /// Writes whatever the debounce is still holding, now. Every action that acts on the body —
@@ -639,11 +710,23 @@ else
     private Task FlushBody()
     {
         _saveToken++;   // cancel the pending timer; this save supersedes it
+        if (!CanEdit)
+        {
+            _savePending = false;
+            return Task.CompletedTask;
+        }
+
+        _savePending = false;
         return Commands.Run(new ChangePostBody(_id, _locale.Value, _body));
     }
 
     private async Task Publish()
     {
+        if (!CanEdit)
+        {
+            return;
+        }
+
         await FlushBody();
         await Commands.Run(new PublishPost(_id, _locale.Value));
         Refresh();
@@ -651,6 +734,11 @@ else
 
     private async Task Unpublish()
     {
+        if (!CanEdit)
+        {
+            return;
+        }
+
         await Commands.Run(new UnpublishPost(_id));
         Refresh();
     }
@@ -687,9 +775,14 @@ else
         // debounce. Losing it is silent, which is the worst kind of losing — so the save is
         // flushed on the way out. Best effort by nature: the circuit may already be gone, and a
         // failure here must not stop the rest of the teardown.
+        //
+        // Gated on a save the AUTHOR caused, never on "the field differs from the aggregate".
+        // Only a keystroke sets _savePending, so a screen that closed without one — bounced to
+        // "/" for lack of access, or torn down mid-load — writes nothing at all. Leaving is not
+        // an edit.
         try
         {
-            if (_post is not null && _body != (_post.Body.Get(_locale) ?? ""))
+            if (_savePending)
             {
                 await FlushBody();
             }
