@@ -63,10 +63,11 @@ a.mk-card:hover, a.mk-card:focus-visible { border-color: var(--accent); text-dec
 .mk-card-top { display: flex; align-items: baseline; justify-content: space-between; gap: 0.8rem; }
 .mk-card-name { font-weight: 650; font-size: var(--fs-md); overflow-wrap: anywhere; }
 .mk-card-owner { color: var(--muted); font-weight: 500; }
-/* Quiet, not a warning colour: closed source is a fact about what a reader can go and verify, not a fault. */
-.mk-card-closed { margin-left: 0.5rem; padding: 0.05rem 0.4rem; border-radius: var(--r-sm, 4px);
+/* Quiet, not a warning colour: closed source is a fact about what a reader can go and verify, not a fault.
+   Its own row, so it never competes with the name for a narrow grid column and cannot break it mid-word. */
+.mk-card-closed { justify-self: start; padding: 0.05rem 0.4rem; border-radius: var(--r-sm, 4px);
   border: 1px solid var(--border); color: var(--muted); font-size: var(--fs-xs); font-weight: 500;
-  white-space: nowrap; vertical-align: middle; }
+  white-space: nowrap; }
 .mk-card-score { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
   font-weight: 700; font-size: var(--fs-lg); flex: none; }
 .mk-card-meta { font-size: var(--fs-xs); color: var(--muted); line-height: 1.5; }
@@ -229,14 +230,17 @@ customElements.define(
         html += `<span class="mk-card-name">`;
         if (r.owner) { html += `<span class="mk-card-owner">${escapeHtml(r.owner)}/</span>`; }
         html += `${escapeHtml(r.name)}</span>`;
+        html += `<span class="mk-card-score ink-${band.key}">${score.toFixed(1)}</span>`;
+        html += `</span>`;
         // A closed-source entry is marked IN THE LIST, so a reader can tell the two apart while scanning rather
         // than only after clicking through. It is a fact about what they can go and check, not a quality mark:
         // both were measured by the same engine under the same rubric. Only "closed" is marked — open source is
-        // the corpus's overwhelming default, and a chip on every one of three thousand rows is noise, not
-        // information.
+        // the corpus's overwhelming default, and a chip on every one of three thousand rows is noise.
+        //
+        // On its OWN ROW, not beside the name. Inside the name row it competed with the score for a narrow grid
+        // column, and a long name then broke mid-word against `overflow-wrap: anywhere` — the live page rendered
+        // "CanineCC/kenne l.canine.dev". A marker that damages the name it qualifies is worse than no marker.
         if (r.source === "closed") { html += `<span class="mk-card-closed">Closed source</span>`; }
-        html += `<span class="mk-card-score ink-${band.key}">${score.toFixed(1)}</span>`;
-        html += `</span>`;
         html += `<span class="cai-lens-bar"><span class="cai-lens-fill fill-${band.key}"`
           + ` style="width:${Math.max(2, Math.round(score))}%"></span></span>`;
         html += `<span class="mk-card-meta">${escapeHtml([band.label, ...meta].join(" · "))}</span>`;
