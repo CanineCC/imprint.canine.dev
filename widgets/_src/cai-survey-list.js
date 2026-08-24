@@ -63,6 +63,10 @@ a.mk-card:hover, a.mk-card:focus-visible { border-color: var(--accent); text-dec
 .mk-card-top { display: flex; align-items: baseline; justify-content: space-between; gap: 0.8rem; }
 .mk-card-name { font-weight: 650; font-size: var(--fs-md); overflow-wrap: anywhere; }
 .mk-card-owner { color: var(--muted); font-weight: 500; }
+/* Quiet, not a warning colour: closed source is a fact about what a reader can go and verify, not a fault. */
+.mk-card-closed { margin-left: 0.5rem; padding: 0.05rem 0.4rem; border-radius: var(--r-sm, 4px);
+  border: 1px solid var(--border); color: var(--muted); font-size: var(--fs-xs); font-weight: 500;
+  white-space: nowrap; vertical-align: middle; }
 .mk-card-score { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
   font-weight: 700; font-size: var(--fs-lg); flex: none; }
 .mk-card-meta { font-size: var(--fs-xs); color: var(--muted); line-height: 1.5; }
@@ -214,12 +218,23 @@ customElements.define(
         if (r.loc) { meta.push(`${compact(Number(r.loc))} lines`); }
         if (Number(r.busFactor) === 1) { meta.push("bus factor 1"); }
         if (r.day) { meta.push(`measured ${r.day}`); }
+        // The score's date and the LAST time anything was published for this project are different facts, and
+        // can be months apart: the score shown is the highest published measurement, not the most recent one.
+        // Stated only when they differ, so the common case stays quiet and the retention rule the page
+        // describes ("removed after three months with nothing newly published") can be read against a date.
+        if (r.lastPublished && r.lastPublished !== r.day) { meta.push(`last published ${r.lastPublished}`); }
 
         html += `<a class="mk-card" href="${escapeHtml(r.href || "#")}">`;
         html += `<span class="mk-card-top">`;
         html += `<span class="mk-card-name">`;
         if (r.owner) { html += `<span class="mk-card-owner">${escapeHtml(r.owner)}/</span>`; }
         html += `${escapeHtml(r.name)}</span>`;
+        // A closed-source entry is marked IN THE LIST, so a reader can tell the two apart while scanning rather
+        // than only after clicking through. It is a fact about what they can go and check, not a quality mark:
+        // both were measured by the same engine under the same rubric. Only "closed" is marked — open source is
+        // the corpus's overwhelming default, and a chip on every one of three thousand rows is noise, not
+        // information.
+        if (r.source === "closed") { html += `<span class="mk-card-closed">Closed source</span>`; }
         html += `<span class="mk-card-score ink-${band.key}">${score.toFixed(1)}</span>`;
         html += `</span>`;
         html += `<span class="cai-lens-bar"><span class="cai-lens-fill fill-${band.key}"`
