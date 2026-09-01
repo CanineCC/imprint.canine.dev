@@ -56,6 +56,21 @@ public sealed class PublishedContent : ReadModel
 
     public PublishedPage? Get(PageId id) => _published.GetValueOrDefault(id);
 
+    /// <summary>
+    /// Every page of one site in its CURRENT DRAFT state — the preview plane's page source,
+    /// published or not. The record's <c>PublishedVersion</c> carries the draft's aggregate
+    /// version, so the preview folder's manifest staleness check re-renders a page whenever
+    /// it is edited — the same mechanism a real publish uses, fed a faster-moving number.
+    /// </summary>
+    public IReadOnlyList<PublishedPage> AllForSiteWithDrafts(SiteId site) =>
+    [
+        .. _drafts.Values
+            .Where(page => page.SiteId == site)
+            .Select(page => new PublishedPage(
+                page.Id, page.SiteId, page.Slug, page.Title, page.MetaTitle, page.MetaDescription,
+                page.Tree, page.Version)),
+    ];
+
     public override void Apply(StoredEvent @event)
     {
         if (StreamIds.IdOf(@event.StreamId, "page-") is not { } guid)

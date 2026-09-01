@@ -138,8 +138,8 @@ public sealed class SitePreview(
             if (siteOverview.Get(siteId) is { } aggregate)
             {
                 // IncludeDrafts is what makes this a preview rather than a mirror: an author asking
-                // "how will this look" is asking about the post they have NOT published yet, and
-                // every real deploy target still renders only what was approved.
+                // "how will this look" is asking about the page tree or post they have NOT published
+                // yet, and every real deploy target still renders only what was approved.
                 var target = new PublishTarget(
                     aggregate, Path.Combine(previewRoot, slug), BaseUrl: null, IncludeDrafts: true);
                 var report = await publisher.Synchronize(target);

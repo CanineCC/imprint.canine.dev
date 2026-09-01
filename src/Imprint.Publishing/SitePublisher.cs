@@ -18,9 +18,10 @@ using RenderMode = Imprint.Rendering.RenderMode;
 namespace Imprint.Publishing;
 
 /// <summary>One site rendered to one output folder, addressed by one base URL — the unit a publish pass acts on.</summary>
-/// <param name="IncludeDrafts">Render unpublished posts too, from their current markdown. Only
-/// the /preview plane sets this: a preview exists to answer "how will this look" BEFORE the
-/// decision to publish, and every real deploy target must show exactly what was approved.</param>
+/// <param name="IncludeDrafts">Render draft state too: pages from their current draft trees
+/// (published or not) and unpublished posts from their current markdown. Only the /preview
+/// plane sets this: a preview exists to answer "how will this look" BEFORE the decision to
+/// publish, and every real deploy target must show exactly what was approved.</param>
 public sealed record PublishTarget(Site Site, string OutputPath, string? BaseUrl, bool IncludeDrafts = false);
 
 /// <summary>
@@ -206,7 +207,12 @@ public sealed class SitePublisher(
                 : publishedPosts.AllForSite(site.Id);
             _pages =
             [
-                .. publishedContent.AllForSite(site.Id),
+                // The preview plane asks for drafts, and that must cover PAGES, not only posts:
+                // an author reviewing "how will this look" is reviewing the tree they just
+                // edited. Every real deploy target keeps reading the published projection.
+                .. includeDrafts
+                    ? publishedContent.AllForSiteWithDrafts(site.Id)
+                    : publishedContent.AllForSite(site.Id),
                 .. SyndicatedPagesOf(site.Id),
                 .. PostPagesOf(),
             ];
