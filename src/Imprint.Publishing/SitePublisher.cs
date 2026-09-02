@@ -253,7 +253,7 @@ public sealed class SitePublisher(
             var pageAssetIds = ordered.ToDictionary(
                 page => page.Id,
                 page => (IReadOnlyList<AssetId>)
-                    [.. NodesOf(page).Select(AssetReferenceOf).Where(id => id.HasValue).Select(id => id!.Value).Distinct()]);
+                    [.. NodesOf(page).SelectMany(AssetReferencesOf).Distinct()]);
             _pageWidgetTags = ordered.ToDictionary(
                 page => page.Id,
                 page => (IReadOnlyList<string>)
@@ -1053,13 +1053,37 @@ public sealed class SitePublisher(
             }
         }
 
-        private static AssetId? AssetReferenceOf(Node node) => node switch
+        // Every asset a node makes the published page depend on. Media nodes carry theirs as
+        // a prop; a button or a prose anchor carries it as an asset LINK — and collecting
+        // those here is exactly what makes the linked file exist in the deploy output.
+        private static IEnumerable<AssetId> AssetReferencesOf(Node node)
         {
-            ImageNode image => image.AssetId,
-            VideoNode video => video.AssetId,
-            SvgNode svg => svg.AssetId,
-            _ => null,
-        };
+            switch (node)
+            {
+                case ImageNode { AssetId: { } image }:
+                    yield return image;
+                    break;
+                case VideoNode { AssetId: { } video }:
+                    yield return video;
+                    break;
+                case SvgNode { AssetId: { } svg }:
+                    yield return svg;
+                    break;
+                case ButtonNode { LinkTo: AssetLink button }:
+                    yield return button.AssetId;
+                    break;
+                case RichTextNode richText:
+                    foreach (var (_, html) in richText.Html.Values)
+                    {
+                        foreach (var id in RichTextHtml.AssetReferences(html))
+                        {
+                            yield return id;
+                        }
+                    }
+
+                    break;
+            }
+        }
 
         private static System.Text.Json.JsonSerializerOptions CreateBlockJson()
         {

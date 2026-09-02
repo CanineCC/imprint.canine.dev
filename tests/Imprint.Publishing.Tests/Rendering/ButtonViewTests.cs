@@ -1,4 +1,5 @@
 using Imprint.Authoring.Domain;
+using Imprint.Authoring.Domain.Assets;
 using Imprint.Authoring.Domain.Pages;
 using Imprint.Rendering;
 
@@ -62,6 +63,37 @@ public sealed class ButtonViewTests
         var html = await RenderHarness.RenderNode(Static, button);
 
         Assert.Contains("<span class=\"ip-btn ip-btn-primary\">Go</span>", html);
+    }
+
+    [Fact]
+    public async Task Resolved_asset_link_renders_anchor_to_the_published_file()
+    {
+        var id = AssetId.New();
+        var button = SampleNodes.Button(new AssetLink(id), label: "Download the whitepaper");
+        var ctx = Static with
+        {
+            ResolveAsset = asset => asset == id
+                ? new AssetRenderInfo(
+                    AssetKind.File, AssetStatus.Ready, "/assets/wp.abc123.pdf", [], null, null, null, LocalizedText.Empty)
+                : null,
+        };
+
+        var html = await RenderHarness.RenderNode(ctx, button);
+
+        Assert.Contains("href=\"/assets/wp.abc123.pdf\"", html);
+        Assert.Contains("Download the whitepaper", html);
+    }
+
+    [Fact]
+    public async Task Unresolvable_asset_link_renders_labelled_span()
+    {
+        // A deleted file degrades exactly like a deleted page: styled, inert, never a dead href.
+        var button = SampleNodes.Button(new AssetLink(AssetId.New()), label: "Gone file");
+
+        var html = await RenderHarness.RenderNode(Static, button);
+
+        Assert.Contains("<span class=\"ip-btn ip-btn-primary\">Gone file</span>", html);
+        Assert.DoesNotContain("<a", html);
     }
 
     [Fact]

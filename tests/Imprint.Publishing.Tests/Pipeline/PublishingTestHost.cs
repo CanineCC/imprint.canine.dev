@@ -320,6 +320,16 @@ internal sealed class PublishingTestHost : IAsyncDisposable
         }
     }
 
+    /// <summary>A plain file upload (a PDF) — Ready the moment it lands, no processing pipeline.</summary>
+    public async Task<AssetId> CreateFileAsset(string name = "paper", string extension = ".pdf")
+    {
+        var id = AssetId.New();
+        var originalKey = $"originals/{id.Compact}/{name}{extension}";
+        Media.Seed(originalKey, Bytes($"{name}-file"));
+        await Commit(Asset.Upload(id, $"{name}{extension}", "application/pdf", AssetKind.File, 1000, originalKey));
+        return id;
+    }
+
     public async Task<AssetId> CreateSvgAsset(
         string svg = "<svg viewBox=\"0 0 10 10\"><path d=\"M0 0h10v10z\"/></svg>")
     {

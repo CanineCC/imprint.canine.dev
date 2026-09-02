@@ -328,20 +328,32 @@ public static class AuthoringNodeJson
         {
             if (!CanonicalHtml.IsAllowedHref(href))
             {
-                throw new SpecException("A link must be https, http, mailto or a page reference.");
+                throw new SpecException("A link must be https, http, mailto, a page reference or an asset reference.");
             }
 
-            return new ExternalLink(href);
+            // asset:{guid} is a reference, not a URL: store it typed so both planes
+            // resolve it through their own ResolveAsset (see AssetHref).
+            return AssetHref.TryParse(href, out var hrefAsset) ? new AssetLink(hrefAsset) : new ExternalLink(href);
         }
 
         if (String(spec, "url") is { Length: > 0 } url)
         {
             if (!CanonicalHtml.IsAllowedHref(url))
             {
-                throw new SpecException("A link must be https, http, mailto or a page reference.");
+                throw new SpecException("A link must be https, http, mailto, a page reference or an asset reference.");
             }
 
-            return new ExternalLink(url);
+            return AssetHref.TryParse(url, out var urlAsset) ? new AssetLink(urlAsset) : new ExternalLink(url);
+        }
+
+        if (String(spec, "assetId") is { Length: > 0 } assetRef)
+        {
+            if (!Guid.TryParseExact(assetRef, "N", out var assetGuid) && !Guid.TryParse(assetRef, out assetGuid))
+            {
+                throw new SpecException("assetId is not a valid asset id.");
+            }
+
+            return new AssetLink(AssetId.From(assetGuid));
         }
 
         if (String(spec, "pageId") is { Length: > 0 } page)
@@ -468,6 +480,7 @@ public static class AuthoringNodeJson
     {
         PageLink page => new { kind = "page", pageId = page.PageId.Compact, fragment = page.Fragment },
         ExternalLink external => new { kind = "external", url = external.Url },
+        AssetLink asset => new { kind = "asset", assetId = asset.AssetId.Compact },
         _ => null,
     };
 

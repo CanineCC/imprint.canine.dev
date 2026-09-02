@@ -1,3 +1,5 @@
+using Imprint.Authoring.Domain;
+using Imprint.Authoring.Domain.Assets;
 using Imprint.Rendering;
 
 namespace Imprint.Publishing.Tests.Rendering;
@@ -112,5 +114,27 @@ public sealed class RichTextViewTests
         var html = await RenderHarness.RenderNode(ctx, node);
 
         Assert.Contains("<p>English body</p>", html);
+    }
+
+    [Fact]
+    public async Task An_asset_link_resolves_to_the_published_file_and_a_dead_one_unwraps()
+    {
+        // Same contract as page references: the reference resolves through the plane's own
+        // ResolveAsset, and a deleted file leaves prose, never a dead href.
+        var id = AssetId.New();
+        var node = SampleNodes.RichText(
+            $"<p><a href=\"asset:{id.Compact}\">the paper</a> and <a href=\"asset:{Guid.NewGuid():N}\">gone</a></p>");
+        var ctx = Static with
+        {
+            ResolveAsset = asset => asset == id
+                ? new AssetRenderInfo(
+                    AssetKind.File, AssetStatus.Ready, "/assets/wp.abc123.pdf", [], null, null, null, LocalizedText.Empty)
+                : null,
+        };
+
+        var html = await RenderHarness.RenderNode(ctx, node);
+
+        Assert.Contains("<a href=\"/assets/wp.abc123.pdf\">the paper</a> and gone", html);
+        Assert.DoesNotContain("asset:", html);
     }
 }

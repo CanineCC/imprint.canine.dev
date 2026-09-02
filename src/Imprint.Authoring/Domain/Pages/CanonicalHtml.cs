@@ -234,7 +234,7 @@ public static partial class CanonicalHtml
 
         return IsAllowedHref(value.ToString())
             ? null
-            : "Links must be https, http, mailto, a page reference or a #section on this page.";
+            : "Links must be https, http, mailto, a page reference, an asset reference or a #section on this page.";
     }
 
     /// <summary>Scheme allowlist, checked on the entity-decoded value. Never a blocklist.</summary>
@@ -267,6 +267,14 @@ public static partial class CanonicalHtml
         if (href.StartsWith(PageHref.Scheme, StringComparison.OrdinalIgnoreCase))
         {
             return PageHref.TryParse(href, out _, out _);
+        }
+
+        // An asset reference — a file download. Stored as the reference because the editor
+        // and the published site serve the same file from different URLs; each plane's
+        // renderer resolves it, and the publisher ships the file because the link exists.
+        if (href.StartsWith(AssetHref.Scheme, StringComparison.OrdinalIgnoreCase))
+        {
+            return AssetHref.TryParse(href, out _);
         }
 
         return false;

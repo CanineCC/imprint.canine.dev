@@ -295,6 +295,7 @@ public sealed record BlockInstanceNode : Node
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$type")]
 [JsonDerivedType(typeof(PageLink), "page")]
 [JsonDerivedType(typeof(ExternalLink), "external")]
+[JsonDerivedType(typeof(AssetLink), "asset")]
 public abstract record Link;
 
 /// <summary>
@@ -330,3 +331,13 @@ public sealed record PageLink(PageId PageId, string? Fragment = null) : Link
 }
 
 public sealed record ExternalLink(string Url) : Link;
+
+/// <summary>
+/// An uploaded file offered to the reader — a whitepaper PDF, a press kit. Stored as the
+/// asset reference (never a media path) because the editor and the published site serve
+/// the same bytes from different URLs; each plane resolves the reference through its own
+/// <c>ResolveAsset</c>, and the publisher ships the file precisely because a page links it
+/// (see <see cref="AssetHref"/>). An unresolvable asset degrades exactly like a deleted
+/// page: the link renders as plain text, never as a dead href.
+/// </summary>
+public sealed record AssetLink(AssetId AssetId) : Link;

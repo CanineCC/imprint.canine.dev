@@ -27,6 +27,9 @@ else
     // validator applies, so no href can reach markup through the button that could
     // not reach it through prose.
     ExternalLink external when CanonicalHtml.IsAllowedHref(external.Url) => external.Url,
+    // A file download: each plane's ResolveAsset supplies its own URL (editor /media/…,
+    // published /assets/…). Unresolvable degrades to the inert span like a deleted page.
+    AssetLink asset => Ctx.ResolveAsset(asset.AssetId)?.Url is { Length: > 0 } url ? url : null,
     _ => null,
   };
 
