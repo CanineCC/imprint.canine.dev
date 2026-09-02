@@ -271,4 +271,72 @@ public sealed class WidgetViewTests
         Assert.Contains("Unknown widget x-nope", html);
         Assert.Contains("ip-placeholder-warn", html);
     }
+
+    // ── The fallback link: a no-JS visitor (and a crawler) gets a real path to the live view ──
+
+    private static WidgetDescriptor LiveViewDescriptor(string? fallbackHref = "{base}/embed/{view}") => new()
+    {
+        Tag = "x-countdown",
+        Name = "Live view",
+        Bundle = "x-countdown.js",
+        Placeholder = "Live view",
+        FallbackHref = fallbackHref,
+        Props =
+        [
+            new WidgetProp { Name = "base", Label = "Base" },
+            new WidgetProp { Name = "view", Label = "View" },
+        ],
+    };
+
+    [Fact]
+    public async Task A_declared_fallback_href_renders_a_real_link_from_the_instance_props()
+    {
+        var widget = SampleNodes.Widget(
+            new KeyValuePair<string, string>("base", "https://app.example.test/"),
+            new KeyValuePair<string, string>("view", "pricing"));
+
+        var html = await RenderHarness.RenderNode(
+            WithWidget(RenderMode.Static, LiveViewDescriptor()), widget);
+
+        Assert.Contains("ip-widget-fallback-link", html);
+        Assert.Contains("href=\"https://app.example.test/embed/pricing\"", html);
+        Assert.Contains("Open the live view", html);
+    }
+
+    [Fact]
+    public async Task An_unresolved_token_renders_no_link_at_all()
+    {
+        // Only base, no view: a partial link is a broken promise, so nothing renders.
+        var widget = SampleNodes.Widget(new KeyValuePair<string, string>("base", "https://app.example.test"));
+
+        var html = await RenderHarness.RenderNode(
+            WithWidget(RenderMode.Static, LiveViewDescriptor()), widget);
+
+        Assert.DoesNotContain("ip-widget-fallback-link", html);
+    }
+
+    [Fact]
+    public async Task A_non_https_result_renders_no_link_at_all()
+    {
+        // The template substitutes author-controlled prop values, so the result is untrusted until
+        // it proves itself an absolute https URL — javascript: or http: must never become an href.
+        var widget = SampleNodes.Widget(
+            new KeyValuePair<string, string>("base", "javascript:alert(1)//"),
+            new KeyValuePair<string, string>("view", "pricing"));
+
+        var html = await RenderHarness.RenderNode(
+            WithWidget(RenderMode.Static, LiveViewDescriptor()), widget);
+
+        Assert.DoesNotContain("ip-widget-fallback-link", html);
+    }
+
+    [Fact]
+    public async Task A_widget_without_the_field_renders_exactly_as_before()
+    {
+        var widget = SampleNodes.Widget(new KeyValuePair<string, string>("until", "2027-01-01"));
+
+        var html = await RenderHarness.RenderNode(WithWidget(RenderMode.Static), widget);
+
+        Assert.DoesNotContain("ip-widget-fallback-link", html);
+    }
 }

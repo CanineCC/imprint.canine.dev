@@ -1154,6 +1154,7 @@
         "type": "number",
         "default": "320"
       }
-    ]
+    ],
+    "fallbackHref": "{base}/embed/{view}"
   }
 ]

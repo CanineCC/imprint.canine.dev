@@ -100,6 +100,56 @@ else if (descriptor is not null)
     }
 
     builder.AddContent(5, descriptor.Placeholder);
+
+    // The pre-hydration fallback gets a REAL link when the manifest declares one: a visitor without
+    // JavaScript (and a crawler) reaches the live view instead of a dead label. Hydration replaces
+    // this light DOM wholesale, so a hydrated visitor never sees it.
+    if (FallbackHref(descriptor) is { } href)
+    {
+      builder.OpenElement(7, "a");
+      builder.AddAttribute(8, "class", "ip-widget-fallback-link");
+      builder.AddAttribute(9, "href", href);
+      builder.AddContent(10, "Open the live view →");
+      builder.CloseElement();
+    }
+
     builder.CloseElement();
+  }
+
+  /// <summary>
+  /// Resolve the descriptor's fallback-href template against this instance's props. Only DECLARED,
+  /// non-private prop values substitute (the same allowlist the attributes pass through), every
+  /// token must resolve to a non-empty value, and the result must be absolute https — otherwise no
+  /// link renders at all: a dead or author-forged href is worse than none.
+  /// </summary>
+  private string? FallbackHref(WidgetDescriptor descriptor)
+  {
+    if (descriptor.FallbackHref is not { Length: > 0 } template)
+    {
+      return null;
+    }
+
+    var href = template;
+    foreach (var prop in descriptor.Props)
+    {
+      var token = "{" + prop.Name + "}";
+      if (!href.Contains(token, StringComparison.Ordinal))
+      {
+        continue;
+      }
+
+      if (prop.Private || Node.Props.Get(prop.Name) is not { Length: > 0 } value)
+      {
+        return null;   // an unresolved token is a broken promise, not a partial link
+      }
+
+      href = href.Replace(token, value.TrimEnd('/'), StringComparison.Ordinal);
+    }
+
+    return href.Contains('{', StringComparison.Ordinal) is false
+        && Uri.TryCreate(href, UriKind.Absolute, out var uri)
+        && uri.Scheme == Uri.UriSchemeHttps
+      ? uri.ToString()
+      : null;
   }
 }

@@ -24,6 +24,15 @@ public sealed record WidgetDescriptor
     /// <summary>Text shown inside the element before hydration and in the editor placeholder.</summary>
     public string Placeholder { get; init; } = "";
 
+    /// <summary>
+    /// Optional href TEMPLATE for the pre-hydration fallback — <c>{prop}</c> tokens are substituted
+    /// with the instance's declared prop values (e.g. <c>{base}/embed/{view}</c>). When every token
+    /// resolves and the result is an absolute https URL, the static fallback carries a real link to
+    /// the live view — so a visitor without JavaScript (and a crawler) gets a working path to the
+    /// data instead of a dead label. Anything unresolved or non-https renders no link at all.
+    /// </summary>
+    public string? FallbackHref { get; init; }
+
     /// <summary>Hydrate immediately instead of on approach (for above-the-fold widgets).</summary>
     public bool Eager { get; init; }
 
