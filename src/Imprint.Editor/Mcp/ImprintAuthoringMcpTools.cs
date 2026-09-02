@@ -27,6 +27,7 @@ using EditTextCmd = Imprint.Authoring.Features.Pages.EditText.EditText;
 using MoveNodeCmd = Imprint.Authoring.Features.Pages.MoveNode.MoveNode;
 using PublishAllStaleCmd = Imprint.Authoring.Features.Pages.PublishAllStale.PublishAllStale;
 using PublishPageCmd = Imprint.Authoring.Features.Pages.PublishPage.PublishPage;
+using UnpublishPageCmd = Imprint.Authoring.Features.Pages.UnpublishPage.UnpublishPage;
 using RemoveNodeCmd = Imprint.Authoring.Features.Pages.RemoveNode.RemoveNode;
 using RemoveLocaleCmd = Imprint.Authoring.Features.Sites.RemoveLocale.RemoveLocale;
 using SeedLocaleCmd = Imprint.Authoring.Features.Sites.SeedLocale.SeedLocale;
@@ -931,6 +932,16 @@ public sealed class ImprintAuthoringMcpTools
     {
         if (!TryPageId(pageId, out var pid)) return Fail("invalid pageId");
         return await Dispatch(dispatcher, config, new PublishPageCmd(pid), ct, () => new { ok = true, pageId = pid.Compact, published = true });
+    }
+
+    [McpServerTool(Name = "unpublish_page")]
+    [Description("Unpublish ONE page: it leaves the site's output (its files sweep away, the sitemap and llms.txt drop it) while the DRAFT is kept, so it can be edited and published again later. Use for content that went live before it was ready.")]
+    public static async Task<object> UnpublishPage(
+        [Description("The page id.")] string pageId,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+    {
+        if (!TryPageId(pageId, out var pid)) return Fail("invalid pageId");
+        return await Dispatch(dispatcher, config, new UnpublishPageCmd(pid), ct, () => new { ok = true, pageId = pid.Compact, published = false });
     }
 
     [McpServerTool(Name = "upsert_syndicated_page")]
