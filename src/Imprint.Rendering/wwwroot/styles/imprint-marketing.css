@@ -213,6 +213,11 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-nav-trigger {
   display: inline-flex; align-items: center; gap: 0.3rem;
   color: var(--muted); font-size: var(--fs-sm); font-weight: 500;
+  /* A nav label never breaks mid-phrase. Without this the bar stayed one row and broke the
+     WORDS instead — "What / you / get" stacked three deep in a 62px header at 1000px. When
+     the labels no longer fit side by side the answer is the burger, which is why the
+     breakpoint below is set where the widest bar stops fitting rather than at a round 900. */
+  white-space: nowrap;
   padding: 0.5rem 0.7rem; border-radius: var(--r-md);
   background: none; border: 0; cursor: pointer; font-family: inherit; line-height: 1;
   text-decoration: none;
@@ -308,7 +313,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-nav-burger:hover { color: var(--heading); }
 .ip-nav-open .ip-nav-burger { color: var(--heading); border-color: var(--border-strong); }
 
-@media (max-width: 900px) {
+@media (max-width: 980px) {
   .ip-nav, .ip-header-quiet { display: none; }
   .ip-nav-burger { display: inline-flex; }
 
