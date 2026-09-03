@@ -32,6 +32,9 @@ public sealed record PublishedPage(
     /// </para>
     /// </remarks>
     public string PublicPath { get; init; } = Slug.Value ?? string.Empty;
+
+    /// <summary>The page's article declaration (author + date), when it has one.</summary>
+    public PageArticle? Article { get; init; }
 }
 
 /// <summary>
@@ -68,7 +71,7 @@ public sealed class PublishedContent : ReadModel
             .Where(page => page.SiteId == site)
             .Select(page => new PublishedPage(
                 page.Id, page.SiteId, page.Slug, page.Title, page.MetaTitle, page.MetaDescription,
-                page.Tree, page.Version)),
+                page.Tree, page.Version) { Article = page.Article }),
     ];
 
     public override void Apply(StoredEvent @event)
@@ -91,7 +94,7 @@ public sealed class PublishedContent : ReadModel
                 page.LoadFrom([@event.Event]);
                 _published[id] = new PublishedPage(
                     id, page.SiteId, page.Slug, page.Title, page.MetaTitle, page.MetaDescription,
-                    page.Tree, published.Version);
+                    page.Tree, published.Version) { Article = page.Article };
                 break;
 
             case PageUnpublished when _drafts.TryGetValue(id, out var page):

@@ -19,6 +19,7 @@ using AddLocaleCmd = Imprint.Authoring.Features.Sites.AddLocale.AddLocale;
 using SetHeaderActionsCmd = Imprint.Authoring.Features.Sites.SetHeaderActions.SetHeaderActions;
 using ChangeNodePropsCmd = Imprint.Authoring.Features.Pages.ChangeNodeProps.ChangeNodeProps;
 using ChangePageMetaCmd = Imprint.Authoring.Features.Pages.ChangePageMeta.ChangePageMeta;
+using SetPageArticleCmd = Imprint.Authoring.Features.Pages.SetPageArticle.SetPageArticle;
 using ChangePageTitleCmd = Imprint.Authoring.Features.Pages.ChangePageTitle.ChangePageTitle;
 using CreatePageCmd = Imprint.Authoring.Features.Pages.CreatePage.CreatePage;
 using CreateSiteCmd = Imprint.Authoring.Features.Sites.CreateSite.CreateSite;
@@ -290,7 +291,7 @@ public sealed class ImprintAuthoringMcpTools
     }
 
     [McpServerTool(Name = "add_node")]
-    [Description("Add a node — and its whole subtree in one call — to a page. The node spec is a JSON object: {\"type\":\"section|stack|columns|grid|heading|richtext|code|button|image|video|svg|divider|spacer|widget\", ...props, \"children\":[...]}. Text props (text/html/label/alt) take a plain string (default locale) or a {\"en\":\"…\"} object; rich-text html must be the canonical inline subset (<p>, <ul>/<ol>/<li>, <strong>, <em>, <a href>, <br>). parentId omitted ⇒ the page root, which accepts sections only. Ids are minted server-side.")]
+    [Description("Add a node — and its whole subtree in one call — to a page. The node spec is a JSON object: {\"type\":\"section|stack|columns|grid|heading|richtext|code|table|button|image|video|svg|divider|spacer|widget\", ...props, \"children\":[...]}. Text props (text/html/label/alt) take a plain string (default locale) or a {\"en\":\"…\"} object; rich-text html must be the canonical inline subset (<p>, <ul>/<ol>/<li>, <strong>, <em>, <a href>, <br>). A table takes {\"head\":[\"…\"],\"rows\":[[\"…\"]]} (cells: string or locale object); code takes {\"text\":…,\"language\":…}. parentId omitted ⇒ the page root, which accepts sections only. Ids are minted server-side.")]
     public static async Task<object> AddNode(
         [Description("The page id.")] string pageId,
         [Description("The node spec as JSON, e.g. {\"type\":\"heading\",\"level\":2,\"text\":\"The loop\"}.")] string nodeJson,
@@ -441,6 +442,20 @@ public sealed class ImprintAuthoringMcpTools
         if (page is null) return Fail("unknown page");
         if (!TryLocale(sites, page, locale, out var contentLocale, out var localeError)) return Fail(localeError);
         return await Dispatch(dispatcher, config, new ChangePageMetaCmd(pid, contentLocale.Value, metaTitle, metaDescription), ct,
+            () => new { ok = true, pageId = pid.Compact });
+    }
+
+    [McpServerTool(Name = "set_page_article")]
+    [Description("Declare (or clear) a page as an ARTICLE for structured data: a named human author and an ISO publication date (yyyy-MM-dd). The published page then carries a schema.org TechArticle node with author, datePublished and publisher — the facts that make a document citable by search engines and models rather than merely crawlable. Pass both to declare, neither to clear; half a declaration is refused. Use it for whitepapers, research pages and anything a person signed.")]
+    public static async Task<object> SetPageArticle(
+        [Description("The page id.")] string pageId,
+        [Description("The named human author, or null to clear the declaration.")] string? author,
+        [Description("The publication date (yyyy-MM-dd), or null to clear.")] string? published,
+        ICommandDispatcher dispatcher, IConfiguration config, PageDrafts drafts, CancellationToken ct = default)
+    {
+        if (!TryPageId(pageId, out var pid)) return Fail("invalid pageId");
+        if (drafts.Get(pid) is null) return Fail("unknown page");
+        return await Dispatch(dispatcher, config, new SetPageArticleCmd(pid, author, published), ct,
             () => new { ok = true, pageId = pid.Compact });
     }
 

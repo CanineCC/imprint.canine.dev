@@ -837,7 +837,9 @@ public sealed class SitePublisher(
                     description: MetaDescriptionOf(page, locale),
                     logoUrl: _logoUrl is null ? null : Absolute(_logoUrl),
                     isHome: HomePageId() == page.Id,
-                    trail: TrailFor(slugPath, locale)),
+                    trail: TrailFor(slugPath, locale),
+                    articleAuthor: page.Article?.Author,
+                    articlePublished: page.Article?.Published),
             ];
         }
 

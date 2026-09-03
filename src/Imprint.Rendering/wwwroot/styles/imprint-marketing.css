@@ -302,6 +302,17 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 }
 /* The header CTA keeps its own always-visible slot beside the burger. */
 
+/* Tables: hairline grid, mono-quiet header; wide tables scroll inside the wrapper. */
+.ip-table-wrap { overflow-x: auto; }
+.ip-table { border-collapse: collapse; width: 100%; font-size: var(--fs-sm); line-height: 1.5; }
+.ip-table th {
+  text-align: left; font-family: var(--font-mono); font-size: var(--fs-2xs); font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
+  padding: 0.5rem 0.85rem; border-bottom: 1px solid var(--border-strong);
+}
+.ip-table td { padding: 0.55rem 0.85rem; border-bottom: 1px solid var(--hairline); color: var(--ink); vertical-align: top; }
+.ip-table td:first-child { color: var(--heading); font-weight: 600; }
+
 /* Code blocks: verbatim mono on a quiet surface; wide samples scroll inside the block. */
 .ip-code {
   background: var(--surface-2); border: 1px solid var(--hairline); border-radius: var(--r-md);

@@ -30,6 +30,10 @@ public sealed class Page : AggregateRoot
     public LocalizedText MetaTitle { get; private set; } = LocalizedText.Empty;
     public LocalizedText MetaDescription { get; private set; } = LocalizedText.Empty;
     public PageTree Tree { get; private set; } = PageTree.Empty;
+
+    /// <summary>Set when the page is an article (a whitepaper, a post-like page): the named
+    /// author and publication date the structured-data graph advertises. Null = a plain page.</summary>
+    public PageArticle? Article { get; private set; }
     public long? PublishedVersion { get; private set; }
     public bool IsDeleted { get; private set; }
 
@@ -79,6 +83,33 @@ public sealed class Page : AggregateRoot
         }
 
         Raise(new MetaChanged(locale, metaTitle, metaDescription));
+    }
+
+    /// <summary>
+    /// Declare (or clear) the page as an article for structured data: a named human author
+    /// and a publication date, or neither. Half a declaration is refused — an Article node
+    /// with an anonymous author or no date is worth less than no node at all.
+    /// </summary>
+    public void SetArticle(string? author, DateOnly? published)
+    {
+        EnsureNotDeleted();
+        if (author is null != published is null)
+        {
+            throw new DomainException("An article declaration needs both an author and a date — or neither, to clear it.");
+        }
+
+        if (author?.Length > MaxMetaLength)
+        {
+            throw new DomainException($"Author is limited to {MaxMetaLength} characters.");
+        }
+
+        var next = author is null ? null : new PageArticle(author, published!.Value);
+        if (next == Article)
+        {
+            return;
+        }
+
+        Raise(new ArticleChanged(author, published));
     }
 
     public void AddNode(NodeId parentId, int index, Node spec)
@@ -448,6 +479,9 @@ public sealed class Page : AggregateRoot
                 MetaTitle = MetaTitle.With(e.Locale, e.MetaTitle ?? string.Empty);
                 MetaDescription = MetaDescription.With(e.Locale, e.MetaDescription ?? string.Empty);
                 break;
+            case ArticleChanged e:
+                Article = e.Author is null ? null : new PageArticle(e.Author, e.Published!.Value);
+                break;
             case NodeAdded e:
                 Tree = Tree.Insert(e.ParentId, e.Index, e.Spec);
                 break;
@@ -719,3 +753,6 @@ public sealed class Page : AggregateRoot
             ? slug
             : throw new InvalidOperationException($"Stored slug '{value}' is invalid: {error}");
 }
+
+/// <summary>An article declaration: the named human who signed the content, and when.</summary>
+public sealed record PageArticle(string Author, DateOnly Published);

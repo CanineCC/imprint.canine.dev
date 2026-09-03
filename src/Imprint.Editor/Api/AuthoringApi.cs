@@ -163,6 +163,9 @@ public static class AuthoringApi
                 title = page.Title.Values.ToDictionary(kv => kv.Key.Value, kv => kv.Value),
                 metaTitle = page.MetaTitle.Values.ToDictionary(kv => kv.Key.Value, kv => kv.Value),
                 metaDescription = page.MetaDescription.Values.ToDictionary(kv => kv.Key.Value, kv => kv.Value),
+                article = page.Article is { } article
+                    ? new { author = article.Author, published = article.Published.ToString("yyyy-MM-dd") }
+                    : null,
                 rootCount = page.Tree.Roots.Count,
                 nodes = flat,
             });

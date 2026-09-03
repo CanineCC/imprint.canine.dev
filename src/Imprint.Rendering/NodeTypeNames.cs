@@ -23,6 +23,7 @@ public static class NodeTypeNames
         VideoNode => "video",
         SvgNode => "svg",
         CodeNode => "code",
+        TableNode => "table",
         DividerNode => "divider",
         SpacerNode => "spacer",
         WidgetNode => "widget",

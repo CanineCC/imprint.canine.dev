@@ -1,0 +1,29 @@
+@namespace Imprint.Rendering
+@inherits NodeViewBase<TableNode>
+@* Cells are CONTENT (Blazor-escaped), never markup. The wrapper owns horizontal
+   overflow so a wide table scrolls inside its own box and the page body never
+   scrolls sideways for it. *@
+<div class="ip-table-wrap" @attributes="NodeAttributes">
+  <table class="ip-table">
+    @if (Node.Head.Count > 0)
+    {
+      <thead><tr>
+        @foreach (var cell in Node.Head)
+        {
+          <th>@Resolve(cell)</th>
+        }
+      </tr></thead>
+    }
+    <tbody>
+      @foreach (var row in Node.Rows)
+      {
+        <tr>
+          @foreach (var cell in row)
+          {
+            <td>@Resolve(cell)</td>
+          }
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

@@ -21,6 +21,8 @@ public sealed class PageEventSamples : IEventSampleProvider
             yield return new SlugChanged("kontakt");
             yield return new MetaChanged(En, "About — Acme", "What Acme is, and why it exists.");
             yield return new MetaChanged(Da, null, null);
+            yield return new ArticleChanged("Jimmy Borch", new DateOnly(2026, 9, 2));
+            yield return new ArticleChanged(null, null);
             yield return new NodeAdded(NodeId.Root, 0, RichSection());
             yield return new NodeAdded(NodeId.New(), 3, RichSection());
             yield return new NodeMoved(NodeId.New(), NodeId.New(), 2);

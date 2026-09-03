@@ -256,6 +256,13 @@ internal sealed class PublishingTestHost : IAsyncDisposable
         await Commit(page);
     }
 
+    public async Task SetArticle(PageId pageId, string? author, DateOnly? published)
+    {
+        var page = await Store.Load<Page>(pageId.Stream);
+        page.SetArticle(author, published);
+        await Commit(page);
+    }
+
     public async Task ChangeSlug(PageId pageId, string slug)
     {
         Assert.True(Slug.TryCreate(slug, out var parsed, out var error), error);

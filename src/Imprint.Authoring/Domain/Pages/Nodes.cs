@@ -21,6 +21,7 @@ namespace Imprint.Authoring.Domain.Pages;
 [JsonDerivedType(typeof(VideoNode), "video")]
 [JsonDerivedType(typeof(SvgNode), "svg")]
 [JsonDerivedType(typeof(CodeNode), "code")]
+[JsonDerivedType(typeof(TableNode), "table")]
 [JsonDerivedType(typeof(DividerNode), "divider")]
 [JsonDerivedType(typeof(SpacerNode), "spacer")]
 [JsonDerivedType(typeof(WidgetNode), "widget")]
@@ -255,6 +256,19 @@ public sealed record CodeNode : Node
         language is null ||
         (language.Length is > 0 and <= 24 &&
          language.All(c => char.IsAsciiLetterOrDigit(c) || c is '+' or '#' or '-'));
+}
+
+/// <summary>
+/// A data table: an optional header row and body rows of plain-text cells. Cells are
+/// localized like every other text prop (a glossary translates; a number column doesn't
+/// have to). Deliberately cells-of-text rather than cells-of-nodes: a table that needs
+/// markup inside a cell is a layout, and layouts already have Columns/Grid.
+/// </summary>
+public sealed record TableNode : Node
+{
+    public IReadOnlyList<LocalizedText> Head { get; init; } = [];
+    public IReadOnlyList<IReadOnlyList<LocalizedText>> Rows { get; init; } = [];
+    public override string DisplayName => "Table";
 }
 
 public sealed record DividerNode : Node

@@ -93,6 +93,10 @@ public static class AuthoringNodeJson
                 props["text"] = code.Text;
                 props["language"] = code.Language;
                 break;
+            case TableNode table:
+                props["head"] = table.Head.Select(Localized).ToList();
+                props["rows"] = table.Rows.Select(row => row.Select(Localized).ToList()).ToList();
+                break;
 
             case SpacerNode spacer:
                 props["size"] = spacer.Size.ToString();
@@ -241,6 +245,12 @@ public static class AuthoringNodeJson
                 Id = id,
                 Text = String(spec, "text") ?? "",
                 Language = ValidLanguage(String(spec, "language")),
+            },
+            "table" => new TableNode
+            {
+                Id = id,
+                Head = LocalizedListOf(spec, "head", locale),
+                Rows = LocalizedRowsOf(spec, "rows", locale),
             },
             "divider" => new DividerNode { Id = id },
             "spacer" => new SpacerNode { Id = id, Size = Enum(spec, "size", SpacerSize.Medium) },
@@ -448,6 +458,11 @@ public static class AuthoringNodeJson
                 // set-props semantics): an absent 'props' object clears them.
                 Props = ParseWidgetProps(WidgetBag(patch)),
             },
+            TableNode table => table with
+            {
+                Head = Has(patch, "head") ? LocalizedListOf(patch, "head", locale) : table.Head,
+                Rows = Has(patch, "rows") ? LocalizedRowsOf(patch, "rows", locale) : table.Rows,
+            },
             CodeNode code => code with
             {
                 Text = Has(patch, "text") ? String(patch, "text") ?? "" : code.Text,
@@ -486,6 +501,67 @@ public static class AuthoringNodeJson
 
     private static LocalizedText LocalizedOf(JsonElement spec, string key, Locale locale) =>
         Merge(LocalizedText.Empty, spec, key, locale);
+
+    /// <summary>A JSON array of cells, each a plain string (default locale) or a locale → text object.</summary>
+    private static IReadOnlyList<LocalizedText> LocalizedListOf(JsonElement spec, string key, Locale locale)
+    {
+        if (!spec.TryGetProperty(key, out var value) || value.ValueKind == JsonValueKind.Null)
+        {
+            return [];
+        }
+
+        if (value.ValueKind != JsonValueKind.Array)
+        {
+            throw new SpecException($"'{key}' must be an array of cells.");
+        }
+
+        return [.. value.EnumerateArray().Select(cell => LocalizedCell(cell, key, locale))];
+    }
+
+    /// <summary>A JSON array of rows, each an array of cells.</summary>
+    private static IReadOnlyList<IReadOnlyList<LocalizedText>> LocalizedRowsOf(JsonElement spec, string key, Locale locale)
+    {
+        if (!spec.TryGetProperty(key, out var value) || value.ValueKind == JsonValueKind.Null)
+        {
+            return [];
+        }
+
+        if (value.ValueKind != JsonValueKind.Array)
+        {
+            throw new SpecException($"'{key}' must be an array of rows.");
+        }
+
+        return [.. value.EnumerateArray().Select(row =>
+        {
+            if (row.ValueKind != JsonValueKind.Array)
+            {
+                throw new SpecException($"each row in '{key}' must be an array of cells.");
+            }
+
+            return (IReadOnlyList<LocalizedText>)[.. row.EnumerateArray().Select(cell => LocalizedCell(cell, key, locale))];
+        })];
+    }
+
+    private static LocalizedText LocalizedCell(JsonElement cell, string key, Locale locale)
+    {
+        if (cell.ValueKind == JsonValueKind.String)
+        {
+            return LocalizedText.Of(locale, cell.GetString() ?? string.Empty);
+        }
+
+        if (cell.ValueKind != JsonValueKind.Object)
+        {
+            throw new SpecException($"cells in '{key}' must be strings or locale → text objects.");
+        }
+
+        var text = LocalizedText.Empty;
+        foreach (var entry in cell.EnumerateObject())
+        {
+            text = text.With(new Locale(entry.Name), entry.Value.GetString() ?? string.Empty);
+        }
+
+        return text;
+    }
 
     private static LocalizedText Merge(LocalizedText current, JsonElement spec, string key, Locale locale)
     {

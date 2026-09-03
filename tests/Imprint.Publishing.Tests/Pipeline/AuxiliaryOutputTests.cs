@@ -233,4 +233,37 @@ public sealed class AuxiliaryOutputTests
 
         return (int)buffer.Length;
     }
+
+    [Fact]
+    public async Task An_article_page_carries_a_TechArticle_node_and_a_plain_page_does_not()
+    {
+        // The two facts a crawler cannot infer from prose — WHO signed the document and
+        // WHEN — are what make it citable. They ride the JSON-LD graph only when a page
+        // declares them, so three thousand syndicated pages stay plain WebPages.
+        await using var host = new PublishingTestHost();
+        var siteId = await host.CreateSite("Watchdog", "en");
+        var homeId = await host.CreatePage(siteId, "home", "Home");
+        var paperId = await host.CreatePage(siteId, "whitepaper", "Paid to measure");
+        await host.SetNavigation(siteId, homeId);
+        await host.SetMeta(paperId, "en", null, "Why the verdict is not a pricing input.");
+        await host.SetArticle(paperId, "Jimmy Borch", new DateOnly(2026, 9, 2));
+        await host.Publish(homeId);
+        await host.Publish(paperId);
+
+        await host.Publisher.Synchronize();
+
+        var paper = host.ReadText("whitepaper/index.html");
+        Assert.Contains("\"@type\":\"TechArticle\"", paper);
+        Assert.Contains("\"datePublished\":\"2026-09-02\"", paper);
+        Assert.Contains("\"author\":{\"@type\":\"Person\",\"name\":\"Jimmy Borch\"}", paper);
+
+        var home = host.ReadText("index.html");
+        Assert.DoesNotContain("TechArticle", home);
+
+        // Clearing the declaration removes the node again.
+        await host.SetArticle(paperId, null, null);
+        await host.Publish(paperId);
+        await host.Publisher.Synchronize();
+        Assert.DoesNotContain("TechArticle", host.ReadText("whitepaper/index.html"));
+    }
 }

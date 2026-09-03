@@ -35,6 +35,8 @@ public static class StructuredData
     /// <param name="logoUrl">The site logo, when one is published.</param>
     /// <param name="isHome">Whether this is the site's front page.</param>
     /// <param name="trail">Ancestor (name, url) pairs from the root down to — but excluding — this page.</param>
+    /// <param name="articleAuthor">The named human behind an article page, or null for a plain page.</param>
+    /// <param name="articlePublished">The article's publication date; present exactly when the author is.</param>
     public static string PageGraph(
         string siteName,
         string lang,
@@ -44,7 +46,9 @@ public static class StructuredData
         string? description,
         string? logoUrl,
         bool isHome,
-        IReadOnlyList<(string Name, string Url)> trail)
+        IReadOnlyList<(string Name, string Url)> trail,
+        string? articleAuthor = null,
+        DateOnly? articlePublished = null)
     {
         var buffer = new MemoryStream();
         using (var json = new Utf8JsonWriter(buffer, WriterOptions))
@@ -103,6 +107,37 @@ public static class StructuredData
             json.WriteString("@id", websiteId);
             json.WriteEndObject();
             json.WriteEndObject();
+
+            // An article page (a whitepaper, a signed report) additionally declares itself
+            // as a TechArticle with the named human and the publication date — the two
+            // facts a search engine or a model cannot infer from prose, and the two that
+            // make a document citable rather than merely crawlable.
+            if (articleAuthor is { Length: > 0 } && articlePublished is { } published)
+            {
+                json.WriteStartObject();
+                json.WriteString("@type", "TechArticle");
+                json.WriteString("@id", $"{pageUrl}#article");
+                json.WriteString("headline", title);
+                if (description is { Length: > 0 })
+                {
+                    json.WriteString("description", description);
+                }
+
+                json.WriteString("url", pageUrl);
+                json.WriteString("inLanguage", lang);
+                json.WriteString("datePublished", published.ToString("yyyy-MM-dd"));
+                json.WriteStartObject("author");
+                json.WriteString("@type", "Person");
+                json.WriteString("name", articleAuthor);
+                json.WriteEndObject();
+                json.WriteStartObject("publisher");
+                json.WriteString("@id", organizationId);
+                json.WriteEndObject();
+                json.WriteStartObject("mainEntityOfPage");
+                json.WriteString("@id", $"{pageUrl}#webpage");
+                json.WriteEndObject();
+                json.WriteEndObject();
+            }
 
             // A breadcrumb for the front page would be a trail of one, which says nothing.
             if (trail.Count > 0)

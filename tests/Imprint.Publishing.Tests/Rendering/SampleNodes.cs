@@ -101,6 +101,12 @@ internal static class SampleNodes
         Video(),
         Svg(alt: "Logo"),
         new CodeNode { Id = NodeId.New(), Text = "var x = 1 < 2 && 3 > 2;", Language = "csharp" },
+        new TableNode
+        {
+            Id = NodeId.New(),
+            Head = [LocalizedText.Of(RenderHarness.En, "Term")],
+            Rows = [[LocalizedText.Of(RenderHarness.En, "Producer")]],
+        },
         new DividerNode { Id = NodeId.New() },
         new SpacerNode { Id = NodeId.New(), Size = SpacerSize.Large },
         Widget(new KeyValuePair<string, string>("until", "2027-01-01")),

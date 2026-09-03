@@ -19,6 +19,10 @@ public sealed record SlugChanged(string Slug);
 [EventType("page.meta-changed")]
 public sealed record MetaChanged(Locale Locale, string? MetaTitle, string? MetaDescription);
 
+/// <summary>Article metadata for structured data — both null clears it.</summary>
+[EventType("page.article-changed")]
+public sealed record ArticleChanged(string? Author, DateOnly? Published);
+
 [EventType("page.node-added")]
 public sealed record NodeAdded(NodeId ParentId, int Index, Node Spec);
 
