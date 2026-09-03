@@ -1,3 +1,6 @@
+/* Border-box everywhere: content-box made every padded, clamped card overflow by its padding. */
+*, *::before, *::after { box-sizing: border-box; }
+
 /* imprint-base.css — the structural system shared by the published site and the
    editor canvas (pixel-identical preview by construction). Ships on every page:
    stay lean, no decoration that a theme token could not retint. */
@@ -48,9 +51,7 @@
 .ip-pad-large { padding-block: var(--ip-space-8); }
 
 /* ---- stack ---- */
-/* max-width/min-width: a layout container never exceeds its parent — a centered
-   (fit-content) stack around a wide verbatim block otherwise grows past the section
-   and drags the page sideways on a phone; the block scrolls inside instead. */
+/* max/min-width: a layout container never exceeds its parent; wide blocks scroll inside. */
 .ip-stack { display: flex; flex-direction: column; gap: var(--ip-space-4); max-width: 100%; min-width: 0; }
 .ip-align-center { align-items: center; }
 .ip-align-end { align-items: flex-end; }
