@@ -59,7 +59,11 @@ else if (IsEditor)
 
     if (Node.MaxWidthPx is { } maxWidth)
     {
-      attributes["style"] = $"max-width: {maxWidth}px";
+      // --ip-svg-w lets the mobile stylesheet distinguish a wide diagram (which should
+      // keep a readable minimum width and scroll inside its own box) from a small mark
+      // (which should simply shrink) — CSS cannot read the viewBox, so the authored
+      // width is the honest signal.
+      attributes["style"] = $"max-width: {maxWidth}px; --ip-svg-w: {maxWidth}px";
     }
 
     if (!isDark)

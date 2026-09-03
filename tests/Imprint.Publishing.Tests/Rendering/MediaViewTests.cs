@@ -102,7 +102,7 @@ public sealed class MediaViewTests
     {
         var html = await RenderHarness.RenderNode(WithMedia(RenderMode.Static), SampleNodes.Svg(maxWidthPx: 240));
 
-        Assert.Contains("style=\"max-width: 240px\"", html);
+        Assert.Contains("style=\"max-width: 240px; --ip-svg-w: 240px\"", html);
     }
 
     [Fact]

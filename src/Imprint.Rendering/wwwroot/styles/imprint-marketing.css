@@ -323,6 +323,24 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 }
 /* The header CTA keeps its own always-visible slot beside the burger. */
 
+/* Pre-hydration island fallback (:not(:defined) = the custom element has not upgraded):
+   a quiet, honest placeholder card instead of label-and-link run together as raw text.
+   Hydration replaces the light DOM, and a defined element drops these rules. */
+.ip-widget:not(:defined) {
+  display: flex; flex-direction: column; gap: 0.45rem; align-items: flex-start;
+  padding: 0.9rem 1rem; border: 1px dashed var(--hairline); border-radius: var(--r-md);
+  color: var(--muted); font-size: var(--fs-sm);
+}
+.ip-widget:not(:defined) .ip-widget-fallback-link { color: var(--accent-ink); }
+
+/* Wide diagrams on a phone: shrinking a 700px figure to 390 makes its labels
+   unreadable. Figures authored wider than the screen keep a readable minimum and
+   scroll inside their own box; small marks (--ip-svg-w below the floor) just shrink. */
+@media (max-width: 700px) {
+  .ip-svg { overflow-x: auto; }
+  .ip-svg svg { min-width: min(var(--ip-svg-w, 0px), 560px); }
+}
+
 /* Tables: hairline grid, mono-quiet header; wide tables scroll inside the wrapper. */
 .ip-table-wrap { overflow-x: auto; max-width: 100%; min-width: 0; }
 .ip-table { border-collapse: collapse; width: 100%; font-size: var(--fs-sm); line-height: 1.5; }
