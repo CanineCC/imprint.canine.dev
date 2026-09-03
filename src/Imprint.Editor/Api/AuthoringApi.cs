@@ -4,6 +4,7 @@ using System.Text.Json;
 using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Assets;
 using Imprint.Authoring.Domain.Pages;
+using Imprint.Authoring.Domain.Pages.Events;
 using Imprint.Authoring.Domain.Posts;
 using Imprint.Authoring.Domain.Posts.Events;
 using Imprint.Authoring.Domain.Sites;
@@ -25,6 +26,7 @@ using ChangePageSlugCmd = Imprint.Authoring.Features.Pages.ChangeSlug.ChangeSlug
 using ChangePageTitleCmd = Imprint.Authoring.Features.Pages.ChangePageTitle.ChangePageTitle;
 using CreatePageCmd = Imprint.Authoring.Features.Pages.CreatePage.CreatePage;
 using DeletePageCmd = Imprint.Authoring.Features.Pages.DeletePage.DeletePage;
+using RestorePageToRevisionCmd = Imprint.Authoring.Features.Pages.RestorePageToRevision.RestorePageToRevision;
 using CreateSiteCmd = Imprint.Authoring.Features.Sites.CreateSite.CreateSite;
 using DuplicateNodeCmd = Imprint.Authoring.Features.Pages.DuplicateNode.DuplicateNode;
 using EditTextCmd = Imprint.Authoring.Features.Pages.EditText.EditText;
@@ -451,6 +453,41 @@ public static class AuthoringApi
             return result.Succeeded
                 ? Results.Ok(new { nodeId = nid.Compact })
                 : Results.BadRequest(new { error = "remove failed", details = result.Errors });
+        });
+
+        // A page's history, straight off its event stream — the same shape posts have had, for the same
+        // reason. An event-sourced CMS keeps every revision by construction; until this existed nothing
+        // could read a page's, so the only recoverable state was the last publish. That gap is why
+        // documentation making audited claims was kept as HTML in git and generated into the CMS: git
+        // could answer "what did this sentence say before, and when did it change" and imprint could not.
+        //
+        // ?content=true includes the text of each revision, which is what makes recovery by reading
+        // possible; without it the response is a compact log and stays small on a page with hundreds of
+        // edits. The length travels either way, so a blanking is visible in the compact log too.
+        api.MapGet("/pages/{pageId}/history", async (
+            string pageId, bool? content, IEventStore events, PageList pages, CancellationToken ct) =>
+        {
+            if (!TryPageId(pageId, out var pid)) return Results.BadRequest(new { error = "invalid pageId" });
+            if (pages.Get(pid) is null) return Results.NotFound(new { error = "unknown page" });
+
+            var stream = await events.ReadStream(pid.Stream, ct: ct);
+            return Results.Ok(new
+            {
+                pageId = pid.Compact,
+                revisions = stream.Select(e => PageRevisionView(e, content ?? false)).ToList(),
+            });
+        });
+
+        // Put the content back to a given revision. Content only — restoring a slug as a side effect of
+        // a content rollback would break every inbound link to the page.
+        api.MapPost("/pages/{pageId}/restore/{version:long}", async (
+            string pageId, long version, ICommandDispatcher dispatcher, CancellationToken ct) =>
+        {
+            if (!TryPageId(pageId, out var pid)) return Results.BadRequest(new { error = "invalid pageId" });
+            var result = await DispatchAs(dispatcher, actor, new RestorePageToRevisionCmd(pid, version), ct);
+            return result.Succeeded
+                ? Results.Ok(new { pageId = pid.Compact, restoredTo = version })
+                : Results.BadRequest(new { error = "restore failed", details = result.Errors });
         });
 
         // Delete a whole page. The handler refuses a page that is still in the site navigation, and
@@ -1195,6 +1232,68 @@ public static class AuthoringApi
     /// event actually changed. Every body revision is here, which is what makes an overwritten
     /// post recoverable without touching the event store on disk.
     /// </summary>
+    /// <summary>
+    /// One page revision as a log line. Node-level events name WHAT changed and where, not the whole
+    /// subtree: a props change on a section carries the entire resolved node, and dumping that per
+    /// revision would bury the one line a reader is looking for. Text is the exception, because text is
+    /// the thing people need to recover — so it travels under ?content=true, with the length always
+    /// present so a blanking shows up even in the compact log.
+    /// </summary>
+    // internal, not private: the MCP tool mirrors this endpoint and shares this projection rather than
+    // keeping a second copy of the event-to-log-line mapping that could drift from it.
+    internal static object PageRevisionView(StoredEvent stored, bool includeContent)
+    {
+        object Entry(string change, object? detail = null) => new
+        {
+            version = stored.StreamVersion,
+            at = stored.Metadata.TimestampUtc,
+            actor = stored.Metadata.Actor,
+            change,
+            detail,
+        };
+
+        return stored.Event switch
+        {
+            PageCreated e => Entry("created", new
+            {
+                siteId = e.SiteId.Compact, slug = e.Slug, locale = e.InitialLocale.Value, title = e.Title,
+            }),
+            TitleChanged e => Entry("title", new { locale = e.Locale.Value, title = e.Title }),
+            SlugChanged e => Entry("slug", new { slug = e.Slug }),
+            MetaChanged e => Entry("meta", new
+            {
+                locale = e.Locale.Value, metaTitle = e.MetaTitle, metaDescription = e.MetaDescription,
+            }),
+            ArticleChanged e => Entry("article", new { author = e.Author, published = e.Published }),
+            NodeAdded e => Entry("node-added", new
+            {
+                parentId = e.ParentId.Compact, index = e.Index, node = e.Spec.Id.Compact, kind = e.Spec.DisplayName,
+            }),
+            NodeMoved e => Entry("node-moved", new
+            {
+                node = e.NodeId.Compact, newParentId = e.NewParentId.Compact, newIndex = e.NewIndex,
+            }),
+            NodeRemoved e => Entry("node-removed", new { node = e.NodeId.Compact }),
+            NodeDuplicated e => Entry("node-duplicated", new { source = e.SourceId.Compact, copy = e.Copy.Id.Compact }),
+            NodePropsChanged e => Entry("props", new { node = e.Node.Id.Compact, kind = e.Node.DisplayName }),
+            TextChanged e => Entry("text", includeContent
+                ? new { node = e.NodeId.Compact, field = e.Field, locale = e.Locale.Value, length = e.Value.Length, value = e.Value }
+                : (object)new { node = e.NodeId.Compact, field = e.Field, locale = e.Locale.Value, length = e.Value.Length }),
+            // The whole-tree swap. Its own detail is a count rather than the tree: what a reader wants
+            // here is "the content was replaced wholesale at this revision", then the revisions around it.
+            PageContentRestored e => Entry("content-restored", new { roots = e.Roots.Count }),
+            BlockOverrideSet e => Entry("block-override", new
+            {
+                instance = e.InstanceId.Compact, field = e.Field, locale = e.Locale.Value, cleared = e.Value is null,
+            }),
+            BlockInstanceDetached e => Entry("block-detached", new { instance = e.InstanceId.Compact }),
+            PagePublished e => Entry("published", new { version = e.Version }),
+            PageUnpublished => Entry("unpublished"),
+            PageDeleted => Entry("deleted"),
+            _ => Entry(stored.StableId),
+        };
+    }
+
     private static object PostRevisionView(StoredEvent stored, bool includeBody)
     {
         object Entry(string change, object? detail = null) => new

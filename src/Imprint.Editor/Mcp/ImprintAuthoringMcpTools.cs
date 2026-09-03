@@ -23,6 +23,7 @@ using SetPageArticleCmd = Imprint.Authoring.Features.Pages.SetPageArticle.SetPag
 using ChangePageTitleCmd = Imprint.Authoring.Features.Pages.ChangePageTitle.ChangePageTitle;
 using CreatePageCmd = Imprint.Authoring.Features.Pages.CreatePage.CreatePage;
 using DeletePageCmd = Imprint.Authoring.Features.Pages.DeletePage.DeletePage;
+using RestorePageToRevisionCmd = Imprint.Authoring.Features.Pages.RestorePageToRevision.RestorePageToRevision;
 using CreateSiteCmd = Imprint.Authoring.Features.Sites.CreateSite.CreateSite;
 using DuplicateNodeCmd = Imprint.Authoring.Features.Pages.DuplicateNode.DuplicateNode;
 using EditTextCmd = Imprint.Authoring.Features.Pages.EditText.EditText;
@@ -648,6 +649,45 @@ public sealed class ImprintAuthoringMcpTools
         if (!TryPageId(pageId, out var pid)) return Fail("invalid pageId");
         if (!NodeId.TryParse(nodeId, out var nid)) return Fail("invalid nodeId");
         return await Dispatch(dispatcher, config, new RemoveNodeCmd(pid, nid), ct, () => new { ok = true, nodeId = nid.Compact });
+    }
+
+    [McpServerTool(Name = "page_history")]
+    [Description("Every revision of a page, oldest first: version, timestamp, actor and what changed. "
+                 + "An event-sourced CMS keeps them all by construction — this is how you read them. "
+                 + "content=true also returns the TEXT of each text change, which is what makes recovering "
+                 + "an overwritten sentence possible; without it the log stays compact but still carries each "
+                 + "change's length, so a blanking is visible either way. Pair with restore_page_revision.")]
+    public static async Task<object> PageHistory(
+        [Description("The page id.")] string pageId,
+        [Description("Include the text of each text change (default false).")] bool? content,
+        IEventStore events, PageList pages, CancellationToken ct = default)
+    {
+        if (!TryPageId(pageId, out var pid)) return Fail("invalid pageId");
+        if (pages.Get(pid) is null) return Fail("unknown page");
+
+        var stream = await events.ReadStream(pid.Stream, ct: ct);
+        return new
+        {
+            ok = true,
+            pageId = pid.Compact,
+            revisions = stream.Select(e => AuthoringApi.PageRevisionView(e, content ?? false)).ToList(),
+        };
+    }
+
+    [McpServerTool(Name = "restore_page_revision")]
+    [Description("Put a page's CONTENT back to how it stood at a given revision (see page_history). The "
+                 + "restore is appended as a new revision rather than rewriting history, so the change being "
+                 + "undone stays readable. Content only: slug, title, meta and published state are left alone, "
+                 + "because silently reverting a slug would break every inbound link to the page. The page is "
+                 + "left as a draft — publish it when the restored content is what you want live.")]
+    public static async Task<object> RestorePageRevision(
+        [Description("The page id.")] string pageId,
+        [Description("The revision to restore to, as reported by page_history.")] long version,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+    {
+        if (!TryPageId(pageId, out var pid)) return Fail("invalid pageId");
+        return await Dispatch(dispatcher, config, new RestorePageToRevisionCmd(pid, version), ct,
+            () => new { ok = true, pageId = pid.Compact, restoredTo = version });
     }
 
     [McpServerTool(Name = "delete_page")]
