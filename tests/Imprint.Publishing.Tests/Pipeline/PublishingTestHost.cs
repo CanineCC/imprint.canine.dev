@@ -178,6 +178,13 @@ internal sealed class PublishingTestHost : IAsyncDisposable
         await Commit(site);
     }
 
+    public async Task SetHomePage(SiteId siteId, PageId? homePageId)
+    {
+        var site = await Store.Load<Site>(siteId.Stream);
+        site.SetHomePage(homePageId);
+        await Commit(site);
+    }
+
     public async Task SetFavicon(SiteId siteId, AssetId? faviconAssetId)
     {
         var site = await Store.Load<Site>(siteId.Stream);

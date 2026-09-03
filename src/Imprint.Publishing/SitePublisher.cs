@@ -139,6 +139,7 @@ public sealed class SitePublisher(
         private Locale _defaultLocale;
         private IReadOnlyList<Locale> _locales = [];
         private IReadOnlyList<NavigationItem> _navigation = [];
+        private PageId? _explicitHomePageId;
         private IReadOnlyList<FooterLinkGroup> _footerGroups = [];
         private HeaderAction? _headerCta;
         private HeaderAction? _headerQuiet;
@@ -185,6 +186,7 @@ public sealed class SitePublisher(
             _defaultLocale = site.DefaultLocale;
             _locales = [.. site.Locales];
             _navigation = [.. site.Navigation];
+            _explicitHomePageId = site.HomePageId;
             _footerGroups = [.. site.FooterGroups];
             _headerCta = site.HeaderCta;
             _headerQuiet = site.HeaderQuiet;
@@ -349,12 +351,21 @@ public sealed class SitePublisher(
         }
 
         /// <summary>
-        /// The nav-first *published* page renders at the site root; without one there is no
-        /// root page. Only a top-level DIRECT page link is a home candidate — group
-        /// headings and external links carry no page identity.
+        /// The page rendered at the site root: the site's explicit choice, or — for a site
+        /// that has never made one — the nav-first *published* page, which is what this meant
+        /// before the choice existed. Without either there is no root page. Only a top-level
+        /// DIRECT page link is a nav-first candidate — group headings and external links carry
+        /// no page identity, which is why dropping the one plain link used to move the root.
         /// </summary>
         private PageId? HomePageId()
         {
+            // The site's explicit choice wins, as long as that page is actually being
+            // published — a root pointing at an unpublished page would emit no "/" at all.
+            if (_explicitHomePageId is { } chosen && _pageById.ContainsKey(chosen))
+            {
+                return chosen;
+            }
+
             foreach (var item in _navigation)
             {
                 if (item.PageId is { } pageId && _pageById.ContainsKey(pageId))
