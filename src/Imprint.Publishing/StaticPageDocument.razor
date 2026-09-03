@@ -122,6 +122,13 @@
              Desktop hides this copy; the header copy hides below the breakpoint. *@
           <li class="ip-nav-cta-item"><a class="ip-nav-cta" href="@Chrome.HeaderCta.Href">@Chrome.HeaderCta.Label</a></li>
         }
+        @if (Chrome.HeaderQuiet is not null)
+        {
+          @* The quiet link's mobile home. .ip-header-quiet is hidden below 900px to keep the
+             header on one line, so without this copy "Sign in" is unreachable on a phone.
+             It follows the CTA here and is ordered above it in the open sheet. *@
+          <li class="ip-nav-quiet-item"><a href="@Chrome.HeaderQuiet.Href">@Chrome.HeaderQuiet.Label</a></li>
+        }
       </ul>
     </nav>
     <div class="ip-header-actions">

@@ -23,10 +23,13 @@ public static class PublisherScripts
     public static string LanguagePreference { get; } = Load("language-preference.js");
 
     /// <summary>
-    /// Mobile nav toggle (~10 lines), inlined at the end of &lt;body&gt; on every page — below
+    /// Mobile nav toggle (~45 lines), inlined at the end of &lt;body&gt; on every page — below
     /// the header breakpoint the nav is otherwise unreachable. A checkbox hack would drop
     /// keyboard users and &lt;details&gt; cannot show its content closed on desktop, so this
-    /// is the honest minimum: one button, one class, aria-expanded kept true to the state.
+    /// is the honest minimum: one button opens the sheet, and the groups inside it are
+    /// accordions (one open at a time) because hover opens nothing on a finger. It owns
+    /// aria-expanded on the group triggers below the breakpoint and removes it above,
+    /// where the panels are hover-driven and the attribute would be a lie.
     /// </summary>
     public static string NavToggle { get; } = Load("nav-toggle.js");
 

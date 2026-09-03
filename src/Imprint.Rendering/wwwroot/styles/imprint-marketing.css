@@ -13,8 +13,12 @@
    packages/ui/src/blocks.tsx (the markup each block emits). The classes there
    (.mk-*, .cai-*) are re-keyed here to imprint's generic node markup
    (.ip-stack / .ip-grid / .ip-columns / .ip-prose / h1–4 / .ip-btn) and the
-   shadow-DOM widget islands (which read the --band-*/--accent*/--font-* custom
-   properties this layer defines from their host).
+   shadow-DOM widget islands (which read the --band-* , --accent-* and --font-*
+   custom properties this layer defines from their host).
+   NB: never let a star meet a slash inside a comment. A token glob written that way
+   closed this banner early for months; the leaked tail became an invalid selector
+   that swallowed the @font-face below it, so Schibsted Grotesk never loaded on any
+   of the sites. Space the wildcards out.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ── Self-hosted variable fonts (the publisher writes these to /fonts/) ─────── */
@@ -86,7 +90,12 @@
   --r-md: var(--ip-radius);
   --r-lg: 14px;
   --r-full: 999px;
-  --shadow-overlay: light-dark(0 4px 16px rgb(20 25 30 / 0.1), 0 4px 16px rgb(0 0 0 / 0.35));
+  /* light-dark() resolves a COLOUR, not a whole shadow — wrapping the offsets in it
+     makes the declaration invalid at computed-value time and the shadow silently
+     becomes none. The theme switch belongs in the colour slot, nowhere else. */
+  --shadow-overlay:
+    0 10px 30px light-dark(rgb(20 25 30 / 0.13), rgb(0 0 0 / 0.5)),
+    0 2px 6px light-dark(rgb(20 25 30 / 0.07), rgb(0 0 0 / 0.4));
 
   /* type — body/controls ride the theme's BODY font (Schibsted Grotesk on the shared sites),
      headings ride --ip-font-heading (serif on Assay's Dal). On sites whose heading == body
@@ -193,7 +202,11 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 
 .ip-nav { display: flex; align-items: center; margin-left: 1rem; }
 .ip-nav > ul { display: flex; align-items: center; gap: 0.15rem; list-style: none; margin: 0; padding: 0; }
-.ip-nav a,
+/* Top-level bar items only. This must stay scoped to the direct children of the list:
+   an unqualified `.ip-nav a` also matches every .ip-nav-card inside a dropdown, and at
+   (0,1,1) it outranks .ip-nav-card's own (0,1,0) rule — which turns each card into a
+   horizontal flex row with its title and description side by side. */
+.ip-nav > ul > li > a,
 .ip-nav-trigger {
   display: inline-flex; align-items: center; gap: 0.3rem;
   color: var(--muted); font-size: var(--fs-sm); font-weight: 500;
@@ -201,7 +214,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
   background: none; border: 0; cursor: pointer; font-family: inherit; line-height: 1;
   text-decoration: none;
 }
-.ip-nav a:hover,
+.ip-nav > ul > li > a:hover,
 .ip-nav-trigger:hover { color: var(--heading); text-decoration: none; }
 .ip-nav a[aria-current="page"] { color: var(--heading); }
 
@@ -217,22 +230,31 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 }
 .ip-nav-group:hover .ip-nav-trigger::after,
 .ip-nav-group:focus-within .ip-nav-trigger::after { transform: rotate(180deg); }
+/* One column by default — a two-item group in a 420px two-column box is mostly air, and
+   a description squeezed into half of it wraps to three lines. Long groups earn the second
+   column below. The panel is left-aligned to its trigger, so a wide group belongs early in
+   the bar; at 600px the third trigger onward would run past a 1280px viewport. */
 .ip-nav-panel {
   position: absolute; top: calc(100% + 10px); left: 0;
-  min-width: 420px; padding: 0.5rem;
-  display: grid; grid-template-columns: 1fr 1fr; gap: 0.15rem;
+  width: max-content; min-width: 300px; max-width: min(340px, calc(100vw - 2rem));
+  padding: 0.6rem;
+  display: grid; grid-template-columns: 1fr; gap: 0.1rem;
   background: var(--bg); border: 1px solid var(--hairline);
   border-radius: var(--r-lg); box-shadow: var(--shadow-overlay);
   opacity: 0; visibility: hidden; transform: translateY(5px);
   transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s; z-index: 60;
 }
+/* Seven or more destinations: split into two columns rather than run down the viewport. */
+.ip-nav-panel:has(> :nth-child(7)) {
+  grid-template-columns: 1fr 1fr; max-width: min(620px, calc(100vw - 2rem));
+}
 .ip-nav-panel::before { content: ""; position: absolute; top: -10px; left: 0; right: 0; height: 10px; }
 .ip-nav-group:hover > .ip-nav-panel,
 .ip-nav-group:focus-within > .ip-nav-panel { opacity: 1; visibility: visible; transform: none; }
-.ip-nav-card { display: block; padding: 0.7rem 0.75rem; border-radius: var(--r-md); color: var(--ink); text-decoration: none; }
+.ip-nav-card { display: block; padding: 0.55rem 0.7rem; border-radius: var(--r-md); color: var(--ink); text-decoration: none; }
 .ip-nav-card:hover { background: var(--surface-2); text-decoration: none; }
-.ip-nav-card strong { display: block; color: var(--heading); font-size: var(--fs-sm); font-weight: 600; }
-.ip-nav-card span { display: block; color: var(--muted); font-size: var(--fs-xs); line-height: 1.35; margin-top: 1px; }
+.ip-nav-card strong { display: block; color: var(--heading); font-size: var(--fs-sm); font-weight: 600; line-height: 1.3; }
+.ip-nav-card span { display: block; color: var(--muted); font-size: var(--fs-xs); line-height: 1.4; margin-top: 2px; }
 
 .ip-header-actions { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; }
 .ip-header-quiet { color: var(--muted); font-size: var(--fs-sm); font-weight: 500; white-space: nowrap; text-decoration: none; }
@@ -264,8 +286,9 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-lang a:hover { color: var(--heading); background: var(--surface-2); }
 .ip-lang a[aria-current="true"] { color: var(--on-accent); background: var(--accent-strong); }
 
-/* The CTA's mobile copy inside the nav panel — hidden until the header hands it over. */
-.ip-nav-cta-item { display: none; }
+/* The CTA's and the quiet link's mobile copies inside the nav panel — hidden until the
+   header hands them over below the breakpoint. */
+.ip-nav-cta-item, .ip-nav-quiet-item { display: none; }
 
 /* Burger: exists only below the breakpoint. */
 .ip-nav-burger {
@@ -289,8 +312,9 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
   .ip-header-cta { padding: 0.45rem 0.7rem; font-size: var(--fs-xs); white-space: nowrap; }
   .ip-lang a { padding: 0.3rem 0.4rem; }
 
-  /* Open panel: the nav drops below the header as one sheet; hover dropdowns cannot
-     work on touch, so groups flatten to a label + always-visible cards. */
+  /* Open panel: the nav drops below the header as one sheet. A flex column so the
+     account items can be ordered above the navigation without moving them in the
+     markup — a phone should reach the CTA without scrolling past every destination. */
   .ip-site-header { position: relative; }
   .ip-nav-open .ip-nav {
     display: block; position: absolute; top: 100%; left: 0; right: 0; z-index: 30;
@@ -298,27 +322,62 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
     background: var(--bg); border-bottom: 1px solid var(--hairline);
     max-height: calc(100vh - 3.5rem); overflow-y: auto;
   }
-  .ip-nav-open .ip-nav > ul { display: block; }
-  .ip-nav-open .ip-nav > ul > li { display: block; }
+  .ip-nav-open .ip-nav > ul { display: flex; flex-direction: column; align-items: stretch; }
+  /* The account items are exempt: this rule is (0,2,2) and would otherwise beat the flat
+     `.ip-nav-cta-item { display: none }` that keeps them hidden until their breakpoint —
+     which is how the CTA came to appear both in the header bar AND at the foot of the
+     sheet between 641px and 900px. They are shown explicitly below instead. */
+  .ip-nav-open .ip-nav > ul > li:not(.ip-nav-cta-item, .ip-nav-quiet-item) { display: block; }
   .ip-nav-open .ip-nav > ul > li > a { display: block; padding: 0.65rem 0.25rem; }
+
+  /* Groups are accordions on touch. Hover opens nothing on a finger, so the old
+     always-expanded treatment dumped every destination of every group into one list —
+     on Watchdog that is fourteen, and the last of them sat below the fold of a
+     scrolling sheet. nav-toggle.js owns aria-expanded and opens one section at a
+     time; the panel keys off that same attribute, so what is shown and what a screen
+     reader is told cannot drift apart. */
   .ip-nav-open .ip-nav-trigger {
-    pointer-events: none; padding: 0.85rem 0.25rem 0.25rem;
-    font-size: var(--fs-xs); letter-spacing: 0.08em; text-transform: uppercase;
+    display: flex; width: 100%; justify-content: space-between; align-items: center;
+    padding: 0.65rem 0.25rem; font-size: var(--fs-sm); line-height: 1.3; text-align: left;
   }
-  .ip-nav-open .ip-nav-trigger::after { content: none; }
+  /* Touch keeps :hover stuck on the last-tapped element, which would leave the chevron
+     pointing up on a collapsed section. Below the breakpoint the attribute is the only
+     thing that turns it. */
+  .ip-nav-group:hover .ip-nav-trigger::after { transform: none; }
+  .ip-nav-open .ip-nav-trigger[aria-expanded="true"] { color: var(--heading); }
+  .ip-nav-open .ip-nav-trigger[aria-expanded="true"]::after { transform: rotate(180deg); }
   .ip-nav-open .ip-nav-panel {
-    position: static; display: block; visibility: visible; opacity: 1; transform: none;
-    border: 0; box-shadow: none; background: none; padding: 0; min-width: 0;
+    position: static; display: none; visibility: visible; opacity: 1; transform: none;
+    width: auto; min-width: 0; max-width: none;
+    border: 0; box-shadow: none; background: none; padding: 0 0 0.4rem 0.25rem;
+  }
+  .ip-nav-open .ip-nav-trigger[aria-expanded="true"] + .ip-nav-panel { display: block; }
+  .ip-nav-open .ip-nav-panel .ip-nav-card { padding: 0.5rem 0.4rem; }
+
+  /* .ip-header-quiet is hidden from the header at this width, which left "Sign in"
+     with nowhere to go. The sheet carries it, ordered above the destinations with the
+     CTA — the account pair reads as a block, separated from the navigation by a rule. */
+  .ip-nav-open .ip-nav-quiet-item {
+    display: block; order: -1;
+    padding-bottom: 0.4rem; margin-bottom: 0.4rem; border-bottom: 1px solid var(--hairline);
   }
 }
 
 @media (max-width: 640px) {
   .ip-site-header > .ip-header-actions > .ip-header-cta { display: none; }
-  .ip-nav-open .ip-nav-cta-item { display: block; padding: 0.9rem 0.25rem 0.35rem; }
-  .ip-nav-open .ip-nav-cta {
+  .ip-nav-open .ip-nav-cta-item { display: block; order: -2; padding: 0.35rem 0.25rem 0.6rem; }
+  /* Only when there is no quiet link to carry it: otherwise the rule sits under that one. */
+  .ip-nav-open .ip-nav-cta-item:not(:has(~ .ip-nav-quiet-item)) {
+    margin-bottom: 0.4rem; border-bottom: 1px solid var(--hairline);
+  }
+  /* Child combinator on purpose: the generic `li > a` sheet rule above is (0,2,3) and
+     would otherwise win the padding back off a flatter (0,2,0) selector. */
+  /* --accent-strong, matching .ip-header-cta: it is the same button, and it should not
+     change colour when the header hands it to the sheet. */
+  .ip-nav-open .ip-nav-cta-item > .ip-nav-cta {
     display: block; text-align: center; text-decoration: none;
-    background: var(--accent); color: var(--on-accent); font-weight: 600;
-    padding: 0.6rem 0.9rem; border-radius: var(--r-md);
+    background: var(--accent-strong); color: var(--on-accent); font-weight: 600;
+    padding: 0.7rem 0.9rem; border-radius: var(--r-sm);
   }
 }
 /* The header CTA keeps its own always-visible slot beside the burger. */
