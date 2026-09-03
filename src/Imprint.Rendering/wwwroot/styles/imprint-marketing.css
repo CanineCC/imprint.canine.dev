@@ -461,6 +461,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 }
 [class*="ip-ap-"] .ip-prose p strong { color: var(--ink); }
 [class*="ip-ap-"] .ip-prose a { color: var(--accent-ink); }
+[class*="ip-ap-"] .ip-prose :is(p, li, a) { overflow-wrap: break-word; }
 
 /* Center the head for grid/list appearances (canine .mk-section-head is centered);
    hero + boundary + table keep it left, handled per-appearance below. */
@@ -746,7 +747,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 /* ── DOCMOCK (a document-sample card) ───────────────────────────────────────── */
 .ip-ap-docmock > .ip-stack {
   border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 1.5rem 1.6rem;
-  background: var(--surface); max-width: 46rem; margin-inline: auto; gap: 0.6rem;
+  background: var(--surface); max-width: min(46rem, 100%); margin-inline: auto; gap: 0.6rem;
 }
 .ip-ap-docmock h4 { font-size: var(--fs-lg); color: var(--heading); }
 .ip-ap-docmock .ip-prose.ip-kicker > p > strong {
@@ -762,7 +763,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 /* ── NOTE / CALLOUT ─────────────────────────────────────────────────────────── */
 .ip-ap-note > .ip-stack {
   border: 1px solid var(--hairline); border-left: 3px solid var(--accent); border-radius: var(--r-md);
-  padding: 0.9rem 1.1rem; background: var(--surface); max-width: 46rem; margin-inline: auto;
+  padding: 0.9rem 1.1rem; background: var(--surface); max-width: min(46rem, 100%); margin-inline: auto;
   font-size: var(--fs-sm); color: var(--ink); line-height: 1.55; gap: 0.25rem;
 }
 .ip-ap-note h3 { color: var(--heading); font-weight: 600; font-size: var(--fs-md); }
@@ -840,7 +841,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 
 /* ── DOC (long-form legal / prose — canine .mk-doc reading column) ──────────── */
 .ip-ap-doc > .ip-stack {
-  max-width: 50rem; margin-inline: auto; width: 100%; gap: 0;
+  max-width: min(50rem, 100%); margin-inline: auto; width: 100%; gap: 0;
 }
 .ip-ap-doc h1 {
   font-size: var(--mk-h2); line-height: 1.12; letter-spacing: -0.02em; color: var(--heading);
@@ -889,12 +890,12 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-ap-gallery cai-card-gallery,
 .ip-ap-flow .ip-widget { max-width: 100%; }
 .ip-ap-band-scale cai-band-scale,
-.ip-ap-composition .ip-widget { max-width: 46rem; margin-inline: auto; }
+.ip-ap-composition .ip-widget { max-width: min(46rem, 100%); margin-inline: auto; }
 /* the C4 heat-map + the findings list are wide, centered figures too */
-.ip-ap-c4-heat .ip-widget { max-width: 62rem; margin-inline: auto; }
-.ip-ap-findings .ip-widget { max-width: 62rem; margin-inline: auto; }
+.ip-ap-c4-heat .ip-widget { max-width: min(62rem, 100%); margin-inline: auto; }
+.ip-ap-findings .ip-widget { max-width: min(62rem, 100%); margin-inline: auto; }
 /* a live/standalone score card is a single 460px card, centered */
-.ip-ap-live-card .ip-widget { max-width: 460px; margin-inline: auto; }
+.ip-ap-live-card .ip-widget { max-width: min(460px, 100%); margin-inline: auto; }
 .ip-ap-contact .ip-widget { max-width: 40rem; margin-inline: auto; }
 /* section caption prose that follows a widget → small muted centered */
 [class*="ip-ap-"] > .ip-stack > .ip-prose:last-child:not(.ip-kicker):not(:has(ul)) {
