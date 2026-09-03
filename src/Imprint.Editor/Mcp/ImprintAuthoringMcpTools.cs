@@ -36,6 +36,7 @@ using RemoveLocaleCmd = Imprint.Authoring.Features.Sites.RemoveLocale.RemoveLoca
 using SeedLocaleCmd = Imprint.Authoring.Features.Sites.SeedLocale.SeedLocale;
 using SetCopyLineCmd = Imprint.Authoring.Features.Sites.SetCopyLine.SetCopyLine;
 using SetFaviconCmd = Imprint.Authoring.Features.Sites.SetFavicon.SetFavicon;
+using SetHomePageCmd = Imprint.Authoring.Features.Sites.SetHomePage.SetHomePage;
 using SetSocialImageCmd = Imprint.Authoring.Features.Sites.SetSocialImage.SetSocialImage;
 using SetLlmsExcludedPathsCmd = Imprint.Authoring.Features.Sites.SetLlmsExcludedPaths.SetLlmsExcludedPaths;
 using SetLlmsPreambleCmd = Imprint.Authoring.Features.Sites.SetLlmsPreamble.SetLlmsPreamble;
@@ -927,6 +928,25 @@ public sealed class ImprintAuthoringMcpTools
             tags = names,
             assets = ids.Select(id => AuthoringApi.AssetView(assets.Get(id)!)).ToList(),
         };
+    }
+
+    [McpServerTool(Name = "set_home_page")]
+    [Description("Set (or clear) the page served at the site root \"/\". Pass a pageId, or null/empty to fall back to the legacy rule (whichever page is first in the navigation). Set this before removing a page from the navigation: without it the root follows the menu, so dropping the first entry silently repoints \"/\" and takes the next page's own URL away.")]
+    public static async Task<object> SetHomePage(
+        [Description("The site id.")] string siteId,
+        [Description("The page id to serve at the root, or null/empty to clear.")] string? pageId,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        PageId? pid = null;
+        if (!string.IsNullOrWhiteSpace(pageId))
+        {
+            if (!TryPageId(pageId, out var parsed)) return Fail("invalid pageId");
+            pid = parsed;
+        }
+
+        return await Dispatch(dispatcher, config, new SetHomePageCmd(sid, pid), ct,
+            () => new { ok = true, siteId = sid.Compact, homePageId = pid?.Compact });
     }
 
     [McpServerTool(Name = "set_favicon")]

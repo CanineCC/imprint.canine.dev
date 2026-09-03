@@ -69,6 +69,8 @@ public sealed class SiteEventSamples : IEventSampleProvider
 
             // Brand imagery — both the "set" (an asset id) and "clear" (null) shapes, so
             // the nullable AssetId payload round-trips in both states.
+            yield return new SiteHomePageChanged(PageId.New());
+            yield return new SiteHomePageChanged(null);
             yield return new SiteFaviconChanged(AssetId.New());
             yield return new SiteFaviconChanged(null);
             yield return new SiteHeaderLogoChanged(AssetId.New());

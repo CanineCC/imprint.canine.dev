@@ -25,7 +25,14 @@ public sealed record PageSummary(
     long Version,
     long? PublishedVersion,
     int? NavigationOrder,
-    DateTimeOffset UpdatedAt)
+    DateTimeOffset UpdatedAt,
+    /// <summary>
+    /// The page served at the site root. The site's explicit choice when it has made one;
+    /// otherwise the nav-first page, which is what this meant before the choice existed.
+    /// Derived at projection time because only the projection sees both the page and its
+    /// site's setting.
+    /// </summary>
+    bool IsHome = false)
 {
     public PageStatus Status => PublishedVersion switch
     {
@@ -37,9 +44,6 @@ public sealed record PageSummary(
     };
 
     public bool IsInNavigation => NavigationOrder is not null;
-
-    /// <summary>The nav-first page is the home page, rendered at the site root.</summary>
-    public bool IsHome => NavigationOrder == 0;
 }
 
 /// <summary>
@@ -58,6 +62,9 @@ public sealed class PageList : ReadModel
     // SiteNavigationChanged event came from. A single shared list would let one site's
     // menu decide another's home page and nav order.
     private readonly Dictionary<SiteId, List<PageId>> _navigation = [];
+
+    // The site's explicit root page, when it has set one. Absent = fall back to nav-first.
+    private readonly Dictionary<SiteId, PageId> _homePages = [];
 
     /// <summary>Every page across all sites — navigation pages first, then the rest by slug.</summary>
     public IReadOnlyList<PageSummary> All() => Ordered(_pages.Select(pair => Summarize(pair.Key, pair.Value)));
@@ -111,6 +118,19 @@ public sealed class PageList : ReadModel
                     [.. navigation.Items.Select(item => item.PageId).OfType<PageId>()];
                 break;
 
+            case SiteHomePageChanged home when StreamIds.IdOf(@event.StreamId, "site-") is { } homeSiteGuid:
+                var homeSite = SiteId.From(homeSiteGuid);
+                if (home.HomePageId is { } chosenHome)
+                {
+                    _homePages[homeSite] = chosenHome;
+                }
+                else
+                {
+                    _homePages.Remove(homeSite);
+                }
+
+                break;
+
             default:
                 if (StreamIds.IdOf(@event.StreamId, "page-") is not { } guid ||
                     !_pages.TryGetValue(PageId.From(guid), out var entry))
@@ -152,15 +172,23 @@ public sealed class PageList : ReadModel
     {
         _pages.Clear();
         _navigation.Clear();
+        _homePages.Clear();
     }
 
     private PageSummary Summarize(PageId id, Entry entry)
     {
-        // Navigation order is looked up in the page's OWN site's menu, so a page is only
-        // "home" (order 0) relative to its site.
+        // Navigation order is looked up in the page's OWN site's menu, so an order is only
+        // meaningful relative to its site.
         var order = _navigation.GetValueOrDefault(entry.SiteId)?.IndexOf(id) ?? -1;
+
+        // The site's explicit choice wins. Only when it has never made one does the old
+        // rule apply — the nav-first page — so sites predating the setting keep the root
+        // they already had, and a site that HAS chosen no longer loses its root when the
+        // menu is reordered or its first entry is removed.
+        var isHome = _homePages.TryGetValue(entry.SiteId, out var chosen) ? chosen == id : order == 0;
+
         return new PageSummary(
             id, entry.Slug, entry.Title, entry.Version, entry.PublishedVersion,
-            order < 0 ? null : order, entry.UpdatedAt);
+            order < 0 ? null : order, entry.UpdatedAt, isHome);
     }
 }

@@ -105,6 +105,14 @@ public sealed record SiteHeaderActionsChanged(HeaderAction? Cta, HeaderAction? Q
 [EventType("site.copy-line-changed", 1)]
 public sealed record SiteCopyLineChanged(CopyLine? CopyLine);
 
+// Which page is served at the site root. Explicit BECAUSE it used to be implicit: the home
+// page was whatever sat first in the menu (PageSummary.IsHome was NavigationOrder == 0), so
+// dropping "Home" from the navigation silently repointed "/" at the next top-level link and
+// took that page's own URL away with it. A site root is not a menu position. Null means
+// "fall back to the nav-first page", which is what every site created before this event did.
+[EventType("site.home-page-changed", 1)]
+public sealed record SiteHomePageChanged(PageId? HomePageId);
+
 // Brand imagery. Each carries the chosen asset id (or null to clear); the asset's bytes
 // and variants live in the Asset stream, so the event stays a single reference.
 [EventType("site.favicon-changed", 1)]

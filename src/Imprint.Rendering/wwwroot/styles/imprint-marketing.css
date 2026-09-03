@@ -201,7 +201,10 @@
 span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 
 .ip-nav { display: flex; align-items: center; margin-left: 1rem; }
-.ip-nav > ul { display: flex; align-items: center; gap: 0.15rem; list-style: none; margin: 0; padding: 0; }
+/* nowrap is load-bearing: a flex list that wraps put a second and then a third row of nav
+   inside a 62px header at 1000px and 920px. Above the breakpoint the bar must be one row or
+   nothing — if a site's nav no longer fits on one, the answer is the burger, not a second row. */
+.ip-nav > ul { display: flex; flex-wrap: nowrap; align-items: center; gap: 0.15rem; list-style: none; margin: 0; padding: 0; }
 /* Top-level bar items only. This must stay scoped to the direct children of the list:
    an unqualified `.ip-nav a` also matches every .ip-nav-card inside a dropdown, and at
    (0,1,1) it outranks .ip-nav-card's own (0,1,0) rule — which turns each card into a

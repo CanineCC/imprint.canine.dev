@@ -67,6 +67,12 @@ public sealed class Site : AggregateRoot
     // Brand imagery, both optional. The favicon is the tab/bookmark icon; the header logo
     // replaces the CSS brand dot in the published header and footer. Each points at an
     // asset in the shared library (validated to exist by the slice), or null for "none".
+    /// <summary>
+    /// The page served at "/", when the site has chosen one. Null means the nav-first page,
+    /// which is how every site behaved before this was explicit.
+    /// </summary>
+    public PageId? HomePageId { get; private set; }
+
     public AssetId? FaviconAssetId { get; private set; }
     public AssetId? HeaderLogoAssetId { get; private set; }
 
@@ -414,6 +420,23 @@ public sealed class Site : AggregateRoot
         }
 
         Raise(new SiteHeaderActionsChanged(cta, quiet));
+    }
+
+    /// <summary>
+    /// Set (or clear, with null) the page served at the site root. Clearing restores the
+    /// legacy behaviour — the nav-first page — which is what a site that has never set one
+    /// still does. Whether the page exists and belongs to this site is a cross-aggregate
+    /// question the slice checks; the aggregate only records the choice. No-op idempotent
+    /// on an unchanged value.
+    /// </summary>
+    public void SetHomePage(PageId? homePageId)
+    {
+        if (Equals(HomePageId, homePageId))
+        {
+            return;
+        }
+
+        Raise(new SiteHomePageChanged(homePageId));
     }
 
     /// <summary>
@@ -792,6 +815,10 @@ public sealed class Site : AggregateRoot
             case SiteCopyLineChanged e:
                 CopyLine = e.CopyLine;
                 break;
+            case SiteHomePageChanged e:
+                HomePageId = e.HomePageId;
+                break;
+
             case SiteFaviconChanged e:
                 FaviconAssetId = e.FaviconAssetId;
                 break;
