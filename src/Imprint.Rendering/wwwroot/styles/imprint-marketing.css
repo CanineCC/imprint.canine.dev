@@ -264,6 +264,9 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-lang a:hover { color: var(--heading); background: var(--surface-2); }
 .ip-lang a[aria-current="true"] { color: var(--on-accent); background: var(--accent-strong); }
 
+/* The CTA's mobile copy inside the nav panel — hidden until the header hands it over. */
+.ip-nav-cta-item { display: none; }
+
 /* Burger: exists only below the breakpoint. */
 .ip-nav-burger {
   display: none; align-items: center; justify-content: center;
@@ -277,6 +280,14 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 @media (max-width: 900px) {
   .ip-nav, .ip-header-quiet { display: none; }
   .ip-nav-burger { display: inline-flex; }
+
+  /* The header must FIT: tighter gaps and padding below the breakpoint, and under
+     640px the CTA hands itself to the nav panel — brand + language + toggle + burger
+     is the widest set that fits every brand's header down to 320px. */
+  .ip-site-header { gap: 0.7rem; padding-inline: max(0.75rem, calc(50% - 570px)); }
+  .ip-header-actions { gap: 0.5rem; }
+  .ip-header-cta { padding: 0.45rem 0.7rem; font-size: var(--fs-xs); white-space: nowrap; }
+  .ip-lang a { padding: 0.3rem 0.4rem; }
 
   /* Open panel: the nav drops below the header as one sheet; hover dropdowns cannot
      work on touch, so groups flatten to a label + always-visible cards. */
@@ -300,10 +311,20 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
     border: 0; box-shadow: none; background: none; padding: 0; min-width: 0;
   }
 }
+
+@media (max-width: 640px) {
+  .ip-site-header > .ip-header-actions > .ip-header-cta { display: none; }
+  .ip-nav-open .ip-nav-cta-item { display: block; padding: 0.9rem 0.25rem 0.35rem; }
+  .ip-nav-open .ip-nav-cta {
+    display: block; text-align: center; text-decoration: none;
+    background: var(--accent); color: var(--on-accent); font-weight: 600;
+    padding: 0.6rem 0.9rem; border-radius: var(--r-md);
+  }
+}
 /* The header CTA keeps its own always-visible slot beside the burger. */
 
 /* Tables: hairline grid, mono-quiet header; wide tables scroll inside the wrapper. */
-.ip-table-wrap { overflow-x: auto; }
+.ip-table-wrap { overflow-x: auto; max-width: 100%; min-width: 0; }
 .ip-table { border-collapse: collapse; width: 100%; font-size: var(--fs-sm); line-height: 1.5; }
 .ip-table th {
   text-align: left; font-family: var(--font-mono); font-size: var(--fs-2xs); font-weight: 600;
@@ -317,6 +338,9 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-code {
   background: var(--surface-2); border: 1px solid var(--hairline); border-radius: var(--r-md);
   padding: 0.85rem 1rem; margin: 0; overflow-x: auto;
+  /* Clamp in CENTERED stacks too: without a max-width, align-items:center lets the block
+     take its intrinsic width and drag the whole page sideways on a phone. */
+  max-width: 100%; min-width: 0;
   font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.55; color: var(--ink);
 }
 .ip-code code { font-family: inherit; font-size: inherit; background: none; padding: 0; }

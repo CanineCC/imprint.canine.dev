@@ -115,6 +115,13 @@
             <li><a href="@item.Href" aria-current="@(item.IsCurrent ? "page" : null)">@item.Label</a></li>
           }
         }
+        @if (Chrome.HeaderCta is not null)
+        {
+          @* The header CTA's mobile home: below 640px the header hasn't room for it beside
+             the language switcher and the burger, so it moves into the open nav panel.
+             Desktop hides this copy; the header copy hides below the breakpoint. *@
+          <li class="ip-nav-cta-item"><a class="ip-nav-cta" href="@Chrome.HeaderCta.Href">@Chrome.HeaderCta.Label</a></li>
+        }
       </ul>
     </nav>
     <div class="ip-header-actions">
