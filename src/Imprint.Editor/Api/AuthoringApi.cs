@@ -24,6 +24,7 @@ using ChangePageMetaCmd = Imprint.Authoring.Features.Pages.ChangePageMeta.Change
 using ChangePageSlugCmd = Imprint.Authoring.Features.Pages.ChangeSlug.ChangeSlug;
 using ChangePageTitleCmd = Imprint.Authoring.Features.Pages.ChangePageTitle.ChangePageTitle;
 using CreatePageCmd = Imprint.Authoring.Features.Pages.CreatePage.CreatePage;
+using DeletePageCmd = Imprint.Authoring.Features.Pages.DeletePage.DeletePage;
 using CreateSiteCmd = Imprint.Authoring.Features.Sites.CreateSite.CreateSite;
 using DuplicateNodeCmd = Imprint.Authoring.Features.Pages.DuplicateNode.DuplicateNode;
 using EditTextCmd = Imprint.Authoring.Features.Pages.EditText.EditText;
@@ -450,6 +451,21 @@ public static class AuthoringApi
             return result.Succeeded
                 ? Results.Ok(new { nodeId = nid.Compact })
                 : Results.BadRequest(new { error = "remove failed", details = result.Errors });
+        });
+
+        // Delete a whole page. The handler refuses a page that is still in the site navigation, and
+        // refuses the last page on a site — so the failure a caller actually hits is a guard, not a
+        // 500, and its message says which one. Abandoned drafts are the reason this exists: the API
+        // could create pages but never remove them, so a mistaken or superseded page could only be
+        // cleaned up in the editor UI.
+        api.MapDelete("/pages/{pageId}", async (
+            string pageId, ICommandDispatcher dispatcher, CancellationToken ct) =>
+        {
+            if (!TryPageId(pageId, out var pid)) return Results.BadRequest(new { error = "invalid pageId" });
+            var result = await DispatchAs(dispatcher, actor, new DeletePageCmd(pid), ct);
+            return result.Succeeded
+                ? Results.Ok(new { pageId = pid.Compact, deleted = true })
+                : Results.BadRequest(new { error = "delete failed", details = result.Errors });
         });
 
         // Publish every stale page in the site. The static files follow automatically (the publisher

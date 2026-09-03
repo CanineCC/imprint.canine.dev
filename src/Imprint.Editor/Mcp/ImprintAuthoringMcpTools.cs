@@ -22,6 +22,7 @@ using ChangePageMetaCmd = Imprint.Authoring.Features.Pages.ChangePageMeta.Change
 using SetPageArticleCmd = Imprint.Authoring.Features.Pages.SetPageArticle.SetPageArticle;
 using ChangePageTitleCmd = Imprint.Authoring.Features.Pages.ChangePageTitle.ChangePageTitle;
 using CreatePageCmd = Imprint.Authoring.Features.Pages.CreatePage.CreatePage;
+using DeletePageCmd = Imprint.Authoring.Features.Pages.DeletePage.DeletePage;
 using CreateSiteCmd = Imprint.Authoring.Features.Sites.CreateSite.CreateSite;
 using DuplicateNodeCmd = Imprint.Authoring.Features.Pages.DuplicateNode.DuplicateNode;
 using EditTextCmd = Imprint.Authoring.Features.Pages.EditText.EditText;
@@ -647,6 +648,18 @@ public sealed class ImprintAuthoringMcpTools
         if (!TryPageId(pageId, out var pid)) return Fail("invalid pageId");
         if (!NodeId.TryParse(nodeId, out var nid)) return Fail("invalid nodeId");
         return await Dispatch(dispatcher, config, new RemoveNodeCmd(pid, nid), ct, () => new { ok = true, nodeId = nid.Compact });
+    }
+
+    [McpServerTool(Name = "delete_page")]
+    [Description("Delete a whole page from a site. Refused while the page is still in the site navigation "
+                 + "(remove it there first), and refused for the only page on a site. Deleting a PUBLISHED page "
+                 + "also withdraws its files on the next publisher pass, so the live URL stops resolving.")]
+    public static async Task<object> DeletePage(
+        [Description("The page id.")] string pageId,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+    {
+        if (!TryPageId(pageId, out var pid)) return Fail("invalid pageId");
+        return await Dispatch(dispatcher, config, new DeletePageCmd(pid), ct, () => new { ok = true, pageId = pid.Compact, deleted = true });
     }
 
     [McpServerTool(Name = "upload_asset")]
