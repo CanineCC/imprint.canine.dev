@@ -62,16 +62,20 @@ public sealed class BrandImagePublishTests
         await host.SetNavigation(siteId, homeId);
         await host.Publish(homeId);
 
-        // An SVG logo: the catalog only inlines SVGs (no assets/ file), so there is no file
-        // URL to reference. It must degrade to the brand dot rather than emit a dead /media URL.
-        var svgId = await host.CreateSvgAsset();
+        // An SVG logo INLINES into the brand mark — that is what lets a currentColor mark
+        // take the header's ink and follow the theme with no second rendition. The markup
+        // is the catalog's sanitized SVG; no /media URL and no <img> are emitted.
+        var svgId = await host.CreateSvgAsset(
+            "<svg viewBox=\"0 0 10 10\"><path d=\"M0 0h10v10z\" stroke=\"currentColor\"/></svg>");
         await host.SetHeaderLogo(siteId, svgId);
 
         await host.Publisher.Synchronize();
 
         var html = host.ReadText("index.html");
         Assert.DoesNotContain("/media/", html);
-        Assert.DoesNotContain("ip-brand-logo", html); // no logo <img>
-        Assert.Contains("ip-brand-dot", html);         // graceful fallback
+        Assert.Contains("<span class=\"ip-brand-logo\" aria-hidden=\"true\"><svg", html);
+        Assert.Contains("stroke=\"currentColor\"", html);
+        Assert.DoesNotContain("<img class=\"ip-brand-logo\"", html);
+        Assert.DoesNotContain("ip-brand-dot", html);
     }
 }

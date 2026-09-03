@@ -148,6 +148,7 @@ public sealed class SitePublisher(
         private AssetId? _socialImageAssetId;
         private string? _faviconUrl;
         private string? _logoUrl;
+        private string? _logoSvg;
         private string? _socialImageUrl;
         private string? _llmsPreamble;
         private IReadOnlyList<string> _llmsExcludedPaths = [];
@@ -276,6 +277,7 @@ public sealed class SitePublisher(
             // Now the catalog exists, resolve the brand imagery to its PUBLISHED /assets URL.
             _faviconUrl = BrandPublishedUrl(_faviconAssetId, preferSmallest: true);
             _logoUrl = BrandPublishedUrl(_headerLogoAssetId, preferSmallest: false);
+            _logoSvg = BrandInlineSvg(_headerLogoAssetId);
             _socialImageUrl = SocialImagePublishedUrl(_socialImageAssetId);
             await LoadWidgetBundles(ct);
 
@@ -609,6 +611,7 @@ public sealed class SitePublisher(
                 CopyLine = CopyLineFor(locale),
                 FaviconUrl = _faviconUrl,
                 LogoUrl = _logoUrl,
+                LogoSvg = _logoSvg,
                 // Exact by construction: WidgetView emits data-island precisely when
                 // the tag has a descriptor AND ResolveWidgetBundle returns a URL —
                 // the same condition, so no second render pass is needed.
@@ -642,6 +645,7 @@ public sealed class SitePublisher(
                 CopyLine = CopyLineFor(_defaultLocale),
                 FaviconUrl = _faviconUrl,
                 LogoUrl = _logoUrl,
+                LogoSvg = _logoSvg,
                 IncludeIslandLoader = false,
             };
 
@@ -723,6 +727,18 @@ public sealed class SitePublisher(
             // Vector (inline-only, no file) or any non-raster kind: no published file URL.
             return null;
         }
+
+        /// <summary>
+        /// The header logo as sanitized inline SVG when the brand asset is a vector — the
+        /// tracked follow-up the raster-only path above pointed at. Inlining is what lets a
+        /// mark drawn in currentColor take the header's ink and follow the theme with no
+        /// second rendition. The markup comes from the catalog's sanitize-and-recheck path,
+        /// the same gate every inlined SvgNode passes.
+        /// </summary>
+        private string? BrandInlineSvg(AssetId? assetId) =>
+            assetId is { } id && _assets.Resolve(id) is { Kind: AssetKind.Vector, InlineSvg: { Length: > 0 } svg }
+                ? svg
+                : null;
 
         /// <summary>
         /// The share card image, resolved to its LARGEST published variant — the opposite

@@ -290,7 +290,7 @@ public sealed class ImprintAuthoringMcpTools
     }
 
     [McpServerTool(Name = "add_node")]
-    [Description("Add a node — and its whole subtree in one call — to a page. The node spec is a JSON object: {\"type\":\"section|stack|columns|grid|heading|richtext|button|image|video|svg|divider|spacer|widget\", ...props, \"children\":[...]}. Text props (text/html/label/alt) take a plain string (default locale) or a {\"en\":\"…\"} object; rich-text html must be the canonical inline subset (<p>, <ul>/<ol>/<li>, <strong>, <em>, <a href>, <br>). parentId omitted ⇒ the page root, which accepts sections only. Ids are minted server-side.")]
+    [Description("Add a node — and its whole subtree in one call — to a page. The node spec is a JSON object: {\"type\":\"section|stack|columns|grid|heading|richtext|code|button|image|video|svg|divider|spacer|widget\", ...props, \"children\":[...]}. Text props (text/html/label/alt) take a plain string (default locale) or a {\"en\":\"…\"} object; rich-text html must be the canonical inline subset (<p>, <ul>/<ol>/<li>, <strong>, <em>, <a href>, <br>). parentId omitted ⇒ the page root, which accepts sections only. Ids are minted server-side.")]
     public static async Task<object> AddNode(
         [Description("The page id.")] string pageId,
         [Description("The node spec as JSON, e.g. {\"type\":\"heading\",\"level\":2,\"text\":\"The loop\"}.")] string nodeJson,

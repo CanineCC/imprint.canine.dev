@@ -36,13 +36,15 @@ public sealed class HtmlContractTests
         Assert.Single(stylesheets);
         Assert.Contains("<link rel=\"stylesheet\" href=\"/css/site.", html);
 
-        // Inline scripts: exactly the three sanctioned ones, byte-identical to the frozen assets. The
+        // Inline scripts: exactly the four sanctioned ones, byte-identical to the frozen assets. The
         // theme toggle and the language preference both sit in <head> BEFORE the stylesheet, because both
         // decide something the visitor would otherwise see flash past - the wrong theme, or the wrong
-        // language. The count is pinned so a fourth inline script is a deliberate contract change.
-        Assert.Equal(3, Regex.Matches(html, "<script>").Count);
+        // language; the nav toggle and island loader sit at the end of <body>. The count is pinned so a
+        // fifth inline script is a deliberate contract change.
+        Assert.Equal(4, Regex.Matches(html, "<script>").Count);
         Assert.Contains(PublisherScripts.ThemeToggle, html);
         Assert.Contains(PublisherScripts.LanguagePreference, html);
+        Assert.Contains(PublisherScripts.NavToggle, html);
         Assert.Contains(PublisherScripts.IslandLoader, html);
         foreach (var head in new[] { PublisherScripts.ThemeToggle, PublisherScripts.LanguagePreference })
         {
@@ -59,7 +61,7 @@ public sealed class HtmlContractTests
         Assert.Contains("<header class=\"ip-site-header\">", html);
         Assert.Contains("<main id=\"main\">", html);
         Assert.Contains("<footer class=\"ip-site-footer\">", html);
-        Assert.Contains("<nav class=\"ip-nav\" aria-label=\"Main\">", html);
+        Assert.Contains("<nav class=\"ip-nav\" id=\"ip-site-nav\" aria-label=\"Main\">", html);
         Assert.Contains("<a href=\"/\" aria-current=\"page\">Home</a>", html);
         Assert.Contains("<a href=\"/about/\">About</a>", html);
         Assert.DoesNotContain("aria-current=\"page\">About", html);
@@ -131,10 +133,11 @@ public sealed class HtmlContractTests
             home.IndexOf("<x-note", StringComparison.Ordinal) <
             home.IndexOf(PublisherScripts.IslandLoader, StringComparison.Ordinal));
 
-        // A page without widgets carries no loader — only the two <head> scripts.
+        // A page without widgets carries no loader — only the two <head> scripts and the
+        // nav toggle every page ships.
         var about = host.ReadText("about/index.html");
         Assert.DoesNotContain(PublisherScripts.IslandLoader, about);
-        Assert.Equal(2, Regex.Matches(about, "<script>").Count);
+        Assert.Equal(3, Regex.Matches(about, "<script>").Count);
     }
 
     [Fact]

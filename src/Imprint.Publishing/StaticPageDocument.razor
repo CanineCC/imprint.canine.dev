@@ -73,7 +73,14 @@
 <body class="ip-page ip-site-@SiteSlug">
   <a href="#main">Skip to content</a>
   <header class="ip-site-header">
-    <a class="ip-brand" href="@Chrome.HomeHref">@if (Chrome.LogoUrl is not null)
+    <a class="ip-brand" href="@Chrome.HomeHref">@if (Chrome.LogoSvg is not null)
+      {
+        @* Inline so a currentColor mark takes the header's ink and follows the theme.
+           Safe by construction: the markup is the catalog's sanitized, publish-guard
+           re-checked SVG — the same gate every inlined SvgNode passes. *@
+        <span class="ip-brand-logo" aria-hidden="true">@((MarkupString)Chrome.LogoSvg)</span>
+      }
+      else if (Chrome.LogoUrl is not null)
       {
         <img class="ip-brand-logo" src="@Chrome.LogoUrl" alt="@Chrome.SiteName" />
       }
@@ -81,7 +88,7 @@
       {
         <span class="ip-brand-dot" aria-hidden="true"></span>
       }@Chrome.SiteName</a>
-    <nav class="ip-nav" aria-label="Main">
+    <nav class="ip-nav" id="ip-site-nav" aria-label="Main">
       <ul>
         @foreach (var item in Chrome.Nav)
         {
@@ -136,6 +143,8 @@
         <a class="ip-header-cta" href="@Chrome.HeaderCta.Href">@Chrome.HeaderCta.Label</a>
       }
       <button type="button" data-theme-toggle aria-label="Switch color theme">◐</button>
+      <button type="button" class="ip-nav-burger" aria-expanded="false" aria-controls="ip-site-nav"
+              aria-label="Menu"><span aria-hidden="true">☰</span></button>
     </div>
   </header>
   <main id="main">
@@ -167,7 +176,11 @@
       </div>
     }
     <div class="ip-footer-fine">
-      <span class="ip-footer-brand">@if (Chrome.LogoUrl is not null)
+      <span class="ip-footer-brand">@if (Chrome.LogoSvg is not null)
+        {
+          <span class="ip-brand-logo" aria-hidden="true">@((MarkupString)Chrome.LogoSvg)</span>
+        }
+        else if (Chrome.LogoUrl is not null)
         {
           <img class="ip-brand-logo" src="@Chrome.LogoUrl" alt="@Chrome.SiteName" />
         }
@@ -182,6 +195,7 @@
       }
     </div>
   </footer>
+  <script>@((MarkupString)PublisherScripts.NavToggle)</script>
   @if (Chrome.IncludeIslandLoader)
   {
     <script>@((MarkupString)PublisherScripts.IslandLoader)</script>

@@ -76,6 +76,14 @@ public sealed record StaticPageChrome
     public string? LogoUrl { get; init; }
 
     /// <summary>
+    /// The header logo as sanitized inline SVG — set when the brand asset is a vector, in
+    /// which case it wins over <see cref="LogoUrl"/>. Inlining is what lets a mark drawn in
+    /// <c>currentColor</c> take the header's ink and follow the theme with no second
+    /// rendition; a raster logo can only ever be one colour.
+    /// </summary>
+    public string? LogoSvg { get; init; }
+
+    /// <summary>
     /// True only when the rendered content carries <c>data-island</c> markup — decided
     /// from the page tree (a widget renders an island exactly when its manifest entry
     /// and bundle resolve), so no second render pass is needed.

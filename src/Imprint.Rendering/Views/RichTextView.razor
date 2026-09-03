@@ -2,7 +2,9 @@
 @inherits NodeViewBase<RichTextNode>
 @* MarkupString is safe here by construction: the stored value passed the canonical
    grammar validator at write time, and RichTextHtml only rewrites hrefs it parsed. *@
-<div class="ip-prose" @attributes="NodeAttributes">@((MarkupString)ResolvedHtml)</div>
+@* The kicker class is decided here, where text nodes are visible — the CSS :only-child
+   heuristic it replaces styled inline emphasis as a kicker mid-sentence. *@
+<div class="@(RichTextHtml.IsKicker(ResolvedHtml) ? "ip-prose ip-kicker" : "ip-prose")" @attributes="NodeAttributes">@((MarkupString)ResolvedHtml)</div>
 
 @code {
   private string ResolvedHtml => RichTextHtml.ResolveLinks(

@@ -112,6 +112,33 @@ public static class RichTextHtml
     }
 
     /// <summary>
+    /// True when the canonical value is a kicker: exactly one paragraph whose entire content
+    /// is a single &lt;strong&gt;. The seeder authors <c>&lt;p&gt;&lt;strong&gt;…&lt;/strong&gt;&lt;/p&gt;</c>
+    /// for every block kicker/tag, and the chrome styles it as the mono accent eyebrow.
+    /// Detected HERE, where text nodes are visible, and emitted as a class — the CSS
+    /// <c>:only-child</c> heuristic this replaces could not see surrounding prose, so an
+    /// inline emphasis ("You run &lt;strong&gt;your&lt;/strong&gt; tool…") was styled as a
+    /// kicker mid-sentence.
+    /// </summary>
+    public static bool IsKicker(string canonicalHtml)
+    {
+        var value = canonicalHtml.Trim();
+        const string open = "<p><strong>";
+        const string close = "</strong></p>";
+        if (!value.StartsWith(open, StringComparison.Ordinal) ||
+            !value.EndsWith(close, StringComparison.Ordinal) ||
+            value.Length <= open.Length + close.Length)
+        {
+            return false;
+        }
+
+        var inner = value[open.Length..^close.Length];
+        return !inner.Contains("<p>", StringComparison.Ordinal) &&
+               !inner.Contains("<strong>", StringComparison.Ordinal) &&
+               !inner.Contains("</strong>", StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// The asset ids a canonical rich-text value links to — what tells the publisher to
     /// ship those files. The scan mirrors <see cref="ResolveLinks"/>' anchor walk over the
     /// same closed grammar, so the set it collects and the set the renderer resolves cannot

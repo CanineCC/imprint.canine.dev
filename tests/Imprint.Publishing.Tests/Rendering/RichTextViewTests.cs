@@ -117,6 +117,22 @@ public sealed class RichTextViewTests
     }
 
     [Fact]
+    public async Task A_kicker_paragraph_is_stamped_and_inline_emphasis_is_not()
+    {
+        // The class is decided server-side, where text nodes are visible. The CSS
+        // :only-child heuristic this replaces styled "You run <strong>your</strong> tool"
+        // as a kicker mid-sentence, because :only-child cannot see surrounding prose.
+        var kicker = await RenderHarness.RenderNode(Static, SampleNodes.RichText("<p><strong>The vocabulary</strong></p>"));
+        var inline = await RenderHarness.RenderNode(Static, SampleNodes.RichText("<p>You run <strong>your</strong> tool.</p>"));
+        var multi = await RenderHarness.RenderNode(Static, SampleNodes.RichText("<p><strong>One</strong></p><p>and prose.</p>"));
+
+        Assert.Contains("class=\"ip-prose ip-kicker\"", kicker);
+        Assert.Contains("class=\"ip-prose\"", inline);
+        Assert.DoesNotContain("ip-kicker", inline);
+        Assert.DoesNotContain("ip-kicker", multi);
+    }
+
+    [Fact]
     public async Task An_asset_link_resolves_to_the_published_file_and_a_dead_one_unwraps()
     {
         // Same contract as page references: the reference resolves through the plane's own

@@ -3,7 +3,7 @@ using System.Text;
 namespace Imprint.Publishing;
 
 /// <summary>
-/// The only two pieces of platform JavaScript a published page may carry
+/// The only pieces of platform JavaScript a published page may carry
 /// (docs/publishing.md §The HTML contract), read verbatim from the embedded
 /// <c>assets/*.js</c> files — the publisher inlines them, it never rewrites them.
 /// </summary>
@@ -21,6 +21,14 @@ public static class PublisherScripts
     /// the page's own hreflang alternates, so it costs nothing and does nothing on a single-locale site.
     /// </summary>
     public static string LanguagePreference { get; } = Load("language-preference.js");
+
+    /// <summary>
+    /// Mobile nav toggle (~10 lines), inlined at the end of &lt;body&gt; on every page — below
+    /// the header breakpoint the nav is otherwise unreachable. A checkbox hack would drop
+    /// keyboard users and &lt;details&gt; cannot show its content closed on desktop, so this
+    /// is the honest minimum: one button, one class, aria-expanded kept true to the state.
+    /// </summary>
+    public static string NavToggle { get; } = Load("nav-toggle.js");
 
     /// <summary>
     /// Island loader (~1 KB), inlined at the end of &lt;body&gt; — it queries

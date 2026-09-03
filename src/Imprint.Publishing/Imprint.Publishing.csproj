@@ -24,6 +24,7 @@
     <EmbeddedResource Include="assets/theme-toggle.js" LogicalName="Imprint.Publishing.assets.theme-toggle.js" />
     <EmbeddedResource Include="assets/island-loader.js" LogicalName="Imprint.Publishing.assets.island-loader.js" />
     <EmbeddedResource Include="assets/language-preference.js" LogicalName="Imprint.Publishing.assets.language-preference.js" />
+    <EmbeddedResource Include="assets/nav-toggle.js" LogicalName="Imprint.Publishing.assets.nav-toggle.js" />
   </ItemGroup>
 
 </Project>

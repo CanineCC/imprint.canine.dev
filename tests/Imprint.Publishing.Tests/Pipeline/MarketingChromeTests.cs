@@ -240,4 +240,22 @@ public sealed class MarketingChromeTests
         Assert.Contains("<a href=\"https://example.com/tos\">Terms</a>", da);
         Assert.Contains("<p class=\"ip-footer-copy\">Copyright Watchdog</p>", da);
     }
+
+    [Fact]
+    public async Task The_mobile_nav_burger_and_its_toggle_script_ship_on_every_page()
+    {
+        // Below the header breakpoint the nav is display:none, so without this button and
+        // its ten-line toggle the site's navigation is unreachable on a phone — the footer
+        // was the only way around. The button carries the ARIA state the script maintains.
+        await using var host = new PublishingTestHost();
+        var (_, siteId, homeId, _, _) = await BuildChromeSite(host);
+        await host.SetNavigation(siteId, homeId);
+
+        await host.Publisher.Synchronize();
+
+        var html = host.ReadText("index.html");
+        Assert.Contains("class=\"ip-nav-burger\" aria-expanded=\"false\" aria-controls=\"ip-site-nav\"", html);
+        Assert.Contains("<nav class=\"ip-nav\" id=\"ip-site-nav\"", html);
+        Assert.Contains("ip-nav-open", html); // the toggle script is inlined
+    }
 }
