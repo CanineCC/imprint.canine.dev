@@ -230,13 +230,16 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 }
 .ip-nav-group:hover .ip-nav-trigger::after,
 .ip-nav-group:focus-within .ip-nav-trigger::after { transform: rotate(180deg); }
-/* One column by default — a two-item group in a 420px two-column box is mostly air, and
-   a description squeezed into half of it wraps to three lines. Long groups earn the second
-   column below. The panel is left-aligned to its trigger, so a wide group belongs early in
-   the bar; at 600px the third trigger onward would run past a 1280px viewport. */
+/* One column, and a FIXED width — not max-content between a min and a max. Sizing each
+   panel to its own longest description made every dropdown in the bar a different width,
+   which reads as sloppiness the moment a visitor moves along the row. A two-item group in
+   a 420px two-column box was mostly air, and a description squeezed into half of it wrapped
+   to three lines; long groups earn the second column below instead. The panel is
+   left-aligned to its trigger, so a wide group belongs early in the bar; at 620px the third
+   trigger onward would run past a 1280px viewport. */
 .ip-nav-panel {
   position: absolute; top: calc(100% + 10px); left: 0;
-  width: max-content; min-width: 300px; max-width: min(340px, calc(100vw - 2rem));
+  width: min(340px, calc(100vw - 2rem));
   padding: 0.6rem;
   display: grid; grid-template-columns: 1fr; gap: 0.1rem;
   background: var(--bg); border: 1px solid var(--hairline);
@@ -244,9 +247,11 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
   opacity: 0; visibility: hidden; transform: translateY(5px);
   transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s; z-index: 60;
 }
-/* Seven or more destinations: split into two columns rather than run down the viewport. */
+/* Seven or more destinations: split into two columns rather than run down the viewport.
+   Sets `width`, not `max-width` — the base rule now fixes the width, and max-width alone
+   would lose to it. */
 .ip-nav-panel:has(> :nth-child(7)) {
-  grid-template-columns: 1fr 1fr; max-width: min(620px, calc(100vw - 2rem));
+  grid-template-columns: 1fr 1fr; width: min(620px, calc(100vw - 2rem));
 }
 .ip-nav-panel::before { content: ""; position: absolute; top: -10px; left: 0; right: 0; height: 10px; }
 .ip-nav-group:hover > .ip-nav-panel,
