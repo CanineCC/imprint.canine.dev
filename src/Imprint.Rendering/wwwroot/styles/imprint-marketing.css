@@ -461,7 +461,10 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 }
 [class*="ip-ap-"] .ip-prose p strong { color: var(--ink); }
 [class*="ip-ap-"] .ip-prose a { color: var(--accent-ink); }
-[class*="ip-ap-"] .ip-prose :is(p, li, a) { overflow-wrap: break-word; }
+/* anywhere, not break-word: identical wrapping, but only `anywhere` also lowers the
+   token's min-content contribution — a long bare URL in a grid-tracked list otherwise
+   forces its whole column 10px past a phone's edge. */
+[class*="ip-ap-"] .ip-prose :is(p, li, a) { overflow-wrap: anywhere; }
 
 /* Center the head for grid/list appearances (canine .mk-section-head is centered);
    hero + boundary + table keep it left, handled per-appearance below. */
