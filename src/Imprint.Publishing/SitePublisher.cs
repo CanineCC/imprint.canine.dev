@@ -226,7 +226,7 @@ public sealed class SitePublisher(
             //      layer, one hashed file. Order matters: tokens define the vars the two
             //      style layers consume; the marketing layer comes last so it can build on
             //      (and, where intended, override) the structural defaults.
-            var cssText = ThemeCss.Emit(theme) + "\n" + ThemeCss.StructuralCss + "\n" + ThemeCss.MarketingCss;
+            var cssText = CssSlim.Strip(ThemeCss.Emit(theme) + "\n" + ThemeCss.StructuralCss + "\n" + ThemeCss.MarketingCss);
             var cssBytes = Encoding.UTF8.GetBytes(cssText);
             var cssHash = Hashing.Hash16(cssBytes);
             _cssFile = $"css/site.{cssHash}.css";

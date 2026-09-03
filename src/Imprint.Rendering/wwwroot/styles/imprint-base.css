@@ -48,7 +48,10 @@
 .ip-pad-large { padding-block: var(--ip-space-8); }
 
 /* ---- stack ---- */
-.ip-stack { display: flex; flex-direction: column; gap: var(--ip-space-4); }
+/* max-width/min-width: a layout container never exceeds its parent — a centered
+   (fit-content) stack around a wide verbatim block otherwise grows past the section
+   and drags the page sideways on a phone; the block scrolls inside instead. */
+.ip-stack { display: flex; flex-direction: column; gap: var(--ip-space-4); max-width: 100%; min-width: 0; }
 .ip-align-center { align-items: center; }
 .ip-align-end { align-items: flex-end; }
 .ip-gap-tight { gap: var(--ip-space-2); }

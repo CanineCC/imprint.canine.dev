@@ -330,6 +330,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
   display: flex; flex-direction: column; gap: 0.45rem; align-items: flex-start;
   padding: 0.9rem 1rem; border: 1px dashed var(--hairline); border-radius: var(--r-md);
   color: var(--muted); font-size: var(--fs-sm);
+  box-sizing: border-box; max-width: 100%;
 }
 .ip-widget:not(:defined) .ip-widget-fallback-link { color: var(--accent-ink); }
 
@@ -337,7 +338,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    unreadable. Figures authored wider than the screen keep a readable minimum and
    scroll inside their own box; small marks (--ip-svg-w below the floor) just shrink. */
 @media (max-width: 700px) {
-  .ip-svg { overflow-x: auto; }
+  .ip-svg { overflow-x: auto; min-width: 0; max-width: 100%; }
   .ip-svg svg { min-width: min(var(--ip-svg-w, 0px), 560px); }
 }
 
