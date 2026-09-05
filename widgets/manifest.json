@@ -410,7 +410,7 @@
     "props": [
       {
         "name": "projects",
-        "label": "Projects (JSON array of {owner, name, score, loc, busFactor, day, at, href}) — `at` is ISO 8601 and enables the by-date sort",
+        "label": "Projects (JSON array of {owner, name, score, loc, day, at, href}) — `at` is ISO 8601 and enables the by-date sort",
         "type": "text",
         "default": "[]"
       },

@@ -1,5 +1,5 @@
 // <cai-survey-list projects='[{"owner":"jasperfx","name":"marten","score":72.4,"loc":173789,
-//                              "busFactor":1,"day":"21 July 2026","href":"/surveys/github/jasperfx/marten/"}]'
+//                              "day":"21 July 2026","href":"/surveys/github/jasperfx/marten/"}]'
 //                  kicker="…" heading="…" lede="…" empty-text="…">
 //
 // A measured corpus you can actually work through: the band distribution as a bar you can
@@ -217,7 +217,10 @@ customElements.define(
         const band = bandFor(score);
         const meta = [];
         if (r.loc) { meta.push(`${compact(Number(r.loc))} lines`); }
-        if (Number(r.busFactor) === 1) { meta.push("bus factor 1"); }
+        // NO BUS FACTOR. The page builder no longer ships the figure, and a card could not state it honestly
+        // if it did: the head count behind it is stored ungated, so "bus factor 1" fired on projects the
+        // engine's own D16 calls single-maintainer. It stays in the full survey, where the carrying set and
+        // the dimension's reading sit beside it.
         if (r.day) { meta.push(`measured ${r.day}`); }
         // The score's date and the LAST time anything was published for this project are different facts, and
         // can be months apart: the score shown is the highest published measurement, not the most recent one.
