@@ -88,6 +88,27 @@ public sealed class AuxiliaryOutputTests
         Assert.DoesNotContain("rel=\"canonical\"", html);
     }
 
+    /// <summary>
+    /// ★ The print rules must survive all the way into the PUBLISHED stylesheet — through concatenation and
+    /// through <c>CssSlim.Strip</c>. A print sheet that exists in the repository but never reaches a reader's
+    /// browser is exactly the "a computed value is not done until something renders it" failure: the guides'
+    /// PDF download was deleted on the strength of these rules being live, so asserting them on the string in
+    /// isolation would be asserting the wrong thing.
+    /// </summary>
+    [Fact]
+    public async Task The_published_stylesheet_carries_the_print_rules()
+    {
+        await using var host = new PublishingTestHost();
+        await TemplatedSiteScenario.Build(host);
+        await host.Publisher.Synchronize();
+
+        var css = host.ReadText(Assert.Single(host.FilesMatching("css/site.", ".css")));
+
+        Assert.Contains("@media print", css);
+        Assert.Contains(".ip-ap-doc", css);          // the guide sidebar is hidden on paper
+        Assert.Contains("overflow-wrap:anywhere", css.Replace(" ", ""));
+    }
+
     [Fact]
     public async Task Precompressed_siblings_are_smaller_and_decompress_to_the_original()
     {

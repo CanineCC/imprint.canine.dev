@@ -14,6 +14,7 @@ public static class ThemeCss
 {
     private static string? _structuralCss;
     private static string? _marketingCss;
+    private static string? _printCss;
 
     public static string Emit(Theme theme) => EmitFor(theme, ":root");
 
@@ -41,6 +42,20 @@ public static class ThemeCss
     /// re-skins with the site theme.
     /// </summary>
     public static string MarketingCss => _marketingCss ??= LoadEmbedded("imprint-marketing.css");
+
+    /// <summary>
+    /// The print stylesheet (imprint-print.css), embedded and appended last.
+    ///
+    /// <para>★ Its own sheet because print is a MEDIUM, not a layer. The rules began split between the
+    /// structural and marketing sheets — each hiding what it styles — which read tidily but pushed
+    /// imprint-base.css past the 8 KB structural budget and turned the deploy red. One sheet per medium keeps
+    /// that budget meaning what it says, and gives the print rules a ceiling of their own.</para>
+    ///
+    /// <para>Load-bearing, not cosmetic: the guides' separate PDF pipeline was deleted on 2026-09-06 because
+    /// its manuscript drifted behind the page it mirrored. Removing a second source is only honest while the
+    /// remaining one prints.</para>
+    /// </summary>
+    public static string PrintCss => _printCss ??= LoadEmbedded("imprint-print.css");
 
     private static string EmitFor(Theme theme, string selector)
     {

@@ -225,10 +225,14 @@ public sealed class SitePublisher(
                 PublishManifest.Load(Path.Combine(_outputRoot, PublishManifest.FileName)) ?? new PublishManifest();
 
             // ---- stylesheet: tokens + structural styles + the marketing chrome/appearance
-            //      layer, one hashed file. Order matters: tokens define the vars the two
-            //      style layers consume; the marketing layer comes last so it can build on
-            //      (and, where intended, override) the structural defaults.
-            var cssText = CssSlim.Strip(ThemeCss.Emit(theme) + "\n" + ThemeCss.StructuralCss + "\n" + ThemeCss.MarketingCss);
+            //      layer + the print sheet, one hashed file. Order matters: tokens define the
+            //      vars the style layers consume; the marketing layer comes after the structural
+            //      defaults so it can build on (and, where intended, override) them; the print
+            //      sheet comes last so its paper-only rules win specificity ties by document
+            //      order against the screen rules they are correcting.
+            var cssText = CssSlim.Strip(
+                ThemeCss.Emit(theme) + "\n" + ThemeCss.StructuralCss + "\n" + ThemeCss.MarketingCss
+                + "\n" + ThemeCss.PrintCss);
             var cssBytes = Encoding.UTF8.GetBytes(cssText);
             var cssHash = Hashing.Hash16(cssBytes);
             _cssFile = $"css/site.{cssHash}.css";

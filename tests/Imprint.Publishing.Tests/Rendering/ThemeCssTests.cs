@@ -136,4 +136,67 @@ public sealed class ThemeCssTests
             ThemeCss.StructuralCss.Length <= 8 * 1024,
             $"imprint-base.css is {ThemeCss.StructuralCss.Length} bytes; the budget is 8192.");
     }
+
+    /// <summary>
+    /// ★ The page IS the printable artefact. The guides' separate PDF pipeline was deleted on 2026-09-06
+    /// because the manuscript it rendered from drifted behind the page — one guide's download still named
+    /// dimensions retired the day before. Removing a second source is only defensible while the remaining one
+    /// prints, so these rules are load-bearing for that decision, not cosmetic.
+    /// </summary>
+    [Fact]
+    public void Print_css_loads_and_carries_the_rules_the_pdf_removal_depends_on()
+    {
+        var css = ThemeCss.PrintCss;
+
+        Assert.Contains("@media print", css);
+
+        // Structure: paper has no horizontal room to spend on a sidebar track.
+        Assert.Contains(".ip-columns, .ip-grid { grid-template-columns: 1fr !important; }", css);
+
+        // ★ The guide sidebar itself. Collapsing the grid ALONE made printing worse — the sidebar then
+        // printed full-width above the article — which only showed up by printing the page and looking.
+        Assert.Contains(".ip-ap-doc .ip-columns > :first-child", css);
+
+        // A printed link whose destination is invisible is a dead end, and the guides lean on citations.
+        Assert.Contains("a[href^=\"http\"]::after", css);
+
+        // `overflow-wrap: anywhere`, never `word-break: break-all`: break-all is greedy and split
+        // "https://watchdog.canine.dev" mid-domain as "https://watch / dog.canine.dev" — a typo in a document
+        // someone may act on. Asserted against the DECLARATIONS, not the prose: the sheet's comment names the
+        // rejected property to explain why it is rejected, and a naive substring check reads that explanation
+        // as the defect it warns about.
+        Assert.Contains("overflow-wrap: anywhere", WithoutComments(css));
+        Assert.DoesNotContain("word-break: break-all", WithoutComments(css));
+
+        // Chrome that exists only to move a reader elsewhere.
+        Assert.Contains(".ip-nav", css);
+        Assert.Contains(".ip-btn", css);
+    }
+
+    /// <summary>
+    /// Print is a MEDIUM, not a layer. Keeping these rules inside the structural sheet is what pushed
+    /// imprint-base.css from 8,085 to 11,427 bytes and turned the deploy red; keeping them in their own sheet
+    /// is what lets the structural budget go on meaning what it says.
+    /// </summary>
+    [Fact]
+    public void Print_rules_live_in_the_print_sheet_and_nowhere_else()
+    {
+        Assert.DoesNotContain("@media print", ThemeCss.StructuralCss);
+        Assert.DoesNotContain("@media print", ThemeCss.MarketingCss);
+    }
+
+    /// <summary>It ships on every published page too — so it gets a ceiling of its own rather than growing
+    /// unwatched in the gap left by the structural budget.</summary>
+    [Fact]
+    public void Print_css_stays_within_its_own_size_budget()
+    {
+        Assert.True(
+            ThemeCss.PrintCss.Length <= 8 * 1024,
+            $"imprint-print.css is {ThemeCss.PrintCss.Length} bytes; the budget is 8192.");
+    }
+
+    /// <summary>CSS with comments removed, so an assertion about the RULES cannot be satisfied — or defeated —
+    /// by the prose explaining them.</summary>
+    private static string WithoutComments(string css) =>
+        System.Text.RegularExpressions.Regex.Replace(css, @"/\*.*?\*/", "", System.Text.RegularExpressions.RegexOptions.Singleline);
 }
