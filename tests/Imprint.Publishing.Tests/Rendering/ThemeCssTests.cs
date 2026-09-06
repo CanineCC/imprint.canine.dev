@@ -195,6 +195,38 @@ public sealed class ThemeCssTests
             $"imprint-print.css is {ThemeCss.PrintCss.Length} bytes; the budget is 8192.");
     }
 
+    /// <summary>
+    /// ★ A rule that cannot fire is worse than a missing one, because it reads as covered. The print sheet hid
+    /// <c>.ip-footer-fine</c> and then set its child <c>.ip-footer-copy</c> to <c>display: block !important</c>
+    /// to keep the copyright line on paper — but <c>display</c> on a child cannot reveal it through a
+    /// <c>display: none</c> ancestor, so the line had never once printed. The container must stay displayed and
+    /// its OTHER children be hidden instead.
+    /// </summary>
+    [Fact]
+    public void The_footer_copy_line_is_not_hidden_by_its_own_ancestor()
+    {
+        var css = WithoutComments(ThemeCss.PrintCss);
+
+        Assert.Contains(".ip-footer-fine { display: block !important; }", css);
+        Assert.Contains(".ip-footer-fine > :not(.ip-footer-copy) { display: none !important; }", css);
+
+        // The container must not appear in the blanket hide list that caused the bug.
+        var hideList = css[css.IndexOf(".ip-nav,", StringComparison.Ordinal)..];
+        hideList = hideList[..hideList.IndexOf('}')];
+        Assert.DoesNotContain(".ip-footer-fine", hideList);
+    }
+
+    /// <summary>An un-hydrated island prints as a box containing its own name. <c>:not(:defined)</c> is that
+    /// state; the classes the rule used to name never existed in the published markup.</summary>
+    [Fact]
+    public void An_unhydrated_widget_island_does_not_print()
+    {
+        var css = WithoutComments(ThemeCss.PrintCss);
+
+        Assert.Contains(".ip-widget:not(:defined)", css);
+        Assert.DoesNotContain(".ip-widget-placeholder", css);
+    }
+
     /// <summary>CSS with comments removed, so an assertion about the RULES cannot be satisfied — or defeated —
     /// by the prose explaining them.</summary>
     private static string WithoutComments(string css) =>

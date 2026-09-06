@@ -58,13 +58,23 @@
 @media print {
   .ip-nav, .ip-nav-panel, .ip-nav-burger, .ip-nav-trigger, .ip-nav-group, .ip-nav-card, .ip-nav-cta-item,
   .ip-header-actions, .ip-header-cta, .ip-btn, .ip-btn-primary, .ip-btn-secondary, .ip-btn-ghost,
-  .ip-footer-cols, .ip-footer-group, .ip-footer-h, .ip-footer-fine, .ip-footer-brand, .ip-footer-byline {
+  .ip-footer-cols, .ip-footer-group, .ip-footer-h, .ip-footer-brand, .ip-footer-byline {
     display: none !important;
   }
 
   /* The copyright line is the one footer element worth keeping: a printed page handed to a security reviewer
-     or attached to a bid should still say whose document it is. */
+     or attached to a bid should still say whose document it is.
+     ★ It lives INSIDE .ip-footer-fine, so hiding that container and then setting the line to `display: block`
+     was inert — `display` on a child cannot reveal it through a `display: none` ancestor. The line had never
+     once printed. Keep the container, hide its other children, and the line actually appears. */
+  .ip-footer-fine { display: block !important; }
+  .ip-footer-fine > :not(.ip-footer-copy) { display: none !important; }
   .ip-footer-copy { display: block !important; border: 0; padding-top: 0.5rem; font-size: 0.8em; color: #000; }
+
+  /* ★ The footer's screen spacing is ~100px of margin and padding around what is now a single line. On paper
+     that was enough to push a LAST, OTHERWISE BLANK SHEET out of an eight-page guide — a whole wasted page
+     carrying one horizontal rule. Seen by printing it and looking at the final page, not predicted. */
+  .ip-site-footer { margin-top: 1.5rem !important; padding: 0.5rem 0 0 !important; }
 
   /* ★ The guide SIDEBAR goes. It is a table of contents for the SITE — "All guides", "Getting started",
      sibling guide links — every entry of which is somewhere the reader cannot go from paper. Collapsing the
@@ -75,6 +85,12 @@
 
   .ip-kicker { color: #000 !important; }
 
-  /* A widget that could not render on paper should not leave a placeholder box behind. */
-  .ip-widget-placeholder, .ip-placeholder { display: none !important; }
+  /* ★ A widget island that has NOT hydrated prints as a bare box containing its own name — "CAI link cards"
+     under a "Learn more and verify" heading. `:not(:defined)` is exactly that state for a custom element.
+     Islands hydrate lazily on scroll, so this is what a reader gets who prints without reading to the end.
+     A HYDRATED widget is deliberately left alone: the link cards carry their destinations as visible text,
+     which is real reference material on paper, and wd-embed renders an architecture diagram.
+     (The previous rule here named .ip-widget-placeholder / .ip-placeholder — neither class exists in the
+     published markup, so it matched nothing. The real element is <cai-link-cards class="ip-widget">.) */
+  .ip-widget:not(:defined) { display: none !important; }
 }
