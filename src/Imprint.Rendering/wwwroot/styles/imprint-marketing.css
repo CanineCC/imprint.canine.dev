@@ -982,3 +982,34 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 @media (prefers-reduced-motion: reduce) {
   .ip-nav-panel, .ip-nav-trigger::after { transition: none !important; }
 }
+
+/* ---- print: the chrome ------------------------------------------------------------------------------------
+   ★ Added 2026-09-06 alongside the structural print rules in imprint-base.css, when the guides' separate PDF
+   pipeline was deleted and the page became the printable artefact.
+
+   Everything hidden here is NAVIGATION or ACTION — it exists to move a reader somewhere else, which paper
+   cannot do. A printed page carrying a burger menu, a "PDF ⤓" button and a footer column of links spends its
+   first sheet on controls nobody can press. The CONTENT stays; only the means of leaving it go. */
+@media print {
+  .ip-nav, .ip-nav-panel, .ip-nav-burger, .ip-nav-trigger, .ip-nav-group, .ip-nav-card, .ip-nav-cta-item,
+  .ip-header-actions, .ip-header-cta, .ip-btn, .ip-btn-primary, .ip-btn-secondary, .ip-btn-ghost,
+  .ip-footer-cols, .ip-footer-group, .ip-footer-h, .ip-footer-fine, .ip-footer-brand, .ip-footer-byline {
+    display: none !important;
+  }
+
+  /* The copyright line is the one footer element worth keeping: a printed page handed to a security reviewer
+     or attached to a bid should still say whose document it is. */
+  .ip-footer-copy { display: block !important; border: 0; padding-top: 0.5rem; font-size: 0.8em; color: #000; }
+
+  /* ★ The guide SIDEBAR goes. It is a table of contents for the SITE — "All guides", "Getting started",
+     sibling guide links — every entry of which is somewhere the reader cannot go from paper. Collapsing the
+     1:3 grid is not enough and is actively worse: the sidebar then prints as a full-width block ABOVE the
+     article, spending most of the first sheet on links. Verified by printing the page and looking at it.
+     Scoped to the doc-appearance section so an ordinary two-column content layout is untouched. */
+  .ip-ap-doc .ip-columns > :first-child { display: none !important; }
+
+  .ip-kicker { color: #000 !important; }
+
+  /* A widget that could not render on paper should not leave a placeholder box behind. */
+  .ip-widget-placeholder, .ip-placeholder { display: none !important; }
+}
