@@ -31,6 +31,8 @@ TAGS=(
   cai-survey-list
   cai-language-board
   cai-link-cards
+  cai-figure-band
+  cai-share-bars
   cai-composition-bar
   cai-evidence-flow
   cai-c4-heat

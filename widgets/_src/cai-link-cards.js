@@ -1,5 +1,6 @@
 // <cai-link-cards links='[{"icon":"github","label":"The project's source repository",
-//                          "note":"github.com/MathewSachin/Captura","href":"https://…"}]'
+//                          "note":"github.com/MathewSachin/Captura","href":"https://…",
+//                          "figure":"3,325","go":"Every advisory","tip":"…"}]'
 //                 kicker="…" heading="…" lede="…">
 //
 // The places a reader goes next, as cards rather than a bullet list of link text. Four
@@ -17,6 +18,18 @@
 //                    the same mark and the same tint the site headers use, so a card cannot
 //                    drift into being a second, slightly different logo.
 //
+// THREE OPTIONAL FIELDS, all absent-safe. A link that carries none of them renders exactly the
+// markup it always has — byte for byte, the same three spans in the same order — so no existing
+// caller changes shape because a later one needed a number:
+//
+//   figure  a large mono value under the label, when the destination is a countable thing
+//           ("3,325 advisories"). It is the destination's size, not a score, so no band ink.
+//   tip     the shared (i) beside the label, hint-right: the dot sits at the card's right edge,
+//           where a tip anchored left:0 would hang off the card and, in the last column, the page.
+//   go      the small mono line at the card's foot, rendered "{go} →", which takes the accent
+//           when the card is hovered. It names what is on the other side of the click, which an
+//           underlined title alone does not.
+//
 // DATA ONLY: no api-base, no fetch. Every row arrives as a prop from the page.
 
 import {
@@ -27,12 +40,13 @@ import {
   sectionHeadHtml,
   escapeHtml,
 } from "./tokens.js";
+import { HINT_CSS, hintHtml } from "./hint.js";
 
 // The badge is the site's own file, tinted by mask rather than redrawn: one shape, and a
 // card can never disagree with the header about what the mark is.
 const BADGE = "/brand/canine-badge.svg";
 
-const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + `
+const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + HINT_CSS + `
 /* Two columns, so the usual four land as a 2x2 block rather than a row of three and an
    orphan. minmax keeps it one column when there is no room for two. */
 .mk-links { max-width: 46rem; margin: 0 auto; display: grid; gap: 10px;
@@ -40,23 +54,40 @@ const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + `
 a.mk-link { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: start;
   padding: 14px 16px; text-decoration: none; color: inherit; background: var(--surface);
   border: 1px solid var(--border); border-radius: var(--r-md);
-  transition: border-color 120ms ease, background 120ms ease; }
+  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease; }
 a.mk-link:hover, a.mk-link:focus-visible { border-color: var(--accent); background: var(--surface-2);
-  text-decoration: none; }
+  transform: translateY(-1px); text-decoration: none; }
+a.mk-link:hover .mk-link-go, a.mk-link:focus-visible .mk-link-go { color: var(--accent); }
 .mk-link-ico { grid-row: 1 / span 2; width: 26px; height: 26px; display: block; flex: none; }
 .mk-link-ico svg { width: 100%; height: 100%; display: block; }
 .mk-link-badge { width: 24px; height: 26px; display: block;
   -webkit-mask: var(--badge) no-repeat center / contain; mask: var(--badge) no-repeat center / contain; }
 .mk-link-badge.is-watchdog { background: var(--wd-accent); }
 .mk-link-badge.is-cai { background: var(--cai-accent); }
+/* Every text row is pinned to column 2. The icon reserves only rows 1-2, so once a card can
+   carry four rows (label, figure, note, go) auto-placement would drop the fourth into column 1
+   under the icon. Pinning is what keeps a three-field card and a plain one the same shape. */
+.mk-link-label-row, .mk-link-label, .mk-link-figure, .mk-link-note, .mk-link-go { grid-column: 2; }
 .mk-link-label { font-weight: 650; font-size: var(--fs-sm); line-height: 1.4; }
 /* A long forge path breaks between segments rather than mid-word: "…/Captur a" reads as a
    typo, and these notes are addresses a reader may want to recognise. */
 .mk-link-note { font-size: var(--fs-xs); color: var(--muted); line-height: 1.5;
   word-break: break-word; overflow-wrap: break-word; }
+/* The label and its (i) share one grid cell, the dot pushed to the card's right edge — which is
+   why the tip is hint-right. */
+.mk-link-label-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; min-width: 0; }
+.mk-link-figure { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  font-size: 22px; font-weight: 700; color: var(--ink); line-height: 1.15; }
+.mk-link-go { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  font-size: var(--fs-2xs); color: var(--muted); padding-top: 2px;
+  transition: color 120ms ease; }
 :host { --wd-accent: #7faace; --cai-accent: #6fbfa4; }
 :host([data-theme="light"]) { --wd-accent: #35618a; --cai-accent: #2e7d64; }
-@media (prefers-reduced-motion: reduce) { a.mk-link { transition: none; } }
+@media (prefers-reduced-motion: reduce) {
+  a.mk-link { transition: none; }
+  a.mk-link:hover, a.mk-link:focus-visible { transform: none; }
+  .mk-link-go { transition: none; }
+}
 `;
 
 // Third-party marks, all monochrome: they label a destination, they are not a brand statement of
@@ -96,8 +127,19 @@ customElements.define(
           html += ICONS[icon] || ICONS.doc;
         }
         html += `</span>`;
-        html += `<span class="mk-link-label">${escapeHtml(l.label)}</span>`;
+        // The label alone when there is no tip: the same single span this island has always
+        // emitted, so an unextended link's markup does not move.
+        const tip = hintHtml(l.tip, { right: true, label: l.label });
+        html += tip
+          ? `<span class="mk-link-label-row"><span class="mk-link-label">${escapeHtml(l.label)}</span>${tip}</span>`
+          : `<span class="mk-link-label">${escapeHtml(l.label)}</span>`;
+        if (l.figure != null && String(l.figure) !== "") {
+          html += `<span class="mk-link-figure">${escapeHtml(String(l.figure))}</span>`;
+        }
         html += `<span class="mk-link-note">${escapeHtml(l.note || "")}</span>`;
+        if (l.go != null && String(l.go) !== "") {
+          html += `<span class="mk-link-go">${escapeHtml(String(l.go))} \u2192</span>`;
+        }
         html += `</a>`;
       }
       html += `</div>`;

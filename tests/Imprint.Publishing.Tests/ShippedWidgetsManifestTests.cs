@@ -59,4 +59,53 @@ public sealed class ShippedWidgetsManifestTests
         Assert.Equal(WidgetPropType.Choice, variant.Type);
         Assert.Contains("switch", variant.Options);
     }
+
+    /// <summary>
+    /// The four-things-by-hand guard. Adding a widget means a source file, a tag in
+    /// <c>widgets/_src/build.sh</c>, a BUILT bundle in <c>widgets/</c>, and a descriptor here —
+    /// and until this test, nothing checked the middle two. A descriptor whose bundle was never
+    /// built, or a bundle that defines a different tag than the descriptor claims, fails in the
+    /// worst possible way: a syndicated page does not validate its tags against the manifest, so
+    /// the element is stored happily and renders NOTHING in the static output. No error, no
+    /// placeholder, no 404 in the log the author will ever see — just an empty space where the
+    /// data was. Assert the bundle is on disk and that it actually registers the tag it is
+    /// filed under.
+    /// </summary>
+    [Fact]
+    public void Every_descriptor_has_a_built_bundle_that_registers_its_own_tag()
+    {
+        var manifestPath = ManifestPath();
+        var widgetsDir = Path.GetDirectoryName(manifestPath)!;
+        var widgets = WidgetManifest.Load(manifestPath);
+
+        var missing = new List<string>();
+        var unregistered = new List<string>();
+
+        foreach (var widget in widgets)
+        {
+            var bundlePath = Path.Combine(widgetsDir, widget.Bundle);
+            if (!File.Exists(bundlePath))
+            {
+                missing.Add($"{widget.Tag} -> {widget.Bundle}");
+                continue;
+            }
+
+            // esbuild keeps the tag as a string literal and may quote it either way.
+            var text = File.ReadAllText(bundlePath);
+            var registersTag =
+                text.Contains($"customElements.define(\"{widget.Tag}\"", StringComparison.Ordinal) ||
+                text.Contains($"customElements.define('{widget.Tag}'", StringComparison.Ordinal);
+            if (!registersTag)
+            {
+                unregistered.Add($"{widget.Tag} -> {widget.Bundle}");
+            }
+        }
+
+        Assert.True(
+            missing.Count == 0,
+            $"widgets/manifest.json names {missing.Count} bundle(s) that are not on disk — run widgets/_src/build.sh for each tag: {string.Join(", ", missing)}");
+        Assert.True(
+            unregistered.Count == 0,
+            $"{unregistered.Count} shipped bundle(s) never call customElements.define for the tag they are filed under, so the element renders nothing: {string.Join(", ", unregistered)}");
+    }
 }

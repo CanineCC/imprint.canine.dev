@@ -512,9 +512,119 @@
     "props": [
       {
         "name": "links",
-        "label": "Links (JSON array of {icon, label, note, href}); icon = github | gitlab | html | doc | watchdog | cai",
+        "label": "Links (JSON array of {icon, label, note, href, figure, tip, go}); icon = github | gitlab | html | doc | watchdog | cai. figure = a large mono value under the label; tip = the (i) explanation beside it; go = the small mono \"where this goes\" line at the card foot.",
         "type": "text",
         "default": "[]"
+      },
+      {
+        "name": "kicker",
+        "label": "Kicker (small uppercase intro)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "heading",
+        "label": "Heading",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "lede",
+        "label": "Lede / intro paragraph",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "brand",
+        "label": "Brand accent (watchdog | assay | cai)",
+        "type": "text",
+        "default": ""
+      }
+    ]
+  },
+  {
+    "tag": "cai-figure-band",
+    "name": "CAI figure band",
+    "description": "A row of figures — each a value with the words that complete it and an optional (i) — at either of two densities. \"head\" is a masthead: a kicker and a dateline on the left, small-caps captions over 18px mono values on the right, ruled off with the accent. \"lead\" is a findings band: 36px mono values in an auto-fitting grid, each over its label and a small mono basis line. A figure's tone inks its value with a CAI band; no tone leaves it in the body ink. DATA ONLY: no API base, it never fetches.",
+    "bundle": "cai-figure-band.js",
+    "placeholder": "CAI figure band",
+    "props": [
+      {
+        "name": "layout",
+        "label": "Density: head (masthead row, accent rule) | lead (findings grid)",
+        "type": "choice",
+        "options": ["lead", "head"],
+        "default": "lead"
+      },
+      {
+        "name": "kicker",
+        "label": "Kicker (small uppercase intro; accent-coloured above the dateline in \"head\")",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "dateline",
+        "label": "Dateline (\"head\" only — the large date beneath the kicker)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "figures",
+        "label": "Figures (JSON array of {lead, label, support, tip, tone}); tone = exemplary | healthy | fair | poor | critical",
+        "type": "text",
+        "default": "[]"
+      },
+      {
+        "name": "footnote",
+        "label": "Footnote under the band",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "brand",
+        "label": "Brand accent (watchdog | assay | cai)",
+        "type": "text",
+        "default": ""
+      }
+    ]
+  },
+  {
+    "tag": "cai-share-bars",
+    "name": "CAI share bars",
+    "description": "A population split into named parts and drawn to scale, as one wide bar (\"wide\") or as a table of rows with a bar each (\"table\"). ★ A row whose population was not measured draws NO bar and says so: a 0% bar reads as \"none affected\", which is the same error as counting an unscanned project as a clean one. Geometry comes from each part's weight; the number a reader sees is the pre-formatted count beside it. DATA ONLY: no API base, it never fetches.",
+    "bundle": "cai-share-bars.js",
+    "placeholder": "CAI share bars",
+    "props": [
+      {
+        "name": "layout",
+        "label": "Shape: table (a row per entry, with columns) | wide (one full-width bar)",
+        "type": "choice",
+        "options": ["table", "wide"],
+        "default": "table"
+      },
+      {
+        "name": "columns",
+        "label": "Column headings (JSON array of strings, \"table\" only — one per entry in each row's cells)",
+        "type": "text",
+        "default": "[]"
+      },
+      {
+        "name": "rows",
+        "label": "Rows (JSON array of {label, href, tip, cells, cellTones, parts, note, unmeasured}); parts = [{weight, count, label, tone}], tone = accent | track | a CAI band key; unmeasured replaces the bar with that sentence and draws nothing",
+        "type": "text",
+        "default": "[]"
+      },
+      {
+        "name": "label-heading",
+        "label": "Heading over the label column (\"table\" only)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "bar-heading",
+        "label": "Heading over the bar column (\"table\" only)",
+        "type": "text",
+        "default": ""
       },
       {
         "name": "kicker",
