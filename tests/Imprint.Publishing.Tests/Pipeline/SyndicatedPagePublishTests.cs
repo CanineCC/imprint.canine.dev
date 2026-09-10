@@ -76,6 +76,43 @@ public sealed class SyndicatedPagePublishTests
         Assert.Contains(PublisherScripts.IslandLoader, html);   // and the loader ships with it
     }
 
+    [Fact]
+    public async Task Re_pushing_identical_content_renders_nothing()
+    {
+        // What the content hash is FOR, seen from the side that pays for it. The producer re-pushes
+        // everything it owns on every run, so an honest hash is the difference between a sweep that costs
+        // nothing and one that re-renders a few thousand pages an hour. It stayed at "re-render everything"
+        // for as long as the hash read the node ids this side had just minted.
+        await using var host = new PublishingTestHost();
+        var scenario = await TemplatedSiteScenario.Build(host);
+        var store = host.Services.GetRequiredService<SyndicatedPageStore>();
+
+        Assert.True(store.Upsert(AsAProducerWouldPush(scenario.SiteId, "registry/github/jasperfx/marten", "JasperFx/marten")));
+        await host.Publisher.Synchronize();
+
+        // The same run again: a new object, new node ids, identical content — which is exactly what the
+        // producer's next hourly sweep sends.
+        Assert.False(store.Upsert(AsAProducerWouldPush(scenario.SiteId, "registry/github/jasperfx/marten", "JasperFx/marten")));
+        var report = await host.Publisher.Synchronize();
+
+        Assert.Equal(0, report.PagesRendered);
+        Assert.Equal(0, report.FilesWritten);
+    }
+
+    /// <summary>
+    /// A push the way one really arrives: the content is the producer's, the node ids and the hash are
+    /// this side's, minted fresh by the same functions the endpoint calls.
+    /// </summary>
+    private static SyndicatedPage AsAProducerWouldPush(SiteId siteId, string path, string heading)
+    {
+        var pushed = Survey(siteId, path, heading);
+        return pushed with
+        {
+            ContentHash = SyndicatedPageStore.HashOf(
+                pushed.Title, pushed.MetaTitle, pushed.MetaDescription, pushed.Node),
+        };
+    }
+
     private static SyndicatedPage Survey(
         SiteId siteId, string path, string heading,
         string body = "<p>A document database and event store built on PostgreSQL.</p>",

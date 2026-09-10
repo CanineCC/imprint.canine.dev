@@ -172,7 +172,14 @@ public sealed class SyndicatedPageStore
         return pages;
     }
 
-    /// <summary>A content hash over everything that can change what the page renders.</summary>
+    /// <summary>A content hash over everything that can change what the page renders — and nothing else.</summary>
+    /// <remarks>
+    /// "Nothing else" is the load-bearing half. The node tree goes in through
+    /// <see cref="SyndicatedJson.NodeForHash"/>, which blanks node ids, because a producer sends content and
+    /// this side mints the ids: hashing them made every re-push of identical content hash differently, so
+    /// <see cref="Upsert"/> could never return false and the publisher re-rendered every syndicated page on
+    /// every sweep. What a reader sees is what is hashed.
+    /// </remarks>
     public static string HashOf(LocalizedText title, LocalizedText metaTitle, LocalizedText metaDescription, Node node)
     {
         var payload = string.Join(
@@ -180,7 +187,7 @@ public sealed class SyndicatedPageStore
             SyndicatedJson.Localized(title),
             SyndicatedJson.Localized(metaTitle),
             SyndicatedJson.Localized(metaDescription),
-            SyndicatedJson.Node(node));
+            SyndicatedJson.NodeForHash(node));
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload)))[..16].ToLowerInvariant();
     }
 }

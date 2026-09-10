@@ -147,6 +147,12 @@ Staleness rules (drive both auto-republish and the editor's badges):
   pages (debounced 2 s so a theme-editing session doesn't re-render per keystroke).
 - asset stale ⇔ a used asset re-processed — republish referencing pages
   (via `AssetUsage`).
+- syndicated page stale ⇔ its stored content hash changed. A pushed page has no aggregate
+  and so no publish version to compare (it is created at version 0 and stays there), which
+  makes its hash its version. That hash covers everything a reader sees and deliberately
+  *not* the node ids this side mints on every parse — hashing those made an unchanged
+  re-push a new page, so the endpoint answered `changed: true` to every push and the
+  publisher re-rendered the whole syndicated corpus on every producer sweep.
 - `page.unpublished`/`page.deleted` — remove files (and locale variants) + manifest
   entry; stale-file sweep removes anything on disk not reachable from the manifest
   (hash rotation cleanup).
