@@ -371,7 +371,13 @@
       },
       {
         "name": "kicker",
-        "label": "Kicker (small uppercase intro)",
+        "label": "Kicker (small uppercase intro). PRESENT = the section rail: the kicker and its (i) sit in a 112px left column and the content takes the whole of the rest. ABSENT = the section head above the content in its own 46rem measure, exactly as before.",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "tip",
+        "label": "Tip beside the kicker \u2014 the (i) explanation for the section. Only shown with a kicker.",
         "type": "text",
         "default": ""
       },
@@ -390,6 +396,12 @@
       {
         "name": "caption",
         "label": "Caption under the chart",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "figures",
+        "label": "Endpoint figures (JSON array of {value, label, sub}) \u2014 the movement stated as text, each value with the population it was measured over. Rendered beneath the caption, inside the content column.",
         "type": "text",
         "default": ""
       },
@@ -518,7 +530,13 @@
       },
       {
         "name": "kicker",
-        "label": "Kicker (small uppercase intro)",
+        "label": "Kicker (small uppercase intro). PRESENT = the section rail: the kicker and its (i) sit in a 112px left column and the content takes the whole of the rest. ABSENT = the section head above the content in its own 46rem measure, exactly as before.",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "tip",
+        "label": "Tip beside the kicker \u2014 the (i) explanation for the section. Only shown with a kicker.",
         "type": "text",
         "default": ""
       },

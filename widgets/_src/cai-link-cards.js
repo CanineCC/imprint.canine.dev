@@ -1,7 +1,7 @@
 // <cai-link-cards links='[{"icon":"github","label":"The project's source repository",
 //                          "note":"github.com/MathewSachin/Captura","href":"https://…",
 //                          "figure":"3,325","go":"Every advisory","tip":"…"}]'
-//                 kicker="…" heading="…" lede="…">
+//                 kicker="§5 Where to look" tip="…" heading="…" lede="…">
 //
 // The places a reader goes next, as cards rather than a bullet list of link text. Four
 // underlined sentences in a row all look equally like footnotes; four cards with a mark on
@@ -30,6 +30,20 @@
 //           when the card is hovered. It names what is on the other side of the click, which an
 //           underlined title alone does not.
 //
+// TWO LAYOUTS, chosen by whether the page passes a `kicker`:
+//
+//   without a kicker  the survey pages: four cards in a 2x2 block, centred in a 46rem measure.
+//                     Unchanged, byte for byte — three thousand survey pages pass `links` and
+//                     nothing else, and they are the reason the cap is still there.
+//   with a kicker     the corpus sheet: the section rail (rail.js), and the grid takes the whole
+//                     content column with NO cap and NO auto margins. The cap is what put five
+//                     cards into a centred 2-up block with an orphan fifth inside a 1120px
+//                     column; uncapped, the same five land as three and two.
+//
+// AT MOST THREE COLUMNS, whatever the column is worth. auto-fit alone would keep dividing a wide
+// column into 16rem tracks until the cards are a row of tiles; the max() in the track floor makes
+// the smallest permissible track a third of the row, so a fourth column can never fit.
+//
 // DATA ONLY: no api-base, no fetch. Every row arrives as a prop from the page.
 
 import {
@@ -41,12 +55,13 @@ import {
   escapeHtml,
 } from "./tokens.js";
 import { HINT_CSS, hintHtml } from "./hint.js";
+import { RAIL_CSS, railHtml, headBelowRailHtml } from "./rail.js";
 
 // The badge is the site's own file, tinted by mask rather than redrawn: one shape, and a
 // card can never disagree with the header about what the mark is.
 const BADGE = "/brand/canine-badge.svg";
 
-const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + HINT_CSS + `
+const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + HINT_CSS + RAIL_CSS + `
 /* Two columns, so the usual four land as a 2x2 block rather than a row of three and an
    orphan. minmax keeps it one column when there is no room for two. */
 .mk-links { max-width: 46rem; margin: 0 auto; display: grid; gap: 10px;
@@ -83,6 +98,20 @@ a.mk-link:hover .mk-link-go, a.mk-link:focus-visible .mk-link-go { color: var(--
   transition: color 120ms ease; }
 :host { --wd-accent: #7faace; --cai-accent: #6fbfa4; }
 :host([data-theme="light"]) { --wd-accent: #35618a; --cai-accent: #2e7d64; }
+
+/* ── inside the rail ────────────────────────────────────────────────────────
+   No cap and no auto margins: the content column IS the measure here, and a 736px block of cards
+   centred in a 950px column reads as a mistake — which is exactly how the sheet's fifth card
+   ended up alone on a row of its own. A descendant selector rather than a modifier class, so the
+   no-kicker markup cannot change at all; the snapshot tests assert that it does not.
+
+   The track floor is max(16rem, (100% - two gaps) / 3): 16rem where the column is narrow, and a
+   full third of the row once the column is wide enough that a third would exceed it — which is
+   what stops auto-fit at three columns without hard-coding a count that would then never
+   collapse on a phone. */
+.rail-body .mk-links { max-width: none; margin: 0;
+  grid-template-columns: repeat(auto-fit, minmax(max(16rem, (100% - 20px) / 3), 1fr)); }
+
 @media (prefers-reduced-motion: reduce) {
   a.mk-link { transition: none; }
   a.mk-link:hover, a.mk-link:focus-visible { transform: none; }
@@ -107,16 +136,9 @@ customElements.define(
   class extends CaiIsland {
     render(root) {
       const links = (this.json("links", []) || []).filter((l) => l && l.href && l.label);
+      const kicker = (this.getAttribute("kicker") || "").trim();
 
-      let html = `<style>${CSS}</style>`;
-      html += sectionHeadHtml(this);
-
-      if (links.length === 0) {
-        root.innerHTML = html;
-        return;
-      }
-
-      html += `<div class="mk-links">`;
+      let html = `<div class="mk-links">`;
       for (const l of links) {
         const icon = String(l.icon || "").toLowerCase();
         html += `<a class="mk-link" href="${escapeHtml(l.href)}" rel="noopener noreferrer">`;
@@ -144,7 +166,20 @@ customElements.define(
       }
       html += `</div>`;
 
-      root.innerHTML = html;
+      // No links is no grid: an empty bordered frame says "the destinations are loading", and
+      // nothing here ever loads.
+      const cards = links.length === 0 ? "" : html;
+
+      let out = `<style>${CSS}</style>`;
+      out += kicker
+        ? railHtml({
+            kicker,
+            tip: this.getAttribute("tip"),
+            content: headBelowRailHtml(this) + cards,
+          })
+        : sectionHeadHtml(this) + cards;
+
+      root.innerHTML = out;
     }
   }
 );

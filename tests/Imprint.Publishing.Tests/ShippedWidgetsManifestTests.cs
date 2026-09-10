@@ -61,6 +61,33 @@ public sealed class ShippedWidgetsManifestTests
     }
 
     /// <summary>
+    /// The corpus sheet's section rail is authored, not hard-coded: an island renders it because
+    /// the page passed <c>kicker</c> (and, for the (i), <c>tip</c>). A widget whose bundle grew
+    /// the attribute but whose descriptor never declared it renders the rail on a syndicated page
+    /// and NOWHERE in the editor, because the inspector only offers the props listed here — the
+    /// same silent half-shipped state the bundle guard below exists for.
+    /// </summary>
+    [Theory]
+    [InlineData("cai-trend", "kicker", "tip", "figures")]
+    [InlineData("cai-link-cards", "kicker", "tip")]
+    [InlineData("cai-figure-band", "kicker")]
+    [InlineData("cai-share-bars", "kicker")]
+    public void The_sheet_widgets_declare_the_props_their_section_layout_reads(
+        string tag,
+        params string[] required)
+    {
+        var widget = Assert.Single(WidgetManifest.Load(ManifestPath()), w => w.Tag == tag);
+
+        var declared = widget.Props.Select(p => p.Name).ToArray();
+        var missing = required.Where(r => !declared.Contains(r)).ToArray();
+        Assert.True(
+            missing.Length == 0,
+            $"widget '{tag}' renders its section layout from {string.Join(", ", required)} but its "
+            + $"descriptor declares only {string.Join(", ", declared)} — the editor cannot author "
+            + $"{string.Join(", ", missing)}.");
+    }
+
+    /// <summary>
     /// The four-things-by-hand guard. Adding a widget means a source file, a tag in
     /// <c>widgets/_src/build.sh</c>, a BUILT bundle in <c>widgets/</c>, and a descriptor here —
     /// and until this test, nothing checked the middle two. A descriptor whose bundle was never

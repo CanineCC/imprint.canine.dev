@@ -1,4 +1,4 @@
-var d=`
+var f=`
 :host {
   /* neutrals \u2014 dark "graphite" */
   --bg: #15191e;
@@ -106,7 +106,7 @@ var d=`
   --accent-strong: #1c4f41;
   --on-accent: #ffffff;
 }
-`;function i(a){return String(a??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function c(a){if(a==null||a==="")return"";let o=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,e="",t=0,n;for(;(n=o.exec(a))!==null;){n.index>t&&(e+=i(a.slice(t,n.index)));let r=n[0];if(r.startsWith("**"))e+=`<strong>${i(r.slice(2,-2))}</strong>`;else if(r.startsWith("`"))e+=`<code>${i(r.slice(1,-1))}</code>`;else{let s=/^\[([^\]]+)\]\(([^)]+)\)$/.exec(r);s?e+=`<a href="${i(s[2])}">${i(s[1])}</a>`:e+=i(r)}t=n.index+r.length}return t<a.length&&(e+=i(a.slice(t))),e}var h=`
+`;function o(i){return String(i??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function c(i){if(i==null||i==="")return"";let n=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,t="",e=0,r;for(;(r=n.exec(i))!==null;){r.index>e&&(t+=o(i.slice(e,r.index)));let s=r[0];if(s.startsWith("**"))t+=`<strong>${o(s.slice(2,-2))}</strong>`;else if(s.startsWith("`"))t+=`<code>${o(s.slice(1,-1))}</code>`;else{let a=/^\[([^\]]+)\]\(([^)]+)\)$/.exec(s);a?t+=`<a href="${o(a[2])}">${o(a[1])}</a>`:t+=o(s)}e=r.index+s.length}return e<i.length&&(t+=o(i.slice(e))),t}var m=`
 :host { display: block; color: var(--ink); font: 400 var(--fs-md)/1.5 var(--font-ui); }
 * { box-sizing: border-box; }
 a { color: var(--accent-ink); text-decoration: none; }
@@ -114,12 +114,12 @@ a:hover { text-decoration: underline; }
 code { background: var(--surface-2); padding: 1px 5px; border-radius: var(--r-sm); font: 500 var(--fs-xs) var(--font-mono); }
 strong { font-weight: 600; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-`;function f(a){let o=a.getAttribute("kicker"),e=a.getAttribute("heading"),t=a.getAttribute("lede");if(!o&&!e&&!t)return"";let n='<div class="mk-section-head">';return o&&(n+=`<span class="mk-kicker">${i(o)}</span>`),e&&(n+=`<h2>${c(e)}</h2>`),t&&(n+=`<p>${c(t)}</p>`),n+="</div>",n}var p=`
+`;function g(i){let n=i.getAttribute("kicker"),t=i.getAttribute("heading"),e=i.getAttribute("lede");if(!n&&!t&&!e)return"";let r='<div class="mk-section-head">';return n&&(r+=`<span class="mk-kicker">${o(n)}</span>`),t&&(r+=`<h2>${c(t)}</h2>`),e&&(r+=`<p>${c(e)}</p>`),r+="</div>",r}var u=`
 .mk-section-head { margin-bottom: 1.5rem; }
 .mk-section-head h2 { font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.1rem); line-height: 1.2; margin: 0.3rem 0 0; color: var(--heading); font-weight: 600; letter-spacing: -0.01em; }
 .mk-section-head p { color: var(--muted); font-size: var(--fs-lg); line-height: 1.6; margin: 0.55rem 0 0; }
 .mk-kicker { display: inline-flex; align-items: center; gap: 0.55rem; font-size: var(--fs-2xs); font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
-`,l=class extends HTMLElement{#e;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#t(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#e=new MutationObserver(()=>{let o=this.dataset.theme;this.#t(),this.dataset.theme!==o&&this.render(this.shadowRoot)}),this.#e.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#e?.disconnect()}#t(){let o=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=o;let e=(this.getAttribute("brand")||"").trim().toLowerCase();e==="assay"||e==="cai"||e==="watchdog"?this.dataset.brand=e:delete this.dataset.brand}json(o,e){let t=this.getAttribute(o);if(t==null||t.trim()==="")return e;try{return JSON.parse(t)}catch{return e}}};var m=`
+`,d=class extends HTMLElement{#e;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#t(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#e=new MutationObserver(()=>{let n=this.dataset.theme;this.#t(),this.dataset.theme!==n&&this.render(this.shadowRoot)}),this.#e.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#e?.disconnect()}#t(){let n=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=n;let t=(this.getAttribute("brand")||"").trim().toLowerCase();t==="assay"||t==="cai"||t==="watchdog"?this.dataset.brand=t:delete this.dataset.brand}json(n,t){let e=this.getAttribute(n);if(e==null||e.trim()==="")return t;try{return JSON.parse(e)}catch{return t}}};var b=`
 .info-hint { position: relative; display: inline-flex; align-items: center; vertical-align: middle; margin-left: 6px; cursor: help; }
 .info-hint:focus { outline: none; }
 .info-hint-dot { width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--border-strong); color: var(--muted);
@@ -171,7 +171,26 @@ strong { font-weight: 600; }
    order, so a LATER sibling row would draw over a tip that opens across it. Each island lifts
    the subject on :hover/:focus-within for that reason \u2014 see the z-index bumps at the call sites. */
 @media (prefers-reduced-motion: reduce) { .info-hint-tip { transition: none; } }
-`;function g(a,{right:o=!1,label:e="More information"}={}){let t=a==null?"":String(a).trim();if(t==="")return"";let n=t.split(/\n\s*\n/).map(s=>s.trim()).filter(s=>s!=="").map(s=>`<p>${c(s)}</p>`).join("");return`<span class="${o?"info-hint hint-right":"info-hint"}" tabindex="0" role="note" aria-label="${i(e||"More information")}"><span class="info-hint-dot" aria-hidden="true">i</span><span class="info-hint-tip">${n}</span></span>`}var b="/brand/canine-badge.svg",k=d+h+p+m+`
+`;function h(i,{right:n=!1,label:t="More information"}={}){let e=i==null?"":String(i).trim();if(e==="")return"";let r=e.split(/\n\s*\n/).map(a=>a.trim()).filter(a=>a!=="").map(a=>`<p>${c(a)}</p>`).join("");return`<span class="${n?"info-hint hint-right":"info-hint"}" tabindex="0" role="note" aria-label="${o(t||"More information")}"><span class="info-hint-dot" aria-hidden="true">i</span><span class="info-hint-tip">${r}</span></span>`}var k=`
+.rail { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 0 24px;
+  align-items: start; position: relative; }
+.rail-side { display: flex; align-items: flex-start; padding-top: 3px; min-width: 0; }
+.rail-kicker { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--muted); font-weight: 700; overflow-wrap: anywhere; }
+.rail-body { min-width: 0; }
+/* The (i)'s subject is the rail, so its tip can never reach past the island. See hint.js. */
+.rail .info-hint { position: static; }
+.rail .info-hint-tip { left: 0; right: auto; max-width: min(320px, 100%); }
+/* A tip opens across the content beside it, which would otherwise paint over it. */
+.rail:hover, .rail:focus-within { z-index: 2; }
+/* The label takes its own line under 560px \u2014 the same width at which cai-share-bars reflows,
+   so two adjacent sections never disagree about when a page has become narrow. A 112px column
+   plus a 24px gutter is a third of a 400px screen spent on two words. */
+@media (max-width: 560px) {
+  .rail { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .rail-side { padding-top: 0; }
+}
+`;function x({kicker:i,tip:n,content:t}){return`<div class="rail"><div class="rail-side"><span class="rail-kicker">${o(i)}</span>`+h(n,{label:i})+`</div><div class="rail-body">${t}</div></div>`}function w(i){let n=i.getAttribute("heading"),t=i.getAttribute("lede");if(!n&&!t)return"";let e='<div class="mk-section-head">';return n&&(e+=`<h2>${c(n)}</h2>`),t&&(e+=`<p>${c(t)}</p>`),e+="</div>",e}var y="/brand/canine-badge.svg",S=f+m+u+b+k+`
 /* Two columns, so the usual four land as a 2x2 block rather than a row of three and an
    orphan. minmax keeps it one column when there is no room for two. */
 .mk-links { max-width: 46rem; margin: 0 auto; display: grid; gap: 10px;
@@ -208,9 +227,23 @@ a.mk-link:hover .mk-link-go, a.mk-link:focus-visible .mk-link-go { color: var(--
   transition: color 120ms ease; }
 :host { --wd-accent: #7faace; --cai-accent: #6fbfa4; }
 :host([data-theme="light"]) { --wd-accent: #35618a; --cai-accent: #2e7d64; }
+
+/* \u2500\u2500 inside the rail \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+   No cap and no auto margins: the content column IS the measure here, and a 736px block of cards
+   centred in a 950px column reads as a mistake \u2014 which is exactly how the sheet's fifth card
+   ended up alone on a row of its own. A descendant selector rather than a modifier class, so the
+   no-kicker markup cannot change at all; the snapshot tests assert that it does not.
+
+   The track floor is max(16rem, (100% - two gaps) / 3): 16rem where the column is narrow, and a
+   full third of the row once the column is wide enough that a third would exceed it \u2014 which is
+   what stops auto-fit at three columns without hard-coding a count that would then never
+   collapse on a phone. */
+.rail-body .mk-links { max-width: none; margin: 0;
+  grid-template-columns: repeat(auto-fit, minmax(max(16rem, (100% - 20px) / 3), 1fr)); }
+
 @media (prefers-reduced-motion: reduce) {
   a.mk-link { transition: none; }
   a.mk-link:hover, a.mk-link:focus-visible { transform: none; }
   .mk-link-go { transition: none; }
 }
-`,u={github:'<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>',gitlab:'<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="m15.73 6.49-.02-.06-2.17-5.66a.57.57 0 0 0-.22-.27.58.58 0 0 0-.88.27L10.98 5.2H5.03L3.57.77a.58.58 0 0 0-.88-.27.57.57 0 0 0-.22.27L.3 6.43l-.02.06a4.03 4.03 0 0 0 1.34 4.65l.01.01.02.01 3.3 2.47 1.63 1.23.99.75a.68.68 0 0 0 .82 0l.99-.75 1.64-1.23 3.32-2.48.01-.01a4.03 4.03 0 0 0 1.34-4.65Z"/></svg>',html:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M1.5 0h21l-1.91 21.563L11.977 24l-8.564-2.438L1.5 0zm7.031 9.75l-.232-2.718 10.059.003.23-2.622L5.412 4.41l.698 8.01h9.126l-.326 3.426-2.91.804-2.955-.81-.188-2.11H6.248l.33 4.171L12 19.351l5.379-1.443.744-8.157H8.531z"/></svg>',doc:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.2 1.4H4a1.6 1.6 0 0 0-1.6 1.6v10A1.6 1.6 0 0 0 4 14.6h8a1.6 1.6 0 0 0 1.6-1.6V5.8Z"/><path d="M9.2 1.4v4.4h4.4"/><path d="M5.6 8.4h4.8M5.6 11h4.8"/></svg>'};customElements.define("cai-link-cards",class extends l{render(a){let o=(this.json("links",[])||[]).filter(t=>t&&t.href&&t.label),e=`<style>${k}</style>`;if(e+=f(this),o.length===0){a.innerHTML=e;return}e+='<div class="mk-links">';for(let t of o){let n=String(t.icon||"").toLowerCase();e+=`<a class="mk-link" href="${i(t.href)}" rel="noopener noreferrer">`,e+='<span class="mk-link-ico" aria-hidden="true">',n==="watchdog"||n==="cai"?e+=`<span class="mk-link-badge is-${n}" style="--badge:url('${b}')"></span>`:e+=u[n]||u.doc,e+="</span>";let r=g(t.tip,{right:!0,label:t.label});e+=r?`<span class="mk-link-label-row"><span class="mk-link-label">${i(t.label)}</span>${r}</span>`:`<span class="mk-link-label">${i(t.label)}</span>`,t.figure!=null&&String(t.figure)!==""&&(e+=`<span class="mk-link-figure">${i(String(t.figure))}</span>`),e+=`<span class="mk-link-note">${i(t.note||"")}</span>`,t.go!=null&&String(t.go)!==""&&(e+=`<span class="mk-link-go">${i(String(t.go))} \u2192</span>`),e+="</a>"}e+="</div>",a.innerHTML=e}});
+`,v={github:'<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>',gitlab:'<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="m15.73 6.49-.02-.06-2.17-5.66a.57.57 0 0 0-.22-.27.58.58 0 0 0-.88.27L10.98 5.2H5.03L3.57.77a.58.58 0 0 0-.88-.27.57.57 0 0 0-.22.27L.3 6.43l-.02.06a4.03 4.03 0 0 0 1.34 4.65l.01.01.02.01 3.3 2.47 1.63 1.23.99.75a.68.68 0 0 0 .82 0l.99-.75 1.64-1.23 3.32-2.48.01-.01a4.03 4.03 0 0 0 1.34-4.65Z"/></svg>',html:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M1.5 0h21l-1.91 21.563L11.977 24l-8.564-2.438L1.5 0zm7.031 9.75l-.232-2.718 10.059.003.23-2.622L5.412 4.41l.698 8.01h9.126l-.326 3.426-2.91.804-2.955-.81-.188-2.11H6.248l.33 4.171L12 19.351l5.379-1.443.744-8.157H8.531z"/></svg>',doc:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.2 1.4H4a1.6 1.6 0 0 0-1.6 1.6v10A1.6 1.6 0 0 0 4 14.6h8a1.6 1.6 0 0 0 1.6-1.6V5.8Z"/><path d="M9.2 1.4v4.4h4.4"/><path d="M5.6 8.4h4.8M5.6 11h4.8"/></svg>'};customElements.define("cai-link-cards",class extends d{render(i){let n=(this.json("links",[])||[]).filter(a=>a&&a.href&&a.label),t=(this.getAttribute("kicker")||"").trim(),e='<div class="mk-links">';for(let a of n){let l=String(a.icon||"").toLowerCase();e+=`<a class="mk-link" href="${o(a.href)}" rel="noopener noreferrer">`,e+='<span class="mk-link-ico" aria-hidden="true">',l==="watchdog"||l==="cai"?e+=`<span class="mk-link-badge is-${l}" style="--badge:url('${y}')"></span>`:e+=v[l]||v.doc,e+="</span>";let p=h(a.tip,{right:!0,label:a.label});e+=p?`<span class="mk-link-label-row"><span class="mk-link-label">${o(a.label)}</span>${p}</span>`:`<span class="mk-link-label">${o(a.label)}</span>`,a.figure!=null&&String(a.figure)!==""&&(e+=`<span class="mk-link-figure">${o(String(a.figure))}</span>`),e+=`<span class="mk-link-note">${o(a.note||"")}</span>`,a.go!=null&&String(a.go)!==""&&(e+=`<span class="mk-link-go">${o(String(a.go))} \u2192</span>`),e+="</a>"}e+="</div>";let r=n.length===0?"":e,s=`<style>${S}</style>`;s+=t?x({kicker:t,tip:this.getAttribute("tip"),content:w(this)+r}):g(this)+r,i.innerHTML=s}});

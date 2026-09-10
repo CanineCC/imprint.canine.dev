@@ -1,5 +1,7 @@
 // <cai-trend series="[54.2,57.1,61]" first-date="4 March 2026" last-date="29 July 2026"
-//            kicker="…" heading="…" lede="…" caption="…">
+//            kicker="§4 Series" tip="…" heading="…" lede="…" caption="…"
+//            figures='[{"value":"45.2","label":"the median at the first reading, 19 July 2026",
+//                       "sub":"across 580 measured codebases"}]'>
 //
 // How one repository's score moved across its own scans. A line, not a table — a reader
 // asks "is it getting better?", and a column of numbers makes them do the differencing
@@ -13,6 +15,21 @@
 //
 // One measurement renders as the number and its date, with no chart: a line through a single
 // point is a decoration, and drawing one would imply a trajectory nobody measured.
+//
+// TWO LAYOUTS, chosen by whether the page passes a `kicker`:
+//
+//   without a kicker  the survey pages and the corpus archive: a section head above a chart
+//                     centred in a 46rem measure. Unchanged, byte for byte — those pages pass
+//                     series, dates, heading and caption and nothing else, and a chart that
+//                     moved because a different page needed a rail would be this widget
+//                     breaking three thousand pages to fix one.
+//   with a kicker     the corpus sheet: the section rail (rail.js) — the label and its (i) in
+//                     a 112px column, the chart taking the whole of the rest.
+//
+// `figures` states the endpoints of the movement the line draws, as text: a line says "it rose",
+// and only the two numbers with the POPULATIONS they were taken over say what rose and among
+// how many. The chart cannot derive them — a median across 580 codebases and a median across
+// 3,542 are two different measurements, and the series carries no populations at all.
 //
 // DATA ONLY, deliberately: no api-base, no liveLoad. Every number arrives as a prop from the
 // page that renders it, so this island cannot plot one repository's history under another
@@ -28,6 +45,8 @@ import {
   renderInline,
 } from "./tokens.js";
 import { SCORECARD_CSS } from "./scorecard.js";
+import { HINT_CSS } from "./hint.js";
+import { RAIL_CSS, railHtml, headBelowRailHtml } from "./rail.js";
 import { bandFor } from "./cai.js";
 
 // The band cutlines. A snapped axis picks the pair of these that brackets the data.
@@ -77,7 +96,7 @@ const W = 720;
 const H = 240;
 const PAD = { top: 26, right: 18, bottom: 34, left: 40 };
 
-const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + `
+const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + HINT_CSS + RAIL_CSS + `
 .mk-trend { max-width: 46rem; margin: 0 auto; }
 .mk-trend-plot { position: relative; }
 .mk-trend svg { display: block; width: 100%; height: auto; overflow: visible; }
@@ -111,6 +130,26 @@ const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + `
 .mk-trend-solo-date { font-size: var(--fs-sm); color: var(--muted); }
 .mk-trend-sum { margin: 0.9rem auto 0; max-width: 46rem; font-size: var(--fs-xs);
   color: var(--muted); line-height: 1.6; text-align: center; }
+
+/* The movement's endpoints, stated. auto-fit collapses them to one column on a phone without a
+   media query — two figures side by side in 368px would each get 184px for a sentence. */
+.mk-trend-figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 18px 28px; margin: 1.1rem auto 0; max-width: 46rem; }
+.mk-trend-fig { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.mk-trend-fig-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  font-size: 22px; font-weight: 700; line-height: 1.1; color: var(--ink); overflow-wrap: anywhere; }
+.mk-trend-fig-label { font-size: var(--fs-sm); color: var(--muted); line-height: 1.45; }
+.mk-trend-fig-sub { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  font-size: var(--fs-2xs); color: var(--muted); }
+
+/* ── inside the rail ────────────────────────────────────────────────────────
+   The chart's 46rem measure and its auto margins are a CARD centred on a page that has no other
+   column. In the rail the content column IS the measure, and a 736px card inside a 950px column
+   is a second, narrower page drawn inside the first. These are descendant selectors rather than
+   a modifier class on purpose: the no-kicker markup then cannot change at all, which is what the
+   snapshot tests assert. */
+.rail-body .mk-trend, .rail-body .mk-trend-figs { max-width: none; margin-left: 0; margin-right: 0; }
+.rail-body .mk-trend-sum { max-width: none; margin-left: 0; margin-right: 0; text-align: left; }
 @media (prefers-reduced-motion: reduce) { .mk-trend-tip { transition: none; } }
 `;
 
@@ -140,31 +179,77 @@ customElements.define(
       const series = (this.json("series", []) || [])
         .map(Number)
         .filter((n) => Number.isFinite(n));
+      const kicker = (this.getAttribute("kicker") || "").trim();
+
+      // The chart, then the endpoints as text. Both are the section's content: in the rail they
+      // fill the right column, without one they keep the centred measure they always had.
+      const body = this.plotHtml(series) + this.figuresHtml();
+
+      let html = `<style>${CSS}</style>`;
+      html += kicker
+        ? railHtml({
+            kicker,
+            tip: this.getAttribute("tip"),
+            content: headBelowRailHtml(this) + body,
+          })
+        : sectionHeadHtml(this) + body;
+
+      root.innerHTML = html;
+      // Only a line has points to answer for; a solo reading and an empty series have none.
+      if (series.length > 1) {
+        this.wireTips(root, series);
+      }
+    }
+
+    /**
+     * The movement's endpoints, stated with the populations they were measured over.
+     *
+     * A figure with no value is not a figure — the same guard cai-figure-band applies, and for
+     * the same reason: an empty column reads as a number that went missing.
+     */
+    figuresHtml() {
+      const figures = (this.json("figures", []) || []).filter(
+        (f) => f && f.value != null && String(f.value) !== ""
+      );
+      if (figures.length === 0) { return ""; }
+
+      let h = `<div class="mk-trend-figs">`;
+      for (const f of figures) {
+        h += `<div class="mk-trend-fig">`;
+        h += `<span class="mk-trend-fig-value">${escapeHtml(String(f.value))}</span>`;
+        if (f.label != null && String(f.label) !== "") {
+          h += `<span class="mk-trend-fig-label">${escapeHtml(String(f.label))}</span>`;
+        }
+        if (f.sub != null && String(f.sub) !== "") {
+          h += `<span class="mk-trend-fig-sub">${escapeHtml(String(f.sub))}</span>`;
+        }
+        h += `</div>`;
+      }
+      return h + `</div>`;
+    }
+
+    /** The chart itself: nothing, a single stated reading, or the line. */
+    plotHtml(series) {
       const firstDate = this.getAttribute("first-date");
       const lastDate = this.getAttribute("last-date");
       const caption = this.getAttribute("caption");
 
-      let html = `<style>${CSS}</style>`;
-      html += sectionHeadHtml(this);
-
       if (series.length === 0) {
-        root.innerHTML = html;
-        return;
+        return "";
       }
 
       if (series.length === 1) {
         // One measurement is a fact, not a trend. State it and stop.
         const only = series[0];
         const band = bandFor(only);
-        html += `<div class="mk-trend"><p class="mk-trend-solo">`;
-        html += `<span class="mk-trend-solo-num ink-${band.key}">${fmt(only)}</span>`;
+        let solo = `<div class="mk-trend"><p class="mk-trend-solo">`;
+        solo += `<span class="mk-trend-solo-num ink-${band.key}">${fmt(only)}</span>`;
         if (lastDate || firstDate) {
-          html += `<span class="mk-trend-solo-date">measured ${escapeHtml(lastDate || firstDate)}</span>`;
+          solo += `<span class="mk-trend-solo-date">measured ${escapeHtml(lastDate || firstDate)}</span>`;
         }
-        html += `</p></div>`;
-        if (caption) { html += `<p class="mk-trend-sum">${renderInline(caption)}</p>`; }
-        root.innerHTML = html;
-        return;
+        solo += `</p></div>`;
+        if (caption) { solo += `<p class="mk-trend-sum">${renderInline(caption)}</p>`; }
+        return solo;
       }
 
       const { min, max } = snapDomain(series);
@@ -180,7 +265,7 @@ customElements.define(
       const marks = collapseFlatRuns(series);
       const points = marks.map((m) => `${x(m.i).toFixed(1)},${y(m.v).toFixed(1)}`);
 
-      html += `<div class="mk-trend"><div class="mk-trend-plot">`;
+      let html = `<div class="mk-trend"><div class="mk-trend-plot">`;
       html += `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${escapeHtml(
         `${series.length} measurements, from ${fmt(series[0])} to ${fmt(last)}.`)}">`;
 
@@ -235,8 +320,7 @@ customElements.define(
       if (caption) { html += `<p class="mk-trend-sum">${renderInline(caption)}</p>`; }
       html += `</div>`;
 
-      root.innerHTML = html;
-      this.wireTips(root, series);
+      return html;
     }
 
     /** A tooltip per point. The chart is HTML, so it may as well answer a pointer. */
