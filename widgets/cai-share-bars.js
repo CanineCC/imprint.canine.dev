@@ -220,7 +220,7 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
 .cai-row:last-child { border-bottom: 0; }
 .cai-row b { color: var(--heading); font-weight: 600; text-align: right; }
 .cai-row .mono { font-family: var(--font-mono); font-size: var(--fs-xs); }
-`;var N=`
+`;var z=`
 .info-hint { position: relative; display: inline-flex; align-items: center; vertical-align: middle; margin-left: 6px; cursor: help; }
 .info-hint:focus { outline: none; }
 .info-hint-dot { width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--border-strong); color: var(--muted);
@@ -272,7 +272,7 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
    order, so a LATER sibling row would draw over a tip that opens across it. Each island lifts
    the subject on :hover/:focus-within for that reason \u2014 see the z-index bumps at the call sites. */
 @media (prefers-reduced-motion: reduce) { .info-hint-tip { transition: none; } }
-`;function v(a,{right:n=!1,label:t="More information"}={}){let i=a==null?"":String(a).trim();if(i==="")return"";let o=i.split(/\n\s*\n/).map(e=>e.trim()).filter(e=>e!=="").map(e=>`<p>${b(e)}</p>`).join("");return`<span class="${n?"info-hint hint-right":"info-hint"}" tabindex="0" role="note" aria-label="${r(t||"More information")}"><span class="info-hint-dot" aria-hidden="true">i</span><span class="info-hint-tip">${o}</span></span>`}var H=`
+`;function v(a,{right:n=!1,label:t="More information"}={}){let i=a==null?"":String(a).trim();if(i==="")return"";let o=i.split(/\n\s*\n/).map(e=>e.trim()).filter(e=>e!=="").map(e=>`<p>${b(e)}</p>`).join("");return`<span class="${n?"info-hint hint-right":"info-hint"}" tabindex="0" role="note" aria-label="${r(t||"More information")}"><span class="info-hint-dot" aria-hidden="true">i</span><span class="info-hint-tip">${o}</span></span>`}var N=`
 .rail { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 0 24px;
   align-items: start; position: relative; }
 .rail-side { display: flex; align-items: flex-start; padding-top: 3px; min-width: 0; }
@@ -292,7 +292,10 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
   .rail { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .rail-side { padding-top: 0; }
 }
-`;function T({kicker:a,tip:n,content:t}){return`<div class="rail"><div class="rail-side"><span class="rail-kicker">${r(a)}</span>`+v(n,{label:a})+`</div><div class="rail-body">${t}</div></div>`}function z(a){let n=a.getAttribute("heading"),t=a.getAttribute("lede");if(!n&&!t)return"";let i='<div class="mk-section-head">';return n&&(i+=`<h2>${b(n)}</h2>`),t&&(i+=`<p>${b(t)}</p>`),i+="</div>",i}var E=new Set(["exemplary","healthy","fair","poor","critical"]);function j(a){let n=String(a||"").trim().toLowerCase();return n==="accent"?"is-accent":E.has(n)?`is-band fill-${n}`:"is-track"}var k=$+S+C+M+N+H+`
+`;function T({kicker:a,tip:n,content:t}){return`<div class="rail"><div class="rail-side"><span class="rail-kicker">${r(a)}</span>`+v(n,{label:a})+`</div><div class="rail-body">${t}</div></div>`}function H(a){let n=a.getAttribute("heading"),t=a.getAttribute("lede");if(!n&&!t)return"";let i='<div class="mk-section-head">';return n&&(i+=`<h2>${b(n)}</h2>`),t&&(i+=`<p>${b(t)}</p>`),i+="</div>",i}var F=new Set(["exemplary","healthy","fair","poor","critical"]);function j(a){let n=String(a||"").trim().toLowerCase();return n==="accent"?"is-accent":F.has(n)?`is-band fill-${n}`:"is-track"}var k=$+S+C+M+z+N+`
+/* The two containers the queries at the foot of this sheet ask about. */
+:host { container-type: inline-size; }
+.sb-table { container-type: inline-size; }
 .sb-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .sb-cap { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
 /* The sentence that stands where a bar would be. Muted, never band-coloured: it is the absence
@@ -329,7 +332,7 @@ a.sb-label:hover { color: var(--accent); text-decoration: none; }
    accessibility tree too, so a screen reader hears one label per part at either width. */
 .sb-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 .sb-legend-item.is-inside { display: none; }
-@media (max-width: 560px) {
+@container (max-width: 560px) {
   .sb-wide-part > span { display: none; }
   .sb-legend-item.is-inside { display: inline-flex; }
 }
@@ -341,6 +344,10 @@ a.sb-label:hover { color: var(--accent); text-decoration: none; }
 
 /* \u2500\u2500 table: a bar per row \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
 .sb-head, .sb-row { display: grid; grid-template-columns: var(--sb-grid); gap: 12px; align-items: center; }
+/* The last defence, for a column heading longer than any threshold anticipated: a heading with
+   nowhere to go wraps inside its own cell. Ugly beats painted over the cell beside it, and both
+   beat the third option nobody should take \u2014 clipping a word off a denominator's name. */
+.sb-head .sb-cap { overflow-wrap: anywhere; }
 .sb-head { padding-bottom: 6px; border-bottom: 1px solid var(--border-strong); align-items: end; }
 .sb-row { padding: 7px 0; border-bottom: 1px solid var(--border); position: relative; }
 /* A row is the subject of its own (i): the tip spans the row rather than hanging off the dot,
@@ -359,16 +366,19 @@ a.sb-label:hover { color: var(--accent); text-decoration: none; }
 .sb-part.is-accent { background: var(--accent); }
 .sb-part.is-track { background: transparent; }
 
-@media (max-width: 560px) {
+@container (max-width: 560px) {
   /* The cells take their own line under the label, each carrying its heading, and the bar takes
      a third. The header row has nothing left to head, so it goes. */
   .sb-head { display: none; }
-  .sb-row { grid-template-columns: repeat(auto-fit, minmax(74px, 1fr)); gap: 8px 12px; padding: 11px 0; }
+  /* 96px, not 74px: a cell's heading is now the widest thing in it \u2014 "MEASURABLE" needs 87px at
+     this size and tracking \u2014 and a 74px track made the reflow do in miniature exactly what the
+     six-column shape was doing at 680px. Measured, not guessed. */
+  .sb-row { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px 12px; padding: 11px 0; }
   .sb-label-row { grid-column: 1 / -1; }
   .sb-bar-cell { grid-column: 1 / -1; }
   .sb-cell { text-align: left; }
   .sb-cell[data-label]::before { content: attr(data-label) " "; display: block;
     font-family: var(--font-ui); font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase;
-    font-weight: 700; color: var(--muted); }
+    font-weight: 700; color: var(--muted); overflow-wrap: anywhere; }
 }
-`;function F(a,{wide:n}){let t=(a||[]).filter(o=>o&&Number.isFinite(Number(o.weight))&&Number(o.weight)>0);if(t.length===0)return"";let i="";for(let o of t){let d=j(o.tone),e=Number(o.weight);if(n){let m=[o.count,o.label].filter(u=>u!=null&&String(u)!=="").join(" ");i+=`<span class="sb-wide-part ${d}" style="flex:${e} 1 0">`,i+=m?`<span>${r(m)}</span>`:"",i+="</span>"}else i+=`<span class="sb-part ${d}" style="flex:${e} 1 0"></span>`}return i}customElements.define("cai-share-bars",class extends x{render(a){let n=(this.getAttribute("layout")||"table").trim().toLowerCase()==="wide"?"wide":"table",t=(this.json("columns",[])||[]).map(s=>s==null?"":String(s)),i=(this.json("rows",[])||[]).filter(s=>s&&s.label!=null&&String(s.label)!==""),o=(this.getAttribute("kicker")||"").trim(),d=o?z(this):A(this),e="";if(i.length===0){a.innerHTML=`<style>${k}</style>`+this.frame(o,d,"");return}let m=(s,p)=>{let h=String(s.label),l='<div class="sb-label-row">';return l+=s.href?`<a class="sb-label" href="${r(String(s.href))}">${r(h)}</a>`:`<span class="sb-label">${r(h)}</span>`,l+=v(s.tip,{right:p,label:h}),l+="</div>",l};if(n==="wide"){for(let s of i){if(e+='<div class="sb-wide-row">',e+=m(s,!1),s.unmeasured)e+=`<p class="sb-unmeasured">${r(String(s.unmeasured))}</p>`;else{let p=(s.parts||[]).filter(l=>l&&Number.isFinite(Number(l.weight))&&Number(l.weight)>0),h=p.reduce((l,f)=>l+Number(f.weight),0);if(p.length>0){let f=p.map(c=>Number(c.weight)/h>=.18);e+='<div class="sb-wide-bar">',e+=F(p.map((c,w)=>f[w]?c:{weight:c.weight,tone:c.tone}),{wide:!0}),e+="</div>";let g=p.map((c,w)=>({text:[c.count,c.label].filter(y=>y!=null&&String(y)!=="").join(" "),cls:j(c.tone),inside:f[w]})).filter(c=>c.text!=="");if(g.length>0){e+='<div class="sb-legend">';for(let c of g)e+=`<span class="sb-legend-item${c.inside?" is-inside":""}"><i class="sb-swatch ${c.cls}"></i>${r(c.text)}</span>`;e+="</div>"}}s.note&&(e+=`<span class="sb-note">${r(String(s.note))}</span>`)}e+="</div>"}a.innerHTML=`<style>${k}</style>`+this.frame(o,d,e);return}let u=Math.max(0,Math.min(12,Math.trunc(t.length))),R=`minmax(90px,1.1fr) repeat(${u}, minmax(52px,auto)) minmax(120px,2fr)`,B=this.getAttribute("label-heading")||"",I=this.getAttribute("bar-heading")||"";e+=`<div class="sb-table" style="--sb-grid:${R}">`,e+='<div class="sb-head">',e+=`<span class="sb-cap">${r(B)}</span>`;for(let s of t)e+=`<span class="sb-cap sb-cell">${r(s)}</span>`;e+=`<span class="sb-cap">${r(I)}</span>`,e+="</div>";for(let s of i){e+='<div class="sb-row">',e+=m(s,!1);let p=(s.cells||[]).map(l=>l==null?"":String(l)),h=s.cellTones||[];for(let l=0;l<u;l++){let f=String(h[l]||"").trim().toLowerCase(),g=E.has(f)?` ink-${f}`:"",c=t[l]||"";e+=`<span class="sb-cell${g}" data-label="${r(c)}">${r(p[l]??"")}</span>`}if(e+='<div class="sb-bar-cell">',s.unmeasured)e+=`<span class="sb-unmeasured">${r(String(s.unmeasured))}</span>`;else{let l=F(s.parts,{wide:!1});l&&(e+=`<span class="sb-track">${l}</span>`),s.note&&(e+=`<span class="sb-note">${r(String(s.note))}</span>`)}e+="</div>",e+="</div>"}e+="</div>",a.innerHTML=`<style>${k}</style>`+this.frame(o,d,e)}frame(a,n,t){return a?T({kicker:a,tip:this.getAttribute("tip"),content:n+t}):n+t}});
+`;function E(a,{wide:n}){let t=(a||[]).filter(o=>o&&Number.isFinite(Number(o.weight))&&Number(o.weight)>0);if(t.length===0)return"";let i="";for(let o of t){let d=j(o.tone),e=Number(o.weight);if(n){let m=[o.count,o.label].filter(u=>u!=null&&String(u)!=="").join(" ");i+=`<span class="sb-wide-part ${d}" style="flex:${e} 1 0">`,i+=m?`<span>${r(m)}</span>`:"",i+="</span>"}else i+=`<span class="sb-part ${d}" style="flex:${e} 1 0"></span>`}return i}customElements.define("cai-share-bars",class extends x{render(a){let n=(this.getAttribute("layout")||"table").trim().toLowerCase()==="wide"?"wide":"table",t=(this.json("columns",[])||[]).map(s=>s==null?"":String(s)),i=(this.json("rows",[])||[]).filter(s=>s&&s.label!=null&&String(s.label)!==""),o=(this.getAttribute("kicker")||"").trim(),d=o?H(this):A(this),e="";if(i.length===0){a.innerHTML=`<style>${k}</style>`+this.frame(o,d,"");return}let m=(s,p)=>{let h=String(s.label),l='<div class="sb-label-row">';return l+=s.href?`<a class="sb-label" href="${r(String(s.href))}">${r(h)}</a>`:`<span class="sb-label">${r(h)}</span>`,l+=v(s.tip,{right:p,label:h}),l+="</div>",l};if(n==="wide"){for(let s of i){if(e+='<div class="sb-wide-row">',e+=m(s,!1),s.unmeasured)e+=`<p class="sb-unmeasured">${r(String(s.unmeasured))}</p>`;else{let p=(s.parts||[]).filter(l=>l&&Number.isFinite(Number(l.weight))&&Number(l.weight)>0),h=p.reduce((l,f)=>l+Number(f.weight),0);if(p.length>0){let f=p.map(c=>Number(c.weight)/h>=.18);e+='<div class="sb-wide-bar">',e+=E(p.map((c,w)=>f[w]?c:{weight:c.weight,tone:c.tone}),{wide:!0}),e+="</div>";let g=p.map((c,w)=>({text:[c.count,c.label].filter(y=>y!=null&&String(y)!=="").join(" "),cls:j(c.tone),inside:f[w]})).filter(c=>c.text!=="");if(g.length>0){e+='<div class="sb-legend">';for(let c of g)e+=`<span class="sb-legend-item${c.inside?" is-inside":""}"><i class="sb-swatch ${c.cls}"></i>${r(c.text)}</span>`;e+="</div>"}}s.note&&(e+=`<span class="sb-note">${r(String(s.note))}</span>`)}e+="</div>"}a.innerHTML=`<style>${k}</style>`+this.frame(o,d,e);return}let u=Math.max(0,Math.min(12,Math.trunc(t.length))),R=`minmax(90px,1.1fr) repeat(${u}, minmax(52px,auto)) minmax(120px,2fr)`,B=this.getAttribute("label-heading")||"",I=this.getAttribute("bar-heading")||"";e+=`<div class="sb-table" style="--sb-grid:${R}">`,e+='<div class="sb-head">',e+=`<span class="sb-cap">${r(B)}</span>`;for(let s of t)e+=`<span class="sb-cap sb-cell">${r(s)}</span>`;e+=`<span class="sb-cap">${r(I)}</span>`,e+="</div>";for(let s of i){e+='<div class="sb-row">',e+=m(s,!1);let p=(s.cells||[]).map(l=>l==null?"":String(l)),h=s.cellTones||[];for(let l=0;l<u;l++){let f=String(h[l]||"").trim().toLowerCase(),g=F.has(f)?` ink-${f}`:"",c=t[l]||"";e+=`<span class="sb-cell${g}" data-label="${r(c)}">${r(p[l]??"")}</span>`}if(e+='<div class="sb-bar-cell">',s.unmeasured)e+=`<span class="sb-unmeasured">${r(String(s.unmeasured))}</span>`;else{let l=E(s.parts,{wide:!1});l&&(e+=`<span class="sb-track">${l}</span>`),s.note&&(e+=`<span class="sb-note">${r(String(s.note))}</span>`)}e+="</div>",e+="</div>"}e+="</div>",a.innerHTML=`<style>${k}</style>`+this.frame(o,d,e)}frame(a,n,t){return a?T({kicker:a,tip:this.getAttribute("tip"),content:n+t}):n+t}});

@@ -30,11 +30,24 @@
 // them apart is what stops the widget from rounding, re-deriving or re-scaling a published
 // figure: it cannot show "42.9%" as anything other than the characters it was handed.
 //
-// NARROW REFLOW (≤560px): the CELLS drop onto their own line under the label, each prefixed
-// with its column heading, and the bar takes a third line. The alternative — an
-// overflow-x:auto wrapper — keeps the shape but hides columns behind a scrollbar in a page a
-// reader is scrolling vertically, and a hidden column of a table like this is a hidden
-// denominator. Reflowing costs vertical space, which the page has.
+// NARROW REFLOW (≤560px OF THE ISLAND'S OWN WIDTH, not the viewport's): the CELLS drop onto
+// their own line under the label, each prefixed with its column heading, and the bar takes a
+// third line. The alternative — an overflow-x:auto wrapper — keeps the shape but hides columns
+// behind a scrollbar in a page a reader is scrolling vertically, and a hidden column of a table
+// like this is a hidden denominator. Reflowing costs vertical space, which the page has.
+//
+// ★ THE WIDTH THAT DECIDES IS THE TABLE'S, AND IT STOPPED BEING THE VIEWPORT'S THE DAY THIS
+// ISLAND MOVED INTO THE SECTION RAIL. A rail takes 112px and a gutter out of the column, so at a
+// 680px viewport the table is 512px wide while a viewport media query still calls the page wide
+// and keeps the six-column shape. What that looked like: MEASURABLE drew straight over NO POLICY
+// — a grid cell does not clip, so a heading too wide for its track just paints over its
+// neighbour and the page still looks like a page. At 600px it was worse: the grid's own minimum
+// track widths exceeded the column and the whole PAGE scrolled sideways.
+//
+// So the queries below are @container, on two containers: the table for the table's shape, the
+// host for the wide bar's legend. Each asks about the box it is actually laid out in, which is
+// the question a media query could only ever approximate — and now cannot get wrong when a
+// caller puts this island in a narrower column than the page.
 //
 // WITH A KICKER IT IS A SECTION OF THE SHEET, and takes the section rail (rail.js): the label
 // and its `tip` in a 112px left column, the bars — and the lede that says what a row's
@@ -74,6 +87,9 @@ function partClass(tone) {
 }
 
 const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + HINT_CSS + RAIL_CSS + `
+/* The two containers the queries at the foot of this sheet ask about. */
+:host { container-type: inline-size; }
+.sb-table { container-type: inline-size; }
 .sb-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .sb-cap { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
 /* The sentence that stands where a bar would be. Muted, never band-coloured: it is the absence
@@ -110,7 +126,7 @@ a.sb-label:hover { color: var(--accent); text-decoration: none; }
    accessibility tree too, so a screen reader hears one label per part at either width. */
 .sb-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 .sb-legend-item.is-inside { display: none; }
-@media (max-width: 560px) {
+@container (max-width: 560px) {
   .sb-wide-part > span { display: none; }
   .sb-legend-item.is-inside { display: inline-flex; }
 }
@@ -122,6 +138,10 @@ a.sb-label:hover { color: var(--accent); text-decoration: none; }
 
 /* ── table: a bar per row ─────────────────────────────────────────────────── */
 .sb-head, .sb-row { display: grid; grid-template-columns: var(--sb-grid); gap: 12px; align-items: center; }
+/* The last defence, for a column heading longer than any threshold anticipated: a heading with
+   nowhere to go wraps inside its own cell. Ugly beats painted over the cell beside it, and both
+   beat the third option nobody should take — clipping a word off a denominator's name. */
+.sb-head .sb-cap { overflow-wrap: anywhere; }
 .sb-head { padding-bottom: 6px; border-bottom: 1px solid var(--border-strong); align-items: end; }
 .sb-row { padding: 7px 0; border-bottom: 1px solid var(--border); position: relative; }
 /* A row is the subject of its own (i): the tip spans the row rather than hanging off the dot,
@@ -140,17 +160,20 @@ a.sb-label:hover { color: var(--accent); text-decoration: none; }
 .sb-part.is-accent { background: var(--accent); }
 .sb-part.is-track { background: transparent; }
 
-@media (max-width: 560px) {
+@container (max-width: 560px) {
   /* The cells take their own line under the label, each carrying its heading, and the bar takes
      a third. The header row has nothing left to head, so it goes. */
   .sb-head { display: none; }
-  .sb-row { grid-template-columns: repeat(auto-fit, minmax(74px, 1fr)); gap: 8px 12px; padding: 11px 0; }
+  /* 96px, not 74px: a cell's heading is now the widest thing in it — "MEASURABLE" needs 87px at
+     this size and tracking — and a 74px track made the reflow do in miniature exactly what the
+     six-column shape was doing at 680px. Measured, not guessed. */
+  .sb-row { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px 12px; padding: 11px 0; }
   .sb-label-row { grid-column: 1 / -1; }
   .sb-bar-cell { grid-column: 1 / -1; }
   .sb-cell { text-align: left; }
   .sb-cell[data-label]::before { content: attr(data-label) " "; display: block;
     font-family: var(--font-ui); font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase;
-    font-weight: 700; color: var(--muted); }
+    font-weight: 700; color: var(--muted); overflow-wrap: anywhere; }
 }
 `;
 

@@ -502,6 +502,174 @@ describe("cai-share-bars: the rail", () => {
   });
 });
 
+// ── §3 at the widths the rail leaves it ─────────────────────────────────────────────────────
+// A table's headings are the first thing to give way when the column narrows, and they give way
+// SILENTLY: a grid cell does not clip, so a heading too wide for its track simply draws over its
+// neighbour and the page still looks like a page. At 680px the sheet rendered MEASURABLE and NO
+// POLICY on top of each other, and nothing failed.
+//
+// The measurement, not the impression: a cell whose scrollWidth exceeds its clientWidth is
+// drawing outside itself, and two cells that share a row and intersect are drawing over each
+// other. Both are asserted at every width, in the table AND in the reflow it falls back to,
+// because the reflow has cells with headings of their own and can do exactly the same thing.
+describe("cai-share-bars: the language table holds up at every width", () => {
+  const measure = (r) =>
+    r.page.evaluate(() => {
+      const root = document.querySelector("cai-share-bars").shadowRoot;
+      const box = (el) => {
+        const b = el.getBoundingClientRect();
+        return {
+          text: (el.textContent.trim() || el.className).slice(0, 24),
+          x: b.x, right: b.right, y: b.y, bottom: b.bottom,
+          overflow: el.scrollWidth - el.clientWidth,
+        };
+      };
+      const head = root.querySelector(".sb-head");
+      const headShown = head && getComputedStyle(head).display !== "none";
+      const rows = [...root.querySelectorAll(".sb-row")];
+      return {
+        headShown,
+        headCells: headShown ? [...head.children].map(box) : [],
+        rowCells: rows.map((r) => [...r.children].map(box)),
+        // Every numeric column must still be somewhere: either the head row names them, or each
+        // cell carries its own heading. A column that quietly went missing is the one outcome
+        // worse than a cramped one.
+        cellsPerRow: rows.map((r) => r.querySelectorAll(".sb-cell").length),
+        labelled: rows.every((r) =>
+          [...r.querySelectorAll(".sb-cell")].every((c) => c.getAttribute("data-label"))),
+        pageOverflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+      };
+    });
+
+  // A cell is drawing over another when their boxes intersect on BOTH axes — cells simply
+  // sitting on different lines of a reflowed row are not an overlap.
+  const overlaps = (cells) => {
+    const bad = [];
+    for (let i = 0; i < cells.length; i++) {
+      for (let j = i + 1; j < cells.length; j++) {
+        const a = cells[i];
+        const b = cells[j];
+        if (a.right - b.x > 1 && b.right - a.x > 1 && a.bottom - b.y > 1 && b.bottom - a.y > 1) {
+          bad.push(`"${a.text}" over "${b.text}"`);
+        }
+      }
+    }
+    return bad;
+  };
+
+  for (const width of [1280, 900, 760, 680, 600, 520, 400]) {
+    test(`no heading draws over another at ${width}px, and no column goes missing`, async () => {
+      const r = await withIslands([{ tag: "cai-share-bars", attrs: { ...BARS_TABLE, tip: TIP } }], { width });
+      try {
+        const m = await measure(r);
+
+        assert.equal(m.pageOverflow, false, `the page scrolls sideways at ${width}px`);
+
+        const spilling = [...m.headCells, ...m.rowCells.flat()].filter((c) => c.overflow > 1);
+        assert.deepEqual(
+          spilling.map((c) => `${c.text} (+${c.overflow}px)`),
+          [],
+          `cells draw outside themselves at ${width}px`
+        );
+
+        assert.deepEqual(overlaps(m.headCells), [], `heading cells overlap at ${width}px`);
+        for (const [i, cells] of m.rowCells.entries()) {
+          assert.deepEqual(overlaps(cells), [], `row ${i} has cells over each other at ${width}px`);
+        }
+
+        // Four numeric columns, at every width, named either by the head row or by each cell.
+        assert.deepEqual(m.cellsPerRow, [4, 4, 4, 4], `a column went missing at ${width}px`);
+        assert.ok(
+          m.headShown || m.labelled,
+          `at ${width}px the head row is gone and the cells carry no headings of their own`
+        );
+
+        // NO HEADING IS BROKEN INSIDE A WORD, in the head row and in the reflow alike.
+        //
+        // Asserting only that nothing spills is not enough: `overflow-wrap: anywhere` satisfies
+        // that by breaking MEASURABLE into MEASURAB / LE, which is how the first version of this
+        // test went green against a table that had not been fixed at all. Asserting that a cell
+        // holds the heading's whole PHRASE is too much the other way — "Affected of measurable"
+        // over the bar wraps at its spaces at 760px and reads exactly as the design draws it.
+        //
+        // The line between those two is min-content: the longest single word. A cell narrower
+        // than that is breaking a word; a cell narrower than the phrase is merely wrapping it.
+        // Measured in the heading's own font, never by copying a track width into this file.
+        const holds = async (selector, labelOf) =>
+          r.page.evaluate(
+            ([sel, useAttr]) => {
+              const root = document.querySelector("cai-share-bars").shadowRoot;
+              const probe = document.createElement("span");
+              probe.style.position = "absolute";
+              probe.style.visibility = "hidden";
+              // min-content: the box shrinks to its longest unbreakable word.
+              probe.style.display = "block";
+              probe.style.width = "min-content";
+              root.appendChild(probe);
+              const bad = [];
+              for (const cell of root.querySelectorAll(sel)) {
+                const pseudo = useAttr ? "::before" : null;
+                const st = getComputedStyle(cell, pseudo);
+                probe.style.font = `${st.fontStyle} ${st.fontWeight} ${st.fontSize}/${st.lineHeight} ${st.fontFamily}`;
+                probe.style.letterSpacing = st.letterSpacing;
+                probe.style.textTransform = st.textTransform;
+                const text = useAttr ? cell.getAttribute("data-label") : cell.textContent.trim();
+                if (!text) continue;
+                probe.textContent = text;
+                const wanted = probe.getBoundingClientRect().width;
+                if (wanted - cell.clientWidth > 1) {
+                  bad.push(
+                    `"${text}" needs ${Math.round(wanted)}px for its longest word, cell is ${Math.round(cell.clientWidth)}px`
+                  );
+                }
+              }
+              probe.remove();
+              return bad;
+            },
+            [selector, labelOf]
+          );
+
+        if (m.headShown) {
+          assert.deepEqual(
+            await holds(".sb-head .sb-cap", false),
+            [],
+            `a heading is being broken mid-word, or painted over its neighbour, at ${width}px`
+          );
+        }
+
+        // In the reflow every cell carries its own heading, so a cell must be at least as wide as
+        // that heading WANTS to be — measured by laying the text out in the pseudo-element's own
+        // font rather than by copying the track width out of the stylesheet into this file. A cell
+        // narrower than its heading is the same defect the head row had, one size down.
+        if (!m.headShown) {
+          assert.deepEqual(
+            await holds(".sb-cell[data-label]", true),
+            [],
+            `a reflowed cell breaks its own heading mid-word at ${width}px`
+          );
+        }
+      } finally {
+        await r.close();
+      }
+    });
+  }
+
+  test("§1's bar states its parts without a part drawing outside itself", async () => {
+    for (const width of [1280, 680, 400]) {
+      const r = await withIslands([{ tag: "cai-share-bars", attrs: BARS_WIDE }], { width });
+      try {
+        const spilling = await r.page.evaluate(() =>
+          [...document.querySelector("cai-share-bars").shadowRoot.querySelectorAll(".sb-wide-part > span")]
+            .filter((s) => getComputedStyle(s).display !== "none" && s.scrollWidth - s.clientWidth > 1)
+            .map((s) => s.textContent.trim().slice(0, 24)));
+        assert.deepEqual(spilling, [], `a bar part is cut off at ${width}px`);
+      } finally {
+        await r.close();
+      }
+    }
+  });
+});
+
 describe("the rail at the widths a reader has", () => {
   for (const width of [1280, 680]) {
     test(`neither island pushes the page sideways at ${width}px`, async () => {
