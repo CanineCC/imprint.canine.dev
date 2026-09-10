@@ -492,6 +492,58 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-btn-ghost:hover { background: transparent; text-decoration: underline; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   LONG TOKENS — an identifier is not a word, and no browser folds one for you.
+
+   Measured in Chromium at a 400px viewport, 2026-09-10: an h1 reading
+   "nordisk/harbour-api" laid out 423px wide inside a 368px column, so the document
+   became 439px and the body scrolled sideways. One producer syndicates ~2,400 pages
+   headed exactly that shape, plus package pages headed by package names, so this was
+   most of a site's pages on most of its readers' phones.
+
+   The solidus is where such a slug WANTS to break and it is the one separator a
+   browser will not break at. A hyphen is one it does — which is why the sibling
+   report, "GHSA-35jh-r3h4-6jhm", measured clean at the same width and needed no rule.
+   Inserting &ZeroWidthSpace; or <wbr> at the separators instead was considered and
+   rejected: HeadingNode carries PLAIN text by contract, and a zero-width space rides
+   along in a copied package name — the one thing a reader is most likely to do with it.
+
+   `overflow-wrap: anywhere` — not `break-word`, and never `word-break: break-all`:
+     · break-all breaks a word whether or not it needs breaking. It split
+       "https://watchdog.canine.dev" mid-domain; imprint-print.css rejects it by name
+       for that, and this sheet rejects it for the same one.
+     · break-word wraps identically to the eye but leaves the token's min-content
+       contribution intact, so anything sized by min-content keeps stretching to hold
+       it. Measured here, not assumed: a 71-character digest in a table cell keeps
+       .ip-table-wrap scrolling under break-word and folds into the column under
+       anywhere. The same difference is why prose carried `anywhere` from 2026-09-03,
+       when a long bare URL in a grid-tracked list forced its column 10px past a
+       phone's edge under break-word.
+   Neither value breaks a word that would have fitted on a line of its own, so ordinary
+   prose is untouched — the wrap only ever happens where the alternative was overflow.
+   Nor does either break at an arbitrary point while a real break opportunity would still
+   have fitted: a UA takes the ordinary ones first. So the fold lands mid-token in the
+   reported heading ("nordisk/harbo | ur-api") only because at 49px in a 368px column
+   neither the solidus (which is not an opportunity at all) nor the hyphen (whose line
+   would be 423px) leaves anything that fits. A smaller heading of the same string folds
+   at the hyphen, untouched by this rule.
+
+   Scope is the page BODY, never the chrome: nav labels must not break at all (the bar
+   hands over to the burger instead — 2026-09-03), and .ip-code keeps its own
+   overflow-x scroller, because a code line is the one content an author cannot reflow.
+   .ip-btn is left out too: a label is authored copy, and a button folded mid-token
+   reads as damage rather than as wrapping.
+
+   And `td` WITHOUT `th`, which cost a screenshot comparison to learn. A column header
+   is a one-word label; letting it fold removed the floor the auto table layout was
+   using to reserve that column, and a "Version" header printed as "VERSIO / N" beside
+   an untouched cell. The header keeps its min-content whole so the column keeps a
+   sensible width, and the long token in the BODY cell is the one that gives.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.ip-page :is(h1, h2, h3, h4, .ip-prose p, .ip-prose li, .ip-prose a, .ip-table td) {
+  overflow-wrap: anywhere;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    SECTION RHYTHM + HEAD — every appearance is a .ip-section whose immediate
    child .ip-stack holds a "head" (a bold-only kicker prose, an h1/h2, a lede
    prose) and then the block body. Style the head generically; each appearance
@@ -534,10 +586,8 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 }
 [class*="ip-ap-"] .ip-prose p strong { color: var(--ink); }
 [class*="ip-ap-"] .ip-prose a { color: var(--accent-ink); }
-/* anywhere, not break-word: identical wrapping, but only `anywhere` also lowers the
-   token's min-content contribution — a long bare URL in a grid-tracked list otherwise
-   forces its whole column 10px past a phone's edge. */
-[class*="ip-ap-"] .ip-prose :is(p, li, a) { overflow-wrap: anywhere; }
+/* Prose wrapping is no longer an appearance's business — see LONG TOKENS above, which
+   covers .ip-prose in every section, appearance or not. */
 
 /* Center the head for grid/list appearances (canine .mk-section-head is centered);
    hero + boundary + table keep it left, handled per-appearance below. */
