@@ -1,4 +1,4 @@
-// <cai-share-bars layout="wide|table" kicker="…" heading="…" lede="…"
+// <cai-share-bars layout="wide|table" kicker="…" tip="…" heading="…" lede="…"
 //                 label-heading="Language" bar-heading="Affected of measurable"
 //                 columns='["Surveys","Median","Measur.","No policy"]'
 //                 rows='[{"label":"csharp","href":"…","tip":"…",
@@ -36,6 +36,16 @@
 // reader is scrolling vertically, and a hidden column of a table like this is a hidden
 // denominator. Reflowing costs vertical space, which the page has.
 //
+// WITH A KICKER IT IS A SECTION OF THE SHEET, and takes the section rail (rail.js): the label
+// and its `tip` in a 112px left column, the bars — and the lede that says what a row's
+// population is — taking the whole of the rest. Both layouts, because §1 and §3 of the corpus
+// sheet are one wide bar and one table and are the same kind of thing on the page. Without a
+// kicker the section head sits above the bars exactly as it always has.
+//
+// The `tip` is the SECTION's (i) and is a different thing from a row's: a row's (i) explains
+// that row's population and has the row as its subject; this one explains the cut and has the
+// rail as its. Both can be present, and on §3 both are.
+//
 // DATA ONLY: no api-base, no fetch. Every row arrives as a prop from the page.
 
 import {
@@ -48,6 +58,7 @@ import {
 } from "./tokens.js";
 import { SCORECARD_CSS } from "./scorecard.js";
 import { HINT_CSS, hintHtml } from "./hint.js";
+import { RAIL_CSS, railHtml, headBelowRailHtml } from "./rail.js";
 
 const TONES = new Set(["exemplary", "healthy", "fair", "poor", "critical"]);
 
@@ -62,7 +73,7 @@ function partClass(tone) {
   return "is-track";
 }
 
-const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + HINT_CSS + `
+const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + HINT_CSS + RAIL_CSS + `
 .sb-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .sb-cap { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
 /* The sentence that stands where a bar would be. Muted, never band-coloured: it is the absence
@@ -175,13 +186,16 @@ customElements.define(
         : "table";
       const columns = (this.json("columns", []) || []).map((c) => (c == null ? "" : String(c)));
       const rows = (this.json("rows", []) || []).filter((r) => r && r.label != null && String(r.label) !== "");
+      const kicker = (this.getAttribute("kicker") || "").trim();
 
-      let html = `<style>${CSS}</style>`;
-      html += sectionHeadHtml(this);
+      // In the rail the label leaves the section head, which keeps only what it was given
+      // besides it. `bars` is the section's content, built below and placed at the end.
+      const head = kicker ? headBelowRailHtml(this) : sectionHeadHtml(this);
+      let html = "";
 
       if (rows.length === 0) {
         // No rows is not a population of zero. An empty frame would say the second thing.
-        root.innerHTML = html;
+        root.innerHTML = `<style>${CSS}</style>` + this.frame(kicker, head, "");
         return;
       }
 
@@ -243,7 +257,7 @@ customElements.define(
           }
           html += `</div>`;
         }
-        root.innerHTML = html;
+        root.innerHTML = `<style>${CSS}</style>` + this.frame(kicker, head, html);
         return;
       }
 
@@ -287,7 +301,20 @@ customElements.define(
       }
       html += `</div>`;
 
-      root.innerHTML = html;
+      root.innerHTML = `<style>${CSS}</style>` + this.frame(kicker, head, html);
+    }
+
+    /**
+     * The section around the bars: the rail when the page named the section, the plain section
+     * head when it did not.
+     *
+     * Both layouts and the no-rows case go through here, so a board cannot end up in the rail at
+     * one density and above it at another — which is the whole reason §1 and §3 are one island.
+     */
+    frame(kicker, head, bars) {
+      return kicker
+        ? railHtml({ kicker, tip: this.getAttribute("tip"), content: head + bars })
+        : head + bars;
     }
   }
 );

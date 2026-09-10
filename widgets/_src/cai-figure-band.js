@@ -1,4 +1,4 @@
-// <cai-figure-band layout="head|lead" kicker="…" dateline="…" footnote="…" brand="…"
+// <cai-figure-band layout="head|lead" kicker="…" tip="…" dateline="…" footnote="…" brand="…"
 //                  figures='[{"lead":"1,161","label":"carry a known-vulnerable component",
 //                             "support":"of 1,511 measurable · 76.8%","tone":"critical",
 //                             "tip":"A component with an advisory published against it…"}]'>
@@ -16,9 +16,12 @@
 //
 //   head  a masthead: kicker + dateline on the left, the figures as a quiet row on the right,
 //         the whole block ruled off with 2px of accent. Its (i)s are hint-right — they sit at
-//         the page's right edge, where a tip anchored left would hang off it.
-//   lead  a findings band: the kicker becomes the section label, the figures become an
-//         auto-fitting grid of 36px values, each over its label and its basis line.
+//         the page's right edge, where a tip anchored left would hang off it. A masthead is not
+//         a section, so it is NOT the rail: it heads the sheet rather than sitting in it.
+//   lead  a findings band, and one section of the sheet: with a `kicker` it takes the section
+//         rail (rail.js) — the label and its `tip` in a 112px left column, the figures grid and
+//         the footnote taking the whole of the rest. Without one, the grid stands alone, which
+//         is what it always did.
 //
 // TONE INKS THE VALUE, NOT THE ROW. A figure with `tone` gets its lead in that band's text
 // colour; a figure without one stays in the body ink. Absent is a real state — "65 publish a
@@ -37,13 +40,14 @@ import {
 } from "./tokens.js";
 import { SCORECARD_CSS } from "./scorecard.js";
 import { HINT_CSS, hintHtml } from "./hint.js";
+import { RAIL_CSS, railHtml } from "./rail.js";
 
 // The five band keys, as the ink-* classes SCORECARD_CSS defines. A `tone` outside this set is
 // not a colour we have, so it is dropped rather than interpolated into a var() name — the
 // figure renders in the body ink and nothing breaks.
 const TONES = new Set(["exemplary", "healthy", "fair", "poor", "critical"]);
 
-const CSS = TOKENS_CSS + BASE_CSS + SCORECARD_CSS + HINT_CSS + `
+const CSS = TOKENS_CSS + BASE_CSS + SCORECARD_CSS + HINT_CSS + RAIL_CSS + `
 .fb-cap { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
 .fb-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .fb-support { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
@@ -69,8 +73,9 @@ const CSS = TOKENS_CSS + BASE_CSS + SCORECARD_CSS + HINT_CSS + `
 .fb-head-lead { font-size: 18px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
 
 /* ── lead: the findings band ─────────────────────────────────────────────────
-   auto-fit + minmax collapses to one column on its own at 400px; no media query needed. */
-.fb-lead-kicker { display: block; margin-bottom: 14px; }
+   auto-fit + minmax collapses to one column on its own at 400px; no media query needed. The
+   kicker has no rule of its own here any more: a lead band that is given one is a section of
+   the sheet, and its label is the rail's (rail.js). */
 .fb-lead-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; }
 .fb-lead-fig { display: flex; flex-direction: column; gap: 5px; min-width: 0; position: relative; }
 /* A findings figure's subject is its own grid cell. auto-fit means no figure knows whether it
@@ -101,7 +106,7 @@ customElements.define(
       const figures = (this.json("figures", []) || []).filter(
         (f) => f && f.lead != null && String(f.lead) !== ""
       );
-      const kicker = this.getAttribute("kicker");
+      const kicker = (this.getAttribute("kicker") || "").trim();
       const dateline = this.getAttribute("dateline");
       const footnote = this.getAttribute("footnote");
 
@@ -139,28 +144,37 @@ customElements.define(
         }
         html += `</div>`;
       } else {
-        if (kicker) html += `<span class="fb-cap fb-lead-kicker">${escapeHtml(kicker)}</span>`;
+        let lead = "";
         if (figures.length > 0) {
-          html += `<div class="fb-lead-grid">`;
+          lead += `<div class="fb-lead-grid">`;
           for (const f of figures) {
-            html += `<div class="fb-lead-fig">`;
-            html += `<span class="fb-mono fb-lead-lead${inkClass(f)}">${escapeHtml(String(f.lead))}</span>`;
+            lead += `<div class="fb-lead-fig">`;
+            lead += `<span class="fb-mono fb-lead-lead${inkClass(f)}">${escapeHtml(String(f.lead))}</span>`;
             const label = f.label == null ? "" : String(f.label);
             const hint = hintHtml(f.tip, { label: label || "More information" });
             if (label || hint) {
-              html += `<div class="fb-label-row">`;
-              html += `<span class="fb-lead-label">${escapeHtml(label)}</span>`;
-              html += hint;
-              html += `</div>`;
+              lead += `<div class="fb-label-row">`;
+              lead += `<span class="fb-lead-label">${escapeHtml(label)}</span>`;
+              lead += hint;
+              lead += `</div>`;
             }
-            if (f.support) html += `<span class="fb-support">${escapeHtml(String(f.support))}</span>`;
-            html += `</div>`;
+            if (f.support) lead += `<span class="fb-support">${escapeHtml(String(f.support))}</span>`;
+            lead += `</div>`;
           }
-          html += `</div>`;
+          lead += `</div>`;
         }
+        // The footnote is the band's own sentence about its figures, so it travels with them
+        // into the content column rather than being left beside the label.
+        if (footnote) { lead += `<p class="fb-foot">${renderInline(footnote)}</p>`; }
+        html += kicker
+          ? railHtml({ kicker, tip: this.getAttribute("tip"), content: lead })
+          : lead;
       }
 
-      if (footnote) html += `<p class="fb-foot">${renderInline(footnote)}</p>`;
+      // The masthead keeps its footnote where it always had it: under the ruled-off block.
+      if (layout === "head" && footnote) {
+        html += `<p class="fb-foot">${renderInline(footnote)}</p>`;
+      }
 
       root.innerHTML = html;
     }

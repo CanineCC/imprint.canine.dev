@@ -1,0 +1,28 @@
+{
+  "figure-band-head": {
+    "layout": "head",
+    "dateline": "10 September 2026",
+    "figures": "[{\"lead\":\"3,542\",\"label\":\"Codebases\",\"support\":\"measured codebases\"},{\"lead\":\"115,681,419\",\"label\":\"Production lines\",\"support\":\"across 3,542 measured codebases\"},{\"lead\":\"54\",\"label\":\"Readings held\",\"support\":\"dated readings\"}]"
+  },
+  "share-bars-wide": {
+    "layout": "wide",
+    "rows": "[{\"label\":\"Surveys with a dependency graph a scanner could resolve\",\"parts\":[{\"weight\":1511,\"count\":\"1,511\",\"label\":\"resolved\",\"tone\":\"accent\"},{\"weight\":2014,\"count\":\"2,014\",\"label\":\"unmeasured\",\"tone\":\"track\"}],\"note\":\"1,511 of 3,525\",\"tip\":\"Every share in \\u00A72 is taken over the resolved part, never over the corpus.\\n\\nThe rest ship no lockfile a scanner can read. They are **unmeasured, not clean** \\u2014 absent from each share rather than counted as passing. Nobody looked at them.\\n\\n2,014 surveys whose dependencies no scanner could resolve ship nothing a dependency scanner could resolve into a graph.\\n\\n9.0% of surveys whose dependencies could not be measured (182 of 2,014) is the part of that gap where a scanner DID run and fell over \\u2014 ours to fix, rather than a fact about the project; the rest is a project with no lockfile to resolve.\\n\\n99.5% of measured codebases (3,525 of 3,542) carry an indexed dimension brief; the remainder were measured before that indexing existed.\\n\\n42.9% of surveys with an indexed dimension brief (1,511 of 3,525)\"}]",
+    "kicker": "§1 Population",
+    "lede": "A survey with no dependency graph is absent from every share below rather than counted as clean."
+  },
+  "figure-band-lead": {
+    "layout": "lead",
+    "kicker": "§2 Findings",
+    "figures": "[{\"lead\": \"1,161\", \"label\": \"carry a known-vulnerable component\", \"support\": \"76.8% of surveys whose dependencies a scanner could resolve (1,161 of 1,511)\", \"tip\": \"A component with an advisory published against it, matched from the lockfile the project ships. Counted once per survey however many findings it carries.\\n\\n67.9% of surveys whose dependencies a scanner could resolve (1,026 of 1,511) carry at least one High or Critical.\\n\\n41.3% of surveys whose dependencies a scanner could resolve (624 of 1,511) carry at least one Critical.\\n\\n54,141 across 1,511 surveys whose dependencies a scanner could resolve were found across them — three scanners contribute, so a component two of them see is one finding each, while the survey counts above never double-count.\"}, {\"lead\": \"2,945\", \"label\": \"publish no disclosure policy\", \"support\": \"83.5% of surveys where the repository itself was checked for a disclosure policy (2,945 of 3,525)\", \"tip\": \"No SECURITY.md or security.txt **in the repository itself**. An organisation can publish one policy in its .github repository covering everything it owns, and a project covered that way is reportable while having no file of its own. Nothing here counts those.\\n\\n90.0% of surveys publishing a disclosure policy (522 of 580) of the policies that do exist name someone to contact.\"}]",
+    "footnote": "Each is taken over its own population, named beneath it. The four populations are not the same."
+  },
+  "share-bars-table": {
+    "layout": "table",
+    "columns": "[\"Surveys\",\"Median\",\"Measurable\",\"No policy\"]",
+    "rows": "[{\"label\": \"C#\", \"href\": \"/state-of-the-corpus/language/csharp/\", \"cells\": [\"420\", \"49.7 Weak\", \"102\", \"375\"], \"cellTones\": [\"\", \"poor\", \"\", \"\"], \"parts\": [{\"weight\": 58, \"count\": \"58\", \"label\": \"affected\", \"tone\": \"accent\"}, {\"weight\": 44, \"count\": \"44\", \"label\": \"not affected\", \"tone\": \"track\"}], \"note\": \"58 of 102\", \"tip\": \"56.9% of surveys here whose dependencies a scanner could resolve (58 of 102)\"}, {\"label\": \"Java\", \"href\": \"/state-of-the-corpus/language/java/\", \"cells\": [\"300\", \"52.7 Adequate\", \"71\", \"261\"], \"cellTones\": [\"\", \"fair\", \"\", \"\"], \"parts\": [{\"weight\": 47, \"count\": \"47\", \"label\": \"affected\", \"tone\": \"accent\"}, {\"weight\": 24, \"count\": \"24\", \"label\": \"not affected\", \"tone\": \"track\"}], \"note\": \"47 of 71\", \"tip\": \"66.2% of surveys here whose dependencies a scanner could resolve (47 of 71)\"}, {\"label\": \"VB.NET\", \"href\": \"/state-of-the-corpus/language/vbnet/\", \"cells\": [\"31\", \"44.2 Weak\", \"0\", \"27\"], \"cellTones\": [\"\", \"poor\", \"\", \"\"], \"unmeasured\": \"nothing a scanner could resolve\"}, {\"label\": \"Ruby\", \"href\": \"/state-of-the-corpus/language/ruby/\", \"cells\": [\"26\", \"57.7 Adequate\", \"10\", \"24\"], \"cellTones\": [\"\", \"fair\", \"\", \"\"], \"parts\": [{\"weight\": 7, \"count\": \"7\", \"label\": \"affected\", \"tone\": \"accent\"}, {\"weight\": 3, \"count\": \"3\", \"label\": \"not affected\", \"tone\": \"track\"}], \"note\": \"7 of 10\", \"tip\": \"70.0% of surveys here whose dependencies a scanner could resolve (7 of 10)\"}]",
+    "label-heading": "Language",
+    "bar-heading": "Affected of measurable",
+    "kicker": "§3 By language",
+    "lede": "A language is read off the code, so nothing here rests on anybody declaring anything. Affected is taken over each language's own measurable surveys, never over its surveys. 68.3% of surveys in this reading (2,407 of 3,525) could be placed in a language at all; the rest carry no primary language this reading could read, which is a fact about our own indexing and never a fact about the projects."
+  }
+}

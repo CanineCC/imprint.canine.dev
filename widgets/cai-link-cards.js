@@ -178,9 +178,10 @@ strong { font-weight: 600; }
 .rail-kicker { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase;
   color: var(--muted); font-weight: 700; overflow-wrap: anywhere; }
 .rail-body { min-width: 0; }
-/* The (i)'s subject is the rail, so its tip can never reach past the island. See hint.js. */
-.rail .info-hint { position: static; }
-.rail .info-hint-tip { left: 0; right: auto; max-width: min(320px, 100%); }
+/* The KICKER's (i) \u2014 and only that one \u2014 takes the rail as its subject, so its tip can never
+   reach past the island. Every other (i) inside keeps the subject its own island gave it. */
+.rail-side .info-hint { position: static; }
+.rail-side .info-hint-tip { left: 0; right: auto; max-width: min(320px, 100%); }
 /* A tip opens across the content beside it, which would otherwise paint over it. */
 .rail:hover, .rail:focus-within { z-index: 2; }
 /* The label takes its own line under 560px \u2014 the same width at which cai-share-bars reflows,

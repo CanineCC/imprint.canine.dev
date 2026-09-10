@@ -70,8 +70,8 @@ public sealed class ShippedWidgetsManifestTests
     [Theory]
     [InlineData("cai-trend", "kicker", "tip", "figures")]
     [InlineData("cai-link-cards", "kicker", "tip")]
-    [InlineData("cai-figure-band", "kicker")]
-    [InlineData("cai-share-bars", "kicker")]
+    [InlineData("cai-figure-band", "kicker", "tip")]
+    [InlineData("cai-share-bars", "kicker", "tip")]
     public void The_sheet_widgets_declare_the_props_their_section_layout_reads(
         string tag,
         params string[] required)

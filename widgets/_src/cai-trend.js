@@ -1,7 +1,8 @@
 // <cai-trend series="[54.2,57.1,61]" first-date="4 March 2026" last-date="29 July 2026"
 //            kicker="§4 Series" tip="…" heading="…" lede="…" caption="…"
-//            figures='[{"value":"45.2","label":"the median at the first reading, 19 July 2026",
-//                       "sub":"across 580 measured codebases"}]'>
+//            figures='[{"label":"Median",
+//                       "from":{"value":"45.2","sub":"across 580 measured codebases, 16 July 2026"},
+//                       "to":{"value":"49.5","sub":"across 3,542 measured codebases, 10 Sep 2026"}}]'>
 //
 // How one repository's score moved across its own scans. A line, not a table — a reader
 // asks "is it getting better?", and a column of numbers makes them do the differencing
@@ -30,6 +31,21 @@
 // and only the two numbers with the POPULATIONS they were taken over say what rose and among
 // how many. The chart cannot derive them — a median across 580 codebases and a median across
 // 3,542 are two different measurements, and the series carries no populations at all.
+//
+// ★★ A PAIR IS ONE THING, NOT TWO CELLS. The sheet this island lives on was redrawn because a
+// reader met four numbers in four boxes and said their eye had nowhere to rest. "45.2" and
+// "49.5" in two cells rebuild exactly that; "45.2 → 49.5" under the word Median is one fact with
+// a direction, which is what a trend section is for. So an entry is a quantity with two ends —
+// {label, from:{value,sub}, to:{value,sub}} — and the join is drawn here rather than left to a
+// reader's eye.
+//
+// THE BASIS IS PRINTED ONCE WHEN BOTH ENDS SHARE IT. Two identical lines under 580 → 3,542 say
+// the two ends were taken over different things and happen to read alike, which is the opposite
+// of true. Two DIFFERENT bases are printed in full, because a median over 580 codebases and a
+// median over 3,542 are the fact a reader most needs and the one a single line would hide.
+//
+// The emitter owns the words — "across 3,542 measured codebases, 10 September 2026" is composed
+// upstream, never assembled here out of parts this island would have to keep in step with it.
 //
 // DATA ONLY, deliberately: no api-base, no liveLoad. Every number arrives as a prop from the
 // page that renders it, so this island cannot plot one repository's history under another
@@ -131,16 +147,39 @@ const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + HINT_CSS 
 .mk-trend-sum { margin: 0.9rem auto 0; max-width: 46rem; font-size: var(--fs-xs);
   color: var(--muted); line-height: 1.6; text-align: center; }
 
-/* The movement's endpoints, stated. auto-fit collapses them to one column on a phone without a
-   media query — two figures side by side in 368px would each get 184px for a sentence. */
-.mk-trend-figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 18px 28px; margin: 1.1rem auto 0; max-width: 46rem; }
-.mk-trend-fig { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.mk-trend-fig-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
-  font-size: 22px; font-weight: 700; line-height: 1.1; color: var(--ink); overflow-wrap: anywhere; }
-.mk-trend-fig-label { font-size: var(--fs-sm); color: var(--muted); line-height: 1.45; }
+/* ── the endpoints, BESIDE the chart ─────────────────────────────────────────
+   The chart takes what the figures do not need (flex: 1), which is the design's shape: a line
+   long enough to read a slope off, and the two quantities stated beside it. Each stack is capped
+   at 220px so a basis sentence wraps instead of pushing the line down to a stub. */
+.mk-trend-row { display: flex; gap: 32px; align-items: flex-start; }
+/* The line never gives up more than two fifths of the row: shrink:0 on a 60% basis means the
+   FIGURES yield when the column narrows, wrapping into one stack, rather than both giving way
+   proportionally until the chart is a 117px stub — which is what a plain flex:1 produced at
+   680px, measured. */
+.mk-trend-row > .mk-trend { flex: 1 0 60%; min-width: 0; }
+/* The pairs are a COLUMN beside the line, at every width, and that is a decision rather than
+   what the wrapping happened to do. The design puts its two stacks in a row because it prints no
+   basis; ours each carry a sentence naming the population, and two of those side by side in the
+   third of the column the chart leaves over wrap into ragged blocks — and then unwrap into a row
+   again at some other width, so the section would be a different shape on a laptop and on a
+   desktop. One column reads the same everywhere. */
+.mk-trend-figs { display: flex; flex-direction: column; gap: 16px; flex: 0 1 auto; min-width: 0; }
+.mk-trend-fig { display: flex; flex-direction: column; gap: 2px; flex: none;
+  min-width: 0; max-width: 260px; }
+/* The same eyebrow the section rail uses: a label over a figure, never a second heading. */
+.mk-trend-fig-label { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--muted); font-weight: 700; }
+.mk-trend-fig-pair { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  font-size: 18px; font-weight: 700; line-height: 1.2; color: var(--ink); overflow-wrap: anywhere; }
 .mk-trend-fig-sub { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
-  font-size: var(--fs-2xs); color: var(--muted); }
+  font-size: var(--fs-2xs); color: var(--muted); line-height: 1.45; }
+/* Under the rail's own stacking width the figures go beneath the line, one column: 220px of
+   stack beside a 130px chart is neither a chart nor a figure. */
+@media (max-width: 560px) {
+  .mk-trend-row { flex-direction: column; gap: 16px; }
+  .mk-trend-figs { flex-direction: column; gap: 14px; }
+  .mk-trend-fig { max-width: none; }
+}
 
 /* ── inside the rail ────────────────────────────────────────────────────────
    The chart's 46rem measure and its auto margins are a CARD centred on a page that has no other
@@ -148,7 +187,7 @@ const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + HINT_CSS 
    is a second, narrower page drawn inside the first. These are descendant selectors rather than
    a modifier class on purpose: the no-kicker markup then cannot change at all, which is what the
    snapshot tests assert. */
-.rail-body .mk-trend, .rail-body .mk-trend-figs { max-width: none; margin-left: 0; margin-right: 0; }
+.rail-body .mk-trend { max-width: none; margin-left: 0; margin-right: 0; }
 .rail-body .mk-trend-sum { max-width: none; margin-left: 0; margin-right: 0; text-align: left; }
 @media (prefers-reduced-motion: reduce) { .mk-trend-tip { transition: none; } }
 `;
@@ -181,9 +220,11 @@ customElements.define(
         .filter((n) => Number.isFinite(n));
       const kicker = (this.getAttribute("kicker") || "").trim();
 
-      // The chart, then the endpoints as text. Both are the section's content: in the rail they
-      // fill the right column, without one they keep the centred measure they always had.
-      const body = this.plotHtml(series) + this.figuresHtml();
+      // The chart and the endpoints stand side by side when both exist. The row only appears
+      // when there are figures, so a page that passes none renders the markup it always did.
+      const figures = this.figuresHtml();
+      const plot = this.plotHtml(series);
+      const body = figures ? `<div class="mk-trend-row">${plot}${figures}</div>` : plot;
 
       let html = `<style>${CSS}</style>`;
       html += kicker
@@ -202,26 +243,38 @@ customElements.define(
     }
 
     /**
-     * The movement's endpoints, stated with the populations they were measured over.
+     * The movement's endpoints: one stack per quantity, each a label over "from → to" over the
+     * population each end was measured over.
      *
-     * A figure with no value is not a figure — the same guard cai-figure-band applies, and for
-     * the same reason: an empty column reads as a number that went missing.
+     * An entry needs both ends to be a movement, so one missing either is dropped rather than
+     * drawn as an arrow into nothing — the same rule cai-figure-band applies to a figure with no
+     * value, and for the same reason: a half-drawn figure reads as a number that went missing.
      */
     figuresHtml() {
       const figures = (this.json("figures", []) || []).filter(
-        (f) => f && f.value != null && String(f.value) !== ""
+        (f) =>
+          f &&
+          f.from != null && f.from.value != null && String(f.from.value) !== "" &&
+          f.to != null && f.to.value != null && String(f.to.value) !== ""
       );
       if (figures.length === 0) { return ""; }
 
       let h = `<div class="mk-trend-figs">`;
       for (const f of figures) {
         h += `<div class="mk-trend-fig">`;
-        h += `<span class="mk-trend-fig-value">${escapeHtml(String(f.value))}</span>`;
         if (f.label != null && String(f.label) !== "") {
           h += `<span class="mk-trend-fig-label">${escapeHtml(String(f.label))}</span>`;
         }
-        if (f.sub != null && String(f.sub) !== "") {
-          h += `<span class="mk-trend-fig-sub">${escapeHtml(String(f.sub))}</span>`;
+        h += `<span class="mk-trend-fig-pair">`
+          + `${escapeHtml(String(f.from.value))} \u2192 ${escapeHtml(String(f.to.value))}`
+          + `</span>`;
+        // One basis when both ends share it, two when they differ. Repeating "measured
+        // codebases" under 580 → 3,542 would say the ends were taken over different things.
+        const from = f.from.sub == null ? "" : String(f.from.sub);
+        const to = f.to.sub == null ? "" : String(f.to.sub);
+        const bases = from === to ? [from] : [from, to];
+        for (const b of bases.filter((x) => x !== "")) {
+          h += `<span class="mk-trend-fig-sub">${escapeHtml(b)}</span>`;
         }
         h += `</div>`;
       }

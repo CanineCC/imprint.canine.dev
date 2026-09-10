@@ -20,10 +20,17 @@
 // the dot, the tip and their theming belong to hint.js, and both current callers already carry
 // it for their own tips.
 //
-// THE TIP'S SUBJECT IS THE WHOLE RAIL. hint.js explains why an absolutely positioned tip needs
-// one: even hidden, it counts toward the document's scroll width, and a 320px tip anchored to a
-// dot inside a 112px column is 200px of page-widening nobody sees until a phone scrolls
-// sideways. Spanning the rail makes the tip at most as wide as the island.
+// THE KICKER'S TIP HAS THE WHOLE RAIL AS ITS SUBJECT. hint.js explains why an absolutely
+// positioned tip needs one: even hidden, it counts toward the document's scroll width, and a
+// 320px tip anchored to a dot inside a 112px column is 200px of page-widening nobody sees until
+// a phone scrolls sideways. Spanning the rail makes the tip at most as wide as the island.
+//
+// ★ THOSE THREE RULES ARE SCOPED TO `.rail-side`, NOT TO `.rail`. Scoped to the rail they also
+// match every (i) in the CONTENT column — a findings figure's, a language row's, a link card's —
+// and silently replace the subject each of those islands chose for its own tips. It is not
+// hypothetical: with `.rail .info-hint` a card's (i) went from anchoring to its own right edge
+// to anchoring to the island, and nothing failed except the look of it. The kicker's (i) is the
+// only one the rail owns.
 
 import { escapeHtml, renderInline } from "./tokens.js";
 import { hintHtml } from "./hint.js";
@@ -38,9 +45,10 @@ export const RAIL_CSS = `
 .rail-kicker { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase;
   color: var(--muted); font-weight: 700; overflow-wrap: anywhere; }
 .rail-body { min-width: 0; }
-/* The (i)'s subject is the rail, so its tip can never reach past the island. See hint.js. */
-.rail .info-hint { position: static; }
-.rail .info-hint-tip { left: 0; right: auto; max-width: min(320px, 100%); }
+/* The KICKER's (i) — and only that one — takes the rail as its subject, so its tip can never
+   reach past the island. Every other (i) inside keeps the subject its own island gave it. */
+.rail-side .info-hint { position: static; }
+.rail-side .info-hint-tip { left: 0; right: auto; max-width: min(320px, 100%); }
 /* A tip opens across the content beside it, which would otherwise paint over it. */
 .rail:hover, .rail:focus-within { z-index: 2; }
 /* The label takes its own line under 560px — the same width at which cai-share-bars reflows,

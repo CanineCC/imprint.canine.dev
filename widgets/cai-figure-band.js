@@ -1,4 +1,4 @@
-var b=`
+var g=`
 :host {
   /* neutrals \u2014 dark "graphite" */
   --bg: #15191e;
@@ -106,7 +106,7 @@ var b=`
   --accent-strong: #1c4f41;
   --on-accent: #ffffff;
 }
-`;function i(o){return String(o??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function f(o){if(o==null||o==="")return"";let s=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,t="",n=0,l;for(;(l=s.exec(o))!==null;){l.index>n&&(t+=i(o.slice(n,l.index)));let c=l[0];if(c.startsWith("**"))t+=`<strong>${i(c.slice(2,-2))}</strong>`;else if(c.startsWith("`"))t+=`<code>${i(c.slice(1,-1))}</code>`;else{let r=/^\[([^\]]+)\]\(([^)]+)\)$/.exec(c);r?t+=`<a href="${i(r[2])}">${i(r[1])}</a>`:t+=i(c)}n=l.index+c.length}return n<o.length&&(t+=i(o.slice(n))),t}var g=`
+`;function a(o){return String(o??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function p(o){if(o==null||o==="")return"";let r=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,t="",n=0,d;for(;(d=r.exec(o))!==null;){d.index>n&&(t+=a(o.slice(n,d.index)));let s=d[0];if(s.startsWith("**"))t+=`<strong>${a(s.slice(2,-2))}</strong>`;else if(s.startsWith("`"))t+=`<code>${a(s.slice(1,-1))}</code>`;else{let c=/^\[([^\]]+)\]\(([^)]+)\)$/.exec(s);c?t+=`<a href="${a(c[2])}">${a(c[1])}</a>`:t+=a(s)}n=d.index+s.length}return n<o.length&&(t+=a(o.slice(n))),t}var u=`
 :host { display: block; color: var(--ink); font: 400 var(--fs-md)/1.5 var(--font-ui); }
 * { box-sizing: border-box; }
 a { color: var(--accent-ink); text-decoration: none; }
@@ -114,7 +114,7 @@ a:hover { text-decoration: underline; }
 code { background: var(--surface-2); padding: 1px 5px; border-radius: var(--r-sm); font: 500 var(--fs-xs) var(--font-mono); }
 strong { font-weight: 600; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-`;var p=class extends HTMLElement{#e;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#t(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#e=new MutationObserver(()=>{let s=this.dataset.theme;this.#t(),this.dataset.theme!==s&&this.render(this.shadowRoot)}),this.#e.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#e?.disconnect()}#t(){let s=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=s;let t=(this.getAttribute("brand")||"").trim().toLowerCase();t==="assay"||t==="cai"||t==="watchdog"?this.dataset.brand=t:delete this.dataset.brand}json(s,t){let n=this.getAttribute(s);if(n==null||n.trim()==="")return t;try{return JSON.parse(n)}catch{return t}}};var u=`
+`;var f=class extends HTMLElement{#e;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#t(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#e=new MutationObserver(()=>{let r=this.dataset.theme;this.#t(),this.dataset.theme!==r&&this.render(this.shadowRoot)}),this.#e.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#e?.disconnect()}#t(){let r=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=r;let t=(this.getAttribute("brand")||"").trim().toLowerCase();t==="assay"||t==="cai"||t==="watchdog"?this.dataset.brand=t:delete this.dataset.brand}json(r,t){let n=this.getAttribute(r);if(n==null||n.trim()==="")return t;try{return JSON.parse(n)}catch{return t}}};var x=`
 .ink-exemplary { color: var(--band-exemplary-text); }
 .ink-healthy { color: var(--band-healthy-text); }
 .ink-fair { color: var(--band-fair-text); }
@@ -215,7 +215,7 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
 .cai-row:last-child { border-bottom: 0; }
 .cai-row b { color: var(--heading); font-weight: 600; text-align: right; }
 .cai-row .mono { font-family: var(--font-mono); font-size: var(--fs-xs); }
-`;var x=`
+`;var v=`
 .info-hint { position: relative; display: inline-flex; align-items: center; vertical-align: middle; margin-left: 6px; cursor: help; }
 .info-hint:focus { outline: none; }
 .info-hint-dot { width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--border-strong); color: var(--muted);
@@ -267,7 +267,27 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
    order, so a LATER sibling row would draw over a tip that opens across it. Each island lifts
    the subject on :hover/:focus-within for that reason \u2014 see the z-index bumps at the call sites. */
 @media (prefers-reduced-motion: reduce) { .info-hint-tip { transition: none; } }
-`;function h(o,{right:s=!1,label:t="More information"}={}){let n=o==null?"":String(o).trim();if(n==="")return"";let l=n.split(/\n\s*\n/).map(r=>r.trim()).filter(r=>r!=="").map(r=>`<p>${f(r)}</p>`).join("");return`<span class="${s?"info-hint hint-right":"info-hint"}" tabindex="0" role="note" aria-label="${i(t||"More information")}"><span class="info-hint-dot" aria-hidden="true">i</span><span class="info-hint-tip">${l}</span></span>`}var v=new Set(["exemplary","healthy","fair","poor","critical"]),w=b+g+u+x+`
+`;function h(o,{right:r=!1,label:t="More information"}={}){let n=o==null?"":String(o).trim();if(n==="")return"";let d=n.split(/\n\s*\n/).map(c=>c.trim()).filter(c=>c!=="").map(c=>`<p>${p(c)}</p>`).join("");return`<span class="${r?"info-hint hint-right":"info-hint"}" tabindex="0" role="note" aria-label="${a(t||"More information")}"><span class="info-hint-dot" aria-hidden="true">i</span><span class="info-hint-tip">${d}</span></span>`}var w=`
+.rail { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 0 24px;
+  align-items: start; position: relative; }
+.rail-side { display: flex; align-items: flex-start; padding-top: 3px; min-width: 0; }
+.rail-kicker { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--muted); font-weight: 700; overflow-wrap: anywhere; }
+.rail-body { min-width: 0; }
+/* The KICKER's (i) \u2014 and only that one \u2014 takes the rail as its subject, so its tip can never
+   reach past the island. Every other (i) inside keeps the subject its own island gave it. */
+.rail-side .info-hint { position: static; }
+.rail-side .info-hint-tip { left: 0; right: auto; max-width: min(320px, 100%); }
+/* A tip opens across the content beside it, which would otherwise paint over it. */
+.rail:hover, .rail:focus-within { z-index: 2; }
+/* The label takes its own line under 560px \u2014 the same width at which cai-share-bars reflows,
+   so two adjacent sections never disagree about when a page has become narrow. A 112px column
+   plus a 24px gutter is a third of a 400px screen spent on two words. */
+@media (max-width: 560px) {
+  .rail { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .rail-side { padding-top: 0; }
+}
+`;function k({kicker:o,tip:r,content:t}){return`<div class="rail"><div class="rail-side"><span class="rail-kicker">${a(o)}</span>`+h(r,{label:o})+`</div><div class="rail-body">${t}</div></div>`}var y=new Set(["exemplary","healthy","fair","poor","critical"]),$=g+u+x+v+w+`
 .fb-cap { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
 .fb-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .fb-support { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
@@ -293,8 +313,9 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
 .fb-head-lead { font-size: 18px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
 
 /* \u2500\u2500 lead: the findings band \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-   auto-fit + minmax collapses to one column on its own at 400px; no media query needed. */
-.fb-lead-kicker { display: block; margin-bottom: 14px; }
+   auto-fit + minmax collapses to one column on its own at 400px; no media query needed. The
+   kicker has no rule of its own here any more: a lead band that is given one is a section of
+   the sheet, and its label is the rail's (rail.js). */
 .fb-lead-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; }
 .fb-lead-fig { display: flex; flex-direction: column; gap: 5px; min-width: 0; position: relative; }
 /* A findings figure's subject is its own grid cell. auto-fit means no figure knows whether it
@@ -311,4 +332,4 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
    two-line label. */
 .fb-label-row { display: flex; align-items: flex-start; }
 .fb-cap-row { display: flex; align-items: center; }
-`;customElements.define("cai-figure-band",class extends p{render(o){let s=(this.getAttribute("layout")||"lead").trim().toLowerCase()==="head"?"head":"lead",t=(this.json("figures",[])||[]).filter(a=>a&&a.lead!=null&&String(a.lead)!==""),n=this.getAttribute("kicker"),l=this.getAttribute("dateline"),c=this.getAttribute("footnote"),r=a=>{let d=String(a.tone||"").trim().toLowerCase();return v.has(d)?` ink-${d}`:""},e=`<style>${w}</style>`;if(s==="head"){if(e+='<div class="fb-head">',(n||l)&&(e+='<div class="fb-head-id">',n&&(e+=`<span class="fb-cap fb-head-kicker">${i(n)}</span>`),l&&(e+=`<span class="fb-dateline">${i(l)}</span>`),e+="</div>"),t.length>0){e+='<div class="fb-head-figs">';for(let a of t){e+='<div class="fb-head-fig">';let d=a.label==null?"":String(a.label);e+='<div class="fb-cap-row">',e+=`<span class="fb-cap">${i(d)}</span>`,e+=h(a.tip,{right:!0,label:d||"More information"}),e+="</div>",e+=`<span class="fb-mono fb-head-lead${r(a)}">${i(String(a.lead))}</span>`,a.support&&(e+=`<span class="fb-support">${i(String(a.support))}</span>`),e+="</div>"}e+="</div>"}e+="</div>"}else if(n&&(e+=`<span class="fb-cap fb-lead-kicker">${i(n)}</span>`),t.length>0){e+='<div class="fb-lead-grid">';for(let a of t){e+='<div class="fb-lead-fig">',e+=`<span class="fb-mono fb-lead-lead${r(a)}">${i(String(a.lead))}</span>`;let d=a.label==null?"":String(a.label),m=h(a.tip,{label:d||"More information"});(d||m)&&(e+='<div class="fb-label-row">',e+=`<span class="fb-lead-label">${i(d)}</span>`,e+=m,e+="</div>"),a.support&&(e+=`<span class="fb-support">${i(String(a.support))}</span>`),e+="</div>"}e+="</div>"}c&&(e+=`<p class="fb-foot">${f(c)}</p>`),o.innerHTML=e}});
+`;customElements.define("cai-figure-band",class extends f{render(o){let r=(this.getAttribute("layout")||"lead").trim().toLowerCase()==="head"?"head":"lead",t=(this.json("figures",[])||[]).filter(e=>e&&e.lead!=null&&String(e.lead)!==""),n=(this.getAttribute("kicker")||"").trim(),d=this.getAttribute("dateline"),s=this.getAttribute("footnote"),c=e=>{let l=String(e.tone||"").trim().toLowerCase();return y.has(l)?` ink-${l}`:""},i=`<style>${$}</style>`;if(r==="head"){if(i+='<div class="fb-head">',(n||d)&&(i+='<div class="fb-head-id">',n&&(i+=`<span class="fb-cap fb-head-kicker">${a(n)}</span>`),d&&(i+=`<span class="fb-dateline">${a(d)}</span>`),i+="</div>"),t.length>0){i+='<div class="fb-head-figs">';for(let e of t){i+='<div class="fb-head-fig">';let l=e.label==null?"":String(e.label);i+='<div class="fb-cap-row">',i+=`<span class="fb-cap">${a(l)}</span>`,i+=h(e.tip,{right:!0,label:l||"More information"}),i+="</div>",i+=`<span class="fb-mono fb-head-lead${c(e)}">${a(String(e.lead))}</span>`,e.support&&(i+=`<span class="fb-support">${a(String(e.support))}</span>`),i+="</div>"}i+="</div>"}i+="</div>"}else{let e="";if(t.length>0){e+='<div class="fb-lead-grid">';for(let l of t){e+='<div class="fb-lead-fig">',e+=`<span class="fb-mono fb-lead-lead${c(l)}">${a(String(l.lead))}</span>`;let m=l.label==null?"":String(l.label),b=h(l.tip,{label:m||"More information"});(m||b)&&(e+='<div class="fb-label-row">',e+=`<span class="fb-lead-label">${a(m)}</span>`,e+=b,e+="</div>"),l.support&&(e+=`<span class="fb-support">${a(String(l.support))}</span>`),e+="</div>"}e+="</div>"}s&&(e+=`<p class="fb-foot">${p(s)}</p>`),i+=n?k({kicker:n,tip:this.getAttribute("tip"),content:e}):e}r==="head"&&s&&(i+=`<p class="fb-foot">${p(s)}</p>`),o.innerHTML=i}});

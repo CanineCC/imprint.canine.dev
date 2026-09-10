@@ -9,7 +9,15 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { withIslands } from "./harness.mjs";
-import { TREND_LEGACY, TREND_LEGACY_SOLO, LINKS_LEGACY } from "./fixtures.mjs";
+import {
+  TREND_LEGACY,
+  TREND_LEGACY_SOLO,
+  LINKS_LEGACY,
+  BAND_HEAD,
+  BAND_LEAD_NO_KICKER,
+  BARS_WIDE_NO_KICKER,
+  BARS_TABLE_NO_KICKER,
+} from "./fixtures.mjs";
 
 const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "snapshots");
 
@@ -17,6 +25,12 @@ const SUBJECTS = [
   ["cai-trend.legacy", "cai-trend", TREND_LEGACY],
   ["cai-trend.legacy-solo", "cai-trend", TREND_LEGACY_SOLO],
   ["cai-link-cards.legacy", "cai-link-cards", LINKS_LEGACY],
+  // The masthead is live markup that must not move; the three no-kicker shapes are the paths no
+  // page uses, pinned so that the rail cannot reach them.
+  ["cai-figure-band.masthead", "cai-figure-band", BAND_HEAD],
+  ["cai-figure-band.lead-no-kicker", "cai-figure-band", BAND_LEAD_NO_KICKER],
+  ["cai-share-bars.wide-no-kicker", "cai-share-bars", BARS_WIDE_NO_KICKER],
+  ["cai-share-bars.table-no-kicker", "cai-share-bars", BARS_TABLE_NO_KICKER],
 ];
 
 await mkdir(DIR, { recursive: true });

@@ -401,7 +401,7 @@
       },
       {
         "name": "figures",
-        "label": "Endpoint figures (JSON array of {value, label, sub}) \u2014 the movement stated as text, each value with the population it was measured over. Rendered beneath the caption, inside the content column.",
+        "label": "Endpoint pairs (JSON array of {label, from:{value,sub}, to:{value,sub}}) \u2014 the movement stated as text beside the chart: the label as an eyebrow, then \"from \u2192 to\" in the mono face, then the population each end was taken over. One basis line when both ends share it, two when they differ.",
         "type": "text",
         "default": ""
       },
@@ -576,7 +576,13 @@
       },
       {
         "name": "kicker",
-        "label": "Kicker (small uppercase intro; accent-coloured above the dateline in \"head\")",
+        "label": "Kicker (small uppercase intro). On layout=lead it means the section rail: the label and its (i) in a 112px left column, the figures and the footnote taking the rest. On layout=head it is the masthead's own accent eyebrow above the dateline and changes no layout.",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "tip",
+        "label": "Tip beside the kicker \u2014 the (i) explanation for the section. Only shown with a kicker (and, on cai-figure-band, only in layout=lead).",
         "type": "text",
         "default": ""
       },
@@ -646,7 +652,13 @@
       },
       {
         "name": "kicker",
-        "label": "Kicker (small uppercase intro)",
+        "label": "Kicker (small uppercase intro). PRESENT = the section rail: the label and its (i) in a 112px left column, the bars and the lede taking the rest, at either density. ABSENT = the section head above the bars, exactly as before.",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "tip",
+        "label": "Tip beside the kicker \u2014 the (i) explanation for the section. Only shown with a kicker (and, on cai-figure-band, only in layout=lead).",
         "type": "text",
         "default": ""
       },
