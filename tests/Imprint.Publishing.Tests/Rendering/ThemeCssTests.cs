@@ -227,6 +227,36 @@ public sealed class ThemeCssTests
         Assert.DoesNotContain(".ip-widget-placeholder", css);
     }
 
+    /// <summary>
+    /// ★ The geometry proof for this rule lives in <c>Imprint.E2E.NarrowViewportTests</c>, which measures a real
+    /// published page in a real 400px Chromium — and the deploy filter excludes Imprint.E2E, so in CI nothing
+    /// would notice the rule going missing. This fact is the CI-visible half: it cannot prove the page fits, but
+    /// it can prove the declaration that makes it fit is still in the sheet that ships.
+    ///
+    /// <para>Asserted against the DECLARATIONS, not the prose: the sheet's comment names both rejected
+    /// properties in order to explain why they are rejected, and a naive substring check reads that explanation
+    /// as the defect it warns about.</para>
+    /// </summary>
+    [Fact]
+    public void Long_identifiers_fold_rather_than_widen_the_page()
+    {
+        var css = WithoutComments(ThemeCss.MarketingCss);
+
+        // Headings are the reported case; prose and body cells are the same class of content.
+        Assert.Contains("h1, h2, h3, h4, .ip-prose p, .ip-prose li, .ip-prose a, .ip-table td", css);
+        Assert.Contains("overflow-wrap: anywhere", css);
+
+        // break-word wraps identically to the eye but leaves min-content alone, so a grid or table
+        // track keeps stretching to hold the token; break-all breaks words that never needed it.
+        Assert.DoesNotContain("overflow-wrap: break-word", css);
+        Assert.DoesNotContain("word-break: break-all", css);
+        Assert.DoesNotContain("word-break: break-word", css);
+
+        // A column header is a one-word label. Folding it removed the floor the auto table layout
+        // used to reserve that column, and "Version" printed as "VERSIO / N".
+        Assert.DoesNotContain(".ip-table th, .ip-table td", css);
+    }
+
     /// <summary>CSS with comments removed, so an assertion about the RULES cannot be satisfied — or defeated —
     /// by the prose explaining them.</summary>
     private static string WithoutComments(string css) =>

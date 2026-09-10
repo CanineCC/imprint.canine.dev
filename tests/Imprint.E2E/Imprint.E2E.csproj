@@ -16,10 +16,20 @@
     <PackageReference Include="Microsoft.Data.Sqlite" />
   </ItemGroup>
 
-  <!-- Build-order only: the fixture launches these with dotnet run -no-build. -->
+  <!-- Build-order only: the fixtures launch these with dotnet run -no-build. -->
   <ItemGroup>
     <ProjectReference Include="../../src/Imprint.Editor/Imprint.Editor.csproj" />
     <ProjectReference Include="../../src/Imprint.Site/Imprint.Site.csproj" />
+  </ItemGroup>
+
+  <!--
+    Compiled against, not merely built: the narrow-viewport fixture publishes its site through the
+    real SitePublisher rather than by driving the canvas, because the shapes it measures are content
+    shapes and authoring them by drag-and-drop would test the editor instead of the stylesheet.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="../../src/Imprint.Publishing/Imprint.Publishing.csproj" />
+    <ProjectReference Include="../Imprint.TestKit/Imprint.TestKit.csproj" />
   </ItemGroup>
 
 </Project>

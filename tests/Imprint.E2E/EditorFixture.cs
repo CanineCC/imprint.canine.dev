@@ -184,5 +184,15 @@ public sealed class EditorFixture : IAsyncLifetime
     }
 }
 
+/// <summary>
+/// One collection for the whole suite, and therefore one thing running at a time.
+///
+/// <para>★ <see cref="NarrowViewportFixture"/> joins it rather than declaring a collection of its
+/// own. Separate collections run in PARALLEL, and this suite's waits are sized for a machine that
+/// is only running this suite: with a second Chromium and a second Kestrel racing it,
+/// <c>Navigation_entries_round_trip_through_the_menu_editor</c> spent its full 60 s budget and
+/// went red while nothing was wrong with it. Sharing the collection costs the two fixtures'
+/// start-up once and buys back a suite whose timings mean something.</para>
+/// </summary>
 [CollectionDefinition("editor")]
-public sealed class EditorCollection : ICollectionFixture<EditorFixture>;
+public sealed class EditorCollection : ICollectionFixture<EditorFixture>, ICollectionFixture<NarrowViewportFixture>;
