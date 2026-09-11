@@ -19,6 +19,8 @@ import { withIslands } from "./harness.mjs";
 import {
   TREND_LEGACY,
   TREND_LEGACY_SOLO,
+  TREND_WEEKLY,
+  TREND_WEEKLY_UNTOLD,
   LINKS_LEGACY,
   LINKS_FIVE,
   BAND_HEAD,
@@ -1030,3 +1032,195 @@ for (const { what, attrs, columns, band, widths: shapeWidths, bar: barShare } of
     });
   });
 }
+
+// ── §4: one point per week, and what a point means ──────────────────────────────────────────
+// The owner, on the chart: "shows a marker pr ??? I have no idea what, they are very unevenly
+// distributed." They were right, and the cause was a feature: collapseFlatRuns keeps the first
+// and last of every run of identical scores, so a mark sat wherever the median CHANGED. That
+// reads as information — marks are closer together here than there — and it is information no
+// reader can decode. The answer is one point per week, resampled by the emitter, and an island
+// told not to reduce what arrives.
+//
+// WHAT IS MEASURED HERE IS THE SPACING OF THE RENDERED MARKS, not the length of an array: the
+// complaint was about distance on a screen, and a test that counted circles would pass on ten
+// marks piled at one end.
+const marksOf = (r) =>
+  r.page.evaluate(() => {
+    const root = document.querySelector("cai-trend").shadowRoot;
+    return [...root.querySelectorAll(".mk-trend-hit")].map((c) => {
+      const b = c.getBoundingClientRect();
+      return {
+        x: Math.round((b.x + b.width / 2) * 100) / 100,
+        v: c.getAttribute("data-v"),
+        run: Number(c.getAttribute("data-run")),
+      };
+    });
+  });
+
+const gapsOf = (marks) => marks.slice(1).map((m, i) => Math.round((m.x - marks[i].x) * 100) / 100);
+
+describe("cai-trend: a weekly sample is drawn as one", () => {
+  test("every week gets a mark, and the marks are evenly spaced", async () => {
+    const r = await withIslands([{ tag: "cai-trend", attrs: TREND_WEEKLY }], { width: 1280 });
+    try {
+      const marks = await marksOf(r);
+      const series = JSON.parse(TREND_WEEKLY.series);
+      assert.equal(
+        marks.length,
+        series.length,
+        `${marks.length} marks for ${series.length} weeks — the flat run was collapsed`
+      );
+      // Evenly distributed is the actual claim, and it is a claim about pixels.
+      const gaps = gapsOf(marks);
+      assert.ok(
+        spread(gaps) <= 0.5,
+        `the marks are ${gaps.join(", ")}px apart — a reader is being shown a rhythm that means nothing`
+      );
+      // And every mark answers for itself, not for a run of scans it stands in for.
+      assert.deepEqual([...new Set(marks.map((m) => m.run))], [1]);
+    } finally {
+      await r.close();
+    }
+  });
+
+  test("a point says it is a sample, and what the sample is", async () => {
+    const r = await withIslands([{ tag: "cai-trend", attrs: TREND_WEEKLY }], { width: 1280 });
+    try {
+      const tip = await r.page.evaluate(() => {
+        const root = document.querySelector("cai-trend").shadowRoot;
+        const hits = root.querySelectorAll(".mk-trend-hit");
+        hits[2].dispatchEvent(new FocusEvent("focus"));
+        const el = root.querySelector(".mk-trend-tip");
+        return { text: el.textContent.replace(/\s+/g, " ").trim(), shown: el.classList.contains("on") };
+      });
+      assert.equal(tip.shown, true, "the tip did not open");
+      // The count a reader can check against the chart …
+      assert.match(tip.text, /weekly sample 3 of 10/,
+        `the tip reads "${tip.text}" and does not say which sample this is`);
+      // … and the thing they cannot possibly know: the point is not a reading taken that day.
+      assert.match(tip.text, /newest reading on or before/,
+        `the tip reads "${tip.text}" and does not say what the point is`);
+    } finally {
+      await r.close();
+    }
+  });
+
+  test("the words under the chart, and the one a screen reader gets, say samples", async () => {
+    const r = await withIslands([{ tag: "cai-trend", attrs: TREND_WEEKLY }], { width: 1280 });
+    try {
+      const read = await r.page.evaluate(() => {
+        const root = document.querySelector("cai-trend").shadowRoot;
+        return {
+          aria: root.querySelector("svg").getAttribute("aria-label"),
+          sum: [...root.querySelectorAll(".mk-trend-sum")].map((p) => p.textContent.replace(/\s+/g, " ").trim()),
+        };
+      });
+      // "10 measurements" is what the series is NOT: it is ten samples of an unstated number of
+      // readings, and a reader who never hovers has only these two sentences.
+      assert.match(read.aria, /10 weekly samples/, `the chart's label reads "${read.aria}"`);
+      assert.equal(read.sum.length, 1, `there should be one summary line, got ${read.sum.length}`);
+      assert.match(read.sum[0], /10 weekly samples/, `the summary reads "${read.sum[0]}"`);
+      assert.match(read.sum[0], /newest reading on or before/, `the summary reads "${read.sum[0]}"`);
+    } finally {
+      await r.close();
+    }
+  });
+
+  test("the open tip never pushes the page sideways", async () => {
+    for (const width of [1280, 680]) {
+      const r = await withIslands([{ tag: "cai-trend", attrs: TREND_WEEKLY }], { width });
+      try {
+        const overflowed = await r.page.evaluate(() => {
+          const root = document.querySelector("cai-trend").shadowRoot;
+          const hits = [...root.querySelectorAll(".mk-trend-hit")];
+          let bad = false;
+          for (const hit of hits) {
+            hit.dispatchEvent(new FocusEvent("focus"));
+            if (document.documentElement.scrollWidth > window.innerWidth + 1) bad = true;
+          }
+          return bad;
+        });
+        assert.equal(overflowed, false, `an open tip scrolls the page sideways at ${width}px`);
+      } finally {
+        await r.close();
+      }
+    }
+  });
+
+  test("without the attribute the flat run still collapses, and still says so", async () => {
+    // The archive and the per-language pages do not resample, and a nightly-scanned repository
+    // drew a solid bar of overlapping circles before collapseFlatRuns. Nothing here may change.
+    const r = await withIslands([{ tag: "cai-trend", attrs: TREND_WEEKLY_UNTOLD }], { width: 1280 });
+    try {
+      const marks = await marksOf(r);
+      assert.equal(marks.length, 7, `the flat run was not collapsed: ${marks.length} marks`);
+      assert.ok(gapsOf(marks).some((g, i, all) => Math.abs(g - all[0]) > 1),
+        "a collapsed series should NOT be evenly spaced — this fixture no longer holds a flat run");
+      const tip = await r.page.evaluate(() => {
+        const root = document.querySelector("cai-trend").shadowRoot;
+        root.querySelectorAll(".mk-trend-hit")[2].dispatchEvent(new FocusEvent("focus"));
+        return root.querySelector(".mk-trend-tip").textContent.replace(/\s+/g, " ").trim();
+      });
+      assert.match(tip, /unchanged across 5 scans/, `the tip reads "${tip}"`);
+    } finally {
+      await r.close();
+    }
+  });
+});
+
+describe("cai-trend: the pairs, and the caption behind the (i)", () => {
+  let r;
+  before(async () => {
+    r = await withIslands([{ tag: "cai-trend", attrs: TREND_WEEKLY }], { width: 1280 });
+  });
+  after(() => r?.close());
+
+  test("a pair with no basis renders no empty line and no stray separator", async () => {
+    const figs = await r.page.evaluate(() => {
+      const root = document.querySelector("cai-trend").shadowRoot;
+      return [...root.querySelectorAll(".mk-trend-fig")].map((f) => {
+        const b = f.getBoundingClientRect();
+        return {
+          children: [...f.children].map((c) => c.className),
+          text: f.textContent.replace(/\s+/g, " ").trim(),
+          y: Math.round(b.y * 100) / 100,
+          height: Math.round(b.height * 100) / 100,
+        };
+      });
+    });
+    assert.equal(figs.length, 2);
+    for (const f of figs) {
+      assert.deepEqual(
+        f.children,
+        ["mk-trend-fig-label", "mk-trend-fig-pair"],
+        `the pair "${f.text}" rendered ${f.children.length} lines with no basis to state`
+      );
+    }
+    // The two stacks are the same object, so they are the same height and the gap between them
+    // is the one the stylesheet declares — not a gap that closed because a line went missing.
+    assert.equal(figs[0].height, figs[1].height, "the two pairs are different heights");
+    assert.equal(
+      Math.round(figs[1].y - (figs[0].y + figs[0].height)),
+      16,
+      "the gap between the pairs is not the 16px the column declares"
+    );
+  });
+
+  test("the caption's sentence is behind the (i), and the chart keeps its own summary", async () => {
+    const seen = await r.page.evaluate(() => {
+      const root = document.querySelector("cai-trend").shadowRoot;
+      const hint = root.querySelector(".rail-side .info-hint");
+      return {
+        tip: hint ? hint.querySelector(".info-hint-tip").innerHTML : null,
+        sums: [...root.querySelectorAll(".mk-trend-sum")].map((p) => p.textContent.trim()),
+        empty: [...root.querySelectorAll("p")].filter((p) => p.textContent.trim() === "").length,
+      };
+    });
+    assert.notEqual(seen.tip, null, "no (i) beside the kicker");
+    assert.match(seen.tip, /<strong>on the day it was read<\/strong>/);
+    assert.match(seen.tip, /newest reading on or before that week's date/);
+    // One summary — the derived one. A caption that is no longer passed must not leave a blank.
+    assert.equal(seen.sums.length, 1, `${seen.sums.length} summary lines under the chart`);
+    assert.equal(seen.empty, 0, "an empty paragraph was rendered where the caption used to be");
+  });
+});

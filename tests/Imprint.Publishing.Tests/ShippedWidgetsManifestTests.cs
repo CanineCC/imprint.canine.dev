@@ -68,7 +68,7 @@ public sealed class ShippedWidgetsManifestTests
     /// same silent half-shipped state the bundle guard below exists for.
     /// </summary>
     [Theory]
-    [InlineData("cai-trend", "kicker", "tip", "figures")]
+    [InlineData("cai-trend", "kicker", "tip", "figures", "sampled")]
     [InlineData("cai-link-cards", "kicker", "tip")]
     [InlineData("cai-figure-band", "kicker", "tip")]
     [InlineData("cai-share-bars", "kicker", "tip")]

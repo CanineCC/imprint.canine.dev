@@ -400,6 +400,12 @@
         "default": ""
       },
       {
+        "name": "sampled",
+        "label": "The series is ALREADY a regular sample — one point per interval, drawn as sent (e.g. \"weekly\"). Leave it empty for a raw series: the chart then keeps only the first and last of each run of identical scores, which is what stops a nightly-scanned repository drawing a solid bar of dots. Set it and every point is drawn, the word is printed to the reader (\"weekly sample 3 of 10\"), and the chart states that each point is the newest reading on or before its own date — so set it only when that is how the series was resampled.",
+        "type": "text",
+        "default": ""
+      },
+      {
         "name": "figures",
         "label": "Endpoint pairs (JSON array of {label, from:{value,sub}, to:{value,sub}}) \u2014 the movement stated as text beside the chart: the label as an eyebrow, then \"from \u2192 to\" in the mono face, then the population each end was taken over. One basis line when both ends share it, two when they differ.",
         "type": "text",

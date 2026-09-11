@@ -1,5 +1,5 @@
 // <cai-trend series="[54.2,57.1,61]" first-date="4 March 2026" last-date="29 July 2026"
-//            kicker="§4 Series" tip="…" heading="…" lede="…" caption="…"
+//            sampled="weekly" kicker="§4 Series" tip="…" heading="…" lede="…" caption="…"
 //            figures='[{"label":"Median",
 //                       "from":{"value":"45.2","sub":"across 580 measured codebases, 16 July 2026"},
 //                       "to":{"value":"49.5","sub":"across 3,542 measured codebases, 10 Sep 2026"}}]'>
@@ -16,6 +16,29 @@
 //
 // One measurement renders as the number and its date, with no chart: a line through a single
 // point is a decoration, and drawing one would imply a trajectory nobody measured.
+//
+// ★★ `sampled` — THE SERIES IS ALREADY THE SAMPLE, DRAW EVERY POINT OF IT.
+//
+// Absent, this island reduces the series it is given (see collapseFlatRuns) because a nightly
+// scanned repository sits at one score for weeks and a dot per scan is a solid bar of
+// overlapping circles. The reduction has a cost nobody saw until a reader met it: a mark then
+// sits wherever the score CHANGED, so the SPACING of the marks encodes the volatility of the
+// data — "shows a marker pr ??? I have no idea what, they are very unevenly distributed". It is
+// information, and it is information no reader can decode.
+//
+// `sampled="weekly"` says the caller has already resampled to a regular interval and every point
+// is to be drawn. It is a claim about THE SERIES IN THIS ATTRIBUTE, never a description of how
+// often the underlying thing is scanned: the corpus is read nightly and its §4 chart is sampled
+// weekly, and it is the second number that belongs here. Set it only on a series that is already
+// small and regular; on a raw nightly series it reinstates the solid bar.
+//
+// The word itself is the caller's and is printed as the caller wrote it — "weekly sample 3 of
+// 10" — for the same reason a figure's basis sentence is composed upstream. And the word carries
+// a CONTRACT about how the resampling was done: each point is the newest reading on or before
+// its own date, not a reading taken on it. That sentence is stated to the reader, twice — in the
+// summary under the chart and in every point's tip — so it must be true of the numbers sent. A
+// caller that resampled by averaging a week is not describing what this attribute means and must
+// not set it.
 //
 // TWO LAYOUTS, chosen by whether the page passes a `kicker`:
 //
@@ -139,6 +162,10 @@ const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + HINT_CSS 
   font-size: var(--fs-xs); color: var(--ink); opacity: 0; transition: opacity 90ms ease; }
 .mk-trend-tip.on { opacity: 1; }
 .mk-trend-tip b { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+/* What a sampled point IS, under what it says: a second line rather than a longer first one,
+   because the tip does not wrap and a single 380px line beside the last mark of a narrow column
+   reaches past the island. */
+.mk-trend-tip-note { display: block; color: var(--muted); font-size: var(--fs-2xs); }
 .mk-trend-solo { display: flex; align-items: baseline; justify-content: center; gap: 0.6rem;
   padding: 1.6rem 0 0.4rem; }
 .mk-trend-solo-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
@@ -286,6 +313,11 @@ customElements.define(
       const firstDate = this.getAttribute("first-date");
       const lastDate = this.getAttribute("last-date");
       const caption = this.getAttribute("caption");
+      // The caller's own word for one point's interval — "weekly" — used as the adjective a
+      // reader sees. Any non-empty value means the series is already the sample: this island owns
+      // no vocabulary of intervals, so "monthly" needs no code here and a typo shows up in the
+      // words on the page rather than being swallowed into today's behaviour.
+      const sampled = (this.getAttribute("sampled") || "").trim();
 
       if (series.length === 0) {
         return "";
@@ -313,14 +345,23 @@ customElements.define(
 
       const last = series[series.length - 1];
       const lastBand = bandFor(last);
-      // The marks, and the path through them. Both come from the collapsed set: the interior of a
-      // flat run is collinear with its ends, so the drawn line is identical and the markup is not.
-      const marks = collapseFlatRuns(series);
+      // The marks, and the path through them. Without `sampled` they come from the collapsed set:
+      // the interior of a flat run is collinear with its ends, so the drawn line is identical and
+      // the markup is not. WITH it, every point is drawn — the caller has already decided how many
+      // there are, and reducing a regular sample is what puts an undecodable rhythm back into the
+      // spacing. Either way the path is the same path; only the circles on it differ.
+      const marks = sampled
+        ? series.map((v, i) => ({ i, v, run: 1 }))
+        : collapseFlatRuns(series);
       const points = marks.map((m) => `${x(m.i).toFixed(1)},${y(m.v).toFixed(1)}`);
 
-      let html = `<div class="mk-trend"><div class="mk-trend-plot">`;
+      let html = `<div class="mk-trend"><div class="mk-trend-plot"${
+        sampled ? ` data-sampled="${escapeHtml(sampled)}"` : ""}>`;
+      const counted = sampled
+        ? `${series.length} ${sampled} samples`
+        : `${series.length} measurements`;
       html += `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${escapeHtml(
-        `${series.length} measurements, from ${fmt(series[0])} to ${fmt(last)}.`)}">`;
+        `${counted}, from ${fmt(series[0])} to ${fmt(last)}.`)}">`;
 
       // The cutlines inside the domain, drawn and labelled — the axis IS the band vocabulary.
       for (const c of CUTS) {
@@ -367,9 +408,13 @@ customElements.define(
       const direction = Math.abs(moved) < 0.05
         ? "unchanged"
         : `${moved > 0 ? "up" : "down"} ${fmt(Math.abs(moved))}`;
+      // The chart in words, for a reader who never runs the script and for one who cannot hover
+      // over a point to ask. It is the only place the sampling is stated unconditionally, so it
+      // states BOTH halves: how many points, and what one of them is.
       html += `<p class="mk-trend-sum">${escapeHtml(
-        `${series.length} measurements${firstDate ? `, from ${firstDate}` : ""}${lastDate ? ` to ${lastDate}` : ""}: `
-        + `${fmt(series[0])} to ${fmt(last)} — ${direction}.`)}</p>`;
+        `${counted}${firstDate ? `, from ${firstDate}` : ""}${lastDate ? ` to ${lastDate}` : ""}: `
+        + `${fmt(series[0])} to ${fmt(last)} — ${direction}.`
+        + (sampled ? ` Each point is the newest reading on or before its own date, not a reading taken on it.` : ""))}</p>`;
       if (caption) { html += `<p class="mk-trend-sum">${renderInline(caption)}</p>`; }
       html += `</div>`;
 
@@ -382,6 +427,8 @@ customElements.define(
       const plot = root.querySelector(".mk-trend-plot");
       if (!tip || !plot) { return; }
 
+      const sampled = plot.getAttribute("data-sampled") || "";
+
       const show = (hit) => {
         const i = Number(hit.getAttribute("data-i"));
         const rect = hit.getBoundingClientRect();
@@ -390,11 +437,20 @@ customElements.define(
         // were dropped: say how many scans held the score instead of naming one of them and leaving
         // a reader to wonder what happened to the other thirty.
         const run = Number(hit.getAttribute("data-run")) || 1;
-        const where = run >= 3
-          ? `unchanged across ${run} scans`
-          : `scan ${i + 1} of ${series.length}`;
+        const where = sampled
+          ? `${sampled} sample ${i + 1} of ${series.length}`
+          : run >= 3
+            ? `unchanged across ${run} scans`
+            : `scan ${i + 1} of ${series.length}`;
         tip.hidden = false;
-        tip.innerHTML = `<b>${escapeHtml(hit.getAttribute("data-v") || "")}</b> · ${escapeHtml(where)}`;
+        tip.innerHTML = `<b>${escapeHtml(hit.getAttribute("data-v") || "")}</b> · ${escapeHtml(where)}`
+          // The one thing a reader cannot work out from the chart: the point is not a reading
+          // taken that week, it is the newest one that had happened by then. On its own line so
+          // the tip stays as narrow as its longest sentence — a nowrap tip beside the last point
+          // of a 680px column is how a page starts scrolling sideways.
+          + (sampled
+            ? `<span class="mk-trend-tip-note">the newest reading on or before that date</span>`
+            : "");
         tip.style.left = `${rect.left + rect.width / 2 - box.left}px`;
         tip.style.top = `${rect.top - box.top - 6}px`;
         tip.classList.add("on");

@@ -206,3 +206,38 @@ export const BARS_TABLE_COUNTRY = {
     },
   ]),
 };
+
+// ── §4 as the sheet is about to pass it ─────────────────────────────────────────────────────
+// Three changes at once, all from the same owner review, and they interact — a fixture per
+// change would have missed that the section has to read right with all three at the same time.
+//
+// 1. ONE POINT PER WEEK. "shows a marker pr ??? I have no idea what, they are very unevenly
+//    distributed" — and they were: a mark sat wherever the median CHANGED, which is a position
+//    no reader can decode. The resampling is the emitter's (it holds a date per reading and this
+//    island receives two dates and some numbers), so what arrives here is already regular and
+//    the island must be told not to reduce it further. The series below carries a FIVE-WEEK
+//    PLATEAU on purpose: it is the shape collapseFlatRuns eats, and eating it is exactly how the
+//    uneven spacing would come back after the emitter had done its half of the work.
+// 2. NO `sub` ON EITHER END OF EITHER PAIR. The Median pair's two populations ARE the Codebases
+//    pair, one line down — "most of this information is redundant with what comes right after".
+//    A figure is still never separated from its population; the page states it, which is the
+//    level the rule holds at.
+// 3. NO `caption`. Its sentence moves behind the section's (i).
+export const TREND_WEEKLY = {
+  series: "[45.2,47.2,50.3,50.3,50.3,50.3,50.3,51.1,52.6,49.5]",
+  sampled: "weekly",
+  "first-date": "10 July 2026",
+  "last-date": "11 September 2026",
+  kicker: "§4 Population",
+  tip: "The median of every measured codebase, **on the day it was read**. One point per week: the newest reading on or before that week's date.",
+  figures: JSON.stringify([
+    { label: "Median", from: { value: "45.2" }, to: { value: "49.5" } },
+    { label: "Measured codebases", from: { value: "580" }, to: { value: "3,545" } },
+  ]),
+};
+
+/** The same series with nothing said about it: the shape every other page still passes. */
+export const TREND_WEEKLY_UNTOLD = (() => {
+  const { sampled, ...rest } = TREND_WEEKLY;
+  return rest;
+})();
