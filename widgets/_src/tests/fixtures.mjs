@@ -100,3 +100,109 @@ LINKS_FIVE.links = JSON.stringify([
     tip: "Readings are append-only and never rewritten, so a figure cited in July still resolves to what July said.",
   },
 ]);
+
+// ── the numeric columns of a table ──────────────────────────────────────────────────────────
+// §3's Median column is the one place on the sheet where a FIGURE and a WORD share a cell, and
+// it is the case that decides whether a column of numbers reads as a column. The four rows of
+// the scraped fixture above happen to carry only two band words of two lengths, which is not
+// enough to expose what the owner saw: the rows below are chosen so that every way the digits
+// can be pushed around is present at once.
+//
+//   "49.6 Weak"        the SHORTEST band word in the vocabulary (cai.js: 4 characters)
+//   "57 Adequate"      a median that landed on a whole number, so the string is a character
+//                      short — the second of the two causes, and invisible in data that happens
+//                      to have a decimal on every row
+//   "91.4 Exemplary"   the LONGEST band word (9 characters)
+//   "24.8 Critical"    a third length, on the row that also draws no bar
+//
+// The other columns vary in digit count on purpose (420/300/57/9/31), because a column of
+// integers has a right edge to hold too and three of them held a different one per row.
+const ALIGN_ROWS = [
+  {
+    label: "C#", href: "/state-of-the-corpus/language/csharp/",
+    cells: ["420", "49.6 Weak", "102", "375"], cellTones: ["", "poor", "", ""],
+    parts: [{ weight: 58, count: "58", label: "affected", tone: "accent" },
+            { weight: 44, count: "44", label: "not affected", tone: "track" }],
+    note: "58 of 102",
+    tip: "56.9% of surveys here whose dependencies a scanner could resolve (58 of 102)",
+  },
+  {
+    label: "Java", href: "/state-of-the-corpus/language/java/",
+    cells: ["300", "52.7 Adequate", "71", "261"], cellTones: ["", "fair", "", ""],
+    parts: [{ weight: 47, count: "47", label: "affected", tone: "accent" },
+            { weight: 24, count: "24", label: "not affected", tone: "track" }],
+    note: "47 of 71",
+  },
+  {
+    label: "Go", href: "/state-of-the-corpus/language/go/",
+    cells: ["57", "57 Adequate", "40", "48"], cellTones: ["", "fair", "", ""],
+    parts: [{ weight: 12, count: "12", label: "affected", tone: "accent" },
+            { weight: 28, count: "28", label: "not affected", tone: "track" }],
+    note: "12 of 40",
+  },
+  {
+    label: "Elixir", href: "/state-of-the-corpus/language/elixir/",
+    cells: ["9", "91.4 Exemplary", "6", "4"], cellTones: ["", "exemplary", "", ""],
+    parts: [{ weight: 1, count: "1", label: "affected", tone: "accent" },
+            { weight: 5, count: "5", label: "not affected", tone: "track" }],
+    note: "1 of 6",
+  },
+  {
+    label: "VB.NET", href: "/state-of-the-corpus/language/vbnet/",
+    cells: ["31", "24.8 Critical", "0", "27"], cellTones: ["", "critical", "", ""],
+    unmeasured: "nothing a scanner could resolve",
+  },
+];
+
+/** §3 with every band-word length in it, and a median that is a whole number. */
+export const BARS_TABLE_BANDS = { ...BARS_TABLE, rows: JSON.stringify(ALIGN_ROWS) };
+
+/**
+ * §4 By country, the section this layout is about to carry — six numeric columns instead of
+ * four, the same Median cell, and the longest label a place name is likely to hand it.
+ *
+ * It is here because the owner's answer to §3's alignment was "I'm sure what you just did for
+ * countries have the same issue": a fix that only holds for four columns and short labels is
+ * not a fix of the layout. The column names are the ones the section is specified with.
+ */
+export const BARS_TABLE_COUNTRY = {
+  layout: "table",
+  kicker: "§4 By country",
+  "label-heading": "Country",
+  "bar-heading": "Affected of measurable",
+  columns: JSON.stringify(["Repositories", "Owners", "Surveys", "Median", "Measurable", "No policy"]),
+  lede: "A country is read off the owner's published location, so nothing here rests on anybody declaring anything.",
+  rows: JSON.stringify([
+    {
+      label: "United States", href: "/state-of-the-corpus/country/us/",
+      cells: ["1,204", "812", "1,240", "51.2 Adequate", "402", "1,104"],
+      cellTones: ["", "", "", "fair", "", ""],
+      parts: [{ weight: 240, count: "240", label: "affected", tone: "accent" },
+              { weight: 162, count: "162", label: "not affected", tone: "track" }],
+      note: "240 of 402",
+      tip: "59.7% of surveys here whose dependencies a scanner could resolve (240 of 402)",
+    },
+    {
+      label: "Bosnia and Herzegovina", href: "/state-of-the-corpus/country/ba/",
+      cells: ["7", "5", "7", "63 Adequate", "3", "6"],
+      cellTones: ["", "", "", "fair", "", ""],
+      parts: [{ weight: 1, count: "1", label: "affected", tone: "accent" },
+              { weight: 2, count: "2", label: "not affected", tone: "track" }],
+      note: "1 of 3",
+    },
+    {
+      label: "Germany", href: "/state-of-the-corpus/country/de/",
+      cells: ["318", "204", "330", "49.8 Weak", "96", "291"],
+      cellTones: ["", "", "", "poor", "", ""],
+      parts: [{ weight: 51, count: "51", label: "affected", tone: "accent" },
+              { weight: 45, count: "45", label: "not affected", tone: "track" }],
+      note: "51 of 96",
+    },
+    {
+      label: "Iceland", href: "/state-of-the-corpus/country/is/",
+      cells: ["4", "3", "4", "92.5 Exemplary", "0", "3"],
+      cellTones: ["", "", "", "exemplary", "", ""],
+      unmeasured: "nothing a scanner could resolve",
+    },
+  ]),
+};

@@ -1,4 +1,4 @@
-var $=`
+var N=`
 :host {
   /* neutrals \u2014 dark "graphite" */
   --bg: #15191e;
@@ -106,7 +106,7 @@ var $=`
   --accent-strong: #1c4f41;
   --on-accent: #ffffff;
 }
-`;function r(a){return String(a??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function b(a){if(a==null||a==="")return"";let n=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,t="",i=0,o;for(;(o=n.exec(a))!==null;){o.index>i&&(t+=r(a.slice(i,o.index)));let d=o[0];if(d.startsWith("**"))t+=`<strong>${r(d.slice(2,-2))}</strong>`;else if(d.startsWith("`"))t+=`<code>${r(d.slice(1,-1))}</code>`;else{let e=/^\[([^\]]+)\]\(([^)]+)\)$/.exec(d);e?t+=`<a href="${r(e[2])}">${r(e[1])}</a>`:t+=r(d)}i=o.index+d.length}return i<a.length&&(t+=r(a.slice(i))),t}var S=`
+`;function l(a){return String(a??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function u(a){if(a==null||a==="")return"";let s=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,t="",i=0,o;for(;(o=s.exec(a))!==null;){o.index>i&&(t+=l(a.slice(i,o.index)));let d=o[0];if(d.startsWith("**"))t+=`<strong>${l(d.slice(2,-2))}</strong>`;else if(d.startsWith("`"))t+=`<code>${l(d.slice(1,-1))}</code>`;else{let e=/^\[([^\]]+)\]\(([^)]+)\)$/.exec(d);e?t+=`<a href="${l(e[2])}">${l(e[1])}</a>`:t+=l(d)}i=o.index+d.length}return i<a.length&&(t+=l(a.slice(i))),t}var C=`
 :host { display: block; color: var(--ink); font: 400 var(--fs-md)/1.5 var(--font-ui); }
 * { box-sizing: border-box; }
 a { color: var(--accent-ink); text-decoration: none; }
@@ -114,12 +114,12 @@ a:hover { text-decoration: underline; }
 code { background: var(--surface-2); padding: 1px 5px; border-radius: var(--r-sm); font: 500 var(--fs-xs) var(--font-mono); }
 strong { font-weight: 600; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-`;function A(a){let n=a.getAttribute("kicker"),t=a.getAttribute("heading"),i=a.getAttribute("lede");if(!n&&!t&&!i)return"";let o='<div class="mk-section-head">';return n&&(o+=`<span class="mk-kicker">${r(n)}</span>`),t&&(o+=`<h2>${b(t)}</h2>`),i&&(o+=`<p>${b(i)}</p>`),o+="</div>",o}var C=`
+`;function H(a){let s=a.getAttribute("kicker"),t=a.getAttribute("heading"),i=a.getAttribute("lede");if(!s&&!t&&!i)return"";let o='<div class="mk-section-head">';return s&&(o+=`<span class="mk-kicker">${l(s)}</span>`),t&&(o+=`<h2>${u(t)}</h2>`),i&&(o+=`<p>${u(i)}</p>`),o+="</div>",o}var M=`
 .mk-section-head { margin-bottom: 1.5rem; }
 .mk-section-head h2 { font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.1rem); line-height: 1.2; margin: 0.3rem 0 0; color: var(--heading); font-weight: 600; letter-spacing: -0.01em; }
 .mk-section-head p { color: var(--muted); font-size: var(--fs-lg); line-height: 1.6; margin: 0.55rem 0 0; }
 .mk-kicker { display: inline-flex; align-items: center; gap: 0.55rem; font-size: var(--fs-2xs); font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
-`,x=class extends HTMLElement{#e;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#t(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#e=new MutationObserver(()=>{let n=this.dataset.theme;this.#t(),this.dataset.theme!==n&&this.render(this.shadowRoot)}),this.#e.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#e?.disconnect()}#t(){let n=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=n;let t=(this.getAttribute("brand")||"").trim().toLowerCase();t==="assay"||t==="cai"||t==="watchdog"?this.dataset.brand=t:delete this.dataset.brand}json(n,t){let i=this.getAttribute(n);if(i==null||i.trim()==="")return t;try{return JSON.parse(i)}catch{return t}}};var M=`
+`,v=class extends HTMLElement{#e;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#t(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#e=new MutationObserver(()=>{let s=this.dataset.theme;this.#t(),this.dataset.theme!==s&&this.render(this.shadowRoot)}),this.#e.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#e?.disconnect()}#t(){let s=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=s;let t=(this.getAttribute("brand")||"").trim().toLowerCase();t==="assay"||t==="cai"||t==="watchdog"?this.dataset.brand=t:delete this.dataset.brand}json(s,t){let i=this.getAttribute(s);if(i==null||i.trim()==="")return t;try{return JSON.parse(i)}catch{return t}}};var I=`
 .ink-exemplary { color: var(--band-exemplary-text); }
 .ink-healthy { color: var(--band-healthy-text); }
 .ink-fair { color: var(--band-fair-text); }
@@ -220,7 +220,7 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
 .cai-row:last-child { border-bottom: 0; }
 .cai-row b { color: var(--heading); font-weight: 600; text-align: right; }
 .cai-row .mono { font-family: var(--font-mono); font-size: var(--fs-xs); }
-`;var z=`
+`;var R=`
 .info-hint { position: relative; display: inline-flex; align-items: center; vertical-align: middle; margin-left: 6px; cursor: help; }
 .info-hint:focus { outline: none; }
 .info-hint-dot { width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--border-strong); color: var(--muted);
@@ -272,7 +272,7 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
    order, so a LATER sibling row would draw over a tip that opens across it. Each island lifts
    the subject on :hover/:focus-within for that reason \u2014 see the z-index bumps at the call sites. */
 @media (prefers-reduced-motion: reduce) { .info-hint-tip { transition: none; } }
-`;function v(a,{right:n=!1,label:t="More information"}={}){let i=a==null?"":String(a).trim();if(i==="")return"";let o=i.split(/\n\s*\n/).map(e=>e.trim()).filter(e=>e!=="").map(e=>`<p>${b(e)}</p>`).join("");return`<span class="${n?"info-hint hint-right":"info-hint"}" tabindex="0" role="note" aria-label="${r(t||"More information")}"><span class="info-hint-dot" aria-hidden="true">i</span><span class="info-hint-tip">${o}</span></span>`}var N=`
+`;function y(a,{right:s=!1,label:t="More information"}={}){let i=a==null?"":String(a).trim();if(i==="")return"";let o=i.split(/\n\s*\n/).map(e=>e.trim()).filter(e=>e!=="").map(e=>`<p>${u(e)}</p>`).join("");return`<span class="${s?"info-hint hint-right":"info-hint"}" tabindex="0" role="note" aria-label="${l(t||"More information")}"><span class="info-hint-dot" aria-hidden="true">i</span><span class="info-hint-tip">${o}</span></span>`}var z=`
 .rail { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 0 24px;
   align-items: start; position: relative; }
 .rail-side { display: flex; align-items: flex-start; padding-top: 3px; min-width: 0; }
@@ -292,7 +292,7 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
   .rail { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .rail-side { padding-top: 0; }
 }
-`;function T({kicker:a,tip:n,content:t}){return`<div class="rail"><div class="rail-side"><span class="rail-kicker">${r(a)}</span>`+v(n,{label:a})+`</div><div class="rail-body">${t}</div></div>`}function H(a){let n=a.getAttribute("heading"),t=a.getAttribute("lede");if(!n&&!t)return"";let i='<div class="mk-section-head">';return n&&(i+=`<h2>${b(n)}</h2>`),t&&(i+=`<p>${b(t)}</p>`),i+="</div>",i}var F=new Set(["exemplary","healthy","fair","poor","critical"]);function j(a){let n=String(a||"").trim().toLowerCase();return n==="accent"?"is-accent":F.has(n)?`is-band fill-${n}`:"is-track"}var k=$+S+C+M+z+N+`
+`;function F({kicker:a,tip:s,content:t}){return`<div class="rail"><div class="rail-side"><span class="rail-kicker">${l(a)}</span>`+y(s,{label:a})+`</div><div class="rail-body">${t}</div></div>`}function O(a){let s=a.getAttribute("heading"),t=a.getAttribute("lede");if(!s&&!t)return"";let i='<div class="mk-section-head">';return s&&(i+=`<h2>${u(s)}</h2>`),t&&(i+=`<p>${u(t)}</p>`),i+="</div>",i}var $=new Set(["exemplary","healthy","fair","poor","critical"]);function L(a){let s=String(a||"").trim().toLowerCase();return s==="accent"?"is-accent":$.has(s)?`is-band fill-${s}`:"is-track"}function U(a,s){let t=String(a??""),i=s?/^(\S+)[ \u00a0]+(\S.*)$/.exec(t):null,o=i?i[1]:t,d=i?i[2]:"",e=o.indexOf(".");return e<0?{int:o,dec:"",band:d}:{int:o.slice(0,e),dec:o.slice(e),band:d}}var k=N+C+M+I+R+z+`
 /* The two containers the queries at the foot of this sheet ask about. */
 :host { container-type: inline-size; }
 .sb-table { container-type: inline-size; }
@@ -303,7 +303,10 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
 .sb-unmeasured { color: var(--muted); font-size: var(--fs-xs); line-height: 1.4; }
 .sb-note { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
   font-size: 11.5px; color: var(--muted); }
-.sb-label-row { display: flex; align-items: flex-start; min-width: 0; }
+/* The 90px is the label column's FLOOR, and it is expressed here rather than in the track list
+   because fit-content() takes no minimum of its own: a track's floor is whatever its items say
+   they need. A column of "Go" and "C#" is a column all the same. */
+.sb-label-row { display: flex; align-items: flex-start; min-width: 90px; }
 .sb-label { font-size: var(--fs-sm); font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
 a.sb-label { color: var(--ink); }
 a.sb-label:hover { color: var(--accent); text-decoration: none; }
@@ -343,11 +346,33 @@ a.sb-label:hover { color: var(--accent); text-decoration: none; }
 .sb-swatch.is-track { background: var(--surface-2); border: 1px solid var(--border); }
 
 /* \u2500\u2500 table: a bar per row \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
-.sb-head, .sb-row { display: grid; grid-template-columns: var(--sb-grid); gap: 12px; align-items: center; }
+/* THE GRID IS AN ELEMENT INSIDE THE CONTAINER, NOT THE CONTAINER ITSELF. A @container rule
+   styles the DESCENDANTS of the container it asks about and never the container, so the reflow
+   rules below, written against .sb-table, would have been dead text \u2014 and dead in the silent
+   direction: the head row would still have gone away at 560px while the grid it belonged to
+   stayed a grid. So .sb-table is the box that is measured and .sb-grid is the one that lays out.
+   \u2605\u2605 ONE GRID FOR THE WHOLE TABLE, AND EVERY ROW A SUBGRID OF IT.
+   A row that carries a grid-template-columns of its own IS its own grid, and a content-sized
+   track in its own grid is sized by THAT ROW's strings: which is why "420" and "300" ended a
+   column at 529px and 519px, why the head row ended it at a third place again, and why the owner
+   read the section as "all over the place, not aligned". Nothing about the track list said so \u2014
+   every row obeyed it perfectly and resolved it to a different number. Subgrid is what makes
+   seventeen rows one table: the tracks are sized once, over every row's content at once, and a
+   row is still a box of its own with the border, the padding, the hover and the (i) anchoring it
+   has always had. (display: contents would have shared the tracks too, and taken all four of
+   those away with the box.) */
+.sb-grid { display: grid; grid-template-columns: var(--sb-grid); column-gap: 12px; }
+.sb-head, .sb-row { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid;
+  gap: 12px; align-items: center; }
 /* The last defence, for a column heading longer than any threshold anticipated: a heading with
    nowhere to go wraps inside its own cell. Ugly beats painted over the cell beside it, and both
-   beat the third option nobody should take \u2014 clipping a word off a denominator's name. */
-.sb-head .sb-cap { overflow-wrap: anywhere; }
+   beat the third option nobody should take \u2014 clipping a word off a denominator's name.
+   \u2605 break-word, NOT anywhere, and the difference is not cosmetic: anywhere also tells the layout
+   that the cell's MINIMUM WIDTH IS ONE CHARACTER, so a track asking for min-content is handed
+   7px and MEASURABLE is broken mid-word to fit it. break-word breaks the same word in the same
+   place when the box is genuinely too small, while still telling the grid that the word is what
+   the column needs. The tracks below ask for min-content precisely so they are told. */
+.sb-head .sb-cap { overflow-wrap: break-word; }
 .sb-head { padding-bottom: 6px; border-bottom: 1px solid var(--border-strong); align-items: end; }
 .sb-row { padding: 7px 0; border-bottom: 1px solid var(--border); position: relative; }
 /* A row is the subject of its own (i): the tip spans the row rather than hanging off the dot,
@@ -356,8 +381,40 @@ a.sb-label:hover { color: var(--accent); text-decoration: none; }
 .sb-wide-row .info-hint, .sb-row .info-hint { position: static; }
 .sb-wide-row .info-hint-tip, .sb-row .info-hint-tip { left: 0; right: auto; max-width: min(320px, 100%); }
 .sb-wide-row:hover, .sb-wide-row:focus-within, .sb-row:hover, .sb-row:focus-within { z-index: 2; }
+/* A NUMERIC CELL IS THREE THINGS, AND ONLY THE FIRST OF THEM MAY DECIDE WHERE THE OTHERS SIT.
+   Right-aligning "49.6 Weak" as one string hands the position of the digits to the length of the
+   band word: "49.6 Weak" started at 541px, "91.4 Exemplary" at 529px, and a reader scanning the
+   Median column for a number found it in a different place on every line. So the band word gets
+   a box of its own, as wide as the longest word in ITS OWN COLUMN, and the digits are laid out
+   against the axis that box leaves \u2014 which cannot move, because no row's word is wider than the
+   widest one. The same trick one character down: the decimal tail gets a box too, so a median
+   that landed on a whole number ("57", not "57.0") does not pull its digits a character right.
+   Widths are in ch units of the cell's own mono face, so they are exact rather than estimated, and
+   they come from the DATA at render time rather than from a constant somebody has to maintain.
+   The integer part is what is left, right-aligned against the decimal axis: 49|.6, 57|, 24|.8. */
 .sb-cell { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
-  font-size: var(--fs-xs); text-align: right; color: var(--muted); }
+  font-size: var(--fs-xs); text-align: right; color: var(--muted);
+  display: flex; justify-content: flex-end; align-items: baseline;
+  /* min-width: 0 so that in the reflow a cell holding "91.4 Exemplary" wraps onto a second line
+     inside its 96px track rather than widening the track and taking a column off the row. */
+  min-width: 0; }
+.sb-int { white-space: nowrap; }
+.sb-dec, .sb-band { flex: none; text-align: left; white-space: nowrap; }
+/* The gap between a figure and its band word is this padding up here and a real space down in
+   the reflow \u2014 and the widget emits BOTH, one space of markup and one character of padding. In a
+   flex row a whitespace-only child is not rendered at all, so what a reader sees is the padding;
+   when the cell stops being a flex row that same space becomes the only place the line is
+   allowed to break, and "91.4 Exemplary" needs one in a 96px cell at 400px.
+   Border-box (tokens.js sets it globally), so the width the widget writes on this span is the
+   OUTER one: the widest word in the column plus that character, which is exactly what the head
+   cell reserves beside its heading. */
+.sb-band { padding-left: 1ch; }
+/* The head cell's matching reserve, so a column's HEADING ends where its figures end rather than
+   over the band words. It does NOT give way when the table is tight: a reserve that shrinks
+   under pressure buys a few pixels by putting the heading somewhere other than over its own
+   numbers, which is the defect this file is about, one row higher up. It is part of what the
+   column needs, and when the column cannot have what it needs the table reflows instead. */
+.sb-reserve { flex: none; height: 0; }
 .sb-head .sb-cell { color: var(--muted); }
 .sb-bar-cell { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .sb-track { flex: 1; display: flex; height: 10px; background: var(--surface-2);
@@ -366,19 +423,26 @@ a.sb-label:hover { color: var(--accent); text-decoration: none; }
 .sb-part.is-accent { background: var(--accent); }
 .sb-part.is-track { background: transparent; }
 
-@container (max-width: 560px) {
+`,W=a=>`
+@container (max-width: ${a}px) {
   /* The cells take their own line under the label, each carrying its heading, and the bar takes
-     a third. The header row has nothing left to head, so it goes. */
+     a third. The header row has nothing left to head, so it goes \u2014 and with it the one grid,
+     because a row here is no longer a slice of the table's columns but a little grid of its own.
+     The figure's boxes go with it: reserving the widest band word in a 96px cell would leave the
+     number nowhere to sit, and down here nothing is beside anything to line up with. */
+  .sb-grid { display: block; }
   .sb-head { display: none; }
+  .sb-cell { display: block; text-align: left; }
+  .sb-cell .sb-dec, .sb-cell .sb-band { width: auto; }
+  .sb-cell .sb-band { padding-left: 0; }
   /* 96px, not 74px: a cell's heading is now the widest thing in it \u2014 "MEASURABLE" needs 87px at
      this size and tracking \u2014 and a 74px track made the reflow do in miniature exactly what the
      six-column shape was doing at 680px. Measured, not guessed. */
   .sb-row { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px 12px; padding: 11px 0; }
   .sb-label-row { grid-column: 1 / -1; }
   .sb-bar-cell { grid-column: 1 / -1; }
-  .sb-cell { text-align: left; }
   .sb-cell[data-label]::before { content: attr(data-label) " "; display: block;
     font-family: var(--font-ui); font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase;
     font-weight: 700; color: var(--muted); overflow-wrap: anywhere; }
 }
-`;function E(a,{wide:n}){let t=(a||[]).filter(o=>o&&Number.isFinite(Number(o.weight))&&Number(o.weight)>0);if(t.length===0)return"";let i="";for(let o of t){let d=j(o.tone),e=Number(o.weight);if(n){let m=[o.count,o.label].filter(u=>u!=null&&String(u)!=="").join(" ");i+=`<span class="sb-wide-part ${d}" style="flex:${e} 1 0">`,i+=m?`<span>${r(m)}</span>`:"",i+="</span>"}else i+=`<span class="sb-part ${d}" style="flex:${e} 1 0"></span>`}return i}customElements.define("cai-share-bars",class extends x{render(a){let n=(this.getAttribute("layout")||"table").trim().toLowerCase()==="wide"?"wide":"table",t=(this.json("columns",[])||[]).map(s=>s==null?"":String(s)),i=(this.json("rows",[])||[]).filter(s=>s&&s.label!=null&&String(s.label)!==""),o=(this.getAttribute("kicker")||"").trim(),d=o?H(this):A(this),e="";if(i.length===0){a.innerHTML=`<style>${k}</style>`+this.frame(o,d,"");return}let m=(s,p)=>{let h=String(s.label),l='<div class="sb-label-row">';return l+=s.href?`<a class="sb-label" href="${r(String(s.href))}">${r(h)}</a>`:`<span class="sb-label">${r(h)}</span>`,l+=v(s.tip,{right:p,label:h}),l+="</div>",l};if(n==="wide"){for(let s of i){if(e+='<div class="sb-wide-row">',e+=m(s,!1),s.unmeasured)e+=`<p class="sb-unmeasured">${r(String(s.unmeasured))}</p>`;else{let p=(s.parts||[]).filter(l=>l&&Number.isFinite(Number(l.weight))&&Number(l.weight)>0),h=p.reduce((l,f)=>l+Number(f.weight),0);if(p.length>0){let f=p.map(c=>Number(c.weight)/h>=.18);e+='<div class="sb-wide-bar">',e+=E(p.map((c,w)=>f[w]?c:{weight:c.weight,tone:c.tone}),{wide:!0}),e+="</div>";let g=p.map((c,w)=>({text:[c.count,c.label].filter(y=>y!=null&&String(y)!=="").join(" "),cls:j(c.tone),inside:f[w]})).filter(c=>c.text!=="");if(g.length>0){e+='<div class="sb-legend">';for(let c of g)e+=`<span class="sb-legend-item${c.inside?" is-inside":""}"><i class="sb-swatch ${c.cls}"></i>${r(c.text)}</span>`;e+="</div>"}}s.note&&(e+=`<span class="sb-note">${r(String(s.note))}</span>`)}e+="</div>"}a.innerHTML=`<style>${k}</style>`+this.frame(o,d,e);return}let u=Math.max(0,Math.min(12,Math.trunc(t.length))),R=`minmax(90px,1.1fr) repeat(${u}, minmax(52px,auto)) minmax(120px,2fr)`,B=this.getAttribute("label-heading")||"",I=this.getAttribute("bar-heading")||"";e+=`<div class="sb-table" style="--sb-grid:${R}">`,e+='<div class="sb-head">',e+=`<span class="sb-cap">${r(B)}</span>`;for(let s of t)e+=`<span class="sb-cap sb-cell">${r(s)}</span>`;e+=`<span class="sb-cap">${r(I)}</span>`,e+="</div>";for(let s of i){e+='<div class="sb-row">',e+=m(s,!1);let p=(s.cells||[]).map(l=>l==null?"":String(l)),h=s.cellTones||[];for(let l=0;l<u;l++){let f=String(h[l]||"").trim().toLowerCase(),g=F.has(f)?` ink-${f}`:"",c=t[l]||"";e+=`<span class="sb-cell${g}" data-label="${r(c)}">${r(p[l]??"")}</span>`}if(e+='<div class="sb-bar-cell">',s.unmeasured)e+=`<span class="sb-unmeasured">${r(String(s.unmeasured))}</span>`;else{let l=E(s.parts,{wide:!1});l&&(e+=`<span class="sb-track">${l}</span>`),s.note&&(e+=`<span class="sb-note">${r(String(s.note))}</span>`)}e+="</div>",e+="</div>"}e+="</div>",a.innerHTML=`<style>${k}</style>`+this.frame(o,d,e)}frame(a,n,t){return a?T({kicker:a,tip:this.getAttribute("tip"),content:n+t}):n+t}});
+`,G=a=>a>=5?800:560;function j(a,{wide:s}){let t=(a||[]).filter(o=>o&&Number.isFinite(Number(o.weight))&&Number(o.weight)>0);if(t.length===0)return"";let i="";for(let o of t){let d=L(o.tone),e=Number(o.weight);if(s){let g=[o.count,o.label].filter(f=>f!=null&&String(f)!=="").join(" ");i+=`<span class="sb-wide-part ${d}" style="flex:${e} 1 0">`,i+=g?`<span>${l(g)}</span>`:"",i+="</span>"}else i+=`<span class="sb-part ${d}" style="flex:${e} 1 0"></span>`}return i}customElements.define("cai-share-bars",class extends v{render(a){let s=(this.getAttribute("layout")||"table").trim().toLowerCase()==="wide"?"wide":"table",t=(this.json("columns",[])||[]).map(n=>n==null?"":String(n)),i=(this.json("rows",[])||[]).filter(n=>n&&n.label!=null&&String(n.label)!==""),o=(this.getAttribute("kicker")||"").trim(),d=o?O(this):H(this),e="";if(i.length===0){a.innerHTML=`<style>${k}</style>`+this.frame(o,d,"");return}let g=(n,c)=>{let p=String(n.label),r='<div class="sb-label-row">';return r+=n.href?`<a class="sb-label" href="${l(String(n.href))}">${l(p)}</a>`:`<span class="sb-label">${l(p)}</span>`,r+=y(n.tip,{right:c,label:p}),r+="</div>",r};if(s==="wide"){for(let n of i){if(e+='<div class="sb-wide-row">',e+=g(n,!1),n.unmeasured)e+=`<p class="sb-unmeasured">${l(String(n.unmeasured))}</p>`;else{let c=(n.parts||[]).filter(r=>r&&Number.isFinite(Number(r.weight))&&Number(r.weight)>0),p=c.reduce((r,b)=>r+Number(b.weight),0);if(c.length>0){let b=c.map(h=>Number(h.weight)/p>=.18);e+='<div class="sb-wide-bar">',e+=j(c.map((h,m)=>b[m]?h:{weight:h.weight,tone:h.tone}),{wide:!0}),e+="</div>";let x=c.map((h,m)=>({text:[h.count,h.label].filter(E=>E!=null&&String(E)!=="").join(" "),cls:L(h.tone),inside:b[m]})).filter(h=>h.text!=="");if(x.length>0){e+='<div class="sb-legend">';for(let h of x)e+=`<span class="sb-legend-item${h.inside?" is-inside":""}"><i class="sb-swatch ${h.cls}"></i>${l(h.text)}</span>`;e+="</div>"}}n.note&&(e+=`<span class="sb-note">${l(String(n.note))}</span>`)}e+="</div>"}a.innerHTML=`<style>${k}</style>`+this.frame(o,d,e);return}let f=Math.max(0,Math.min(12,Math.trunc(t.length))),B=`fit-content(200px) repeat(${f}, minmax(min-content,1fr)) minmax(96px,2.5fr)`,D=this.getAttribute("label-heading")||"",_=this.getAttribute("bar-heading")||"",S=i.map(n=>{let c=(n.cells||[]).map(r=>r==null?"":String(r)),p=n.cellTones||[];return Array.from({length:f},(r,b)=>U(c[b]??"",$.has(String(p[b]||"").trim().toLowerCase())))}),T=(n,c)=>S.reduce((p,r)=>Math.max(p,r[n][c].length),0),A=Array.from({length:f},(n,c)=>T(c,"dec")),w=Array.from({length:f},(n,c)=>T(c,"band"));e+=`<div class="sb-table"><div class="sb-grid" style="--sb-grid:${B}">`,e+='<div class="sb-head">',e+=`<span class="sb-cap">${l(D)}</span>`;for(let n=0;n<f;n++){let c=w[n]?`<i class="sb-reserve" style="width:${w[n]+1}ch" aria-hidden="true"></i>`:"";e+=`<span class="sb-cap sb-cell">${l(t[n]||"")}${c}</span>`}e+=`<span class="sb-cap">${l(_)}</span>`,e+="</div>";for(let[n,c]of i.entries()){e+='<div class="sb-row">',e+=g(c,!1);let p=c.cellTones||[];for(let r=0;r<f;r++){let b=String(p[r]||"").trim().toLowerCase(),x=$.has(b)?` ink-${b}`:"",h=t[r]||"",m=S[n][r];e+=`<span class="sb-cell${x}" data-label="${l(h)}">`,e+=`<span class="sb-int">${l(m.int)}</span>`,A[r]&&(e+=`<span class="sb-dec" style="width:${A[r]}ch">${l(m.dec)}</span>`),w[r]&&(e+=` <span class="sb-band" style="width:${w[r]+1}ch">${l(m.band)}</span>`),e+="</span>"}if(e+='<div class="sb-bar-cell">',c.unmeasured)e+=`<span class="sb-unmeasured">${l(String(c.unmeasured))}</span>`;else{let r=j(c.parts,{wide:!1});r&&(e+=`<span class="sb-track">${r}</span>`),c.note&&(e+=`<span class="sb-note">${l(String(c.note))}</span>`)}e+="</div>",e+="</div>"}e+="</div></div>",a.innerHTML=`<style>${k}${W(G(f))}</style>`+this.frame(o,d,e)}frame(a,s,t){return a?F({kicker:a,tip:this.getAttribute("tip"),content:s+t}):s+t}});

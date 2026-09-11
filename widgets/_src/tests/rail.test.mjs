@@ -28,6 +28,8 @@ import {
   BARS_WIDE_NO_KICKER,
   BARS_TABLE,
   BARS_TABLE_NO_KICKER,
+  BARS_TABLE_BANDS,
+  BARS_TABLE_COUNTRY,
 } from "./fixtures.mjs";
 
 const SNAPSHOTS = path.join(path.dirname(fileURLToPath(import.meta.url)), "snapshots");
@@ -512,7 +514,14 @@ describe("cai-share-bars: the rail", () => {
 // drawing outside itself, and two cells that share a row and intersect are drawing over each
 // other. Both are asserted at every width, in the table AND in the reflow it falls back to,
 // because the reflow has cells with headings of their own and can do exactly the same thing.
-describe("cai-share-bars: the language table holds up at every width", () => {
+//
+// ★ IT TAKES THE TABLE AS AN ARGUMENT. §3 is four numeric columns and labels two characters
+// long; §4 By country is six, and "Bosnia and Herzegovina". A width suite that only ever ran
+// against §3 would have said the layout holds while the section about to reuse it did not, and
+// the owner's answer to §3's alignment was "Im sure what you just did for countries have the
+// same issue" — so the widths are asserted against both shapes of the same layout.
+function describeTableAtEveryWidth(what, attrs, columnCount) {
+describe(`cai-share-bars: ${what} holds up at every width`, () => {
   const measure = (r) =>
     r.page.evaluate(() => {
       const root = document.querySelector("cai-share-bars").shadowRoot;
@@ -559,7 +568,7 @@ describe("cai-share-bars: the language table holds up at every width", () => {
 
   for (const width of [1280, 900, 760, 680, 600, 520, 400]) {
     test(`no heading draws over another at ${width}px, and no column goes missing`, async () => {
-      const r = await withIslands([{ tag: "cai-share-bars", attrs: { ...BARS_TABLE, tip: TIP } }], { width });
+      const r = await withIslands([{ tag: "cai-share-bars", attrs }], { width });
       try {
         const m = await measure(r);
 
@@ -577,8 +586,12 @@ describe("cai-share-bars: the language table holds up at every width", () => {
           assert.deepEqual(overlaps(cells), [], `row ${i} has cells over each other at ${width}px`);
         }
 
-        // Four numeric columns, at every width, named either by the head row or by each cell.
-        assert.deepEqual(m.cellsPerRow, [4, 4, 4, 4], `a column went missing at ${width}px`);
+        // Every numeric column, at every width, named either by the head row or by each cell.
+        assert.deepEqual(
+          m.cellsPerRow,
+          m.cellsPerRow.map(() => columnCount),
+          `a column went missing at ${width}px`
+        );
         assert.ok(
           m.headShown || m.labelled,
           `at ${width}px the head row is gone and the cells carry no headings of their own`
@@ -654,6 +667,13 @@ describe("cai-share-bars: the language table holds up at every width", () => {
     });
   }
 
+});
+}
+
+describeTableAtEveryWidth("the language table", { ...BARS_TABLE, tip: TIP }, 4);
+describeTableAtEveryWidth("the by-country table", { ...BARS_TABLE_COUNTRY, tip: TIP }, 6);
+
+describe("cai-share-bars: the wide bar", () => {
   test("§1's bar states its parts without a part drawing outside itself", async () => {
     for (const width of [1280, 680, 400]) {
       const r = await withIslands([{ tag: "cai-share-bars", attrs: BARS_WIDE }], { width });
@@ -738,3 +758,275 @@ describe("the rail at the widths a reader has", () => {
     }
   });
 });
+
+// ── a column of numbers is a column ─────────────────────────────────────────────────────────
+// The owner, reading the live §3: "the elements in the table are all over the place, not aligned
+// … there is no reason for the texts to float/jump around like they do." Measured, it was worse
+// than one column: EVERY column held a different right edge on every row, and the head row held
+// a third one. Each `.sb-row` was its own `display:grid` with content-sized tracks, so a row's
+// own strings decided that row's columns and nothing lined up with anything.
+//
+// On top of that the Median cell carries "49.6 Weak" as ONE right-aligned string, so the length
+// of the band word decides where the number starts, and a median that lands on a whole number
+// renders "57" rather than "57.0" and loses a character on top of that.
+//
+// WHAT IS MEASURED HERE IS THE RENDERED TEXT, not a track width and not a stylesheet value: a
+// Range is laid over the run of digits inside each cell, wherever the widget happens to have put
+// it, and the x of its first character is compared row against row. A test that asserted
+// `grid-template-columns` would pass on a stylesheet that says the right thing while the browser
+// draws the wrong one — which is exactly the trap the first version of the reflow test fell into.
+const geometry = (r, index = 0) =>
+  r.page.evaluate(
+    (i) => {
+      const root = document.querySelectorAll("cai-share-bars")[i].shadowRoot;
+      const round = (n) => Math.round(n * 100) / 100;
+
+      // The figure a reader sees: the first run of digits in the cell, measured off the text
+      // nodes themselves so that it does not matter whether the widget wraps it in a span.
+      const textRange = (el, pick) => {
+        const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        const nodes = [];
+        let text = "";
+        while (walk.nextNode()) {
+          nodes.push([walk.currentNode, text.length]);
+          text += walk.currentNode.textContent;
+        }
+        const span = pick(text);
+        if (!span) return null;
+        const at = (offset) => {
+          for (const [n, base] of nodes) {
+            if (offset <= base + n.textContent.length) return [n, offset - base];
+          }
+          return null;
+        };
+        const rect = (from, to) => {
+          const rg = document.createRange();
+          const [sn, so] = at(from);
+          const [en, eo] = at(to);
+          rg.setStart(sn, so);
+          rg.setEnd(en, eo);
+          return rg.getBoundingClientRect();
+        };
+        const whole = rect(span[0], span[1]);
+        const first = rect(span[0], span[0] + 1);
+        // The figure's own right edge — the axis plus whatever decimal tail this row has. It is
+        // where the column's HEADING should end, and it is NOT where "57" ends: a whole number
+        // is aligned on the axis with the rest, not dragged right to meet their last digit.
+        const tail = /^[\d,]*(\.[\d]+)?/.exec(text.slice(span[0]))[0].length;
+        return {
+          text: text.slice(span[0], span[1]),
+          firstX: round(first.x),
+          right: round(whole.right),
+          figureRight: round(rect(span[0], span[0] + tail).right),
+        };
+      };
+      // The DECIMAL AXIS: the right edge of the integer part. It is the axis a column of figures
+      // is read against, and the one thing a band word or a missing decimal must not move —
+      // "57" belongs under the "49" of "49.6", not under its "9.6", and asserting a shared right
+      // edge for the whole figure would demand the opposite of that.
+      const digits = (el) =>
+        textRange(el, (t) => {
+          const m = /\d[\d,]*/.exec(t);
+          return m ? [m.index, m.index + m[0].length] : null;
+        });
+      const words = (el) =>
+        textRange(el, (t) => {
+          const from = t.search(/\S/);
+          return from < 0 ? null : [from, t.trimEnd().length];
+        });
+
+      const cellsOf = (row, read) =>
+        [...row.querySelectorAll(".sb-cell")].map((c) => {
+          const b = c.getBoundingClientRect();
+          return {
+            text: c.textContent.trim(),
+            right: round(b.right),
+            width: round(b.width),
+            figure: read(c),
+          };
+        });
+
+      const head = root.querySelector(".sb-head");
+      const table = root.querySelector(".sb-table");
+      const labelBox = (el) => (el ? round(el.getBoundingClientRect().width) : null);
+      return {
+        tableWidth: round(table.getBoundingClientRect().width),
+        headShown: !!head && getComputedStyle(head).display !== "none",
+        head: head ? cellsOf(head, words) : null,
+        headLabelWidth: labelBox(head && head.firstElementChild),
+        rows: [...root.querySelectorAll(".sb-row")].map((row) => ({
+          label: row.querySelector(".sb-label").textContent,
+          labelWidth: labelBox(row.querySelector(".sb-label-row")),
+          barWidth: labelBox(row.querySelector(".sb-bar-cell")),
+          cells: cellsOf(row, digits),
+        })),
+      };
+    },
+    index
+  );
+
+/** The largest disagreement in a set of measurements, in px. Zero is the claim. */
+const spread = (values) => Math.max(...values) - Math.min(...values);
+/** Sub-pixel: two identical strings laid out in identical boxes land on the same float. */
+const SAME = 0.05;
+
+const column = (g, i, pick) => g.rows.map((row) => pick(row.cells[i]));
+
+// The two tables, and the widths at which each of them is still a table. §4 carries two more
+// numeric columns than §3 and a heading — "Repositories" — that is 110px of unbreakable word, so
+// its wide shape needs a wider column to live in and it reflows sooner. The bar is what gives
+// way to make room for the columns, which is why the share it takes is not one number either.
+const TABLES = [
+  {
+    what: "§3 By language",
+    attrs: { ...BARS_TABLE_BANDS, tip: TIP },
+    columns: 4, band: 1, widths: [1280, 900, 760], bar: [0.3, 0.36],
+  },
+  {
+    what: "§4 By country",
+    attrs: { ...BARS_TABLE_COUNTRY, tip: TIP },
+    columns: 6, band: 3, widths: [1280], bar: [0.15, 0.26],
+  },
+];
+
+for (const { what, attrs, columns, band, widths: shapeWidths, bar: barShare } of TABLES) {
+  describe(`cai-share-bars: ${what} is aligned`, () => {
+    for (const width of shapeWidths) {
+      test(`every numeric column holds one right edge at ${width}px`, async () => {
+        const r = await withIslands([{ tag: "cai-share-bars", attrs }], { width });
+        try {
+          const g = await geometry(r);
+          assert.equal(g.headShown, true, `the table shape is gone at ${width}px`);
+          for (let i = 0; i < columns; i++) {
+            // The cell box first: one grid, one track, one right edge — head row included.
+            const edges = [g.head[i].right, ...column(g, i, (c) => c.right)];
+            assert.ok(
+              spread(edges) <= SAME,
+              `column ${i} right edges at ${width}px: ${edges.join(", ")}`
+            );
+            // Then the FIGURES inside it, against their decimal axis. A band word sharing the
+            // cell must not move that axis, and neither must a median that has no decimal.
+            const axes = column(g, i, (c) => c.figure && c.figure.right).filter((x) => x != null);
+            assert.ok(
+              spread(axes) <= SAME,
+              `column ${i} figures sit on axes ${axes.join(", ")} at ${width}px ` +
+                `(${column(g, i, (c) => c.text).join(" | ")})`
+            );
+          }
+        } finally {
+          await r.close();
+        }
+      });
+    }
+
+    test("the band word does not move the digits it sits beside", async () => {
+      const r = await withIslands([{ tag: "cai-share-bars", attrs }], { width: 1280 });
+      try {
+        const g = await geometry(r);
+        // The rows were chosen so this cannot pass by accident: the shortest band word in the
+        // vocabulary, the longest, and a median that landed on a whole number.
+        const texts = column(g, band, (c) => c.text);
+        const shown = texts.map((t) => t.replace(/\s+/g, " "));
+        assert.ok(
+          shown.some((t) => /\bWeak\b/.test(t)) && shown.some((t) => /\bExemplary\b/.test(t)),
+          `the fixture no longer holds both the shortest and the longest band word: ${shown.join(" | ")}`
+        );
+        assert.ok(
+          shown.some((t) => /^\d+ /.test(t)),
+          `the fixture no longer holds a whole-number median: ${shown.join(" | ")}`
+        );
+        const starts = column(g, band, (c) => c.figure.firstX);
+        assert.ok(
+          spread(starts) <= SAME,
+          `the medians start at ${starts.join(", ")} — ${shown.join(" | ")}`
+        );
+      } finally {
+        await r.close();
+      }
+    });
+
+    test("the heading of a numeric column ends where its figures end", async () => {
+      const r = await withIslands([{ tag: "cai-share-bars", attrs }], { width: 1280 });
+      try {
+        const g = await geometry(r);
+        for (let i = 0; i < columns; i++) {
+          const figures = column(g, i, (c) => c.figure && c.figure.figureRight).filter((x) => x != null);
+          assert.ok(
+            Math.abs(g.head[i].figure.right - Math.max(...figures)) <= SAME,
+            `"${g.head[i].text}" ends at ${g.head[i].figure.right}, its figures at ${figures.join(", ")}`
+          );
+        }
+      } finally {
+        await r.close();
+      }
+    });
+
+    test("the label column sizes to its own content, floor 90px and ceiling 200px", async () => {
+      const r = await withIslands([{ tag: "cai-share-bars", attrs }], { width: 1280 });
+      try {
+        const g = await geometry(r);
+        const widths = [g.headLabelWidth, ...g.rows.map((row) => row.labelWidth)];
+        assert.ok(spread(widths) <= SAME, `the label column is ${widths.join(", ")} wide`);
+        const w = widths[0];
+        assert.ok(w >= 90, `the label column collapsed to ${w}px`);
+        assert.ok(w <= 200, `the label column is ${w}px — it was 240px of mostly empty space`);
+        // Sized to content, not to a fraction: the longest label still fits on one line.
+        const longest = await r.page.evaluate(() => {
+          const root = document.querySelector("cai-share-bars").shadowRoot;
+          return Math.max(
+            ...[...root.querySelectorAll(".sb-label")].map((el) => {
+              const rg = document.createRange();
+              rg.selectNodeContents(el);
+              return rg.getClientRects().length;
+            })
+          );
+        });
+        assert.equal(longest, 1, "a label wrapped inside the column that is sized to hold it");
+      } finally {
+        await r.close();
+      }
+    });
+
+    test("the bar column takes about a third of the table, not four ninths", async () => {
+      const r = await withIslands([{ tag: "cai-share-bars", attrs }], { width: 1280 });
+      try {
+        const g = await geometry(r);
+        const bars = g.rows.map((row) => row.barWidth);
+        assert.ok(spread(bars) <= SAME, `the bar column is ${bars.join(", ")} wide`);
+        const share = bars[0] / g.tableWidth;
+        // 437 of 984 before — 44.4%. §3 comes down to 32.6%, a 27% cut, which is the "reduced by
+        // 25% in width and still work well" the owner asked for; §4 comes down further on its
+        // own, because 2.5fr against a column's 1fr is a ratio and six columns claim more of it.
+        assert.ok(
+          share > barShare[0] && share < barShare[1],
+          `the bar takes ${(share * 100).toFixed(1)}% of the table (${bars[0]} of ${g.tableWidth})`
+        );
+      } finally {
+        await r.close();
+      }
+    });
+
+    test("at 680px it is still the per-row reflow, and the figure keeps its band word", async () => {
+      const r = await withIslands([{ tag: "cai-share-bars", attrs }], { width: 680 });
+      try {
+        assert.equal(await r.overflows(), false, "the page scrolls sideways at 680px");
+        const g = await geometry(r);
+        assert.equal(g.headShown, false, "the table did not reflow at 680px");
+        // One line, one string: "49.6 Weak" must not have become two boxes with a gap in them.
+        const cell = await r.page.evaluate(
+          (i) => {
+            const row = document.querySelector("cai-share-bars").shadowRoot.querySelectorAll(".sb-row")[0];
+            const el = row.querySelectorAll(".sb-cell")[i];
+            const rg = document.createRange();
+            rg.selectNodeContents(el);
+            return { text: el.textContent.replace(/\s+/g, " ").trim(), lines: rg.getClientRects().length };
+          },
+          band
+        );
+        assert.match(cell.text, /^\d[\d.]* [A-Z][a-z]+$/, `the reflowed median reads "${cell.text}"`);
+      } finally {
+        await r.close();
+      }
+    });
+  });
+}
