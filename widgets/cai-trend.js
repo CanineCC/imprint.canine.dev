@@ -1,4 +1,4 @@
-var H=`
+var F=`
 :host {
   /* neutrals \u2014 dark "graphite" */
   --bg: #15191e;
@@ -106,7 +106,7 @@ var H=`
   --accent-strong: #1c4f41;
   --on-accent: #ffffff;
 }
-`;function o(e){return String(e??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function h(e){if(e==null||e==="")return"";let n=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,t="",a=0,i;for(;(i=n.exec(e))!==null;){i.index>a&&(t+=o(e.slice(a,i.index)));let r=i[0];if(r.startsWith("**"))t+=`<strong>${o(r.slice(2,-2))}</strong>`;else if(r.startsWith("`"))t+=`<code>${o(r.slice(1,-1))}</code>`;else{let l=/^\[([^\]]+)\]\(([^)]+)\)$/.exec(r);l?t+=`<a href="${o(l[2])}">${o(l[1])}</a>`:t+=o(r)}a=i.index+r.length}return a<e.length&&(t+=o(e.slice(a))),t}var N=`
+`;function r(t){return String(t??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function f(t){if(t==null||t==="")return"";let n=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,e="",a=0,i;for(;(i=n.exec(t))!==null;){i.index>a&&(e+=r(t.slice(a,i.index)));let o=i[0];if(o.startsWith("**"))e+=`<strong>${r(o.slice(2,-2))}</strong>`;else if(o.startsWith("`"))e+=`<code>${r(o.slice(1,-1))}</code>`;else{let l=/^\[([^\]]+)\]\(([^)]+)\)$/.exec(o);l?e+=`<a href="${r(l[2])}">${r(l[1])}</a>`:e+=r(o)}a=i.index+o.length}return a<t.length&&(e+=r(t.slice(a))),e}var I=`
 :host { display: block; color: var(--ink); font: 400 var(--fs-md)/1.5 var(--font-ui); }
 * { box-sizing: border-box; }
 a { color: var(--accent-ink); text-decoration: none; }
@@ -114,12 +114,12 @@ a:hover { text-decoration: underline; }
 code { background: var(--surface-2); padding: 1px 5px; border-radius: var(--r-sm); font: 500 var(--fs-xs) var(--font-mono); }
 strong { font-weight: 600; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-`;function j(e){let n=e.getAttribute("kicker"),t=e.getAttribute("heading"),a=e.getAttribute("lede");if(!n&&!t&&!a)return"";let i='<div class="mk-section-head">';return n&&(i+=`<span class="mk-kicker">${o(n)}</span>`),t&&(i+=`<h2>${h(t)}</h2>`),a&&(i+=`<p>${h(a)}</p>`),i+="</div>",i}var B=`
+`;function z(t){let n=t.getAttribute("kicker"),e=t.getAttribute("heading"),a=t.getAttribute("lede");if(!n&&!e&&!a)return"";let i='<div class="mk-section-head">';return n&&(i+=`<span class="mk-kicker">${r(n)}</span>`),e&&(i+=`<h2>${f(e)}</h2>`),a&&(i+=`<p>${f(a)}</p>`),i+="</div>",i}var R=`
 .mk-section-head { margin-bottom: 1.5rem; }
 .mk-section-head h2 { font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.1rem); line-height: 1.2; margin: 0.3rem 0 0; color: var(--heading); font-weight: 600; letter-spacing: -0.01em; }
 .mk-section-head p { color: var(--muted); font-size: var(--fs-lg); line-height: 1.6; margin: 0.55rem 0 0; }
 .mk-kicker { display: inline-flex; align-items: center; gap: 0.55rem; font-size: var(--fs-2xs); font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
-`,$=class extends HTMLElement{#t;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#e(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#t=new MutationObserver(()=>{let n=this.dataset.theme;this.#e(),this.dataset.theme!==n&&this.render(this.shadowRoot)}),this.#t.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#t?.disconnect()}#e(){let n=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=n;let t=(this.getAttribute("brand")||"").trim().toLowerCase();t==="assay"||t==="cai"||t==="watchdog"?this.dataset.brand=t:delete this.dataset.brand}json(n,t){let a=this.getAttribute(n);if(a==null||a.trim()==="")return t;try{return JSON.parse(a)}catch{return t}}};var v=[{label:"Critical",key:"critical",floor:0},{label:"Weak",key:"poor",floor:25},{label:"Adequate",key:"fair",floor:50},{label:"Strong",key:"healthy",floor:70},{label:"Exemplary",key:"exemplary",floor:90}];function S(e){return e>=90?v[4]:e>=70?v[3]:e>=50?v[2]:e>=25?v[1]:v[0]}var I=`
+`,A=class extends HTMLElement{#e;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#t(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#e=new MutationObserver(()=>{let n=this.dataset.theme;this.#t(),this.dataset.theme!==n&&this.render(this.shadowRoot)}),this.#e.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#e?.disconnect()}#t(){let n=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=n;let e=(this.getAttribute("brand")||"").trim().toLowerCase();e==="assay"||e==="cai"||e==="watchdog"?this.dataset.brand=e:delete this.dataset.brand}json(n,e){let a=this.getAttribute(n);if(a==null||a.trim()==="")return e;try{return JSON.parse(a)}catch{return e}}};var v=[{label:"Critical",key:"critical",floor:0},{label:"Weak",key:"poor",floor:25},{label:"Adequate",key:"fair",floor:50},{label:"Strong",key:"healthy",floor:70},{label:"Exemplary",key:"exemplary",floor:90}];function T(t){return t>=90?v[4]:t>=70?v[3]:t>=50?v[2]:t>=25?v[1]:v[0]}var O=`
 .ink-exemplary { color: var(--band-exemplary-text); }
 .ink-healthy { color: var(--band-healthy-text); }
 .ink-fair { color: var(--band-fair-text); }
@@ -220,7 +220,7 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
 .cai-row:last-child { border-bottom: 0; }
 .cai-row b { color: var(--heading); font-weight: 600; text-align: right; }
 .cai-row .mono { font-family: var(--font-mono); font-size: var(--fs-xs); }
-`;var L=`
+`;var D=`
 .info-hint { position: relative; display: inline-flex; align-items: center; vertical-align: middle; margin-left: 6px; cursor: help; }
 .info-hint:focus { outline: none; }
 .info-hint-dot { width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--border-strong); color: var(--muted);
@@ -272,7 +272,20 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
    order, so a LATER sibling row would draw over a tip that opens across it. Each island lifts
    the subject on :hover/:focus-within for that reason \u2014 see the z-index bumps at the call sites. */
 @media (prefers-reduced-motion: reduce) { .info-hint-tip { transition: none; } }
-`;function R(e,{right:n=!1,label:t="More information"}={}){let a=e==null?"":String(e).trim();if(a==="")return"";let i=a.split(/\n\s*\n/).map(l=>l.trim()).filter(l=>l!=="").map(l=>`<p>${h(l)}</p>`).join("");return`<span class="${n?"info-hint hint-right":"info-hint"}" tabindex="0" role="note" aria-label="${o(t||"More information")}"><span class="info-hint-dot" aria-hidden="true">i</span><span class="info-hint-tip">${i}</span></span>`}var D=`
+`;function L(t,{right:n=!1,label:e="More information"}={}){let a=t==null?"":String(t).trim();if(a==="")return"";let i=a.split(/\n\s*\n/).map(l=>l.trim()).filter(l=>l!=="").map(l=>`<p>${f(l)}</p>`).join("");return`<span class="${n?"info-hint hint-right":"info-hint"}" tabindex="0" role="note" aria-label="${r(e||"More information")}"><span class="info-hint-dot" aria-hidden="true">i</span><span class="info-hint-tip">${i}</span></span>`}var j=`
+/* \u2605 THE ONE CONTAINER, DECLARED ONCE FOR THE FOUR ISLANDS THAT TAKE THIS RAIL.
+   Every width question an island asks is about a box inside the page, never about the page: a
+   rail takes 112px and a gutter out of the column, so an island 648px wide has 512px of content
+   and a viewport media query calls that a wide page. It is named rather than left to
+   nearest-ancestor resolution because naming is what makes the answer stable \u2014 an unnamed
+   @container binds to whichever container is nearest when the rule RUNS, so adding a container
+   anywhere inside an island would silently re-point every unnamed query beneath it at a
+   different box. That is not hypothetical: it is what would have happened to the wide bar's
+   legend in cai-share-bars the moment a container was put on .rail-body.
+   \u2605 AND IT IS ON :host, NOT ON .rail \u2014 a @container rule styles the DESCENDANTS of its
+   container and never the container itself, so the stacking rule at the foot of this file could
+   not have asked a container that was .rail. */
+:host { container-type: inline-size; container-name: island; }
 .rail { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 0 24px;
   align-items: start; position: relative; }
 .rail-side { display: flex; align-items: flex-start; padding-top: 3px; min-width: 0; }
@@ -285,14 +298,16 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
 .rail-side .info-hint-tip { left: 0; right: auto; max-width: min(320px, 100%); }
 /* A tip opens across the content beside it, which would otherwise paint over it. */
 .rail:hover, .rail:focus-within { z-index: 2; }
-/* The label takes its own line under 560px \u2014 the same width at which cai-share-bars reflows,
-   so two adjacent sections never disagree about when a page has become narrow. A 112px column
-   plus a 24px gutter is a third of a 400px screen spent on two words. */
-@media (max-width: 560px) {
+/* The label takes its own line under 560px OF THE ISLAND \u2014 the same width at which
+   cai-share-bars reflows, so two adjacent sections never disagree about when a page has become
+   narrow. A 112px column plus a 24px gutter is a third of a 400px screen spent on two words.
+   Of the island, because an island is not the page: dropped into a 380px column of a 1280px
+   page, a viewport query kept the rail beside 244px of content and nothing failed. */
+@container island (max-width: 560px) {
   .rail { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .rail-side { padding-top: 0; }
 }
-`;function _({kicker:e,tip:n,content:t}){return`<div class="rail"><div class="rail-side"><span class="rail-kicker">${o(e)}</span>`+R(n,{label:e})+`</div><div class="rail-body">${t}</div></div>`}function O(e){let n=e.getAttribute("heading"),t=e.getAttribute("lede");if(!n&&!t)return"";let a='<div class="mk-section-head">';return n&&(a+=`<h2>${h(n)}</h2>`),t&&(a+=`<p>${h(t)}</p>`),a+="</div>",a}var k=[0,25,50,70,90,100],W=.05;function q(e){let n=[],t=0;for(;t<e.length;){let a=t;for(;a+1<e.length&&Math.abs(e[a+1]-e[t])<W;)a++;let i=a-t+1;n.push({i:t,v:e[t],run:i}),a>t&&n.push({i:a,v:e[a],run:i}),t=a+1}return n}var A=720,M=240,p={top:26,right:18,bottom:34,left:40},P=H+N+B+I+L+D+`
+`;function B({kicker:t,tip:n,content:e}){return`<div class="rail"><div class="rail-side"><span class="rail-kicker">${r(t)}</span>`+L(n,{label:t})+`</div><div class="rail-body">${e}</div></div>`}function W(t){let n=t.getAttribute("heading"),e=t.getAttribute("lede");if(!n&&!e)return"";let a='<div class="mk-section-head">';return n&&(a+=`<h2>${f(n)}</h2>`),e&&(a+=`<p>${f(e)}</p>`),a+="</div>",a}var k=[0,25,50,70,90,100],q=.05;function U(t){let n=[],e=0;for(;e<t.length;){let a=e;for(;a+1<t.length&&Math.abs(t[a+1]-t[e])<q;)a++;let i=a-e+1;n.push({i:e,v:t[e],run:i}),a>e&&n.push({i:a,v:t[a],run:i}),e=a+1}return n}var E=720,N=240,p={top:26,right:18,bottom:34,left:40},P=F+I+R+O+D+j+`
 .mk-trend { max-width: 46rem; margin: 0 auto; }
 .mk-trend-plot { position: relative; }
 .mk-trend svg { display: block; width: 100%; height: auto; overflow: visible; }
@@ -335,12 +350,24 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
    The chart takes what the figures do not need (flex: 1), which is the design's shape: a line
    long enough to read a slope off, and the two quantities stated beside it. Each stack is capped
    at 220px so a basis sentence wraps instead of pushing the line down to a stub. */
-.mk-trend-row { display: flex; gap: 32px; align-items: flex-start; }
-/* The line never gives up more than two fifths of the row: shrink:0 on a 60% basis means the
-   FIGURES yield when the column narrows, wrapping into one stack, rather than both giving way
-   proportionally until the chart is a 117px stub \u2014 which is what a plain flex:1 produced at
-   680px, measured. */
-.mk-trend-row > .mk-trend { flex: 1 0 60%; min-width: 0; }
+/* \u2605\u2605 THE CHART GETS ITS OWN WIDTH OR IT GETS THE WHOLE ROW, AND NO BREAKPOINT DECIDES THAT.
+   The plot is a 720-unit viewBox and every label inside it is set in real pixels \u2014 12px dates,
+   11px cutlines \u2014 so an SVG drawn 329px wide draws them at 5.5px. Nothing in the CSS says so:
+   computed style still reports 12px, which is why this was reported as "unreadable" by a person
+   rather than caught by a rule. A percentage basis cannot express it either, because 60% of a
+   column is not a number of pixels.
+   The flex basis below says the thing itself: the chart asks for a width it can be drawn at.
+   648px is 90% of the 720-unit plot \u2014 the point below which its 12px dates are drawn under 11px
+   and its 11px cutlines under 10. While the row can give it that AND hold the pairs beside it,
+   they sit beside it and the chart takes the surplus; when it cannot, the pairs wrap onto their
+   own line and the chart has the whole column. The basis decides only WHERE THEY WRAP: beside
+   the pairs the chart is still 692px in the sheet's 984px column, or 801px now that the pairs
+   have lost their basis sentences and take 151px instead of 260.
+   It is the same answer cai-figure-band and cai-link-cards already give with auto-fit: a layout
+   that responds to its own box needs no query to be told how wide it is. Two of the four sheet
+   islands never needed a width query at all, and this one now does not either. */
+.mk-trend-row { display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; }
+.mk-trend-row > .mk-trend { flex: 1 1 648px; min-width: 0; }
 /* The pairs are a COLUMN beside the line, at every width, and that is a decision rather than
    what the wrapping happened to do. The design puts its two stacks in a row because it prints no
    basis; ours each carry a sentence naming the population, and two of those side by side in the
@@ -357,10 +384,12 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
   font-size: 18px; font-weight: 700; line-height: 1.2; color: var(--ink); overflow-wrap: anywhere; }
 .mk-trend-fig-sub { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
   font-size: var(--fs-2xs); color: var(--muted); line-height: 1.45; }
-/* Under the rail's own stacking width the figures go beneath the line, one column: 220px of
-   stack beside a 130px chart is neither a chart nor a figure. */
-@media (max-width: 560px) {
-  .mk-trend-row { flex-direction: column; gap: 16px; }
+/* The pairs are beneath the line by then \u2014 the wrap above puts them there \u2014 so all this width
+   has left to say is that a basis sentence may use the whole of it. On the ISLAND, because that
+   is the box a reader's screen is, and because a cap released against the wrong box is the
+   difference between a sentence wrapping and a sentence wrapping twice. */
+@container island (max-width: 560px) {
+  .mk-trend-row { gap: 16px; }
   .mk-trend-figs { flex-direction: column; gap: 14px; }
   .mk-trend-fig { max-width: none; }
 }
@@ -374,4 +403,4 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
 .rail-body .mk-trend { max-width: none; margin-left: 0; margin-right: 0; }
 .rail-body .mk-trend-sum { max-width: none; margin-left: 0; margin-right: 0; text-align: left; }
 @media (prefers-reduced-motion: reduce) { .mk-trend-tip { transition: none; } }
-`;function G(e){let n=Math.min(...e),t=Math.max(...e),a=0,i=100;for(let r of k)r<=n&&(a=r);for(let r=k.length-1;r>=0;r--)k[r]>=t&&(i=k[r]);return i-a<10&&(a=Math.max(0,Math.min(a,i-25))),i-a<10&&(i=Math.min(100,a+25)),{min:a,max:i}}function x(e){return(Math.round(e*10)/10).toFixed(1)}customElements.define("cai-trend",class extends ${render(e){let n=(this.json("series",[])||[]).map(Number).filter(c=>Number.isFinite(c)),t=(this.getAttribute("kicker")||"").trim(),a=this.figuresHtml(),i=this.plotHtml(n),r=a?`<div class="mk-trend-row">${i}${a}</div>`:i,l=`<style>${P}</style>`;l+=t?_({kicker:t,tip:this.getAttribute("tip"),content:O(this)+r}):j(this)+r,e.innerHTML=l,n.length>1&&this.wireTips(e,n)}figuresHtml(){let e=(this.json("figures",[])||[]).filter(t=>t&&t.from!=null&&t.from.value!=null&&String(t.from.value)!==""&&t.to!=null&&t.to.value!=null&&String(t.to.value)!=="");if(e.length===0)return"";let n='<div class="mk-trend-figs">';for(let t of e){n+='<div class="mk-trend-fig">',t.label!=null&&String(t.label)!==""&&(n+=`<span class="mk-trend-fig-label">${o(String(t.label))}</span>`),n+=`<span class="mk-trend-fig-pair">${o(String(t.from.value))} \u2192 ${o(String(t.to.value))}</span>`;let a=t.from.sub==null?"":String(t.from.sub),i=t.to.sub==null?"":String(t.to.sub),r=a===i?[a]:[a,i];for(let l of r.filter(c=>c!==""))n+=`<span class="mk-trend-fig-sub">${o(l)}</span>`;n+="</div>"}return n+"</div>"}plotHtml(e){let n=this.getAttribute("first-date"),t=this.getAttribute("last-date"),a=this.getAttribute("caption"),i=(this.getAttribute("sampled")||"").trim();if(e.length===0)return"";if(e.length===1){let s=e[0],g=S(s),b='<div class="mk-trend"><p class="mk-trend-solo">';return b+=`<span class="mk-trend-solo-num ink-${g.key}">${x(s)}</span>`,(t||n)&&(b+=`<span class="mk-trend-solo-date">measured ${o(t||n)}</span>`),b+="</p></div>",a&&(b+=`<p class="mk-trend-sum">${h(a)}</p>`),b}let{min:r,max:l}=G(e),c=A-p.left-p.right,w=M-p.top-p.bottom,f=s=>p.left+c*s/(e.length-1),m=s=>p.top+w*(1-(s-r)/(l-r)),u=e[e.length-1],y=S(u),E=i?e.map((s,g)=>({i:g,v:s,run:1})):q(e),T=E.map(s=>`${f(s.i).toFixed(1)},${m(s.v).toFixed(1)}`),d=`<div class="mk-trend"><div class="mk-trend-plot"${i?` data-sampled="${o(i)}"`:""}>`,z=i?`${e.length} ${i} samples`:`${e.length} measurements`;d+=`<svg viewBox="0 0 ${A} ${M}" role="img" aria-label="${o(`${z}, from ${x(e[0])} to ${x(u)}.`)}">`;for(let s of k){if(s<r||s>l)continue;let g=m(s).toFixed(1);d+=`<line class="mk-trend-grid" x1="${p.left}" y1="${g}" x2="${A-p.right}" y2="${g}"></line>`,d+=`<text class="mk-trend-cut" x="${p.left-8}" y="${g}" text-anchor="end" dominant-baseline="middle">${s}</text>`}d+=`<path class="mk-trend-area" d="M${f(0).toFixed(1)},${m(r).toFixed(1)} L${T.join(" L")} L${f(e.length-1).toFixed(1)},${m(r).toFixed(1)} Z"></path>`,d+=`<polyline class="mk-trend-line" points="${T.join(" ")}" vector-effect="non-scaling-stroke"></polyline>`,n&&(d+=`<text class="mk-trend-date" x="${p.left}" y="${M-10}" text-anchor="start">${o(n)}</text>`),t&&(d+=`<text class="mk-trend-date" x="${A-p.right}" y="${M-10}" text-anchor="end">${o(t)}</text>`),E.forEach(s=>{let g=s.i===e.length-1,b=f(s.i).toFixed(1),C=m(s.v).toFixed(1);d+=`<circle class="mk-trend-hit" cx="${b}" cy="${C}" r="18" tabindex="0" data-i="${s.i}" data-v="${x(s.v)}" data-run="${s.run}"></circle>`,d+=g?`<circle class="mk-trend-end fill-${y.key}" cx="${b}" cy="${C}" r="5.5"></circle>`:`<circle class="mk-trend-dot" cx="${b}" cy="${C}" r="4"></circle>`}),d+=`<text class="mk-trend-endlabel ink-${y.key}" x="${f(e.length-1).toFixed(1)}" y="${(m(u)-14).toFixed(1)}" text-anchor="end">${x(u)}</text>`,d+="</svg>",d+='<div class="mk-trend-tip" hidden></div>',d+="</div>";let F=u-e[0],U=Math.abs(F)<.05?"unchanged":`${F>0?"up":"down"} ${x(Math.abs(F))}`;return d+=`<p class="mk-trend-sum">${o(`${z}${n?`, from ${n}`:""}${t?` to ${t}`:""}: ${x(e[0])} to ${x(u)} \u2014 ${U}.`+(i?" Each point is the newest reading on or before its own date, not a reading taken on it.":""))}</p>`,a&&(d+=`<p class="mk-trend-sum">${h(a)}</p>`),d+="</div>",d}wireTips(e,n){let t=e.querySelector(".mk-trend-tip"),a=e.querySelector(".mk-trend-plot");if(!t||!a)return;let i=a.getAttribute("data-sampled")||"",r=c=>{let w=Number(c.getAttribute("data-i")),f=c.getBoundingClientRect(),m=a.getBoundingClientRect(),u=Number(c.getAttribute("data-run"))||1,y=i?`${i} sample ${w+1} of ${n.length}`:u>=3?`unchanged across ${u} scans`:`scan ${w+1} of ${n.length}`;t.hidden=!1,t.innerHTML=`<b>${o(c.getAttribute("data-v")||"")}</b> \xB7 ${o(y)}`+(i?'<span class="mk-trend-tip-note">the newest reading on or before that date</span>':""),t.style.left=`${f.left+f.width/2-m.left}px`,t.style.top=`${f.top-m.top-6}px`,t.classList.add("on")},l=()=>{t.classList.remove("on")};for(let c of e.querySelectorAll(".mk-trend-hit"))c.addEventListener("pointerenter",()=>r(c)),c.addEventListener("focus",()=>r(c)),c.addEventListener("pointerleave",l),c.addEventListener("blur",l)}});export{q as collapseFlatRuns};
+`;function G(t){let n=Math.min(...t),e=Math.max(...t),a=0,i=100;for(let o of k)o<=n&&(a=o);for(let o=k.length-1;o>=0;o--)k[o]>=e&&(i=k[o]);return i-a<10&&(a=Math.max(0,Math.min(a,i-25))),i-a<10&&(i=Math.min(100,a+25)),{min:a,max:i}}function x(t){return(Math.round(t*10)/10).toFixed(1)}customElements.define("cai-trend",class extends A{render(t){let n=(this.json("series",[])||[]).map(Number).filter(d=>Number.isFinite(d)),e=(this.getAttribute("kicker")||"").trim(),a=this.figuresHtml(),i=this.plotHtml(n),o=a?`<div class="mk-trend-row">${i}${a}</div>`:i,l=`<style>${P}</style>`;l+=e?B({kicker:e,tip:this.getAttribute("tip"),content:W(this)+o}):z(this)+o,t.innerHTML=l,n.length>1&&this.wireTips(t,n)}figuresHtml(){let t=(this.json("figures",[])||[]).filter(e=>e&&e.from!=null&&e.from.value!=null&&String(e.from.value)!==""&&e.to!=null&&e.to.value!=null&&String(e.to.value)!=="");if(t.length===0)return"";let n='<div class="mk-trend-figs">';for(let e of t){n+='<div class="mk-trend-fig">',e.label!=null&&String(e.label)!==""&&(n+=`<span class="mk-trend-fig-label">${r(String(e.label))}</span>`),n+=`<span class="mk-trend-fig-pair">${r(String(e.from.value))} \u2192 ${r(String(e.to.value))}</span>`;let a=e.from.sub==null?"":String(e.from.sub),i=e.to.sub==null?"":String(e.to.sub),o=a===i?[a]:[a,i];for(let l of o.filter(d=>d!==""))n+=`<span class="mk-trend-fig-sub">${r(l)}</span>`;n+="</div>"}return n+"</div>"}plotHtml(t){let n=this.getAttribute("first-date"),e=this.getAttribute("last-date"),a=this.getAttribute("caption"),i=(this.getAttribute("sampled")||"").trim();if(t.length===0)return"";if(t.length===1){let s=t[0],g=T(s),b='<div class="mk-trend"><p class="mk-trend-solo">';return b+=`<span class="mk-trend-solo-num ink-${g.key}">${x(s)}</span>`,(e||n)&&(b+=`<span class="mk-trend-solo-date">measured ${r(e||n)}</span>`),b+="</p></div>",a&&(b+=`<p class="mk-trend-sum">${f(a)}</p>`),b}let{min:o,max:l}=G(t),d=E-p.left-p.right,y=N-p.top-p.bottom,m=s=>p.left+d*s/(t.length-1),h=s=>p.top+y*(1-(s-o)/(l-o)),u=t[t.length-1],$=T(u),S=i?t.map((s,g)=>({i:g,v:s,run:1})):U(t),w=S.map(s=>`${m(s.i).toFixed(1)},${h(s.v).toFixed(1)}`),c=`<div class="mk-trend"><div class="mk-trend-plot"${i?` data-sampled="${r(i)}"`:""}>`,C=i?`${t.length} ${i} samples`:`${t.length} measurements`;c+=`<svg viewBox="0 0 ${E} ${N}" role="img" aria-label="${r(`${C}, from ${x(t[0])} to ${x(u)}.`)}">`;for(let s of k){if(s<o||s>l)continue;let g=h(s).toFixed(1);c+=`<line class="mk-trend-grid" x1="${p.left}" y1="${g}" x2="${E-p.right}" y2="${g}"></line>`,c+=`<text class="mk-trend-cut" x="${p.left-8}" y="${g}" text-anchor="end" dominant-baseline="middle">${s}</text>`}c+=`<path class="mk-trend-area" d="M${m(0).toFixed(1)},${h(o).toFixed(1)} L${w.join(" L")} L${m(t.length-1).toFixed(1)},${h(o).toFixed(1)} Z"></path>`,c+=`<polyline class="mk-trend-line" points="${w.join(" ")}" vector-effect="non-scaling-stroke"></polyline>`,n&&(c+=`<text class="mk-trend-date" x="${p.left}" y="${N-10}" text-anchor="start">${r(n)}</text>`),e&&(c+=`<text class="mk-trend-date" x="${E-p.right}" y="${N-10}" text-anchor="end">${r(e)}</text>`),S.forEach(s=>{let g=s.i===t.length-1,b=m(s.i).toFixed(1),M=h(s.v).toFixed(1);c+=`<circle class="mk-trend-hit" cx="${b}" cy="${M}" r="18" tabindex="0" data-i="${s.i}" data-v="${x(s.v)}" data-run="${s.run}"></circle>`,c+=g?`<circle class="mk-trend-end fill-${$.key}" cx="${b}" cy="${M}" r="5.5"></circle>`:`<circle class="mk-trend-dot" cx="${b}" cy="${M}" r="4"></circle>`}),c+=`<text class="mk-trend-endlabel ink-${$.key}" x="${m(t.length-1).toFixed(1)}" y="${(h(u)-14).toFixed(1)}" text-anchor="end">${x(u)}</text>`,c+="</svg>",c+='<div class="mk-trend-tip" hidden></div>',c+="</div>";let H=u-t[0],_=Math.abs(H)<.05?"unchanged":`${H>0?"up":"down"} ${x(Math.abs(H))}`;return c+=`<p class="mk-trend-sum">${r(`${C}${n?`, from ${n}`:""}${e?` to ${e}`:""}: ${x(t[0])} to ${x(u)} \u2014 ${_}.`+(i?" Each point is the newest reading on or before its own date, not a reading taken on it.":""))}</p>`,a&&(c+=`<p class="mk-trend-sum">${f(a)}</p>`),c+="</div>",c}wireTips(t,n){let e=t.querySelector(".mk-trend-tip"),a=t.querySelector(".mk-trend-plot");if(!e||!a)return;let i=a.getAttribute("data-sampled")||"",o=d=>{let y=Number(d.getAttribute("data-i")),m=d.getBoundingClientRect(),h=a.getBoundingClientRect(),u=Number(d.getAttribute("data-run"))||1,$=i?`${i} sample ${y+1} of ${n.length}`:u>=3?`unchanged across ${u} scans`:`scan ${y+1} of ${n.length}`;e.hidden=!1,e.innerHTML=`<b>${r(d.getAttribute("data-v")||"")}</b> \xB7 ${r($)}`+(i?'<span class="mk-trend-tip-note">the newest reading on or before that date</span>':"");let S=m.left+m.width/2-h.left,w=e.offsetWidth/2,c=Math.min(Math.max(S-w,0),Math.max(0,h.width-e.offsetWidth));e.style.left=`${c+w}px`,e.style.top=`${m.top-h.top-6}px`,e.classList.add("on")},l=()=>{e.classList.remove("on")};for(let d of t.querySelectorAll(".mk-trend-hit"))d.addEventListener("pointerenter",()=>o(d)),d.addEventListener("focus",()=>o(d)),d.addEventListener("pointerleave",l),d.addEventListener("blur",l)}});export{U as collapseFlatRuns};

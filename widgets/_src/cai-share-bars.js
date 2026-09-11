@@ -52,10 +52,13 @@
 // neighbour and the page still looks like a page. At 600px it was worse: the grid's own minimum
 // track widths exceeded the column and the whole PAGE scrolled sideways.
 //
-// So the queries below are @container, on two containers: the table for the table's shape, the
-// host for the wide bar's legend. Each asks about the box it is actually laid out in, which is
-// the question a media query could only ever approximate — and now cannot get wrong when a
-// caller puts this island in a narrower column than the page.
+// So the queries below are @container, on two NAMED containers: `table` for the table's shape,
+// `island` (declared once in rail.js, for all four sheet islands) for the wide bar's legend.
+// Each asks about the box it is actually laid out in, which is the question a media query could
+// only ever approximate — and now cannot get wrong when a caller puts this island in a narrower
+// column than the page. Named, because an unnamed query binds to the nearest container: the
+// names are what stop a container added later, anywhere in between, from silently answering a
+// question it was never asked.
 //
 // WITH A KICKER IT IS A SECTION OF THE SHEET, and takes the section rail (rail.js): the label
 // and its `tip` in a 112px left column, the bars — and the lede that says what a row's
@@ -122,9 +125,14 @@ function splitCell(text, toned) {
 }
 
 const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + HINT_CSS + RAIL_CSS + `
-/* The two containers the queries at the foot of this sheet ask about. */
-:host { container-type: inline-size; }
-.sb-table { container-type: inline-size; }
+/* The two containers the queries at the foot of this sheet ask about. The island — the whole
+   island — is declared once in rail.js for all four sheet islands and is not re-declared here;
+   the table container is this island's own, because a table's shape is decided by its width and
+   nothing else. Both are NAMED, and the names are the point: an unnamed @container binds to
+   whichever container happens to be nearest when the rule runs, so putting a container anywhere
+   inside .rail-body would have silently re-pointed the wide bar's legend at a box 136px
+   narrower than the one its 560px threshold was measured against. */
+.sb-table { container-type: inline-size; container-name: table; }
 .sb-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .sb-cap { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
 /* The sentence that stands where a bar would be. Muted, never band-coloured: it is the absence
@@ -164,7 +172,13 @@ a.sb-label:hover { color: var(--accent); text-decoration: none; }
    accessibility tree too, so a screen reader hears one label per part at either width. */
 .sb-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 .sb-legend-item.is-inside { display: none; }
-@container (max-width: 560px) {
+/* 560px OF THE ISLAND, which is the box this threshold was measured against — not the content
+   column beside the rail. The number came from a string ("1,511 resolved · 42.9%" in a 151px
+   part at a 400px screen), and re-pointing it at a column 136px narrower without re-measuring
+   that string would tighten a rule whose derivation is a fact about type, not about layout.
+   The box is arguably the bar's own; the threshold for that box is not 560, and finding it means
+   measuring the live page's part labels rather than this fixture's shorter ones. */
+@container island (max-width: 560px) {
   .sb-wide-part > span { display: none; }
   .sb-legend-item.is-inside { display: inline-flex; }
 }
@@ -270,7 +284,7 @@ a.sb-label:hover { color: var(--accent); text-decoration: none; }
  * are written once here rather than copied per breakpoint.
  */
 const tableReflowCss = (max) => `
-@container (max-width: ${max}px) {
+@container table (max-width: ${max}px) {
   /* The cells take their own line under the label, each carrying its heading, and the bar takes
      a third. The header row has nothing left to head, so it goes — and with it the one grid,
      because a row here is no longer a slice of the table's columns but a little grid of its own.

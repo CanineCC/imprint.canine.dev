@@ -704,12 +704,18 @@ describe("the rail at the widths a reader has", () => {
         assert.ok(body.width >= 440, `the content column is only ${body.width}px at ${width}px`);
         const cards = await r.computed("cai-link-cards", ".mk-links", "gridTemplateColumns");
         assert.ok(cards.split(" ").length <= 3, `${cards.split(" ").length} card columns at ${width}px`);
-        // Above the stacking width the figures stay beside the chart, and the chart stays a
-        // chart: a line squeezed under 240px is a decoration.
+        // The chart stays a chart: a line squeezed under 240px is a decoration.
+        //
+        // ★ THIS ASSERTION USED TO SAY "BESIDE" AT BOTH WIDTHS, AND THAT IS WHAT IT WAS WRONG
+        // ABOUT. At 680px the figures beside the chart left it 329px of a 720-unit viewBox and
+        // its 12px date labels were drawn at 5.5px — the test held the shape and never asked
+        // what the shape cost. Beside is right only while the column can hold both; below 680px
+        // of column the pairs wrap and the chart takes the whole of it. Which of the two it is,
+        // at which width, is asserted against the rendered type in "the chart is drawn at its
+        // own size, or given the whole column".
         const chart = await r.box("cai-trend", ".mk-trend");
         const figs = await r.box("cai-trend", ".mk-trend-figs");
         assert.notEqual(figs, null, `no figures rendered at ${width}px`);
-        assert.ok(figs.x >= chart.x + chart.width - 1, `the figures are not beside the chart at ${width}px`);
         assert.ok(chart.width >= 240, `the chart is only ${chart.width}px wide at ${width}px`);
       } finally {
         await r.close();
@@ -1223,4 +1229,124 @@ describe("cai-trend: the pairs, and the caption behind the (i)", () => {
     assert.equal(seen.sums.length, 1, `${seen.sums.length} summary lines under the chart`);
     assert.equal(seen.empty, 0, "an empty paragraph was rendered where the caption used to be");
   });
+});
+
+// ── an island asks about ITS OWN box, not the window's ───────────────────────────────────────
+// eab8af0 fixed this in cai-share-bars: a rail takes 112px and a gutter out of the column, so at
+// a 680px viewport the island's content is 512px wide while a viewport media query still calls
+// the page wide. The same defect was still live one island over, and it showed up as type:
+// §4's chart was 329px of a 720-unit viewBox, so its 12px date labels were drawn at 5.5px.
+//
+// MEASURED AS RENDERED TEXT, AGAINST THE SIZE THE STYLESHEET ASKED FOR. An SVG scaled to 46%
+// draws every label at 46%, and nothing in the CSS says so — computed style still reports 12px.
+// So the test lays the same string out twice: once as the chart drew it, once in an HTML span
+// carrying the label's own computed font. The ratio is the scale, and the claim is that a chart
+// never draws its own type smaller than it asked for.
+const typeScale = (r, selector = ".mk-trend-date") =>
+  r.page.evaluate((sel) => {
+    const root = document.querySelector("cai-trend").shadowRoot;
+    const el = root.querySelector(sel);
+    if (!el) return null;
+    const st = getComputedStyle(el);
+    const probe = document.createElement("span");
+    probe.style.cssText = "position:absolute;visibility:hidden;white-space:pre";
+    probe.style.font = `${st.fontStyle} ${st.fontWeight} ${st.fontSize}/1 ${st.fontFamily}`;
+    probe.textContent = el.textContent;
+    root.appendChild(probe);
+    const wanted = probe.getBoundingClientRect().width;
+    probe.remove();
+    const drawn = el.getBoundingClientRect().width;
+    return {
+      text: el.textContent,
+      asked: Math.round(wanted * 10) / 10,
+      drawn: Math.round(drawn * 10) / 10,
+      scale: Math.round((drawn / wanted) * 100) / 100,
+    };
+  }, selector);
+
+describe("cai-trend: the chart is a chart at every width the rail leaves it", () => {
+  // The claim, at every width: EITHER the chart is drawn at the size it is set in, OR it has the
+  // whole content column and is as large as the page can make it. What it may never be is a stub
+  // beside something else — which is what it was at three of these four widths, because a
+  // percentage basis let the pairs keep their 260px while the chart went to 329.
+  //
+  // Stated as one assertion on purpose. "scale >= 0.95" alone is unsatisfiable in a 512px column:
+  // a chart cannot be wider than the column it is in, and asserting it could would be asserting a
+  // wish. "full width" alone would pass on a chart that had gone full width at 1280 too, giving
+  // up the design's shape to satisfy a test.
+  for (const width of [1280, 900, 760, 680]) {
+    test(`the chart is drawn at its own size, or given the whole column, at ${width}px`, async () => {
+      const r = await withIslands([{ tag: "cai-trend", attrs: TREND_WEEKLY }], { width });
+      try {
+        const t = await typeScale(r);
+        assert.notEqual(t, null, "no date label rendered");
+        const body = await r.box("cai-trend", ".rail-body");
+        const chart = await r.box("cai-trend", ".mk-trend");
+        const full = Math.abs(chart.width - body.width) <= 1;
+        assert.ok(
+          t.scale >= 0.95 || full,
+          `"${t.text}" is set at ${t.asked}px wide and drawn at ${t.drawn}px — the chart is `
+            + `${Math.round(chart.width)}px of a ${Math.round(body.width)}px column, scaled to `
+            + `${Math.round(t.scale * 100)}%, so its 12px type renders at `
+            + `${Math.round(12 * t.scale * 10) / 10}px`
+        );
+      } finally {
+        await r.close();
+      }
+    });
+  }
+
+  test("the pairs sit beside the chart while it fits, and under it when it does not", async () => {
+    for (const [width, beside] of [[1280, true], [900, false], [680, false]]) {
+      const r = await withIslands([{ tag: "cai-trend", attrs: TREND_WEEKLY }], { width });
+      try {
+        const body = await r.box("cai-trend", ".rail-body");
+        const chart = await r.box("cai-trend", ".mk-trend");
+        const figs = await r.box("cai-trend", ".mk-trend-figs");
+        if (beside) {
+          assert.ok(figs.x >= chart.x + chart.width - 1,
+            `at ${width}px the figures are not beside the chart`);
+        } else {
+          assert.ok(figs.y >= chart.y + chart.height - 1,
+            `at ${width}px the figures are still beside a ${Math.round(chart.width)}px chart`);
+          // And the whole point of moving them: the chart gets the column.
+          assert.equal(Math.round(chart.width), Math.round(body.width),
+            `at ${width}px the chart did not take the column the figures left`);
+        }
+      } finally {
+        await r.close();
+      }
+    }
+  });
+});
+
+describe("the rail stacks on the island's width, not the window's", () => {
+  // The latent half of the same defect, in rail.js itself: an island placed in a narrow column
+  // of a wide page keeps a 112px rail beside a column that cannot spare it. No page does this
+  // today — which is exactly why it would be found by a reader rather than by us.
+  for (const tag of ["cai-trend", "cai-share-bars", "cai-figure-band", "cai-link-cards"]) {
+    test(`${tag} stacks its rail in a 380px column on a 1280px page`, async () => {
+      const attrs = {
+        "cai-trend": TREND_WEEKLY,
+        "cai-share-bars": { ...BARS_TABLE_BANDS, tip: TIP },
+        "cai-figure-band": BAND_LEAD,
+        "cai-link-cards": LINKS_RAIL,
+      }[tag];
+      const r = await withIslands([{ tag, attrs }], { width: 1280 });
+      try {
+        await r.page.evaluate(() => {
+          document.querySelector(".column").style.maxWidth = "380px";
+        });
+        const side = await r.box(tag, ".rail-side");
+        const body = await r.box(tag, ".rail-body");
+        assert.ok(
+          body.y > side.y,
+          `the kicker is still beside a ${Math.round(body.width)}px content column`
+        );
+        assert.equal(await r.overflows(), false, "the island pushed the page sideways");
+      } finally {
+        await r.close();
+      }
+    });
+  }
 });

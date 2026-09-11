@@ -178,12 +178,24 @@ const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + HINT_CSS 
    The chart takes what the figures do not need (flex: 1), which is the design's shape: a line
    long enough to read a slope off, and the two quantities stated beside it. Each stack is capped
    at 220px so a basis sentence wraps instead of pushing the line down to a stub. */
-.mk-trend-row { display: flex; gap: 32px; align-items: flex-start; }
-/* The line never gives up more than two fifths of the row: shrink:0 on a 60% basis means the
-   FIGURES yield when the column narrows, wrapping into one stack, rather than both giving way
-   proportionally until the chart is a 117px stub — which is what a plain flex:1 produced at
-   680px, measured. */
-.mk-trend-row > .mk-trend { flex: 1 0 60%; min-width: 0; }
+/* ★★ THE CHART GETS ITS OWN WIDTH OR IT GETS THE WHOLE ROW, AND NO BREAKPOINT DECIDES THAT.
+   The plot is a 720-unit viewBox and every label inside it is set in real pixels — 12px dates,
+   11px cutlines — so an SVG drawn 329px wide draws them at 5.5px. Nothing in the CSS says so:
+   computed style still reports 12px, which is why this was reported as "unreadable" by a person
+   rather than caught by a rule. A percentage basis cannot express it either, because 60% of a
+   column is not a number of pixels.
+   The flex basis below says the thing itself: the chart asks for a width it can be drawn at.
+   648px is 90% of the 720-unit plot — the point below which its 12px dates are drawn under 11px
+   and its 11px cutlines under 10. While the row can give it that AND hold the pairs beside it,
+   they sit beside it and the chart takes the surplus; when it cannot, the pairs wrap onto their
+   own line and the chart has the whole column. The basis decides only WHERE THEY WRAP: beside
+   the pairs the chart is still 692px in the sheet's 984px column, or 801px now that the pairs
+   have lost their basis sentences and take 151px instead of 260.
+   It is the same answer cai-figure-band and cai-link-cards already give with auto-fit: a layout
+   that responds to its own box needs no query to be told how wide it is. Two of the four sheet
+   islands never needed a width query at all, and this one now does not either. */
+.mk-trend-row { display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; }
+.mk-trend-row > .mk-trend { flex: 1 1 648px; min-width: 0; }
 /* The pairs are a COLUMN beside the line, at every width, and that is a decision rather than
    what the wrapping happened to do. The design puts its two stacks in a row because it prints no
    basis; ours each carry a sentence naming the population, and two of those side by side in the
@@ -200,10 +212,12 @@ const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + HINT_CSS 
   font-size: 18px; font-weight: 700; line-height: 1.2; color: var(--ink); overflow-wrap: anywhere; }
 .mk-trend-fig-sub { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
   font-size: var(--fs-2xs); color: var(--muted); line-height: 1.45; }
-/* Under the rail's own stacking width the figures go beneath the line, one column: 220px of
-   stack beside a 130px chart is neither a chart nor a figure. */
-@media (max-width: 560px) {
-  .mk-trend-row { flex-direction: column; gap: 16px; }
+/* The pairs are beneath the line by then — the wrap above puts them there — so all this width
+   has left to say is that a basis sentence may use the whole of it. On the ISLAND, because that
+   is the box a reader's screen is, and because a cap released against the wrong box is the
+   difference between a sentence wrapping and a sentence wrapping twice. */
+@container island (max-width: 560px) {
+  .mk-trend-row { gap: 16px; }
   .mk-trend-figs { flex-direction: column; gap: 14px; }
   .mk-trend-fig { max-width: none; }
 }
@@ -451,7 +465,14 @@ customElements.define(
           + (sampled
             ? `<span class="mk-trend-tip-note">the newest reading on or before that date</span>`
             : "");
-        tip.style.left = `${rect.left + rect.width / 2 - box.left}px`;
+        // Centred on the point, but never past the edge of the plot. The tip does not wrap, so
+        // half of a 250px one hangs 125px off the last mark — which was invisible only because
+        // the chart used to be a 329px stub with slack around it. The moment the chart took the
+        // whole column, the same tip pushed the PAGE sideways. Clamp the box, not the point.
+        const centre = rect.left + rect.width / 2 - box.left;
+        const half = tip.offsetWidth / 2;
+        const left = Math.min(Math.max(centre - half, 0), Math.max(0, box.width - tip.offsetWidth));
+        tip.style.left = `${left + half}px`;
         tip.style.top = `${rect.top - box.top - 6}px`;
         tip.classList.add("on");
       };

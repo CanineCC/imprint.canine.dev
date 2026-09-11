@@ -106,7 +106,7 @@ var N=`
   --accent-strong: #1c4f41;
   --on-accent: #ffffff;
 }
-`;function l(a){return String(a??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function u(a){if(a==null||a==="")return"";let s=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,t="",i=0,o;for(;(o=s.exec(a))!==null;){o.index>i&&(t+=l(a.slice(i,o.index)));let d=o[0];if(d.startsWith("**"))t+=`<strong>${l(d.slice(2,-2))}</strong>`;else if(d.startsWith("`"))t+=`<code>${l(d.slice(1,-1))}</code>`;else{let e=/^\[([^\]]+)\]\(([^)]+)\)$/.exec(d);e?t+=`<a href="${l(e[2])}">${l(e[1])}</a>`:t+=l(d)}i=o.index+d.length}return i<a.length&&(t+=l(a.slice(i))),t}var C=`
+`;function l(a){return String(a??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function u(a){if(a==null||a==="")return"";let s=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,t="",n=0,o;for(;(o=s.exec(a))!==null;){o.index>n&&(t+=l(a.slice(n,o.index)));let d=o[0];if(d.startsWith("**"))t+=`<strong>${l(d.slice(2,-2))}</strong>`;else if(d.startsWith("`"))t+=`<code>${l(d.slice(1,-1))}</code>`;else{let e=/^\[([^\]]+)\]\(([^)]+)\)$/.exec(d);e?t+=`<a href="${l(e[2])}">${l(e[1])}</a>`:t+=l(d)}n=o.index+d.length}return n<a.length&&(t+=l(a.slice(n))),t}var C=`
 :host { display: block; color: var(--ink); font: 400 var(--fs-md)/1.5 var(--font-ui); }
 * { box-sizing: border-box; }
 a { color: var(--accent-ink); text-decoration: none; }
@@ -114,12 +114,12 @@ a:hover { text-decoration: underline; }
 code { background: var(--surface-2); padding: 1px 5px; border-radius: var(--r-sm); font: 500 var(--fs-xs) var(--font-mono); }
 strong { font-weight: 600; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-`;function H(a){let s=a.getAttribute("kicker"),t=a.getAttribute("heading"),i=a.getAttribute("lede");if(!s&&!t&&!i)return"";let o='<div class="mk-section-head">';return s&&(o+=`<span class="mk-kicker">${l(s)}</span>`),t&&(o+=`<h2>${u(t)}</h2>`),i&&(o+=`<p>${u(i)}</p>`),o+="</div>",o}var M=`
+`;function H(a){let s=a.getAttribute("kicker"),t=a.getAttribute("heading"),n=a.getAttribute("lede");if(!s&&!t&&!n)return"";let o='<div class="mk-section-head">';return s&&(o+=`<span class="mk-kicker">${l(s)}</span>`),t&&(o+=`<h2>${u(t)}</h2>`),n&&(o+=`<p>${u(n)}</p>`),o+="</div>",o}var I=`
 .mk-section-head { margin-bottom: 1.5rem; }
 .mk-section-head h2 { font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.1rem); line-height: 1.2; margin: 0.3rem 0 0; color: var(--heading); font-weight: 600; letter-spacing: -0.01em; }
 .mk-section-head p { color: var(--muted); font-size: var(--fs-lg); line-height: 1.6; margin: 0.55rem 0 0; }
 .mk-kicker { display: inline-flex; align-items: center; gap: 0.55rem; font-size: var(--fs-2xs); font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
-`,v=class extends HTMLElement{#e;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#t(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#e=new MutationObserver(()=>{let s=this.dataset.theme;this.#t(),this.dataset.theme!==s&&this.render(this.shadowRoot)}),this.#e.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#e?.disconnect()}#t(){let s=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=s;let t=(this.getAttribute("brand")||"").trim().toLowerCase();t==="assay"||t==="cai"||t==="watchdog"?this.dataset.brand=t:delete this.dataset.brand}json(s,t){let i=this.getAttribute(s);if(i==null||i.trim()==="")return t;try{return JSON.parse(i)}catch{return t}}};var I=`
+`,v=class extends HTMLElement{#e;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#t(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#e=new MutationObserver(()=>{let s=this.dataset.theme;this.#t(),this.dataset.theme!==s&&this.render(this.shadowRoot)}),this.#e.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#e?.disconnect()}#t(){let s=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=s;let t=(this.getAttribute("brand")||"").trim().toLowerCase();t==="assay"||t==="cai"||t==="watchdog"?this.dataset.brand=t:delete this.dataset.brand}json(s,t){let n=this.getAttribute(s);if(n==null||n.trim()==="")return t;try{return JSON.parse(n)}catch{return t}}};var M=`
 .ink-exemplary { color: var(--band-exemplary-text); }
 .ink-healthy { color: var(--band-healthy-text); }
 .ink-fair { color: var(--band-fair-text); }
@@ -220,7 +220,7 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
 .cai-row:last-child { border-bottom: 0; }
 .cai-row b { color: var(--heading); font-weight: 600; text-align: right; }
 .cai-row .mono { font-family: var(--font-mono); font-size: var(--fs-xs); }
-`;var R=`
+`;var O=`
 .info-hint { position: relative; display: inline-flex; align-items: center; vertical-align: middle; margin-left: 6px; cursor: help; }
 .info-hint:focus { outline: none; }
 .info-hint-dot { width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--border-strong); color: var(--muted);
@@ -272,7 +272,20 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
    order, so a LATER sibling row would draw over a tip that opens across it. Each island lifts
    the subject on :hover/:focus-within for that reason \u2014 see the z-index bumps at the call sites. */
 @media (prefers-reduced-motion: reduce) { .info-hint-tip { transition: none; } }
-`;function y(a,{right:s=!1,label:t="More information"}={}){let i=a==null?"":String(a).trim();if(i==="")return"";let o=i.split(/\n\s*\n/).map(e=>e.trim()).filter(e=>e!=="").map(e=>`<p>${u(e)}</p>`).join("");return`<span class="${s?"info-hint hint-right":"info-hint"}" tabindex="0" role="note" aria-label="${l(t||"More information")}"><span class="info-hint-dot" aria-hidden="true">i</span><span class="info-hint-tip">${o}</span></span>`}var z=`
+`;function y(a,{right:s=!1,label:t="More information"}={}){let n=a==null?"":String(a).trim();if(n==="")return"";let o=n.split(/\n\s*\n/).map(e=>e.trim()).filter(e=>e!=="").map(e=>`<p>${u(e)}</p>`).join("");return`<span class="${s?"info-hint hint-right":"info-hint"}" tabindex="0" role="note" aria-label="${l(t||"More information")}"><span class="info-hint-dot" aria-hidden="true">i</span><span class="info-hint-tip">${o}</span></span>`}var R=`
+/* \u2605 THE ONE CONTAINER, DECLARED ONCE FOR THE FOUR ISLANDS THAT TAKE THIS RAIL.
+   Every width question an island asks is about a box inside the page, never about the page: a
+   rail takes 112px and a gutter out of the column, so an island 648px wide has 512px of content
+   and a viewport media query calls that a wide page. It is named rather than left to
+   nearest-ancestor resolution because naming is what makes the answer stable \u2014 an unnamed
+   @container binds to whichever container is nearest when the rule RUNS, so adding a container
+   anywhere inside an island would silently re-point every unnamed query beneath it at a
+   different box. That is not hypothetical: it is what would have happened to the wide bar's
+   legend in cai-share-bars the moment a container was put on .rail-body.
+   \u2605 AND IT IS ON :host, NOT ON .rail \u2014 a @container rule styles the DESCENDANTS of its
+   container and never the container itself, so the stacking rule at the foot of this file could
+   not have asked a container that was .rail. */
+:host { container-type: inline-size; container-name: island; }
 .rail { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 0 24px;
   align-items: start; position: relative; }
 .rail-side { display: flex; align-items: flex-start; padding-top: 3px; min-width: 0; }
@@ -285,17 +298,24 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
 .rail-side .info-hint-tip { left: 0; right: auto; max-width: min(320px, 100%); }
 /* A tip opens across the content beside it, which would otherwise paint over it. */
 .rail:hover, .rail:focus-within { z-index: 2; }
-/* The label takes its own line under 560px \u2014 the same width at which cai-share-bars reflows,
-   so two adjacent sections never disagree about when a page has become narrow. A 112px column
-   plus a 24px gutter is a third of a 400px screen spent on two words. */
-@media (max-width: 560px) {
+/* The label takes its own line under 560px OF THE ISLAND \u2014 the same width at which
+   cai-share-bars reflows, so two adjacent sections never disagree about when a page has become
+   narrow. A 112px column plus a 24px gutter is a third of a 400px screen spent on two words.
+   Of the island, because an island is not the page: dropped into a 380px column of a 1280px
+   page, a viewport query kept the rail beside 244px of content and nothing failed. */
+@container island (max-width: 560px) {
   .rail { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .rail-side { padding-top: 0; }
 }
-`;function F({kicker:a,tip:s,content:t}){return`<div class="rail"><div class="rail-side"><span class="rail-kicker">${l(a)}</span>`+y(s,{label:a})+`</div><div class="rail-body">${t}</div></div>`}function O(a){let s=a.getAttribute("heading"),t=a.getAttribute("lede");if(!s&&!t)return"";let i='<div class="mk-section-head">';return s&&(i+=`<h2>${u(s)}</h2>`),t&&(i+=`<p>${u(t)}</p>`),i+="</div>",i}var $=new Set(["exemplary","healthy","fair","poor","critical"]);function L(a){let s=String(a||"").trim().toLowerCase();return s==="accent"?"is-accent":$.has(s)?`is-band fill-${s}`:"is-track"}function U(a,s){let t=String(a??""),i=s?/^(\S+)[ \u00a0]+(\S.*)$/.exec(t):null,o=i?i[1]:t,d=i?i[2]:"",e=o.indexOf(".");return e<0?{int:o,dec:"",band:d}:{int:o.slice(0,e),dec:o.slice(e),band:d}}var k=N+C+M+I+R+z+`
-/* The two containers the queries at the foot of this sheet ask about. */
-:host { container-type: inline-size; }
-.sb-table { container-type: inline-size; }
+`;function z({kicker:a,tip:s,content:t}){return`<div class="rail"><div class="rail-side"><span class="rail-kicker">${l(a)}</span>`+y(s,{label:a})+`</div><div class="rail-body">${t}</div></div>`}function F(a){let s=a.getAttribute("heading"),t=a.getAttribute("lede");if(!s&&!t)return"";let n='<div class="mk-section-head">';return s&&(n+=`<h2>${u(s)}</h2>`),t&&(n+=`<p>${u(t)}</p>`),n+="</div>",n}var $=new Set(["exemplary","healthy","fair","poor","critical"]);function D(a){let s=String(a||"").trim().toLowerCase();return s==="accent"?"is-accent":$.has(s)?`is-band fill-${s}`:"is-track"}function _(a,s){let t=String(a??""),n=s?/^(\S+)[ \u00a0]+(\S.*)$/.exec(t):null,o=n?n[1]:t,d=n?n[2]:"",e=o.indexOf(".");return e<0?{int:o,dec:"",band:d}:{int:o.slice(0,e),dec:o.slice(e),band:d}}var k=N+C+I+M+O+R+`
+/* The two containers the queries at the foot of this sheet ask about. The island \u2014 the whole
+   island \u2014 is declared once in rail.js for all four sheet islands and is not re-declared here;
+   the table container is this island's own, because a table's shape is decided by its width and
+   nothing else. Both are NAMED, and the names are the point: an unnamed @container binds to
+   whichever container happens to be nearest when the rule runs, so putting a container anywhere
+   inside .rail-body would have silently re-pointed the wide bar's legend at a box 136px
+   narrower than the one its 560px threshold was measured against. */
+.sb-table { container-type: inline-size; container-name: table; }
 .sb-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .sb-cap { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
 /* The sentence that stands where a bar would be. Muted, never band-coloured: it is the absence
@@ -335,7 +355,13 @@ a.sb-label:hover { color: var(--accent); text-decoration: none; }
    accessibility tree too, so a screen reader hears one label per part at either width. */
 .sb-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 .sb-legend-item.is-inside { display: none; }
-@container (max-width: 560px) {
+/* 560px OF THE ISLAND, which is the box this threshold was measured against \u2014 not the content
+   column beside the rail. The number came from a string ("1,511 resolved \xB7 42.9%" in a 151px
+   part at a 400px screen), and re-pointing it at a column 136px narrower without re-measuring
+   that string would tighten a rule whose derivation is a fact about type, not about layout.
+   The box is arguably the bar's own; the threshold for that box is not 560, and finding it means
+   measuring the live page's part labels rather than this fixture's shorter ones. */
+@container island (max-width: 560px) {
   .sb-wide-part > span { display: none; }
   .sb-legend-item.is-inside { display: inline-flex; }
 }
@@ -424,7 +450,7 @@ a.sb-label:hover { color: var(--accent); text-decoration: none; }
 .sb-part.is-track { background: transparent; }
 
 `,W=a=>`
-@container (max-width: ${a}px) {
+@container table (max-width: ${a}px) {
   /* The cells take their own line under the label, each carrying its heading, and the bar takes
      a third. The header row has nothing left to head, so it goes \u2014 and with it the one grid,
      because a row here is no longer a slice of the table's columns but a little grid of its own.
@@ -445,4 +471,4 @@ a.sb-label:hover { color: var(--accent); text-decoration: none; }
     font-family: var(--font-ui); font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase;
     font-weight: 700; color: var(--muted); overflow-wrap: anywhere; }
 }
-`,G=a=>a>=5?800:560;function j(a,{wide:s}){let t=(a||[]).filter(o=>o&&Number.isFinite(Number(o.weight))&&Number(o.weight)>0);if(t.length===0)return"";let i="";for(let o of t){let d=L(o.tone),e=Number(o.weight);if(s){let g=[o.count,o.label].filter(f=>f!=null&&String(f)!=="").join(" ");i+=`<span class="sb-wide-part ${d}" style="flex:${e} 1 0">`,i+=g?`<span>${l(g)}</span>`:"",i+="</span>"}else i+=`<span class="sb-part ${d}" style="flex:${e} 1 0"></span>`}return i}customElements.define("cai-share-bars",class extends v{render(a){let s=(this.getAttribute("layout")||"table").trim().toLowerCase()==="wide"?"wide":"table",t=(this.json("columns",[])||[]).map(n=>n==null?"":String(n)),i=(this.json("rows",[])||[]).filter(n=>n&&n.label!=null&&String(n.label)!==""),o=(this.getAttribute("kicker")||"").trim(),d=o?O(this):H(this),e="";if(i.length===0){a.innerHTML=`<style>${k}</style>`+this.frame(o,d,"");return}let g=(n,c)=>{let p=String(n.label),r='<div class="sb-label-row">';return r+=n.href?`<a class="sb-label" href="${l(String(n.href))}">${l(p)}</a>`:`<span class="sb-label">${l(p)}</span>`,r+=y(n.tip,{right:c,label:p}),r+="</div>",r};if(s==="wide"){for(let n of i){if(e+='<div class="sb-wide-row">',e+=g(n,!1),n.unmeasured)e+=`<p class="sb-unmeasured">${l(String(n.unmeasured))}</p>`;else{let c=(n.parts||[]).filter(r=>r&&Number.isFinite(Number(r.weight))&&Number(r.weight)>0),p=c.reduce((r,b)=>r+Number(b.weight),0);if(c.length>0){let b=c.map(h=>Number(h.weight)/p>=.18);e+='<div class="sb-wide-bar">',e+=j(c.map((h,m)=>b[m]?h:{weight:h.weight,tone:h.tone}),{wide:!0}),e+="</div>";let x=c.map((h,m)=>({text:[h.count,h.label].filter(E=>E!=null&&String(E)!=="").join(" "),cls:L(h.tone),inside:b[m]})).filter(h=>h.text!=="");if(x.length>0){e+='<div class="sb-legend">';for(let h of x)e+=`<span class="sb-legend-item${h.inside?" is-inside":""}"><i class="sb-swatch ${h.cls}"></i>${l(h.text)}</span>`;e+="</div>"}}n.note&&(e+=`<span class="sb-note">${l(String(n.note))}</span>`)}e+="</div>"}a.innerHTML=`<style>${k}</style>`+this.frame(o,d,e);return}let f=Math.max(0,Math.min(12,Math.trunc(t.length))),B=`fit-content(200px) repeat(${f}, minmax(min-content,1fr)) minmax(96px,2.5fr)`,D=this.getAttribute("label-heading")||"",_=this.getAttribute("bar-heading")||"",S=i.map(n=>{let c=(n.cells||[]).map(r=>r==null?"":String(r)),p=n.cellTones||[];return Array.from({length:f},(r,b)=>U(c[b]??"",$.has(String(p[b]||"").trim().toLowerCase())))}),T=(n,c)=>S.reduce((p,r)=>Math.max(p,r[n][c].length),0),A=Array.from({length:f},(n,c)=>T(c,"dec")),w=Array.from({length:f},(n,c)=>T(c,"band"));e+=`<div class="sb-table"><div class="sb-grid" style="--sb-grid:${B}">`,e+='<div class="sb-head">',e+=`<span class="sb-cap">${l(D)}</span>`;for(let n=0;n<f;n++){let c=w[n]?`<i class="sb-reserve" style="width:${w[n]+1}ch" aria-hidden="true"></i>`:"";e+=`<span class="sb-cap sb-cell">${l(t[n]||"")}${c}</span>`}e+=`<span class="sb-cap">${l(_)}</span>`,e+="</div>";for(let[n,c]of i.entries()){e+='<div class="sb-row">',e+=g(c,!1);let p=c.cellTones||[];for(let r=0;r<f;r++){let b=String(p[r]||"").trim().toLowerCase(),x=$.has(b)?` ink-${b}`:"",h=t[r]||"",m=S[n][r];e+=`<span class="sb-cell${x}" data-label="${l(h)}">`,e+=`<span class="sb-int">${l(m.int)}</span>`,A[r]&&(e+=`<span class="sb-dec" style="width:${A[r]}ch">${l(m.dec)}</span>`),w[r]&&(e+=` <span class="sb-band" style="width:${w[r]+1}ch">${l(m.band)}</span>`),e+="</span>"}if(e+='<div class="sb-bar-cell">',c.unmeasured)e+=`<span class="sb-unmeasured">${l(String(c.unmeasured))}</span>`;else{let r=j(c.parts,{wide:!1});r&&(e+=`<span class="sb-track">${r}</span>`),c.note&&(e+=`<span class="sb-note">${l(String(c.note))}</span>`)}e+="</div>",e+="</div>"}e+="</div></div>",a.innerHTML=`<style>${k}${W(G(f))}</style>`+this.frame(o,d,e)}frame(a,s,t){return a?F({kicker:a,tip:this.getAttribute("tip"),content:s+t}):s+t}});
+`,G=a=>a>=5?800:560;function L(a,{wide:s}){let t=(a||[]).filter(o=>o&&Number.isFinite(Number(o.weight))&&Number(o.weight)>0);if(t.length===0)return"";let n="";for(let o of t){let d=D(o.tone),e=Number(o.weight);if(s){let g=[o.count,o.label].filter(f=>f!=null&&String(f)!=="").join(" ");n+=`<span class="sb-wide-part ${d}" style="flex:${e} 1 0">`,n+=g?`<span>${l(g)}</span>`:"",n+="</span>"}else n+=`<span class="sb-part ${d}" style="flex:${e} 1 0"></span>`}return n}customElements.define("cai-share-bars",class extends v{render(a){let s=(this.getAttribute("layout")||"table").trim().toLowerCase()==="wide"?"wide":"table",t=(this.json("columns",[])||[]).map(i=>i==null?"":String(i)),n=(this.json("rows",[])||[]).filter(i=>i&&i.label!=null&&String(i.label)!==""),o=(this.getAttribute("kicker")||"").trim(),d=o?F(this):H(this),e="";if(n.length===0){a.innerHTML=`<style>${k}</style>`+this.frame(o,d,"");return}let g=(i,c)=>{let p=String(i.label),r='<div class="sb-label-row">';return r+=i.href?`<a class="sb-label" href="${l(String(i.href))}">${l(p)}</a>`:`<span class="sb-label">${l(p)}</span>`,r+=y(i.tip,{right:c,label:p}),r+="</div>",r};if(s==="wide"){for(let i of n){if(e+='<div class="sb-wide-row">',e+=g(i,!1),i.unmeasured)e+=`<p class="sb-unmeasured">${l(String(i.unmeasured))}</p>`;else{let c=(i.parts||[]).filter(r=>r&&Number.isFinite(Number(r.weight))&&Number(r.weight)>0),p=c.reduce((r,b)=>r+Number(b.weight),0);if(c.length>0){let b=c.map(h=>Number(h.weight)/p>=.18);e+='<div class="sb-wide-bar">',e+=L(c.map((h,m)=>b[m]?h:{weight:h.weight,tone:h.tone}),{wide:!0}),e+="</div>";let x=c.map((h,m)=>({text:[h.count,h.label].filter(E=>E!=null&&String(E)!=="").join(" "),cls:D(h.tone),inside:b[m]})).filter(h=>h.text!=="");if(x.length>0){e+='<div class="sb-legend">';for(let h of x)e+=`<span class="sb-legend-item${h.inside?" is-inside":""}"><i class="sb-swatch ${h.cls}"></i>${l(h.text)}</span>`;e+="</div>"}}i.note&&(e+=`<span class="sb-note">${l(String(i.note))}</span>`)}e+="</div>"}a.innerHTML=`<style>${k}</style>`+this.frame(o,d,e);return}let f=Math.max(0,Math.min(12,Math.trunc(t.length))),j=`fit-content(200px) repeat(${f}, minmax(min-content,1fr)) minmax(96px,2.5fr)`,B=this.getAttribute("label-heading")||"",U=this.getAttribute("bar-heading")||"",S=n.map(i=>{let c=(i.cells||[]).map(r=>r==null?"":String(r)),p=i.cellTones||[];return Array.from({length:f},(r,b)=>_(c[b]??"",$.has(String(p[b]||"").trim().toLowerCase())))}),T=(i,c)=>S.reduce((p,r)=>Math.max(p,r[i][c].length),0),A=Array.from({length:f},(i,c)=>T(c,"dec")),w=Array.from({length:f},(i,c)=>T(c,"band"));e+=`<div class="sb-table"><div class="sb-grid" style="--sb-grid:${j}">`,e+='<div class="sb-head">',e+=`<span class="sb-cap">${l(B)}</span>`;for(let i=0;i<f;i++){let c=w[i]?`<i class="sb-reserve" style="width:${w[i]+1}ch" aria-hidden="true"></i>`:"";e+=`<span class="sb-cap sb-cell">${l(t[i]||"")}${c}</span>`}e+=`<span class="sb-cap">${l(U)}</span>`,e+="</div>";for(let[i,c]of n.entries()){e+='<div class="sb-row">',e+=g(c,!1);let p=c.cellTones||[];for(let r=0;r<f;r++){let b=String(p[r]||"").trim().toLowerCase(),x=$.has(b)?` ink-${b}`:"",h=t[r]||"",m=S[i][r];e+=`<span class="sb-cell${x}" data-label="${l(h)}">`,e+=`<span class="sb-int">${l(m.int)}</span>`,A[r]&&(e+=`<span class="sb-dec" style="width:${A[r]}ch">${l(m.dec)}</span>`),w[r]&&(e+=` <span class="sb-band" style="width:${w[r]+1}ch">${l(m.band)}</span>`),e+="</span>"}if(e+='<div class="sb-bar-cell">',c.unmeasured)e+=`<span class="sb-unmeasured">${l(String(c.unmeasured))}</span>`;else{let r=L(c.parts,{wide:!1});r&&(e+=`<span class="sb-track">${r}</span>`),c.note&&(e+=`<span class="sb-note">${l(String(c.note))}</span>`)}e+="</div>",e+="</div>"}e+="</div></div>",a.innerHTML=`<style>${k}${W(G(f))}</style>`+this.frame(o,d,e)}frame(a,s,t){return a?z({kicker:a,tip:this.getAttribute("tip"),content:s+t}):s+t}});

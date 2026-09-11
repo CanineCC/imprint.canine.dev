@@ -39,6 +39,19 @@ import { hintHtml } from "./hint.js";
 // one line at the kicker's own size and does not grow when the column does, because a section
 // label that reflowed with the viewport would stop lining up with the section above it.
 export const RAIL_CSS = `
+/* ★ THE ONE CONTAINER, DECLARED ONCE FOR THE FOUR ISLANDS THAT TAKE THIS RAIL.
+   Every width question an island asks is about a box inside the page, never about the page: a
+   rail takes 112px and a gutter out of the column, so an island 648px wide has 512px of content
+   and a viewport media query calls that a wide page. It is named rather than left to
+   nearest-ancestor resolution because naming is what makes the answer stable — an unnamed
+   @container binds to whichever container is nearest when the rule RUNS, so adding a container
+   anywhere inside an island would silently re-point every unnamed query beneath it at a
+   different box. That is not hypothetical: it is what would have happened to the wide bar's
+   legend in cai-share-bars the moment a container was put on .rail-body.
+   ★ AND IT IS ON :host, NOT ON .rail — a @container rule styles the DESCENDANTS of its
+   container and never the container itself, so the stacking rule at the foot of this file could
+   not have asked a container that was .rail. */
+:host { container-type: inline-size; container-name: island; }
 .rail { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 0 24px;
   align-items: start; position: relative; }
 .rail-side { display: flex; align-items: flex-start; padding-top: 3px; min-width: 0; }
@@ -51,10 +64,12 @@ export const RAIL_CSS = `
 .rail-side .info-hint-tip { left: 0; right: auto; max-width: min(320px, 100%); }
 /* A tip opens across the content beside it, which would otherwise paint over it. */
 .rail:hover, .rail:focus-within { z-index: 2; }
-/* The label takes its own line under 560px — the same width at which cai-share-bars reflows,
-   so two adjacent sections never disagree about when a page has become narrow. A 112px column
-   plus a 24px gutter is a third of a 400px screen spent on two words. */
-@media (max-width: 560px) {
+/* The label takes its own line under 560px OF THE ISLAND — the same width at which
+   cai-share-bars reflows, so two adjacent sections never disagree about when a page has become
+   narrow. A 112px column plus a 24px gutter is a third of a 400px screen spent on two words.
+   Of the island, because an island is not the page: dropped into a 380px column of a 1280px
+   page, a viewport query kept the rail beside 244px of content and nothing failed. */
+@container island (max-width: 560px) {
   .rail { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .rail-side { padding-top: 0; }
 }

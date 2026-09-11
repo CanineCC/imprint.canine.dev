@@ -1,4 +1,4 @@
-var g=`
+var u=`
 :host {
   /* neutrals \u2014 dark "graphite" */
   --bg: #15191e;
@@ -106,7 +106,7 @@ var g=`
   --accent-strong: #1c4f41;
   --on-accent: #ffffff;
 }
-`;function a(o){return String(o??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function p(o){if(o==null||o==="")return"";let r=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,t="",n=0,d;for(;(d=r.exec(o))!==null;){d.index>n&&(t+=a(o.slice(n,d.index)));let s=d[0];if(s.startsWith("**"))t+=`<strong>${a(s.slice(2,-2))}</strong>`;else if(s.startsWith("`"))t+=`<code>${a(s.slice(1,-1))}</code>`;else{let c=/^\[([^\]]+)\]\(([^)]+)\)$/.exec(s);c?t+=`<a href="${a(c[2])}">${a(c[1])}</a>`:t+=a(s)}n=d.index+s.length}return n<o.length&&(t+=a(o.slice(n))),t}var u=`
+`;function a(o){return String(o??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function p(o){if(o==null||o==="")return"";let r=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,t="",n=0,d;for(;(d=r.exec(o))!==null;){d.index>n&&(t+=a(o.slice(n,d.index)));let s=d[0];if(s.startsWith("**"))t+=`<strong>${a(s.slice(2,-2))}</strong>`;else if(s.startsWith("`"))t+=`<code>${a(s.slice(1,-1))}</code>`;else{let c=/^\[([^\]]+)\]\(([^)]+)\)$/.exec(s);c?t+=`<a href="${a(c[2])}">${a(c[1])}</a>`:t+=a(s)}n=d.index+s.length}return n<o.length&&(t+=a(o.slice(n))),t}var g=`
 :host { display: block; color: var(--ink); font: 400 var(--fs-md)/1.5 var(--font-ui); }
 * { box-sizing: border-box; }
 a { color: var(--accent-ink); text-decoration: none; }
@@ -268,6 +268,19 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
    the subject on :hover/:focus-within for that reason \u2014 see the z-index bumps at the call sites. */
 @media (prefers-reduced-motion: reduce) { .info-hint-tip { transition: none; } }
 `;function h(o,{right:r=!1,label:t="More information"}={}){let n=o==null?"":String(o).trim();if(n==="")return"";let d=n.split(/\n\s*\n/).map(c=>c.trim()).filter(c=>c!=="").map(c=>`<p>${p(c)}</p>`).join("");return`<span class="${r?"info-hint hint-right":"info-hint"}" tabindex="0" role="note" aria-label="${a(t||"More information")}"><span class="info-hint-dot" aria-hidden="true">i</span><span class="info-hint-tip">${d}</span></span>`}var w=`
+/* \u2605 THE ONE CONTAINER, DECLARED ONCE FOR THE FOUR ISLANDS THAT TAKE THIS RAIL.
+   Every width question an island asks is about a box inside the page, never about the page: a
+   rail takes 112px and a gutter out of the column, so an island 648px wide has 512px of content
+   and a viewport media query calls that a wide page. It is named rather than left to
+   nearest-ancestor resolution because naming is what makes the answer stable \u2014 an unnamed
+   @container binds to whichever container is nearest when the rule RUNS, so adding a container
+   anywhere inside an island would silently re-point every unnamed query beneath it at a
+   different box. That is not hypothetical: it is what would have happened to the wide bar's
+   legend in cai-share-bars the moment a container was put on .rail-body.
+   \u2605 AND IT IS ON :host, NOT ON .rail \u2014 a @container rule styles the DESCENDANTS of its
+   container and never the container itself, so the stacking rule at the foot of this file could
+   not have asked a container that was .rail. */
+:host { container-type: inline-size; container-name: island; }
 .rail { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 0 24px;
   align-items: start; position: relative; }
 .rail-side { display: flex; align-items: flex-start; padding-top: 3px; min-width: 0; }
@@ -280,14 +293,16 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
 .rail-side .info-hint-tip { left: 0; right: auto; max-width: min(320px, 100%); }
 /* A tip opens across the content beside it, which would otherwise paint over it. */
 .rail:hover, .rail:focus-within { z-index: 2; }
-/* The label takes its own line under 560px \u2014 the same width at which cai-share-bars reflows,
-   so two adjacent sections never disagree about when a page has become narrow. A 112px column
-   plus a 24px gutter is a third of a 400px screen spent on two words. */
-@media (max-width: 560px) {
+/* The label takes its own line under 560px OF THE ISLAND \u2014 the same width at which
+   cai-share-bars reflows, so two adjacent sections never disagree about when a page has become
+   narrow. A 112px column plus a 24px gutter is a third of a 400px screen spent on two words.
+   Of the island, because an island is not the page: dropped into a 380px column of a 1280px
+   page, a viewport query kept the rail beside 244px of content and nothing failed. */
+@container island (max-width: 560px) {
   .rail { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .rail-side { padding-top: 0; }
 }
-`;function k({kicker:o,tip:r,content:t}){return`<div class="rail"><div class="rail-side"><span class="rail-kicker">${a(o)}</span>`+h(r,{label:o})+`</div><div class="rail-body">${t}</div></div>`}var y=new Set(["exemplary","healthy","fair","poor","critical"]),$=g+u+x+v+w+`
+`;function k({kicker:o,tip:r,content:t}){return`<div class="rail"><div class="rail-side"><span class="rail-kicker">${a(o)}</span>`+h(r,{label:o})+`</div><div class="rail-body">${t}</div></div>`}var y=new Set(["exemplary","healthy","fair","poor","critical"]),$=u+g+x+v+w+`
 .fb-cap { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
 .fb-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .fb-support { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
