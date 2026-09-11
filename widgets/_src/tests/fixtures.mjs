@@ -241,3 +241,18 @@ export const TREND_WEEKLY_UNTOLD = (() => {
   const { sampled, ...rest } = TREND_WEEKLY;
   return rest;
 })();
+
+/** §5 with endpoint pairs that are NOT this series' ends — the summary may not assume they are. */
+export const TREND_WEEKLY_OTHER_PAIRS = {
+  ...TREND_WEEKLY,
+  figures: JSON.stringify([
+    { label: "Codebases", from: { value: "580" }, to: { value: "3,545" } },
+    { label: "Countries", from: { value: "3" }, to: { value: "54" } },
+  ]),
+};
+
+/** §5 with only one of the two dates: the axis can only print what it was given. */
+export const TREND_WEEKLY_ONE_DATE = (() => {
+  const { "last-date": _drop, ...rest } = TREND_WEEKLY;
+  return rest;
+})();

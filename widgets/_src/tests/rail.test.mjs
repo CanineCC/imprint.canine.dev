@@ -21,6 +21,8 @@ import {
   TREND_LEGACY_SOLO,
   TREND_WEEKLY,
   TREND_WEEKLY_UNTOLD,
+  TREND_WEEKLY_OTHER_PAIRS,
+  TREND_WEEKLY_ONE_DATE,
   LINKS_LEGACY,
   LINKS_FIVE,
   BAND_HEAD,
@@ -1349,4 +1351,103 @@ describe("the rail stacks on the island's width, not the window's", () => {
       }
     });
   }
+});
+
+// ── the summary says what is not said beside it ─────────────────────────────────────────────
+// The owner, of the sentence under the chart: "is that even needed? is that not redundant?" On
+// the sheet, most of it is. The axis prints both dates immediately above it; the MEDIAN pair
+// prints "45.2 → 49.5" to its right; "up 4.3" is the difference between two numbers a reader is
+// already looking at. What is stated NOWHERE else is the count and what one point means, and
+// that is the half that makes the sampling honest.
+//
+// But the same line is the ONLY place the movement appears on the archive and the per-language
+// and per-country pages, which pass no figures at all — so the trim cannot be a trim of the
+// sentence. It has to be a rule about what is on the page, and the rule is checked against the
+// page: the widget drops the endpoints only when a pair actually prints THIS series' ends.
+const summaryOf = (r) =>
+  r.page.evaluate(() => {
+    const root = document.querySelector("cai-trend").shadowRoot;
+    return {
+      lines: [...root.querySelectorAll(".mk-trend-sum")].map((p) => p.textContent.replace(/\s+/g, " ").trim()),
+      aria: root.querySelector("svg").getAttribute("aria-label"),
+      axis: [...root.querySelectorAll(".mk-trend-date")].map((t) => t.textContent),
+      pairs: [...root.querySelectorAll(".mk-trend-fig-pair")].map((p) => p.textContent.replace(/\s+/g, " ").trim()),
+    };
+  });
+
+describe("cai-trend: the summary under the chart", () => {
+  test("drops the endpoints the page already states, and keeps what only it can say", async () => {
+    const r = await withIslands([{ tag: "cai-trend", attrs: TREND_WEEKLY }], { width: 1280 });
+    try {
+      const s = await summaryOf(r);
+      assert.equal(s.lines.length, 1);
+      const line = s.lines[0];
+
+      // The half that earns its place: nine marks over eight weeks is a fact about the DRAWING,
+      // and what one mark is cannot be read off the chart at all.
+      assert.match(line, /10 weekly samples/, `the summary reads "${line}"`);
+      assert.match(line, /newest reading on or before its own date/, `the summary reads "${line}"`);
+
+      // The half that does not: every one of these is printed within 20px of the sentence.
+      assert.deepEqual(s.axis, ["10 July 2026", "11 September 2026"], "the axis stopped printing its dates");
+      assert.ok(s.pairs.includes("45.2 → 49.5"), `no pair states the movement: ${s.pairs.join(" | ")}`);
+      for (const said of ["10 July 2026", "11 September 2026", "45.2 to 49.5", "up 4.3"]) {
+        assert.ok(!line.includes(said), `the summary still restates "${said}": "${line}"`);
+      }
+
+      // AND NOTHING IS LOST BY DROPPING THEM. The svg carries role="img", which makes it one
+      // opaque image to assistive technology — the axis labels inside it are NOT read out. So
+      // the dates the visible line gives up have to land in the label that replaces the picture,
+      // or this trim takes the date range away from exactly the reader who cannot see the axis.
+      assert.match(s.aria, /10 July 2026/, `the chart's label reads "${s.aria}"`);
+      assert.match(s.aria, /11 September 2026/, `the chart's label reads "${s.aria}"`);
+      assert.match(s.aria, /45\.2 to 49\.5/, `the chart's label reads "${s.aria}"`);
+    } finally {
+      await r.close();
+    }
+  });
+
+  test("the pages with no pairs beside the chart keep the sentence they have always had", async () => {
+    // The archive, and every per-language and per-country trend: no figures, so the movement is
+    // stated nowhere but here. Asserted as the whole string, because "leave it alone" is a claim
+    // about every word of it.
+    const r = await withIslands([{ tag: "cai-trend", attrs: TREND_LEGACY }], { width: 1280 });
+    try {
+      const s = await summaryOf(r);
+      assert.deepEqual(s.pairs, [], "this fixture grew figures and is no longer the archive's shape");
+      assert.equal(
+        s.lines[0],
+        "10 measurements, from 19 July 2026 to 10 September 2026: 45.2 to 49.5 — up 4.3."
+      );
+      assert.equal(s.aria, "10 measurements, from 45.2 to 49.5.", "the legacy chart's label moved");
+    } finally {
+      await r.close();
+    }
+  });
+
+  test("pairs about something else do not count as the endpoints being stated", async () => {
+    // "Codebases 580 → 3,545" is not this series' ends, and a widget that took the presence of
+    // figures as proof would silently delete the only statement of the movement.
+    const r = await withIslands([{ tag: "cai-trend", attrs: TREND_WEEKLY_OTHER_PAIRS }], { width: 1280 });
+    try {
+      const line = (await summaryOf(r)).lines[0];
+      assert.match(line, /45\.2 to 49\.5 — up 4\.3/, `the summary reads "${line}"`);
+      assert.match(line, /from 10 July 2026 to 11 September 2026/, `the summary reads "${line}"`);
+      assert.match(line, /newest reading on or before/, `the summary reads "${line}"`);
+    } finally {
+      await r.close();
+    }
+  });
+
+  test("a date the axis was never given is not a date the summary may drop", async () => {
+    const r = await withIslands([{ tag: "cai-trend", attrs: TREND_WEEKLY_ONE_DATE }], { width: 1280 });
+    try {
+      const s = await summaryOf(r);
+      assert.deepEqual(s.axis, ["10 July 2026"], "the axis printed a date it was not given");
+      assert.match(s.lines[0], /from 10 July 2026/, `the summary reads "${s.lines[0]}"`);
+      assert.match(s.lines[0], /45\.2 to 49\.5/, `the summary reads "${s.lines[0]}"`);
+    } finally {
+      await r.close();
+    }
+  });
 });

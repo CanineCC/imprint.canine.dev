@@ -374,8 +374,38 @@ customElements.define(
       const counted = sampled
         ? `${series.length} ${sampled} samples`
         : `${series.length} measurements`;
+
+      // ★ IS THE MOVEMENT ALREADY ON THE PAGE? The summary at the foot of this method restates
+      // the two ends and the distance between them, and on the corpus sheet all three are
+      // printed within 20px of it: the axis carries both dates, the MEDIAN pair carries
+      // "45.2 → 49.5" beside the chart, and "up 4.3" is the difference between two numbers the
+      // reader is already looking at. "is that even needed? is that not redundant?" — not there.
+      //
+      // It is everywhere else. The archive, the per-language and the per-country trends pass no
+      // figures at all, and for them this sentence is the ONLY place the movement appears. So
+      // the question is not answered once in prose, it is asked of the page each time it is
+      // rendered, and asked NARROWLY: a pair counts only if it prints THIS series' own ends. A
+      // "Codebases 580 → 3,545" pair is a second quantity, not a restatement, and taking the
+      // presence of `figures` as proof would delete the only statement of the movement.
+      const ends = [fmt(series[0]), fmt(last)];
+      const pairStatesEnds = (this.json("figures", []) || []).some(
+        (f) =>
+          f && f.from && f.to &&
+          String(f.from.value ?? "").trim() === ends[0] &&
+          String(f.to.value ?? "").trim() === ends[1]
+      );
+      // The dates are only on the axis if the axis was given them — both of them.
+      const statedBeside = pairStatesEnds && !!firstDate && !!lastDate;
+
+      // The picture's replacement for a reader who never sees it. `role="img"` makes this svg
+      // ONE OPAQUE IMAGE to assistive technology: the date labels drawn inside it are not read
+      // out, at any width. So when the visible summary gives the dates up to the axis, they have
+      // to land here — otherwise the trim takes the date range away from precisely the reader
+      // who cannot look at the axis to get it back.
       html += `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${escapeHtml(
-        `${counted}, from ${fmt(series[0])} to ${fmt(last)}.`)}">`;
+        statedBeside
+          ? `${counted}, from ${firstDate} to ${lastDate}: ${ends[0]} to ${ends[1]}.`
+          : `${counted}, from ${ends[0]} to ${ends[1]}.`)}">`;
 
       // The cutlines inside the domain, drawn and labelled — the axis IS the band vocabulary.
       for (const c of CUTS) {
@@ -423,11 +453,16 @@ customElements.define(
         ? "unchanged"
         : `${moved > 0 ? "up" : "down"} ${fmt(Math.abs(moved))}`;
       // The chart in words, for a reader who never runs the script and for one who cannot hover
-      // over a point to ask. It is the only place the sampling is stated unconditionally, so it
-      // states BOTH halves: how many points, and what one of them is.
+      // over a point to ask. What it says is what is NOT said beside it: the count and the
+      // sampling rule always — neither is anywhere else on any page — and the movement only when
+      // no pair is printing it. It is the one sentence that cannot be cut to nothing: a chart of
+      // nine marks over eight weeks owes a reader an account of what a mark is.
+      const movement =
+        `${firstDate ? `, from ${firstDate}` : ""}${lastDate ? ` to ${lastDate}` : ""}: `
+        + `${ends[0]} to ${ends[1]} — ${direction}.`;
       html += `<p class="mk-trend-sum">${escapeHtml(
-        `${counted}${firstDate ? `, from ${firstDate}` : ""}${lastDate ? ` to ${lastDate}` : ""}: `
-        + `${fmt(series[0])} to ${fmt(last)} — ${direction}.`
+        counted
+        + (statedBeside ? "." : movement)
         + (sampled ? ` Each point is the newest reading on or before its own date, not a reading taken on it.` : ""))}</p>`;
       if (caption) { html += `<p class="mk-trend-sum">${renderInline(caption)}</p>`; }
       html += `</div>`;
