@@ -257,6 +257,33 @@ public sealed class ThemeCssTests
         Assert.DoesNotContain(".ip-table th, .ip-table td", css);
     }
 
+    /// <summary>
+    /// ★ The Panels kicker rule is decoration, and at kicker size it reads as a dash inside the label rather
+    /// than as a mark beside it. It is off unless a site asks for it — and it is switched by <c>display</c>,
+    /// not by <c>content</c> or <c>width</c>: the label is an inline-flex box with a 0.55rem gap, so a
+    /// zero-width pseudo-element would still be a flex item and would leave that gap standing in front of
+    /// every label on the page.
+    /// </summary>
+    [Fact]
+    public void The_panel_kicker_rule_is_off_by_default_and_switched_by_display()
+    {
+        var off = ThemeCss.Emit(Theme.Default);
+        Assert.Contains("--ip-kicker-rule-display: none", off);
+
+        var on = ThemeCss.Emit(Theme.Default with
+        {
+            Typography = Theme.Default.Typography with { PanelKickerRule = true },
+        });
+        Assert.Contains("--ip-kicker-rule-display: inline-block", on);
+
+        // The sheet must consume the variable on display — never re-hard-code the old value.
+        var css = WithoutComments(ThemeCss.MarketingCss);
+        Assert.Contains("display: var(--ip-kicker-rule-display, none)", css);
+        Assert.DoesNotContain(
+            "content: \"\"; width: 18px; height: 1px; background: var(--accent); display: inline-block;",
+            css);
+    }
+
     /// <summary>CSS with comments removed, so an assertion about the RULES cannot be satisfied — or defeated —
     /// by the prose explaining them.</summary>
     private static string WithoutComments(string css) =>

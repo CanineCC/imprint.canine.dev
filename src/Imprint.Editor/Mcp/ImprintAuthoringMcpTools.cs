@@ -206,6 +206,7 @@ public sealed class ImprintAuthoringMcpTools
                     scaleRatio = site.Theme.Typography.ScaleRatio,
                     radiusPx = site.Theme.Typography.RadiusPx,
                     spacing = site.Theme.Typography.Spacing.ToString(),
+                    panelKickerRule = site.Theme.Typography.PanelKickerRule,
                 },
             },
         };
@@ -650,7 +651,7 @@ public sealed class ImprintAuthoringMcpTools
     }
 
     [McpServerTool(Name = "set_typography")]
-    [Description("Change the site's typography. Every argument is optional: omit one and its current value is kept, so this can move a single dial. Fonts are curated system stacks — Sans, Humanist, Geometric, Serif, Slab, Mono, Grotesk — chosen for zero third-party requests. Ranges: baseSizePx 14–20, scaleRatio 1.125–1.5, radiusPx 0–24; spacing is Compact, Comfortable or Spacious. This is site CHROME — no draft state, it re-renders every page on the next publish pass.")]
+    [Description("Change the site's typography. Every argument is optional: omit one and its current value is kept, so this can move a single dial. Fonts are curated system stacks — Sans, Humanist, Geometric, Serif, Slab, Mono, Grotesk — chosen for zero third-party requests. Ranges: baseSizePx 14–20, scaleRatio 1.125–1.5, radiusPx 0–24; spacing is Compact, Comfortable or Spacious. panelKickerRule switches the short accent rule Panels sections draw in front of each kicker (off by default). This is site CHROME — no draft state, it re-renders every page on the next publish pass.")]
     public static async Task<object> SetTypography(
         [Description("The site id.")] string siteId,
         [Description("Optional heading font stack: Sans, Humanist, Geometric, Serif, Slab, Mono or Grotesk.")] string? headingFont,
@@ -659,6 +660,7 @@ public sealed class ImprintAuthoringMcpTools
         [Description("Optional type scale ratio (1.125–1.5).")] double? scaleRatio,
         [Description("Optional corner radius in px (0–24).")] int? radiusPx,
         [Description("Optional spacing scale: Compact, Comfortable or Spacious.")] string? spacing,
+        [Description("Optional: whether Panels sections draw the short accent rule in front of each kicker (default off).")] bool? panelKickerRule,
         ICommandDispatcher dispatcher, IConfiguration config, SiteOverview sites, CancellationToken ct = default)
     {
         if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
@@ -677,7 +679,8 @@ public sealed class ImprintAuthoringMcpTools
             baseSizePx ?? current.BaseSizePx,
             scaleRatio ?? current.ScaleRatio,
             radiusPx ?? current.RadiusPx,
-            spacingScale);
+            spacingScale,
+            panelKickerRule ?? current.PanelKickerRule);
 
         return await Dispatch(dispatcher, config, new ChangeTypographyCmd(sid, updated), ct,
             () => new
@@ -692,6 +695,7 @@ public sealed class ImprintAuthoringMcpTools
                     scaleRatio = updated.ScaleRatio,
                     radiusPx = updated.RadiusPx,
                     spacing = updated.Spacing.ToString(),
+                    panelKickerRule = updated.PanelKickerRule,
                 },
             });
     }

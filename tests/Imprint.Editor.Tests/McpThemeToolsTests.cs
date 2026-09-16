@@ -65,7 +65,7 @@ public sealed class McpThemeToolsTests
 
         var result = await ImprintAuthoringMcpTools.SetTypography(
             id.Compact, headingFont: null, bodyFont: null, baseSizePx: null,
-            scaleRatio: null, radiusPx: 0, spacing: null, dispatcher, config, sites);
+            scaleRatio: null, radiusPx: 0, spacing: null, panelKickerRule: null, dispatcher, config, sites);
 
         Assert.True(Json(result).GetProperty("ok").GetBoolean());
         var sent = Assert.IsType<ChangeTypographyCmd>(Assert.Single(dispatcher.Dispatched));
@@ -80,7 +80,7 @@ public sealed class McpThemeToolsTests
 
         await ImprintAuthoringMcpTools.SetTypography(
             id.Compact, headingFont: "grotesk", bodyFont: null, baseSizePx: null,
-            scaleRatio: null, radiusPx: null, spacing: null, dispatcher, config, sites);
+            scaleRatio: null, radiusPx: null, spacing: null, panelKickerRule: null, dispatcher, config, sites);
 
         var sent = Assert.IsType<ChangeTypographyCmd>(Assert.Single(dispatcher.Dispatched));
         Assert.Equal(FontStack.Grotesk, sent.Typography.Heading);
@@ -94,7 +94,7 @@ public sealed class McpThemeToolsTests
 
         var result = await ImprintAuthoringMcpTools.SetTypography(
             id.Compact, headingFont: "Comic Sans", bodyFont: null, baseSizePx: null,
-            scaleRatio: null, radiusPx: null, spacing: null, dispatcher, config, sites);
+            scaleRatio: null, radiusPx: null, spacing: null, panelKickerRule: null, dispatcher, config, sites);
 
         var json = Json(result);
         Assert.False(json.GetProperty("ok").GetBoolean());
