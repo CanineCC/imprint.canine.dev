@@ -666,6 +666,12 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 [class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > :is(h2, h3) {
   max-width: var(--mk-measure-head); text-wrap: pretty; text-align: center;
 }
+/* ★ The kicker belongs to the HEAD, not to the copy. It is rich text, so the body rule was catching
+   it and setting it left while the heading directly beneath centred — left, centred, left stacked on
+   top of each other. Same scope as the heading above, so the two can never disagree. */
+[class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > .ip-prose.ip-kicker {
+  text-align: center;
+}
 [class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack:has(> :is(.ip-grid, .ip-columns, .ip-widget)) > :is(h2, h3) {
   align-self: stretch; max-width: none;
 }
