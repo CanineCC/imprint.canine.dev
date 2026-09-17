@@ -633,7 +633,13 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-ap-findings > .ip-stack > :is(.ip-prose, h2),
 .ip-ap-live-card > .ip-stack > :is(.ip-prose, h2),
 .ip-ap-contact > .ip-stack > :is(.ip-prose, h2) {
-  text-align: center; max-width: var(--mk-measure); margin-inline: auto;
+  /* ★ The COLUMN is centred, the text inside it is not. Centred text costs a reader the fixed left
+     edge the eye returns to, which is affordable for a one- or two-line statement and not past that:
+     30 of the 32 centre-aligned blocks on CAI ran to three lines or more, one of them to about 21.
+     Kicker, heading and paragraph all take the same edge so the block reads as one column. The hero
+     and the CTA keep centred text -- both are short statements by construction -- and so does the
+     caption rule below, which now only reaches genuine captions. */
+  text-align: left; max-width: var(--mk-measure); margin-inline: auto;
 }
 /* the head grid/columns/widgets must still span full width even with a centered head */
 [class*="ip-ap-"] > .ip-stack > :is(.ip-grid, .ip-columns) { width: 100%; align-self: stretch; }
