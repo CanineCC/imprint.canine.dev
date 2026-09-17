@@ -371,59 +371,52 @@ public sealed class ThemeCssTests
     }
 
     /// <summary>
-    /// ★ ONE left edge per section. The grid in these appearances stretches to the band, so a centred head
-    /// began a third of the way in while the content it labelled began at the edge — two left edges inside
-    /// one section, which is what read as a header floating away from its own cards. The head shares the
-    /// band edge with the grid, and the text inside it is left-aligned rather than centred line by line.
+    /// ★ The content column is CENTRED; the text inside it is left-aligned. Those are two different
+    /// things and conflating them is what sent every section hard against the left edge with the right
+    /// half empty. Centring a block is fine. Centring text costs the reader the fixed left edge the eye
+    /// returns to on every line.
     /// </summary>
     [Fact]
-    public void A_section_head_shares_its_left_edge_with_the_content_it_labels()
+    public void The_content_column_is_centred_and_its_text_is_left_aligned()
     {
         var css = WithoutComments(ThemeCss.MarketingCss);
 
-        var start = css.IndexOf(".ip-ap-contact > .ip-stack > :is(.ip-prose, h2)", StringComparison.Ordinal);
+        var start = css.IndexOf(".ip-ap-contact > .ip-stack > .ip-prose", StringComparison.Ordinal);
         Assert.True(start >= 0, "the section body-text rule is gone");
         var rule = css[start..(css.IndexOf('}', start) + 1)];
 
         Assert.Contains("text-align: left", rule);
-        Assert.DoesNotContain("margin-inline: auto", rule);
+        Assert.Contains("margin-inline: auto", rule);
+        Assert.Contains("max-width: var(--mk-measure)", rule);
 
-        // And the stack must not re-centre it as a flex item.
         var stackStart = css.IndexOf(".ip-ap-contact > .ip-stack {", StringComparison.Ordinal);
         Assert.True(stackStart >= 0, "the section stack rule is gone");
         var stackRule = css[stackStart..(css.IndexOf('}', stackStart) + 1)];
-        Assert.Contains("align-items: flex-start", stackRule);
+        Assert.Contains("align-items: center", stackRule);
     }
 
     /// <summary>
-    /// ★ A heading that introduces a paragraph takes that paragraph's measure. Body copy is capped for
-    /// readability and a heading was not capped at all, so a headline ran the full section width above a
-    /// column of text half as wide — read as "the text is narrow" when the heading was the wide one. A
-    /// heading labelling a grid or a table keeps full width; it belongs to the wide thing beneath it.
+    /// ★ A header spans its section; only the COLUMN beneath it is capped and centred.
+    /// Capping a heading to the reading measure made it narrower than the grid it labelled, so it read as
+    /// belonging to something else. Expressed in ch it did nothing at all on the larger sizes, because ch
+    /// is relative to each element own font-size. A header is not measured copy and takes no cap.
     /// </summary>
     [Fact]
-    public void A_heading_that_introduces_a_paragraph_shares_its_measure()
+    public void A_section_header_spans_its_section_and_is_never_capped()
     {
         var css = WithoutComments(ThemeCss.MarketingCss);
 
-        // The selector and its declarations, not just the selector line.
-        var start = css.IndexOf(":is(h2, h3):has(+ .ip-prose:not(.ip-kicker))", StringComparison.Ordinal);
-        Assert.True(start >= 0, "the heading-measure rule is gone");
-        var lineStart = css.LastIndexOf('\n', start) + 1;
-        var rule = css[lineStart..(css.IndexOf('}', start) + 1)];
+        var start = css.IndexOf("[class*=\"ip-ap-\"] > .ip-stack > :is(h2, h3)", StringComparison.Ordinal);
+        Assert.True(start >= 0, "the header rule is gone");
+        var rule = css[start..(css.IndexOf('}', start) + 1)];
 
-        // Heroes and CTAs cap their own headings more tightly; this must not widen them back out.
-        Assert.Contains(":not(.ip-ap-hero)", rule);
-        Assert.Contains(":not(.ip-ap-cta)", rule);
-        Assert.Contains(".ip-ap-cta h2", css);
-        Assert.Contains("max-width: 30ch", css);
+        Assert.Contains("max-width: none", rule);
+        Assert.Contains("align-self: stretch", rule);
+        Assert.Contains("text-align: left", rule);
 
-        // ★ The measure has to be ABSOLUTE for a heading to share the paragraph's edge. While it was 60ch
-        // this rule capped a 33px heading at ~1100px — the whole section — and the headings did not move.
-        // ch is relative to each element's own font-size, so one ch count is not one edge.
-        Assert.Contains("max-width: var(--mk-measure)", rule);
-        Assert.Matches(@"--mk-measure: \d+(\.\d+)?rem;", css);
-        Assert.DoesNotMatch(@"--mk-measure: \d+ch;", css);
+        // The reading measure belongs to the copy, not the heading, and stays absolute.
+        Assert.Matches(@"--mk-measure: [\d.]+rem;", css);
+        Assert.DoesNotMatch(@"--mk-measure: [\d.]+ch;", css);
     }
 
     /// <summary>

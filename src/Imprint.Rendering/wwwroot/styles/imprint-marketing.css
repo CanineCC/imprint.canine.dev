@@ -604,17 +604,8 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 [class*="ip-ap-"] h3 { font-size: var(--fs-lg); color: var(--heading); }
 /* A section-level h3 introduces body copy, so it cannot be smaller than it. Card h3s keep
    --fs-lg: they sit above 13px card text, where 16px is already the step up. */
-[class*="ip-ap-"] > .ip-stack > h3 { font-size: var(--fs-xl); }
+[class*="ip-ap-"]:not(.ip-ap-note) > .ip-stack > h3 { font-size: var(--fs-xl); }
 
-/* ★ A heading that introduces a paragraph shares that paragraph's measure. Body copy is capped at
-   --mk-measure for readability while a heading had no cap at all, so a headline ran the full width of
-   its section above a column of text half as wide, with the rest of the line left empty. The text was
-   never the narrow part; the heading above it was the wide one. A heading that labels something wide —
-   a grid, a table, a widget — keeps the full width, because it belongs to the wide thing under it.
-   Heroes and CTAs are excluded: both are centred and already carry their own, narrower cap. */
-[class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-cta) > .ip-stack > :is(h2, h3):has(+ .ip-prose:not(.ip-kicker)) {
-  max-width: var(--mk-measure);
-}
 /* The lede: the first prose paragraph after the head heading. */
 [class*="ip-ap-"] > .ip-stack > .ip-prose:not(.ip-kicker) {
   color: var(--muted); font-size: var(--mk-body); line-height: 1.65; max-width: var(--mk-measure);
@@ -639,27 +630,34 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-ap-findings > .ip-stack,
 .ip-ap-live-card > .ip-stack,
 .ip-ap-contact > .ip-stack {
-  /* ★ flex-start, not center: the grid in these sections stretches to the band, so a centred
-     heading starts a third of the way in and the content it labels starts at the edge -- two
-     left edges in one section. Everything shares the band edge instead. */
-  align-items: flex-start;
+  align-items: center;
 }
-.ip-ap-feature-grid > .ip-stack > :is(.ip-prose, h2),
-.ip-ap-personas > .ip-stack > :is(.ip-prose, h2),
-.ip-ap-steps > .ip-stack > :is(.ip-prose, h2),
-.ip-ap-panels > .ip-stack > :is(.ip-prose, h2),
-.ip-ap-composition > .ip-stack > :is(.ip-prose, h2),
-.ip-ap-flow > .ip-stack > :is(.ip-prose, h2),
-.ip-ap-band-scale > .ip-stack > :is(.ip-prose, h2),
-.ip-ap-gallery > .ip-stack > :is(.ip-prose, h2),
-.ip-ap-c4-heat > .ip-stack > :is(.ip-prose, h2),
-.ip-ap-findings > .ip-stack > :is(.ip-prose, h2),
-.ip-ap-live-card > .ip-stack > :is(.ip-prose, h2),
-.ip-ap-contact > .ip-stack > :is(.ip-prose, h2) {
-  text-align: left; max-width: var(--mk-measure); margin-inline: 0;
+.ip-ap-feature-grid > .ip-stack > .ip-prose,
+.ip-ap-personas > .ip-stack > .ip-prose,
+.ip-ap-steps > .ip-stack > .ip-prose,
+.ip-ap-panels > .ip-stack > .ip-prose,
+.ip-ap-composition > .ip-stack > .ip-prose,
+.ip-ap-flow > .ip-stack > .ip-prose,
+.ip-ap-band-scale > .ip-stack > .ip-prose,
+.ip-ap-gallery > .ip-stack > .ip-prose,
+.ip-ap-c4-heat > .ip-stack > .ip-prose,
+.ip-ap-findings > .ip-stack > .ip-prose,
+.ip-ap-live-card > .ip-stack > .ip-prose,
+.ip-ap-contact > .ip-stack > .ip-prose {
+  text-align: left; max-width: var(--mk-measure); margin-inline: auto;
 }
-/* the head grid/columns/widgets span the full band; the head now shares its left edge */
+/* ★ A header spans its section. It is not capped to the reading measure: a heading narrower
+   than the grid it labels reads as belonging to something else, and capping it in ch did
+   nothing at all on the larger sizes anyway. The COLUMN under it stays centred; only the
+   text inside that column is left-aligned. */
+[class*="ip-ap-"] > .ip-stack > :is(h2, h3) { align-self: stretch; max-width: none; text-align: left; }
+/* the head grid/columns/widgets span the full band */
 [class*="ip-ap-"] > .ip-stack > :is(.ip-grid, .ip-columns) { width: 100%; align-self: stretch; }
+/* ★ One step of air between a section head and the block it introduces. The stack gap alone
+   (--ip-space-4) sets the same distance between kicker, heading and paragraph as between the
+   head and a grid of cards, so a head did not read as a group. A single extra step is enough;
+   more starts to break the section apart. */
+[class*="ip-ap-"] > .ip-stack > :is(.ip-grid, .ip-columns, .ip-widget) { margin-block-start: var(--ip-space-2); }
 
 /* ── HERO ─────────────────────────────────────────────────────────────────── */
 .ip-ap-hero { padding-block: clamp(3rem, 1.5rem + 5vw, 5.5rem) var(--mk-section); }
@@ -747,7 +745,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 }
 [class*="ip-ap-"] .ip-btn + .ip-btn { margin-left: 0; }
 .ip-ap-hero > .ip-stack,
-.ip-ap-cta > .ip-stack { row-gap: 1.1rem; }
+.ip-ap-cta > .ip-stack { row-gap: var(--ip-space-4); }
 
 /* ── BOUNDARY (is / is-not two columns) ─────────────────────────────────────── */
 .ip-ap-boundary h2 { max-width: var(--mk-measure); }
