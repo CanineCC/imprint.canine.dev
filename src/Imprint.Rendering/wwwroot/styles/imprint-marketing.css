@@ -125,10 +125,17 @@
      hold still across sizes; the cost is that it no longer adapts if the body font is changed, which
      is the right trade for a measure whole pages line up against.
      34rem is ~66 characters at body size and ~60 at lede size: inside the comfortable range at both. */
-  --mk-measure: 34rem;
+  /* ★ The measure and the section band are ONE decision, and were made separately.
+     The band was sized so three 280px cards fit a row (72rem); the measure was sized so a line
+     stays readable (~34rem). Nobody compared them, and the result was text occupying 47% of the
+     band it sat in — a paragraph looking like half a page beside a card grid that filled it.
+     A readable line cannot grow past roughly 640px, so the band came down to meet it instead:
+     60rem band against a 38rem measure is 63%, and three cards still fit a row at 298px each.
+     Change one of these two and check the other. */
+  --mk-measure: 38rem;
   /* Long-form reading — the Prose and Timeline appearances, which are articles rather than marketing
      sections. A wider column is a deliberate choice for a different reading mode, not drift. */
-  --mk-measure-long: 38rem;
+  --mk-measure-long: 42rem;
   --mk-gap: clamp(2rem, 1rem + 3vw, 3.25rem);
   --mk-section: clamp(2.5rem, 1.5rem + 2.8vw, 4rem);
 }
@@ -640,7 +647,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-ap-findings > .ip-stack > :is(.ip-prose, h2),
 .ip-ap-live-card > .ip-stack > :is(.ip-prose, h2),
 .ip-ap-contact > .ip-stack > :is(.ip-prose, h2) {
-  text-align: center; max-width: var(--mk-measure); margin-inline: auto;
+  text-align: left; max-width: var(--mk-measure); margin-inline: auto;
 }
 /* the head grid/columns/widgets must still span full width even with a centered head */
 [class*="ip-ap-"] > .ip-stack > :is(.ip-grid, .ip-columns) { width: 100%; align-self: stretch; }

@@ -333,6 +333,53 @@ public sealed class ThemeCssTests
     }
 
     /// <summary>
+    /// ★ The reading measure and the section band are ONE decision. They were made separately — the band
+    /// sized so three cards fit a row, the measure sized so a line stays readable — and nobody compared
+    /// them, leaving text at 47% of the band it sat in: a paragraph looking like half a page next to a card
+    /// grid that filled it. A readable line cannot grow past ~640px, so the band has to come down to meet
+    /// the measure rather than the other way round.
+    /// </summary>
+    [Fact]
+    public void The_reading_measure_is_a_fair_share_of_the_section_band()
+    {
+        var band = Rem(ThemeCss.StructuralCss, @"calc\(50% - ([\d.]+)rem\)") * 2;
+        var measure = Rem(ThemeCss.MarketingCss, @"--mk-measure: ([\d.]+)rem;");
+
+        var share = measure / band;
+        Assert.True(
+            share >= 0.55,
+            $"text is {share:P0} of the {band}rem band — a paragraph should not read as half a page beside a card grid.");
+
+        // And it still has to be readable: past ~40rem a line is too long whatever the band does.
+        Assert.True(measure <= 40, $"the measure is {measure}rem; a line that long is hard to read.");
+    }
+
+    private static double Rem(string css, string pattern)
+    {
+        var m = System.Text.RegularExpressions.Regex.Match(css, pattern);
+        Assert.True(m.Success, $"no match for {pattern}");
+        return double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// ★ The column is centred; the TEXT inside it is not. Centring a block is fine — it is what gives the
+    /// page a spine. Centring the text costs the reader the fixed left edge the eye returns to on every
+    /// line, which is affordable for a one- or two-line statement and not past that.
+    /// </summary>
+    [Fact]
+    public void Section_body_text_is_left_aligned_inside_a_centred_column()
+    {
+        var css = WithoutComments(ThemeCss.MarketingCss);
+
+        var start = css.IndexOf(".ip-ap-contact > .ip-stack > :is(.ip-prose, h2)", StringComparison.Ordinal);
+        Assert.True(start >= 0, "the section body-text rule is gone");
+        var rule = css[start..(css.IndexOf('}', start) + 1)];
+
+        Assert.Contains("text-align: left", rule);
+        Assert.Contains("margin-inline: auto", rule);
+    }
+
+    /// <summary>
     /// ★ A heading that introduces a paragraph takes that paragraph's measure. Body copy is capped for
     /// readability and a heading was not capped at all, so a headline ran the full section width above a
     /// column of text half as wide — read as "the text is narrow" when the heading was the wide one. A
