@@ -350,8 +350,17 @@ public sealed class ThemeCssTests
             share >= 0.55,
             $"text is {share:P0} of the {band}rem band — a paragraph should not read as half a page beside a card grid.");
 
-        // And it still has to be readable: past ~40rem a line is too long whatever the band does.
-        Assert.True(measure <= 40, $"the measure is {measure}rem; a line that long is hard to read.");
+        // ★ And the pair has to stay READABLE, which is a character count, not a width. A wider column is
+        // only legitimate if the text in it is bigger: an average glyph is about half the font size, so
+        // characters-per-line is the measure divided by half the body size. Past ~80 the eye loses the
+        // line on the way back to the left, whatever the band is doing.
+        var bodyPx = double.Parse(
+            System.Text.RegularExpressions.Regex.Match(ThemeCss.MarketingCss, @"--mk-body: (\d+)px;").Groups[1].Value,
+            System.Globalization.CultureInfo.InvariantCulture);
+        var charsPerLine = (measure * 16) / (bodyPx / 2);
+        Assert.True(
+            charsPerLine <= 80,
+            $"{measure}rem of {bodyPx}px text is ~{charsPerLine:N0} characters a line; widen the text only by making it bigger.");
     }
 
     private static double Rem(string css, string pattern)

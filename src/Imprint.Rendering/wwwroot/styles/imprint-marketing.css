@@ -132,10 +132,13 @@
      A readable line cannot grow past roughly 640px, so the band came down to meet it instead:
      60rem band against a 38rem measure is 63%, and three cards still fit a row at 298px each.
      Change one of these two and check the other. */
-  --mk-measure: 38rem;
+  /* ★ Body size and measure are one decision: 42rem of 18px text is ~75 characters a line,
+     the top of the comfortable range. Move one and recheck the other. */
+  --mk-body: 18px;
+  --mk-measure: 42rem;
   /* Long-form reading — the Prose and Timeline appearances, which are articles rather than marketing
      sections. A wider column is a deliberate choice for a different reading mode, not drift. */
-  --mk-measure-long: 42rem;
+  --mk-measure-long: 46rem;
   --mk-gap: clamp(2rem, 1rem + 3vw, 3.25rem);
   --mk-section: clamp(2.5rem, 1.5rem + 2.8vw, 4rem);
 }
@@ -599,6 +602,9 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
   font-size: var(--mk-h2); line-height: 1.12; letter-spacing: -0.02em; color: var(--heading);
 }
 [class*="ip-ap-"] h3 { font-size: var(--fs-lg); color: var(--heading); }
+/* A section-level h3 introduces body copy, so it cannot be smaller than it. Card h3s keep
+   --fs-lg: they sit above 13px card text, where 16px is already the step up. */
+[class*="ip-ap-"] > .ip-stack > h3 { font-size: var(--fs-xl); }
 
 /* ★ A heading that introduces a paragraph shares that paragraph's measure. Body copy is capped at
    --mk-measure for readability while a heading had no cap at all, so a headline ran the full width of
@@ -611,7 +617,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 }
 /* The lede: the first prose paragraph after the head heading. */
 [class*="ip-ap-"] > .ip-stack > .ip-prose:not(.ip-kicker) {
-  color: var(--muted); font-size: var(--fs-lg); line-height: 1.6; max-width: var(--mk-measure);
+  color: var(--muted); font-size: var(--mk-body); line-height: 1.65; max-width: var(--mk-measure);
 }
 [class*="ip-ap-"] .ip-prose p strong { color: var(--ink); }
 [class*="ip-ap-"] .ip-prose a { color: var(--accent-ink); }

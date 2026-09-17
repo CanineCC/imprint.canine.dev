@@ -38,11 +38,11 @@
   flex-direction: column;
   gap: var(--ip-space-4);
   padding-block: var(--ip-space-6);
-  /* 60rem track: padding grows once the viewport exceeds it, centering the content
+  /* 72rem track: padding grows once the viewport exceeds it, centering the content
      while the background stays full-bleed — no wrapper element needed. */
-  padding-inline: max(var(--ip-space-4), calc(50% - 30rem));
+  padding-inline: max(var(--ip-space-4), calc(50% - 36rem));
 }
-.ip-section-wide { padding-inline: max(var(--ip-space-4), calc(50% - 40rem)); }
+.ip-section-wide { padding-inline: max(var(--ip-space-4), calc(50% - 48rem)); }
 .ip-section-full { padding-inline: 0; }
 .ip-bg-surface { background: var(--ip-surface); }
 .ip-bg-surface-alt { background: var(--ip-surface-alt); }
