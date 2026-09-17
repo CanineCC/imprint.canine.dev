@@ -396,29 +396,40 @@ public sealed class ThemeCssTests
     }
 
     /// <summary>
-    /// ★ A header spans its section; only the COLUMN beneath it is capped and centred.
-    /// Capping a heading to the reading measure made it narrower than the grid it labelled, so it read as
-    /// belonging to something else. Expressed in ch it did nothing at all on the larger sizes, because ch
-    /// is relative to each element own font-size. A header is not measured copy and takes no cap.
+    /// ★ A header is NEVER narrower than the content under it -- that is the whole rule. It takes the
+    /// headline measure, which is deliberately wider than the copy measure, and stretches to the band
+    /// when the section holds a grid or a widget so it matches its own cards. Full width everywhere was
+    /// wrong for the opposite reason: at 33px a heading holds ~68 characters on one line and 27 of CAI's
+    /// 31 headings fit on one, which reads as a banner rather than a headline.
     /// </summary>
     [Fact]
-    public void A_section_header_spans_its_section_and_is_never_capped()
+    public void A_header_is_never_narrower_than_the_content_beneath_it()
     {
         var css = WithoutComments(ThemeCss.MarketingCss);
 
-        var start = css.IndexOf("[class*=\"ip-ap-\"] > .ip-stack > :is(h2, h3)", StringComparison.Ordinal);
-        Assert.True(start >= 0, "the header rule is gone");
-        var rule = css[start..(css.IndexOf('}', start) + 1)];
+        var head = Rem(css, @"--mk-measure-head: ([\d.]+)rem;");
+        var copy = Rem(css, @"--mk-measure: ([\d.]+)rem;");
+        Assert.True(head > copy, $"the headline measure ({head}rem) must exceed the copy measure ({copy}rem)");
 
-        Assert.Contains("max-width: none", rule);
-        Assert.Contains("align-self: stretch", rule);
-        Assert.Contains("text-align: left", rule);
+        // ...and it is a HEADLINE measure, not the band: display type past ~45 characters stops reading
+        // as a headline. 46rem at the largest heading size is about 43.
+        Assert.True(head <= 48, $"{head}rem of display type is a banner, not a headline");
 
-        // The reading measure belongs to the copy, not the heading, and stays absolute.
-        Assert.Matches(@"--mk-measure: [\d.]+rem;", css);
-        Assert.DoesNotMatch(@"--mk-measure: [\d.]+ch;", css);
+        // With a grid, columns or a widget present it matches them instead of staying capped.
+        Assert.Contains(
+            "[class*=\"ip-ap-\"] > .ip-stack:has(> :is(.ip-grid, .ip-columns, .ip-widget)) > :is(h2, h3)",
+            css);
+
+        // The hero and CTA are centred statements and keep their own alignment.
+        var align = css.IndexOf("> .ip-stack > :is(h2, h3) { text-align: left; }", StringComparison.Ordinal);
+        Assert.True(align >= 0, "the header alignment rule is gone");
+        var lineStart = css.LastIndexOf('\n', align) + 1;
+        var rule = css[lineStart..align];
+        Assert.Contains(":not(.ip-ap-hero)", rule);
+        Assert.Contains(":not(.ip-ap-cta)", rule);
     }
 
+    /// <summary>
     /// <summary>
     /// ★ The lede size is a contrast, so it is only spent where there is something to contrast with. Most CAI
     /// heroes are kicker / headline / one paragraph / buttons — and that lone paragraph was being set larger
