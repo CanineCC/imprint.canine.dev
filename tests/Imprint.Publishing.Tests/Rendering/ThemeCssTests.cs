@@ -371,12 +371,13 @@ public sealed class ThemeCssTests
     }
 
     /// <summary>
-    /// ★ The column is centred; the TEXT inside it is not. Centring a block is fine — it is what gives the
-    /// page a spine. Centring the text costs the reader the fixed left edge the eye returns to on every
-    /// line, which is affordable for a one- or two-line statement and not past that.
+    /// ★ ONE left edge per section. The grid in these appearances stretches to the band, so a centred head
+    /// began a third of the way in while the content it labelled began at the edge — two left edges inside
+    /// one section, which is what read as a header floating away from its own cards. The head shares the
+    /// band edge with the grid, and the text inside it is left-aligned rather than centred line by line.
     /// </summary>
     [Fact]
-    public void Section_body_text_is_left_aligned_inside_a_centred_column()
+    public void A_section_head_shares_its_left_edge_with_the_content_it_labels()
     {
         var css = WithoutComments(ThemeCss.MarketingCss);
 
@@ -385,7 +386,13 @@ public sealed class ThemeCssTests
         var rule = css[start..(css.IndexOf('}', start) + 1)];
 
         Assert.Contains("text-align: left", rule);
-        Assert.Contains("margin-inline: auto", rule);
+        Assert.DoesNotContain("margin-inline: auto", rule);
+
+        // And the stack must not re-centre it as a flex item.
+        var stackStart = css.IndexOf(".ip-ap-contact > .ip-stack {", StringComparison.Ordinal);
+        Assert.True(stackStart >= 0, "the section stack rule is gone");
+        var stackRule = css[stackStart..(css.IndexOf('}', stackStart) + 1)];
+        Assert.Contains("align-items: flex-start", stackRule);
     }
 
     /// <summary>

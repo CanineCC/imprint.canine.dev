@@ -639,7 +639,10 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-ap-findings > .ip-stack,
 .ip-ap-live-card > .ip-stack,
 .ip-ap-contact > .ip-stack {
-  align-items: center;
+  /* ★ flex-start, not center: the grid in these sections stretches to the band, so a centred
+     heading starts a third of the way in and the content it labels starts at the edge -- two
+     left edges in one section. Everything shares the band edge instead. */
+  align-items: flex-start;
 }
 .ip-ap-feature-grid > .ip-stack > :is(.ip-prose, h2),
 .ip-ap-personas > .ip-stack > :is(.ip-prose, h2),
@@ -653,9 +656,9 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-ap-findings > .ip-stack > :is(.ip-prose, h2),
 .ip-ap-live-card > .ip-stack > :is(.ip-prose, h2),
 .ip-ap-contact > .ip-stack > :is(.ip-prose, h2) {
-  text-align: left; max-width: var(--mk-measure); margin-inline: auto;
+  text-align: left; max-width: var(--mk-measure); margin-inline: 0;
 }
-/* the head grid/columns/widgets must still span full width even with a centered head */
+/* the head grid/columns/widgets span the full band; the head now shares its left edge */
 [class*="ip-ap-"] > .ip-stack > :is(.ip-grid, .ip-columns) { width: 100%; align-self: stretch; }
 
 /* ── HERO ─────────────────────────────────────────────────────────────────── */
