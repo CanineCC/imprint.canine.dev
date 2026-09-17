@@ -343,14 +343,24 @@ public sealed class ThemeCssTests
     {
         var css = WithoutComments(ThemeCss.MarketingCss);
 
-        var rule = css.Split('\n').Single(l =>
-            l.Contains(":is(h2, h3):has(+ .ip-prose:not(.ip-kicker))", StringComparison.Ordinal));
+        // The selector and its declarations, not just the selector line.
+        var start = css.IndexOf(":is(h2, h3):has(+ .ip-prose:not(.ip-kicker))", StringComparison.Ordinal);
+        Assert.True(start >= 0, "the heading-measure rule is gone");
+        var lineStart = css.LastIndexOf('\n', start) + 1;
+        var rule = css[lineStart..(css.IndexOf('}', start) + 1)];
 
         // Heroes and CTAs cap their own headings more tightly; this must not widen them back out.
         Assert.Contains(":not(.ip-ap-hero)", rule);
         Assert.Contains(":not(.ip-ap-cta)", rule);
         Assert.Contains(".ip-ap-cta h2", css);
         Assert.Contains("max-width: 30ch", css);
+
+        // ★ NOT --mk-measure. That is 60ch, and ch is relative to the element's own font-size: it caps a
+        // 16px paragraph at ~540px and a 33px heading at ~1100px, which is the whole section and therefore
+        // no cap at all. Shipped that way once and the headings did not move.
+        Assert.Contains("max-width: var(--mk-heading-measure)", rule);
+        Assert.DoesNotContain("var(--mk-measure)", rule);
+        Assert.Matches(@"--mk-heading-measure: \d+(\.\d+)?rem;", css);
     }
 
     /// <summary>

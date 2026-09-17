@@ -117,6 +117,11 @@
   --mk-display: clamp(2.4rem, 1.4rem + 3.4vw, 3.6rem);
   --mk-h2: clamp(1.5rem, 1.1rem + 1.4vw, 2.1rem);
   --mk-measure: 60ch;
+  /* ★ The same column, for text that is not body size. `ch` is relative to the element's OWN
+     font-size, so --mk-measure caps a 16px paragraph at ~540px and a 33px heading at ~1100px —
+     the full width of a section, which is no cap at all. Anything larger than body copy that
+     should end where the paragraph ends needs the column stated absolutely, not in ch. */
+  --mk-heading-measure: 34rem;
   --mk-gap: clamp(2rem, 1rem + 3vw, 3.25rem);
   --mk-section: clamp(2.5rem, 1.5rem + 2.8vw, 4rem);
 }
@@ -588,7 +593,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    a grid, a table, a widget — keeps the full width, because it belongs to the wide thing under it.
    Heroes and CTAs are excluded: both are centred and already carry their own, narrower cap. */
 [class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-cta) > .ip-stack > :is(h2, h3):has(+ .ip-prose:not(.ip-kicker)) {
-  max-width: var(--mk-measure);
+  max-width: var(--mk-heading-measure);
 }
 /* The lede: the first prose paragraph after the head heading. */
 [class*="ip-ap-"] > .ip-stack > .ip-prose:not(.ip-kicker) {
