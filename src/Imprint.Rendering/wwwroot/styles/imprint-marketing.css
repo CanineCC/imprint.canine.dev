@@ -685,7 +685,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    Keyed on position alone this caught heroes whose single paragraph simply came last, and
    set the page's only lede at fine-print size — /badge read as a footnote with no intro. */
 .ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker) ~ .ip-prose:last-of-type:not(.ip-prose-secondary) {
-  font-size: var(--fs-sm); color: var(--muted);
+  font-size: var(--fs-xs); color: var(--muted);
 }
 @media (max-width: 900px) {
   .ip-ap-hero > .ip-stack { grid-template-columns: 1fr; }
@@ -1035,8 +1035,12 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-ap-contact .ip-widget { max-width: 40rem; margin-inline: auto; }
 /* section caption prose that follows a widget → small muted centered.
    :not(.ip-prose-secondary) so a paragraph explicitly marked as a supporting paragraph is not
-   dragged back down to the fine-print floor by where it happens to sit. */
-[class*="ip-ap-"] > .ip-stack > .ip-prose:last-child:not(.ip-kicker):not(:has(ul)):not(.ip-prose-secondary) {
+   dragged back down to the fine-print floor by where it happens to sit.
+   :not(.ip-ap-hero) because a hero states its own trailing-paragraph rule directly above, with the
+   sibling guard that keeps a lone lede out of it. Without this exclusion that guard is dead letter:
+   this selector is the more specific of the two and quietly wins, which is why a hero's closing line
+   has always rendered at --fs-xs and never at the --fs-sm the hero rule asks for. */
+[class*="ip-ap-"]:not(.ip-ap-hero) > .ip-stack > .ip-prose:last-child:not(.ip-kicker):not(:has(ul)):not(.ip-prose-secondary) {
   font-size: var(--fs-xs);
 }
 

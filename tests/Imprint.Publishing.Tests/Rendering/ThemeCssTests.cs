@@ -322,6 +322,13 @@ public sealed class ThemeCssTests
         Assert.DoesNotContain(
             ".ip-ap-hero > .ip-stack > .ip-prose:last-of-type {",
             css);
+
+        // ★ And the guard only bites if the generic trailing rule stays out of heroes. That selector is
+        // the more specific of the two, so while it also matched a hero it won outright and the guard
+        // above was dead letter — the lone lede went on rendering at --fs-xs with nothing to show why.
+        var generic = css.Split('\n').Single(l =>
+            l.Contains("> .ip-stack > .ip-prose:last-child:not(.ip-kicker):not(:has(ul))", StringComparison.Ordinal));
+        Assert.Contains(":not(.ip-ap-hero)", generic);
     }
 
     /// <summary>
