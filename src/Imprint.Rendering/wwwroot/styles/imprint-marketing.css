@@ -611,11 +611,16 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 [class*="ip-ap-"] h3 { font-size: var(--fs-lg); color: var(--heading); }
 /* A section-level h3 introduces body copy, so it cannot be smaller than it. Card h3s keep
    --fs-lg: they sit above 13px card text, where 16px is already the step up. */
-[class*="ip-ap-"]:not(.ip-ap-note) > .ip-stack > h3 { font-size: var(--fs-xl); }
+[class*="ip-ap-"]:not(.ip-ap-note):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-docmock):not(.ip-ap-timeline) > .ip-stack > h3 { font-size: var(--fs-xl); }
 
 /* The lede: the first prose paragraph after the head heading. */
 [class*="ip-ap-"] > .ip-stack > .ip-prose:not(.ip-kicker) {
-  color: var(--muted); font-size: var(--mk-body); line-height: 1.65; max-width: var(--mk-measure);
+  color: var(--muted); font-size: var(--fs-lg); line-height: 1.6; max-width: 60ch;
+}
+/* ★ The 18px/42rem pair is the CAI marketing work and stops at the article appearances:
+   Prose, Doc, Docmock, Timeline and Note keep the size, leading and measure they had. */
+[class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > .ip-prose:not(.ip-kicker) {
+  font-size: var(--mk-body); line-height: 1.65; max-width: var(--mk-measure);
 }
 [class*="ip-ap-"] .ip-prose p strong { color: var(--ink); }
 [class*="ip-ap-"] .ip-prose a { color: var(--accent-ink); }
@@ -658,9 +663,10 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    With a grid, columns or a widget in the section, it stretches to match them instead —
    those span the band, and a header narrower than its own cards reads as detached.
    The hero and the CTA are excluded from the alignment: both are centred statements. */
-[class*="ip-ap-"] > .ip-stack > :is(h2, h3) { max-width: var(--mk-measure-head); text-wrap: pretty; }
-[class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-cta) > .ip-stack > :is(h2, h3) { text-align: left; }
-[class*="ip-ap-"] > .ip-stack:has(> :is(.ip-grid, .ip-columns, .ip-widget)) > :is(h2, h3) {
+[class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > :is(h2, h3) {
+  max-width: var(--mk-measure-head); text-wrap: pretty; text-align: center;
+}
+[class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack:has(> :is(.ip-grid, .ip-columns, .ip-widget)) > :is(h2, h3) {
   align-self: stretch; max-width: none;
 }
 /* the head grid/columns/widgets span the full band */
@@ -669,7 +675,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    (--ip-space-4) sets the same distance between kicker, heading and paragraph as between the
    head and a grid of cards, so a head did not read as a group. A single extra step is enough;
    more starts to break the section apart. */
-[class*="ip-ap-"] > .ip-stack > :is(.ip-grid, .ip-columns, .ip-widget) { margin-block-start: var(--ip-space-2); }
+[class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > :is(.ip-grid, .ip-columns, .ip-widget) { margin-block-start: var(--ip-space-2); }
 
 /* ── HERO ─────────────────────────────────────────────────────────────────── */
 .ip-ap-hero { padding-block: clamp(3rem, 1.5rem + 5vw, 5.5rem) var(--mk-section); }
@@ -961,9 +967,9 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-ap-note.ip-bg-primary > .ip-stack { border-left-color: var(--band-fair); }
 
 /* ── PROSE (long-form marketing prose: manifesto / doctrine / why-we-exist) ──── */
-.ip-ap-prose > .ip-stack > :is(.ip-prose, h1, h2, h3) { max-width: var(--mk-measure-long); }
+.ip-ap-prose > .ip-stack > :is(.ip-prose, h1, h2, h3) { max-width: 68ch; }
 .ip-ap-prose > .ip-stack > .ip-prose:not(.ip-kicker) {
-  color: var(--ink); font-size: var(--fs-lg); line-height: 1.65; max-width: var(--mk-measure-long);
+  color: var(--ink); font-size: var(--fs-lg); line-height: 1.65; max-width: 68ch;
 }
 /* the doctrine list: unbulleted, hairline-separated rows */
 .ip-ap-prose .ip-prose ul { list-style: none; padding: 0; }
@@ -984,7 +990,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 }
 
 /* ── TIMELINE (history: mono date column + body per row, hairline-separated) ──── */
-.ip-ap-timeline > .ip-stack > :is(.ip-prose, h1, h2, h3) { max-width: var(--mk-measure-long); }
+.ip-ap-timeline > .ip-stack > :is(.ip-prose, h1, h2, h3) { max-width: 68ch; }
 .ip-ap-timeline .ip-prose ul { list-style: none; padding: 0; max-width: 46rem; }
 .ip-ap-timeline .ip-prose ul li {
   position: relative; padding: 0.85rem 0 0.85rem 190px;

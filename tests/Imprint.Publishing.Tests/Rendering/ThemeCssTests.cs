@@ -417,16 +417,21 @@ public sealed class ThemeCssTests
 
         // With a grid, columns or a widget present it matches them instead of staying capped.
         Assert.Contains(
-            "[class*=\"ip-ap-\"] > .ip-stack:has(> :is(.ip-grid, .ip-columns, .ip-widget)) > :is(h2, h3)",
+            ".ip-stack:has(> :is(.ip-grid, .ip-columns, .ip-widget)) > :is(h2, h3)",
             css);
 
-        // The hero and CTA are centred statements and keep their own alignment.
-        var align = css.IndexOf("> .ip-stack > :is(h2, h3) { text-align: left; }", StringComparison.Ordinal);
-        Assert.True(align >= 0, "the header alignment rule is gone");
-        var lineStart = css.LastIndexOf('\n', align) + 1;
-        var rule = css[lineStart..align];
-        Assert.Contains(":not(.ip-ap-hero)", rule);
-        Assert.Contains(":not(.ip-ap-cta)", rule);
+        // ★ And the whole thing stops at the article appearances. These rules are the CAI marketing work;
+        // written against the bare wildcard they reached Prose, Doc, Timeline and Note on every site, and
+        // put the headings of every guide and whitepaper 200px away from their own body copy.
+        var start = css.IndexOf("> .ip-stack > :is(h2, h3) {", StringComparison.Ordinal);
+        Assert.True(start >= 0, "the header rule is gone");
+        var lineStart = css.LastIndexOf('\n', start) + 1;
+        var selector = css[lineStart..start];
+
+        foreach (var article in (string[])["prose", "doc", "docmock", "timeline", "note"])
+        {
+            Assert.Contains($":not(.ip-ap-{article})", selector);
+        }
     }
 
     /// <summary>
