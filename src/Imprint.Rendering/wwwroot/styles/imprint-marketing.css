@@ -676,7 +676,12 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
   font-size: var(--mk-display); line-height: 1.05; letter-spacing: -0.03em;
   color: var(--heading); max-width: 18ch;
 }
-.ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker):not(.ip-prose-secondary):not(.ip-prose-fine) {
+/* ★ The lede size is a CONTRAST, so it needs something to contrast with: it applies only while a
+   second paragraph follows. A hero holding one paragraph — kicker, headline, paragraph, buttons, which
+   is how most of CAI is written — was printing that paragraph larger than every other paragraph on
+   the page with nothing smaller beside it to explain why, which reads as an arbitrary extra size
+   rather than an intro. Alone, it falls through to the ordinary body rule and matches the site. */
+.ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker):not(.ip-prose-secondary):not(.ip-prose-fine):has(~ .ip-prose:not(.ip-kicker)) {
   font-size: var(--fs-xl); line-height: 1.5; color: var(--ink); max-width: 52ch;
 }
 .ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker) strong { color: var(--heading); }

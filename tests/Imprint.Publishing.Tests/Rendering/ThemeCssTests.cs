@@ -332,6 +332,23 @@ public sealed class ThemeCssTests
     }
 
     /// <summary>
+    /// ★ The lede size is a contrast, so it is only spent where there is something to contrast with. Most CAI
+    /// heroes are kicker / headline / one paragraph / buttons — and that lone paragraph was being set larger
+    /// than every other paragraph on its page with nothing smaller beside it to justify the jump, which reads
+    /// as an arbitrary size rather than an intro. It takes the lede size only while a paragraph follows it.
+    /// </summary>
+    [Fact]
+    public void The_hero_lede_size_applies_only_while_a_second_paragraph_follows()
+    {
+        var css = WithoutComments(ThemeCss.MarketingCss);
+
+        var lede = css.Split('\n').Single(l =>
+            l.Contains(".ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker):not(.ip-prose-secondary)", StringComparison.Ordinal));
+
+        Assert.Contains(":has(~ .ip-prose:not(.ip-kicker))", lede);
+    }
+
+    /// <summary>
     /// Emphasis is a statement about what a paragraph IS, so every positional rule that could shrink it has
     /// to stand aside for it — otherwise the class is set, reads as applied, and is silently outranked.
     /// </summary>
