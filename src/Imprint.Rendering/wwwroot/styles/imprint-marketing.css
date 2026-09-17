@@ -135,11 +135,13 @@
   /* ★ Body size and measure are one decision: 42rem of 18px text is ~75 characters a line,
      the top of the comfortable range. Move one and recheck the other. */
   --mk-body: 18px;
-  /* ★ The headline measure. Wider than --mk-measure on purpose: a header narrower than the copy
-     beneath it looks detached from it. Narrower than the band on purpose too — at full width a
-     33px heading holds ~68 characters on one line, and 27 of CAI's 31 headings fit on one, which
-     reads as a banner rather than a headline. 46rem is ~43 characters: two balanced lines. */
-  --mk-measure-head: 46rem;
+  /* ★ The headline measure. Wider than --mk-measure on purpose, and by enough to SEE: a header
+     narrower than the copy beneath it looks detached from it, and 32rem of overhang was too small
+     to register. 50rem against a 42rem copy overhangs by 64px each side.
+     text-wrap: pretty, not balance: balance breaks a heading into short even lines, so the heading
+     never reached the edges of the box it had been given and still read as the narrower of the two.
+     pretty fills the measure and only tidies the last line, so the overhang is actually visible. */
+  --mk-measure-head: 50rem;
   --mk-measure: 42rem;
   /* Long-form reading — the Prose and Timeline appearances, which are articles rather than marketing
      sections. A wider column is a deliberate choice for a different reading mode, not drift. */
@@ -656,10 +658,10 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    With a grid, columns or a widget in the section, it stretches to match them instead —
    those span the band, and a header narrower than its own cards reads as detached.
    The hero and the CTA are excluded from the alignment: both are centred statements. */
-[class*="ip-ap-"] > .ip-stack > :is(h2, h3) { max-width: var(--mk-measure-head); margin-inline: auto; }
+[class*="ip-ap-"] > .ip-stack > :is(h2, h3) { max-width: var(--mk-measure-head); text-wrap: pretty; }
 [class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-cta) > .ip-stack > :is(h2, h3) { text-align: left; }
 [class*="ip-ap-"] > .ip-stack:has(> :is(.ip-grid, .ip-columns, .ip-widget)) > :is(h2, h3) {
-  align-self: stretch; max-width: none; margin-inline: 0;
+  align-self: stretch; max-width: none;
 }
 /* the head grid/columns/widgets span the full band */
 [class*="ip-ap-"] > .ip-stack > :is(.ip-grid, .ip-columns) { width: 100%; align-self: stretch; }

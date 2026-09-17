@@ -413,7 +413,7 @@ public sealed class ThemeCssTests
 
         // ...and it is a HEADLINE measure, not the band: display type past ~45 characters stops reading
         // as a headline. 46rem at the largest heading size is about 43.
-        Assert.True(head <= 48, $"{head}rem of display type is a banner, not a headline");
+        Assert.True(head <= 52, $"{head}rem of display type is a banner, not a headline");
 
         // With a grid, columns or a widget present it matches them instead of staying capped.
         Assert.Contains(
