@@ -761,9 +761,9 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
   content: none;
 }
 /* footnote / note under the grid → centered small muted */
-.ip-ap-feature-grid > .ip-stack > .ip-prose:last-child:not(.ip-kicker):not(.ip-prose-secondary),
-.ip-ap-personas > .ip-stack > .ip-prose:last-child:not(.ip-kicker):not(.ip-prose-secondary),
-.ip-ap-steps > .ip-stack > .ip-prose:last-child:not(.ip-kicker):not(.ip-prose-secondary) {
+.ip-ap-feature-grid > .ip-stack > :not(:is(h1, h2, h3, h4, .ip-prose)) + .ip-prose:last-child:not(.ip-kicker):not(.ip-prose-secondary),
+.ip-ap-personas > .ip-stack > :not(:is(h1, h2, h3, h4, .ip-prose)) + .ip-prose:last-child:not(.ip-kicker):not(.ip-prose-secondary),
+.ip-ap-steps > .ip-stack > :not(:is(h1, h2, h3, h4, .ip-prose)) + .ip-prose:last-child:not(.ip-kicker):not(.ip-prose-secondary) {
   font-size: var(--fs-xs); color: var(--muted); text-align: center; max-width: var(--mk-measure); margin-inline: auto;
 }
 
@@ -846,7 +846,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-ap-pricing .ip-prose ul li { font-size: var(--fs-sm); color: var(--ink); padding-left: 1.4rem; position: relative; line-height: 1.45; }
 .ip-ap-pricing .ip-prose ul li::before { content: "\2713"; position: absolute; left: 0; color: var(--band-exemplary-text); font-weight: 700; }
 .ip-ap-pricing .ip-btn { margin-top: auto; align-self: stretch; }
-.ip-ap-pricing > .ip-stack > .ip-prose:last-child {
+.ip-ap-pricing > .ip-stack > :not(:is(h1, h2, h3, h4, .ip-prose)) + .ip-prose:last-child {
   font-size: var(--fs-sm); color: var(--muted); text-align: center; max-width: var(--mk-measure); margin-inline: auto;
 }
 
@@ -881,7 +881,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
   background: var(--surface-2); color: var(--muted); font-size: var(--fs-xs);
   text-transform: uppercase; letter-spacing: 0.04em;
 }
-.ip-ap-table-list > .ip-stack > .ip-prose:last-child:not(:has(ul)) {
+.ip-ap-table-list > .ip-stack > :not(:is(h1, h2, h3, h4, .ip-prose)) + .ip-prose:last-child:not(:has(ul)) {
   font-size: var(--fs-xs); color: var(--muted); text-align: center;
 }
 
@@ -1038,14 +1038,21 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 /* a live/standalone score card is a single 460px card, centered */
 .ip-ap-live-card .ip-widget { max-width: min(460px, 100%); margin-inline: auto; }
 .ip-ap-contact .ip-widget { max-width: 40rem; margin-inline: auto; }
-/* section caption prose that follows a widget → small muted centered.
+/* ★ A CAPTION, which is what this size is for, sits under the thing it captions — a button row, a
+   grid, a table, a figure, a code block. Keyed on "last in the section" alone it also caught the
+   section's own body text whenever nothing happened to follow it, so two sections written identically
+   printed at different sizes depending on whether one of them ended with buttons: on the CAI home page
+   five Panels sections read at body size and the sixth, the longest of them, at half that. The
+   preceding sibling now has to be something visual; straight after a heading it is body text.
+
+   section caption prose that follows a widget → small muted centered.
    :not(.ip-prose-secondary) so a paragraph explicitly marked as a supporting paragraph is not
    dragged back down to the fine-print floor by where it happens to sit.
    :not(.ip-ap-hero) because a hero states its own trailing-paragraph rule directly above, with the
    sibling guard that keeps a lone lede out of it. Without this exclusion that guard is dead letter:
    this selector is the more specific of the two and quietly wins, which is why a hero's closing line
    has always rendered at --fs-xs and never at the --fs-sm the hero rule asks for. */
-[class*="ip-ap-"]:not(.ip-ap-hero) > .ip-stack > .ip-prose:last-child:not(.ip-kicker):not(:has(ul)):not(.ip-prose-secondary) {
+[class*="ip-ap-"]:not(.ip-ap-hero) > .ip-stack > :not(:is(h1, h2, h3, h4, .ip-prose)) + .ip-prose:last-child:not(.ip-kicker):not(:has(ul)):not(.ip-prose-secondary) {
   font-size: var(--fs-xs);
 }
 

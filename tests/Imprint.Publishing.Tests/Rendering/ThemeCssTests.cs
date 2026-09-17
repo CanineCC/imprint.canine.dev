@@ -327,7 +327,8 @@ public sealed class ThemeCssTests
         // the more specific of the two, so while it also matched a hero it won outright and the guard
         // above was dead letter — the lone lede went on rendering at --fs-xs with nothing to show why.
         var generic = css.Split('\n').Single(l =>
-            l.Contains("> .ip-stack > .ip-prose:last-child:not(.ip-kicker):not(:has(ul))", StringComparison.Ordinal));
+            l.Contains("[class*=\"ip-ap-\"]", StringComparison.Ordinal) &&
+            l.Contains(".ip-prose:last-child:not(.ip-kicker):not(:has(ul))", StringComparison.Ordinal));
         Assert.Contains(":not(.ip-ap-hero)", generic);
     }
 
@@ -359,6 +360,20 @@ public sealed class ThemeCssTests
 
         Assert.Contains("[class*=\"ip-ap-\"] .ip-prose.ip-prose-secondary", css);
         Assert.Contains("[class*=\"ip-ap-\"] .ip-prose.ip-prose-fine", css);
+
+        // ★ And every one of them must also require something visual before the paragraph. This size is
+        // for a CAPTION — it sits under a button row, a grid, a table, a figure. Keyed on "last in the
+        // section" alone it also caught a section's own body text whenever nothing followed it, so two
+        // sections written identically printed at different sizes depending on whether one ended with
+        // buttons. Straight after a heading, a paragraph is body text.
+        foreach (var line in css.Split('\n'))
+        {
+            if (!line.Contains(".ip-prose:last-child", StringComparison.Ordinal)) { continue; }
+
+            Assert.True(
+                line.Contains(":not(:is(h1, h2, h3, h4, .ip-prose)) +", StringComparison.Ordinal),
+                $"A trailing-paragraph rule can still shrink a section's body text: {line.Trim()}");
+        }
 
         // Every rule that demotes a trailing paragraph must exclude an explicit Secondary.
         foreach (var line in css.Split('\n'))
