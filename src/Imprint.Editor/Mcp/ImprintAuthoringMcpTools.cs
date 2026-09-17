@@ -48,6 +48,7 @@ using ChangePostMetaCmd = Imprint.Authoring.Features.Posts.ChangePostMeta.Change
 using CreatePostCmd = Imprint.Authoring.Features.Posts.CreatePost.CreatePost;
 using SetSiteReviewerCmd = Imprint.Authoring.Features.Sites.SetSiteReviewer.SetSiteReviewer;
 using SubmitPostForReviewCmd = Imprint.Authoring.Features.Posts.SubmitPostForReview.SubmitPostForReview;
+using DeleteAssetCmd = Imprint.Authoring.Features.Assets.DeleteAsset.DeleteAsset;
 using TagAssetCmd = Imprint.Authoring.Features.Assets.TagAsset.TagAsset;
 using UntagAssetCmd = Imprint.Authoring.Features.Assets.UntagAsset.UntagAsset;
 using UploadAssetCmd = Imprint.Authoring.Features.Assets.UploadAsset.UploadAsset;
@@ -847,6 +848,22 @@ public sealed class ImprintAuthoringMcpTools
         await using var stream = new MemoryStream(bytes);
         return await Dispatch(dispatcher, config, new UploadAssetDarkVariantCmd(aid, fileName, type, bytes.Length, stream), ct,
             () => new { ok = true, assetId = aid.Compact, status = "Pending", dark = true });
+    }
+
+    [McpServerTool(Name = "delete_asset")]
+    [Description("Delete one asset from the media library, bytes and all. Refused while any page or block "
+                 + "still references it — an image, video or SVG node placing it, a button linking it, or a "
+                 + "prose anchor linking it — and the refusal says how many of each, so the fix is to remove "
+                 + "those references first and call again. Not undoable: the file is gone, and a page that "
+                 + "picks it up afterwards would only find an empty reference.")]
+    public static async Task<object> DeleteAsset(
+        [Description("The asset id (compact or dashed GUID).")] string assetId,
+        ICommandDispatcher dispatcher, IConfiguration config, AssetLibrary assets, CancellationToken ct = default)
+    {
+        if (!AuthoringApi.TryAssetId(assetId, out var aid)) return Fail("invalid assetId");
+        if (assets.Get(aid) is null) return Fail("unknown asset");
+        return await Dispatch(dispatcher, config, new DeleteAssetCmd(aid), ct,
+            () => new { ok = true, assetId = aid.Compact, deleted = true });
     }
 
     [McpServerTool(Name = "list_posts")]

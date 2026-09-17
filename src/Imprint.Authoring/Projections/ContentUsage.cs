@@ -47,12 +47,50 @@ public sealed class ContentUsage(PageDrafts drafts, BlockLibrary blocks)
     public int BlockInstanceCount(BlockDefinitionId blockId) =>
         drafts.All.Sum(page => page.Tree.All().OfType<BlockInstanceNode>().Count(i => i.DefinitionId == blockId));
 
+    // The cases here have to match the ones the publisher collects in
+    // SitePublisher.AssetReferencesOf: a file ships precisely because something references it,
+    // so anything that makes a file ship must also hold its deletion. A media node carries the
+    // reference as a prop; a button or a prose anchor carries it as an asset LINK, and those two
+    // were the ones missing — which left a linked whitepaper PDF deletable while a published page
+    // still offered it for download.
     private static bool ReferencesAsset(IEnumerable<Node> nodes, AssetId assetId) =>
         nodes.Any(node => node switch
         {
             ImageNode image => image.AssetId == assetId,
             VideoNode video => video.AssetId == assetId,
             SvgNode svg => svg.AssetId == assetId,
+            ButtonNode { LinkTo: AssetLink link } => link.AssetId == assetId,
+            RichTextNode richText => LinksAsset(richText.Html, assetId),
             _ => false,
         });
+
+    /// <summary>
+    /// Asset links inside prose. Read through <see cref="AssetHref"/> rather than by walking
+    /// anchors, so this side stays clear of the renderer: the guard only asks whether the id is
+    /// referenced at all, and over-counting refuses a deletion, which is the safe direction to err.
+    /// </summary>
+    private static bool LinksAsset(LocalizedText html, AssetId assetId)
+    {
+        foreach (var (_, value) in html.Values)
+        {
+            var pos = value.IndexOf(AssetHref.Scheme, StringComparison.OrdinalIgnoreCase);
+            while (pos >= 0)
+            {
+                var end = pos + AssetHref.Scheme.Length;
+                while (end < value.Length && (char.IsAsciiLetterOrDigit(value[end]) || value[end] == '-'))
+                {
+                    end++;
+                }
+
+                if (AssetHref.TryParse(value[pos..end], out var linked) && linked == assetId)
+                {
+                    return true;
+                }
+
+                pos = value.IndexOf(AssetHref.Scheme, end, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
+        return false;
+    }
 }
