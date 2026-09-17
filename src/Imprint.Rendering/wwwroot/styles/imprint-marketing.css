@@ -580,6 +580,16 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
   font-size: var(--mk-h2); line-height: 1.12; letter-spacing: -0.02em; color: var(--heading);
 }
 [class*="ip-ap-"] h3 { font-size: var(--fs-lg); color: var(--heading); }
+
+/* ★ A heading that introduces a paragraph shares that paragraph's measure. Body copy is capped at
+   --mk-measure for readability while a heading had no cap at all, so a headline ran the full width of
+   its section above a column of text half as wide, with the rest of the line left empty. The text was
+   never the narrow part; the heading above it was the wide one. A heading that labels something wide —
+   a grid, a table, a widget — keeps the full width, because it belongs to the wide thing under it.
+   Heroes and CTAs are excluded: both are centred and already carry their own, narrower cap. */
+[class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-cta) > .ip-stack > :is(h2, h3):has(+ .ip-prose:not(.ip-kicker)) {
+  max-width: var(--mk-measure);
+}
 /* The lede: the first prose paragraph after the head heading. */
 [class*="ip-ap-"] > .ip-stack > .ip-prose:not(.ip-kicker) {
   color: var(--muted); font-size: var(--fs-lg); line-height: 1.6; max-width: var(--mk-measure);

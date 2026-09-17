@@ -333,6 +333,27 @@ public sealed class ThemeCssTests
     }
 
     /// <summary>
+    /// ★ A heading that introduces a paragraph takes that paragraph's measure. Body copy is capped for
+    /// readability and a heading was not capped at all, so a headline ran the full section width above a
+    /// column of text half as wide — read as "the text is narrow" when the heading was the wide one. A
+    /// heading labelling a grid or a table keeps full width; it belongs to the wide thing beneath it.
+    /// </summary>
+    [Fact]
+    public void A_heading_that_introduces_a_paragraph_shares_its_measure()
+    {
+        var css = WithoutComments(ThemeCss.MarketingCss);
+
+        var rule = css.Split('\n').Single(l =>
+            l.Contains(":is(h2, h3):has(+ .ip-prose:not(.ip-kicker))", StringComparison.Ordinal));
+
+        // Heroes and CTAs cap their own headings more tightly; this must not widen them back out.
+        Assert.Contains(":not(.ip-ap-hero)", rule);
+        Assert.Contains(":not(.ip-ap-cta)", rule);
+        Assert.Contains(".ip-ap-cta h2", css);
+        Assert.Contains("max-width: 30ch", css);
+    }
+
+    /// <summary>
     /// ★ The lede size is a contrast, so it is only spent where there is something to contrast with. Most CAI
     /// heroes are kicker / headline / one paragraph / buttons — and that lone paragraph was being set larger
     /// than every other paragraph on its page with nothing smaller beside it to justify the jump, which reads
