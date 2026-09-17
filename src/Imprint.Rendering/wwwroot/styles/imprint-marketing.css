@@ -676,12 +676,17 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
   font-size: var(--mk-display); line-height: 1.05; letter-spacing: -0.03em;
   color: var(--heading); max-width: 18ch;
 }
-.ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker) {
+.ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker):not(.ip-prose-secondary):not(.ip-prose-fine) {
   font-size: var(--fs-xl); line-height: 1.5; color: var(--ink); max-width: 52ch;
 }
 .ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker) strong { color: var(--heading); }
 /* the trailing microcopy prose is small + muted */
-.ip-ap-hero > .ip-stack > .ip-prose:last-of-type { font-size: var(--fs-sm); color: var(--muted); }
+/* ★ Only demote a trailing paragraph when there is a lede ABOVE it to be trailing after.
+   Keyed on position alone this caught heroes whose single paragraph simply came last, and
+   set the page's only lede at fine-print size — /badge read as a footnote with no intro. */
+.ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker) ~ .ip-prose:last-of-type:not(.ip-prose-secondary) {
+  font-size: var(--fs-sm); color: var(--muted);
+}
 @media (max-width: 900px) {
   .ip-ap-hero > .ip-stack { grid-template-columns: 1fr; }
   .ip-ap-hero > .ip-stack > * { grid-column: 1 !important; }
@@ -751,9 +756,9 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
   content: none;
 }
 /* footnote / note under the grid → centered small muted */
-.ip-ap-feature-grid > .ip-stack > .ip-prose:last-child:not(.ip-kicker),
-.ip-ap-personas > .ip-stack > .ip-prose:last-child:not(.ip-kicker),
-.ip-ap-steps > .ip-stack > .ip-prose:last-child:not(.ip-kicker) {
+.ip-ap-feature-grid > .ip-stack > .ip-prose:last-child:not(.ip-kicker):not(.ip-prose-secondary),
+.ip-ap-personas > .ip-stack > .ip-prose:last-child:not(.ip-kicker):not(.ip-prose-secondary),
+.ip-ap-steps > .ip-stack > .ip-prose:last-child:not(.ip-kicker):not(.ip-prose-secondary) {
   font-size: var(--fs-xs); color: var(--muted); text-align: center; max-width: var(--mk-measure); margin-inline: auto;
 }
 
@@ -781,9 +786,13 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
   font-size: clamp(1.15rem, 1rem + 0.8vw, 1.5rem); line-height: 1.2; letter-spacing: -0.01em; margin: 0.1rem 0 0.2rem;
 }
 .ip-ap-panels .ip-prose { color: var(--muted); font-size: var(--fs-sm); line-height: 1.6; }
+/* No colour of its own: a panel kicker takes the accent from the base kicker rule, the
+   same as every other eyebrow on the site. It used to override to --muted, which was
+   legible while the accent rule sat in front of it and carried the colour, and left the
+   panel eyebrow the one eyebrow with no accent at all once that rule went away. */
 .ip-ap-panels .ip-prose.ip-kicker > p > strong {
   display: inline-flex; align-items: center; gap: 0.55rem;
-  font-size: var(--fs-2xs); font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+  font-size: var(--fs-2xs); font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase;
 }
 .ip-ap-panels .ip-prose.ip-kicker > p > strong::before {
   content: ""; width: 18px; height: 1px; background: var(--accent);
@@ -1024,9 +1033,23 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 /* a live/standalone score card is a single 460px card, centered */
 .ip-ap-live-card .ip-widget { max-width: min(460px, 100%); margin-inline: auto; }
 .ip-ap-contact .ip-widget { max-width: 40rem; margin-inline: auto; }
-/* section caption prose that follows a widget → small muted centered */
-[class*="ip-ap-"] > .ip-stack > .ip-prose:last-child:not(.ip-kicker):not(:has(ul)) {
+/* section caption prose that follows a widget → small muted centered.
+   :not(.ip-prose-secondary) so a paragraph explicitly marked as a supporting paragraph is not
+   dragged back down to the fine-print floor by where it happens to sit. */
+[class*="ip-ap-"] > .ip-stack > .ip-prose:last-child:not(.ip-kicker):not(:has(ul)):not(.ip-prose-secondary) {
   font-size: var(--fs-xs);
+}
+
+/* ── PROSE EMPHASIS ───────────────────────────────────────────────────────────
+   A paragraph's weight said outright, instead of inferred from its position.
+   Secondary is one step under the lede and stays a paragraph; fine print is the
+   closing-line treatment asked for rather than inherited. Both beat the positional
+   rules above by carrying a class of their own. */
+[class*="ip-ap-"] .ip-prose.ip-prose-secondary {
+  font-size: var(--fs-lg); line-height: 1.6; color: var(--muted); max-width: 56ch;
+}
+[class*="ip-ap-"] .ip-prose.ip-prose-fine {
+  font-size: var(--fs-xs); line-height: 1.6; color: var(--muted);
 }
 
 /* ── Reduced motion already handled by imprint-base; nav transitions respect it. */

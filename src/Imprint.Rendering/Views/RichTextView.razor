@@ -4,9 +4,30 @@
    grammar validator at write time, and RichTextHtml only rewrites hrefs it parsed. *@
 @* The kicker class is decided here, where text nodes are visible — the CSS :only-child
    heuristic it replaces styled inline emphasis as a kicker mid-sentence. *@
-<div class="@(RichTextHtml.IsKicker(ResolvedHtml) ? "ip-prose ip-kicker" : "ip-prose")" @attributes="NodeAttributes">@((MarkupString)ResolvedHtml)</div>
+@* Emphasis is a named choice about what the paragraph IS, so it is decided here with the
+   kicker, not left to a :last-child rule that can only guess from position. *@
+<div class="@CssClass" @attributes="NodeAttributes">@((MarkupString)ResolvedHtml)</div>
 
 @code {
   private string ResolvedHtml => RichTextHtml.ResolveLinks(
     Resolve(Node.Html), Ctx.ResolvePagePath, id => Ctx.ResolveAsset(id)?.Url is { Length: > 0 } url ? url : null);
+
+  private string CssClass
+  {
+    get
+    {
+      // A kicker is its own thing and takes no emphasis: it is already a label, not body copy.
+      if (RichTextHtml.IsKicker(ResolvedHtml))
+      {
+        return "ip-prose ip-kicker";
+      }
+
+      return Node.Emphasis switch
+      {
+        ProseEmphasis.Secondary => "ip-prose ip-prose-secondary",
+        ProseEmphasis.FinePrint => "ip-prose ip-prose-fine",
+        _ => "ip-prose",
+      };
+    }
+  }
 }

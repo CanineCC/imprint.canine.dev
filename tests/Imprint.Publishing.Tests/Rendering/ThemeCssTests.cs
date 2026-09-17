@@ -284,6 +284,73 @@ public sealed class ThemeCssTests
             css);
     }
 
+    /// <summary>
+    /// Every eyebrow on the site is accent-coloured, Panels included. Panels used to override the label to
+    /// <c>--muted</c>, which read as deliberate only while the accent rule sat in front of it carrying the
+    /// colour; once that rule was switched off by default it left the panel eyebrow the single eyebrow on the
+    /// estate with no accent on it at all.
+    /// </summary>
+    [Fact]
+    public void A_panel_kicker_takes_the_accent_colour_like_every_other_kicker()
+    {
+        var css = WithoutComments(ThemeCss.MarketingCss);
+
+        // The base rule is where the colour comes from, for panels too.
+        Assert.Contains("text-transform: uppercase; color: var(--accent);", css);
+
+        // The Panels override must not reintroduce a colour of its own.
+        var panelRule = css[css.IndexOf(".ip-ap-panels .ip-prose.ip-kicker > p > strong {", StringComparison.Ordinal)..];
+        panelRule = panelRule[..panelRule.IndexOf('}')];
+        Assert.DoesNotContain("color:", panelRule);
+    }
+
+    /// <summary>
+    /// ★ A hero with ONE paragraph has no trailing paragraph — it has a lede. Keyed on position alone the
+    /// closing-line rule caught it anyway and set the page's only intro at fine-print size (/badge read as a
+    /// footnote with no lede at all). The demotion now requires a prose sibling ahead of it.
+    /// </summary>
+    [Fact]
+    public void A_heros_only_paragraph_is_never_demoted_to_a_closing_line()
+    {
+        var css = WithoutComments(ThemeCss.MarketingCss);
+
+        Assert.Contains(
+            ".ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker) ~ .ip-prose:last-of-type",
+            css);
+
+        // The unguarded form is what produced the bug: it must not come back.
+        Assert.DoesNotContain(
+            ".ip-ap-hero > .ip-stack > .ip-prose:last-of-type {",
+            css);
+    }
+
+    /// <summary>
+    /// Emphasis is a statement about what a paragraph IS, so every positional rule that could shrink it has
+    /// to stand aside for it — otherwise the class is set, reads as applied, and is silently outranked.
+    /// </summary>
+    [Fact]
+    public void An_explicit_emphasis_is_never_overridden_by_a_positional_rule()
+    {
+        var css = WithoutComments(ThemeCss.MarketingCss);
+
+        Assert.Contains("[class*=\"ip-ap-\"] .ip-prose.ip-prose-secondary", css);
+        Assert.Contains("[class*=\"ip-ap-\"] .ip-prose.ip-prose-fine", css);
+
+        // Every rule that demotes a trailing paragraph must exclude an explicit Secondary.
+        foreach (var line in css.Split('\n'))
+        {
+            var isTrailingRule =
+                line.Contains(".ip-prose:last-child:not(.ip-kicker)", StringComparison.Ordinal) ||
+                line.Contains(".ip-prose:last-of-type", StringComparison.Ordinal);
+
+            if (!isTrailingRule) { continue; }
+
+            Assert.True(
+                line.Contains(":not(.ip-prose-secondary)", StringComparison.Ordinal),
+                $"A positional rule can still outrank an explicit emphasis: {line.Trim()}");
+        }
+    }
+
     /// <summary>CSS with comments removed, so an assertion about the RULES cannot be satisfied — or defeated —
     /// by the prose explaining them.</summary>
     private static string WithoutComments(string css) =>

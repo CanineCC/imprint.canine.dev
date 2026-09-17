@@ -1,3 +1,4 @@
+using Imprint.Authoring.Domain.Pages;
 using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Assets;
 using Imprint.Rendering;
@@ -16,6 +17,39 @@ public sealed class RichTextViewTests
         var html = await RenderHarness.RenderNode(Static, node);
 
         Assert.Contains("<div class=\"ip-prose\"><p>Plain <strong>bold</strong> and <em>italic</em></p></div>", html);
+    }
+
+    /// <summary>
+    /// ★ Emphasis is decided here, where the node is visible, rather than by a <c>:last-child</c> rule that can
+    /// only guess from position — the guess set real second paragraphs at fine-print size and, in a hero with a
+    /// single paragraph, demoted the page's only lede.
+    /// </summary>
+    [Theory]
+    [InlineData(ProseEmphasis.Default, "ip-prose")]
+    [InlineData(ProseEmphasis.Secondary, "ip-prose ip-prose-secondary")]
+    [InlineData(ProseEmphasis.FinePrint, "ip-prose ip-prose-fine")]
+    public async Task Emphasis_is_carried_on_the_prose_wrapper(ProseEmphasis emphasis, string expected)
+    {
+        var node = SampleNodes.RichText("<p>Body copy</p>") with { Emphasis = emphasis };
+
+        var html = await RenderHarness.RenderNode(Static, node);
+
+        Assert.Contains($"<div class=\"{expected}\">", html);
+    }
+
+    /// <summary>A kicker is a label, not body copy: it keeps its own class and takes no emphasis.</summary>
+    [Fact]
+    public async Task A_kicker_ignores_emphasis()
+    {
+        var node = SampleNodes.RichText("<p><strong>The form</strong></p>") with
+        {
+            Emphasis = ProseEmphasis.Secondary,
+        };
+
+        var html = await RenderHarness.RenderNode(Static, node);
+
+        Assert.Contains("<div class=\"ip-prose ip-kicker\">", html);
+        Assert.DoesNotContain("ip-prose-secondary", html);
     }
 
     [Fact]
