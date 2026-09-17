@@ -116,12 +116,19 @@
   /* marketing scaffolding measures */
   --mk-display: clamp(2.4rem, 1.4rem + 3.4vw, 3.6rem);
   --mk-h2: clamp(1.5rem, 1.1rem + 1.4vw, 2.1rem);
-  --mk-measure: 60ch;
-  /* ★ The same column, for text that is not body size. `ch` is relative to the element's OWN
-     font-size, so --mk-measure caps a 16px paragraph at ~540px and a 33px heading at ~1100px —
-     the full width of a section, which is no cap at all. Anything larger than body copy that
-     should end where the paragraph ends needs the column stated absolutely, not in ch. */
-  --mk-heading-measure: 34rem;
+  /* ★ ONE reading column, and it is stated in rem ON PURPOSE.
+     `ch` is relative to each element's OWN font-size, so a single ch count does NOT produce a single
+     edge: 60ch is ~537px on 16px body copy, ~660px on the 20px hero lede and ~1100px on a 33px
+     heading — which is the whole section, and why capping headings in ch moved nothing at all. The
+     page was carrying five text measures (52ch, 56ch, 60ch, 68ch, 34rem) that each landed somewhere
+     different, so the content edge moved as a reader scrolled. Absolute units are what make the edge
+     hold still across sizes; the cost is that it no longer adapts if the body font is changed, which
+     is the right trade for a measure whole pages line up against.
+     34rem is ~66 characters at body size and ~60 at lede size: inside the comfortable range at both. */
+  --mk-measure: 34rem;
+  /* Long-form reading — the Prose and Timeline appearances, which are articles rather than marketing
+     sections. A wider column is a deliberate choice for a different reading mode, not drift. */
+  --mk-measure-long: 38rem;
   --mk-gap: clamp(2rem, 1rem + 3vw, 3.25rem);
   --mk-section: clamp(2.5rem, 1.5rem + 2.8vw, 4rem);
 }
@@ -593,7 +600,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    a grid, a table, a widget — keeps the full width, because it belongs to the wide thing under it.
    Heroes and CTAs are excluded: both are centred and already carry their own, narrower cap. */
 [class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-cta) > .ip-stack > :is(h2, h3):has(+ .ip-prose:not(.ip-kicker)) {
-  max-width: var(--mk-heading-measure);
+  max-width: var(--mk-measure);
 }
 /* The lede: the first prose paragraph after the head heading. */
 [class*="ip-ap-"] > .ip-stack > .ip-prose:not(.ip-kicker) {
@@ -703,7 +710,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    the page with nothing smaller beside it to explain why, which reads as an arbitrary extra size
    rather than an intro. Alone, it falls through to the ordinary body rule and matches the site. */
 .ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker):not(.ip-prose-secondary):not(.ip-prose-fine):has(~ .ip-prose:not(.ip-kicker)) {
-  font-size: var(--fs-xl); line-height: 1.5; color: var(--ink); max-width: 52ch;
+  font-size: var(--fs-xl); line-height: 1.5; color: var(--ink); max-width: var(--mk-measure);
 }
 .ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker) strong { color: var(--heading); }
 /* the trailing microcopy prose is small + muted */
@@ -934,9 +941,9 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-ap-note.ip-bg-primary > .ip-stack { border-left-color: var(--band-fair); }
 
 /* ── PROSE (long-form marketing prose: manifesto / doctrine / why-we-exist) ──── */
-.ip-ap-prose > .ip-stack > :is(.ip-prose, h1, h2, h3) { max-width: 68ch; }
+.ip-ap-prose > .ip-stack > :is(.ip-prose, h1, h2, h3) { max-width: var(--mk-measure-long); }
 .ip-ap-prose > .ip-stack > .ip-prose:not(.ip-kicker) {
-  color: var(--ink); font-size: var(--fs-lg); line-height: 1.65; max-width: 68ch;
+  color: var(--ink); font-size: var(--fs-lg); line-height: 1.65; max-width: var(--mk-measure-long);
 }
 /* the doctrine list: unbulleted, hairline-separated rows */
 .ip-ap-prose .ip-prose ul { list-style: none; padding: 0; }
@@ -949,7 +956,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    barred, surface-backed statement set larger than body copy */
 .ip-ap-prose > .ip-stack > .ip-prose.ip-kicker:not(:first-child) {
   border-left: 3px solid var(--accent); background: var(--surface);
-  padding: 1rem 1.25rem; border-radius: 0 var(--r-md) var(--r-md) 0; max-width: 68ch;
+  padding: 1rem 1.25rem; border-radius: 0 var(--r-md) var(--r-md) 0; max-width: var(--mk-measure-long);
 }
 .ip-ap-prose > .ip-stack > .ip-prose.ip-kicker:not(:first-child) > p > strong {
   font-size: var(--fs-xl); line-height: 1.45; color: var(--heading); font-weight: 600;
@@ -957,7 +964,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 }
 
 /* ── TIMELINE (history: mono date column + body per row, hairline-separated) ──── */
-.ip-ap-timeline > .ip-stack > :is(.ip-prose, h1, h2, h3) { max-width: 68ch; }
+.ip-ap-timeline > .ip-stack > :is(.ip-prose, h1, h2, h3) { max-width: var(--mk-measure-long); }
 .ip-ap-timeline .ip-prose ul { list-style: none; padding: 0; max-width: 46rem; }
 .ip-ap-timeline .ip-prose ul li {
   position: relative; padding: 0.85rem 0 0.85rem 190px;
@@ -1083,7 +1090,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    closing-line treatment asked for rather than inherited. Both beat the positional
    rules above by carrying a class of their own. */
 [class*="ip-ap-"] .ip-prose.ip-prose-secondary {
-  font-size: var(--fs-lg); line-height: 1.6; color: var(--muted); max-width: 56ch;
+  font-size: var(--fs-lg); line-height: 1.6; color: var(--muted); max-width: var(--mk-measure);
 }
 [class*="ip-ap-"] .ip-prose.ip-prose-fine {
   font-size: var(--fs-xs); line-height: 1.6; color: var(--muted);

@@ -380,12 +380,12 @@ public sealed class ThemeCssTests
         Assert.Contains(".ip-ap-cta h2", css);
         Assert.Contains("max-width: 30ch", css);
 
-        // ★ NOT --mk-measure. That is 60ch, and ch is relative to the element's own font-size: it caps a
-        // 16px paragraph at ~540px and a 33px heading at ~1100px, which is the whole section and therefore
-        // no cap at all. Shipped that way once and the headings did not move.
-        Assert.Contains("max-width: var(--mk-heading-measure)", rule);
-        Assert.DoesNotContain("var(--mk-measure)", rule);
-        Assert.Matches(@"--mk-heading-measure: \d+(\.\d+)?rem;", css);
+        // ★ The measure has to be ABSOLUTE for a heading to share the paragraph's edge. While it was 60ch
+        // this rule capped a 33px heading at ~1100px — the whole section — and the headings did not move.
+        // ch is relative to each element's own font-size, so one ch count is not one edge.
+        Assert.Contains("max-width: var(--mk-measure)", rule);
+        Assert.Matches(@"--mk-measure: \d+(\.\d+)?rem;", css);
+        Assert.DoesNotMatch(@"--mk-measure: \d+ch;", css);
     }
 
     /// <summary>
