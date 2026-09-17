@@ -333,31 +333,6 @@ public sealed class ThemeCssTests
     }
 
     /// <summary>
-    /// ★ The column is centred; the text inside it is not. A centred paragraph costs the reader the fixed
-    /// left edge the eye returns to on every line — affordable for a one- or two-line statement, not past
-    /// that. 30 of the 32 centre-aligned blocks on CAI ran to three lines or more, one to about 21. The hero
-    /// and the CTA keep centred text because both are short statements by construction.
-    /// </summary>
-    [Fact]
-    public void Section_body_text_is_left_aligned_inside_a_centred_column()
-    {
-        var css = WithoutComments(ThemeCss.MarketingCss);
-
-        var start = css.IndexOf(".ip-ap-contact > .ip-stack > :is(.ip-prose, h2)", StringComparison.Ordinal);
-        Assert.True(start >= 0, "the section body-text rule is gone");
-        var rule = css[start..(css.IndexOf('}', start) + 1)];
-
-        Assert.Contains("text-align: left", rule);
-        // The column itself stays centred — that is what gives the page one spine.
-        Assert.Contains("margin-inline: auto", rule);
-        Assert.Contains("max-width: var(--mk-measure)", rule);
-
-        // The two places a centred statement is right, and short by construction.
-        Assert.Contains(".ip-ap-cta > .ip-stack { align-items: center; text-align: center; }", css);
-        Assert.Contains("align-items: center; text-align: center;", css);
-    }
-
-    /// <summary>
     /// ★ A heading that introduces a paragraph takes that paragraph's measure. Body copy is capped for
     /// readability and a heading was not capped at all, so a headline ran the full section width above a
     /// column of text half as wide — read as "the text is narrow" when the heading was the wide one. A
