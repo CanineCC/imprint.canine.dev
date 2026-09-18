@@ -11,22 +11,30 @@
 // densest honest summary of a document: you recognise it, and one line tells you whether it
 // answers your question.
 //
-// THE COVER IS A TITLE PAGE, and it is laid out like one: a masthead band across the head
-// carrying the series, then the title, then the description, then the imprint on the baseline
-// under a hairline. Everything is inside the face. An earlier cut hung the description and the
-// byline underneath it and the cover looked like it carried nothing, because it did not.
+// TWO COVERS, NOT ONE COVER AND A DISCOUNT. The shelves had been told apart by taking things
+// away from the article — the same face with its band unfilled and its spine removed — which
+// read as an unfinished paper rather than a different kind of document. They are now two
+// layouts over identical markup, each borrowing from the thing it actually is:
 //
-// THE TITLE ALWAYS SITS AT THE HEAD. A cut that pushed the article title down to the baseline,
-// magazine fashion, read as a fault rather than a choice — you look at a cover to find out what
-// it is, and on that one the answer was in the wrong place. Both shelves now open with their
-// title, and the shelves are told apart by the masthead instead:
+//   paper    a TITLE PAGE. A solid masthead across the head carrying the series, a double rule
+//            under it in the old title-page manner, the title, the description, and the imprint
+//            on the baseline. Weight at the top, centred measure, bound: a spine runs down the
+//            binding edge.
+//   article  a JOURNAL PAGE. The series is set vertically up the fore-edge in a ruled column of
+//            its own, the way a bound periodical carries its name where a reader will see it on
+//            a shelf. That frees the whole face for the title, which opens the page and is
+//            followed by a short accent rule and then the description.
 //
-//   paper    a solid masthead in the accent, and a spine down the binding edge. Bound, and it
-//            looks it.
-//   article  a hollow masthead, hairline only, with no spine. The same cover, unbound.
+// The grid does the work: the same band/body/foot spans lay out as head/body/foot on a paper and
+// as edge/body/foot on an article. Identical markup, so neither shelf can drift into a different
+// card, and a tone that is misspelt renders the paper layout rather than nothing.
 //
-// The difference is CSS over identical markup, so neither shelf can drift into a different card,
-// and a tone that is misspelt renders the paper layout rather than nothing.
+// EVERYTHING IS ON THE COVER. An earlier cut hung the description and the byline underneath the
+// face and the cover looked like it carried nothing, because it did not.
+//
+// THE TITLE ALWAYS SITS AT THE HEAD. A cut that pushed the article title to the baseline read as
+// a fault rather than a choice: you look at a cover to find out what it is, and the answer was
+// in the wrong place.
 //
 // THE TRACK IS CAPPED, which is the whole reason the shelf looks like a shelf. Sizing the face
 // from an aspect ratio alone let the cards grow with their column: three papers came out 372px
@@ -36,7 +44,7 @@
 // into it.
 //
 // PASS brand="cai" ON A CAI PAGE. The island carries its own copy of the token table, so without
-// the brand attribute a cover takes the family's steel accent rather than the green the rest of
+// it a cover takes the family's steel accent rather than the green the rest of
 // codeassuranceindex.info is built from.
 //
 // EVERY FIELD BUT TITLE AND HREF IS OPTIONAL and absent-safe: a card with no byline, date or
@@ -67,48 +75,57 @@ a.mk-pub { display: block; text-decoration: none; color: inherit;
 a.mk-pub:hover, a.mk-pub:focus-visible { text-decoration: none; transform: translateY(-3px); }
 a.mk-pub:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 
-/* The face IS the card: a page, not a panel. The wash lifts from the head so the masthead sits
-   on the darker end and the imprint on the lighter, which is the way a printed page carries its
-   weight. */
-.mk-pub-face { position: relative; aspect-ratio: 3 / 4; display: flex; flex-direction: column;
-  border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden;
-  background: linear-gradient(180deg, var(--pub-wash) 0%, var(--surface) 78%);
+.mk-pub-face { position: relative; aspect-ratio: 3 / 4; display: grid; overflow: hidden;
+  border: 1px solid var(--border); border-radius: var(--r-md);
   transition: border-color 140ms ease, box-shadow 140ms ease; }
 a.mk-pub:hover .mk-pub-face, a.mk-pub:focus-visible .mk-pub-face {
   border-color: var(--accent); box-shadow: var(--shadow-overlay); }
 
-/* The spine: a solid bar down the binding edge, on the bound shelf only. */
-.mk-pub.is-paper .mk-pub-face::before { content: ""; position: absolute; inset: 0 auto 0 0;
-  width: 5px; background: var(--accent); }
-
-/* The masthead. Solid on a paper, hollow on an article: the one place the two shelves differ. */
-.mk-pub-band { padding: 11px 18px 11px 22px; }
-.mk-pub.is-paper .mk-pub-band { background: var(--accent); }
-.mk-pub.is-article .mk-pub-band { border-bottom: 1px solid var(--accent); }
-.mk-pub-series { font-size: var(--fs-2xs); font-weight: 700; letter-spacing: 0.1em;
-  text-transform: uppercase; }
-.mk-pub.is-paper .mk-pub-series { color: var(--on-accent); }
-.mk-pub.is-article .mk-pub-series { color: var(--accent-ink); }
-
-.mk-pub-body { padding: 18px 18px 0 22px; }
-/* The title is the cover. It may be big and wrap as far as it needs; the face grows no taller,
-   because the aspect ratio is fixed, so a long title simply fills more of it. */
-.mk-pub-title { display: block; font-size: clamp(1.1rem, 0.92rem + 0.55vw, 1.4rem);
-  line-height: 1.24; font-weight: 600; letter-spacing: -0.012em; color: var(--heading); }
-.mk-pub-note { display: block; margin-top: 11px; font-size: var(--fs-sm); line-height: 1.55;
-  color: var(--ink-soft); }
-
-/* The imprint, on the baseline under a hairline, where a title page carries it. */
-.mk-pub-foot { margin-top: auto; padding: 12px 18px 15px 22px; border-top: 1px solid var(--hairline); }
+.mk-pub-title { display: block; font-weight: 600; letter-spacing: -0.012em; color: var(--heading); }
+.mk-pub-note { display: block; font-size: var(--fs-sm); line-height: 1.55; color: var(--ink-soft); }
 .mk-pub-meta { display: block; font-size: var(--fs-xs); line-height: 1.5; color: var(--muted); }
 .mk-pub-go { display: block; margin-top: 7px; font-family: var(--font-mono);
   font-size: var(--fs-2xs); letter-spacing: 0.02em; color: var(--accent-ink);
   transition: color 140ms ease; }
 a.mk-pub:hover .mk-pub-go, a.mk-pub:focus-visible .mk-pub-go { color: var(--accent); }
+.mk-pub-series { font-size: var(--fs-2xs); font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; }
 
-:host { --pub-wash: var(--surface-2); }
-.mk-pub.is-paper { --pub-wash: var(--accent-wash); }
-.mk-pub.is-article { --pub-wash: var(--surface-2); }
+/* ── the paper: a title page ────────────────────────────────────────────────
+   Head, body, foot. The wash lifts from the masthead down, so the weight sits where a bound
+   document announces itself, and the double rule under the band is the title-page convention
+   that says "this is the front of something", not a decoration. */
+.mk-pub.is-paper .mk-pub-face { grid-template-rows: auto 1fr auto;
+  background: linear-gradient(180deg, var(--accent-wash) 0%, var(--surface) 76%); }
+.mk-pub.is-paper .mk-pub-face::before { content: ""; position: absolute; inset: 0 auto 0 0;
+  width: 5px; background: var(--accent); }
+.mk-pub.is-paper .mk-pub-band { padding: 11px 18px 11px 22px; background: var(--accent); }
+.mk-pub.is-paper .mk-pub-series { color: var(--on-accent); }
+.mk-pub.is-paper .mk-pub-body { padding: 0 18px 0 22px; }
+.mk-pub.is-paper .mk-pub-body::before { content: ""; display: block; height: 3px;
+  border-top: 1px solid var(--border-strong); border-bottom: 1px solid var(--border-strong);
+  margin: 16px 0 15px; }
+.mk-pub.is-paper .mk-pub-title { font-size: clamp(1.1rem, 0.92rem + 0.55vw, 1.4rem); line-height: 1.24; }
+.mk-pub.is-paper .mk-pub-note { margin-top: 11px; }
+.mk-pub.is-paper .mk-pub-foot { padding: 12px 18px 15px 22px; border-top: 1px solid var(--hairline); }
+
+/* ── the article: a journal page ────────────────────────────────────────────
+   The series runs up the fore-edge in a ruled column of its own, which is where a bound
+   periodical carries its name so a reader can find it side-on. That leaves the whole face for
+   the title, and the short accent rule under the title is the paragraph opener a journal uses
+   instead of a masthead. */
+.mk-pub.is-article .mk-pub-face { grid-template-columns: 40px 1fr; grid-template-rows: 1fr auto;
+  background: linear-gradient(200deg, var(--surface-2) 0%, var(--surface) 62%); }
+.mk-pub.is-article .mk-pub-band { grid-row: 1 / span 2; display: flex; align-items: flex-end;
+  justify-content: center; padding: 0 0 18px; border-right: 1px solid var(--accent); }
+.mk-pub.is-article .mk-pub-series { writing-mode: vertical-rl; transform: rotate(180deg);
+  color: var(--accent-ink); white-space: nowrap; }
+.mk-pub.is-article .mk-pub-body { padding: 22px 20px 0 18px; }
+.mk-pub.is-article .mk-pub-title { font-size: clamp(1.15rem, 0.95rem + 0.6vw, 1.5rem); line-height: 1.2; }
+.mk-pub.is-article .mk-pub-title::after { content: ""; display: block; width: 34px; height: 2px;
+  background: var(--accent); margin: 14px 0 0; }
+.mk-pub.is-article .mk-pub-note { margin-top: 13px; }
+.mk-pub.is-article .mk-pub-foot { padding: 12px 20px 15px 18px; }
 
 @media (prefers-reduced-motion: reduce) {
   a.mk-pub, .mk-pub-face, .mk-pub-go { transition: none; }
