@@ -114,62 +114,64 @@ a:hover { text-decoration: underline; }
 code { background: var(--surface-2); padding: 1px 5px; border-radius: var(--r-sm); font: 500 var(--fs-xs) var(--font-mono); }
 strong { font-weight: 600; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-`;function f(a){let r=a.getAttribute("kicker"),e=a.getAttribute("heading"),t=a.getAttribute("lede");if(!r&&!e&&!t)return"";let s='<div class="mk-section-head">';return r&&(s+=`<span class="mk-kicker">${n(r)}</span>`),e&&(s+=`<h2>${d(e)}</h2>`),t&&(s+=`<p>${d(t)}</p>`),s+="</div>",s}var h=`
+`;function f(a){let r=a.getAttribute("kicker"),e=a.getAttribute("heading"),t=a.getAttribute("lede");if(!r&&!e&&!t)return"";let s='<div class="mk-section-head">';return r&&(s+=`<span class="mk-kicker">${n(r)}</span>`),e&&(s+=`<h2>${d(e)}</h2>`),t&&(s+=`<p>${d(t)}</p>`),s+="</div>",s}var m=`
 .mk-section-head { margin-bottom: 1.5rem; }
 .mk-section-head h2 { font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.1rem); line-height: 1.2; margin: 0.3rem 0 0; color: var(--heading); font-weight: 600; letter-spacing: -0.01em; }
 .mk-section-head p { color: var(--muted); font-size: var(--fs-lg); line-height: 1.6; margin: 0.55rem 0 0; }
 .mk-kicker { display: inline-flex; align-items: center; gap: 0.55rem; font-size: var(--fs-2xs); font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
-`,i=class extends HTMLElement{#e;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#t(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#e=new MutationObserver(()=>{let r=this.dataset.theme;this.#t(),this.dataset.theme!==r&&this.render(this.shadowRoot)}),this.#e.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#e?.disconnect()}#t(){let r=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=r;let e=(this.getAttribute("brand")||"").trim().toLowerCase();e==="assay"||e==="cai"||e==="watchdog"?this.dataset.brand=e:delete this.dataset.brand}json(r,e){let t=this.getAttribute(r);if(t==null||t.trim()==="")return e;try{return JSON.parse(t)}catch{return e}}};var m=l+p+h+`
-/* The track floor is max(18rem, (100% - two gaps) / 3): 18rem where the column is narrow, and a
-   full third of the row once a third would be wider than that \u2014 which caps the shelf at three
-   without hard-coding a count that would then never collapse. */
-.mk-pubs { display: grid; gap: 18px;
-  grid-template-columns: repeat(auto-fit, minmax(max(18rem, (100% - 36px) / 3), 1fr)); }
+`,i=class extends HTMLElement{#e;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#t(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#e=new MutationObserver(()=>{let r=this.dataset.theme;this.#t(),this.dataset.theme!==r&&this.render(this.shadowRoot)}),this.#e.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#e?.disconnect()}#t(){let r=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=r;let e=(this.getAttribute("brand")||"").trim().toLowerCase();e==="assay"||e==="cai"||e==="watchdog"?this.dataset.brand=e:delete this.dataset.brand}json(r,e){let t=this.getAttribute(r);if(t==null||t.trim()==="")return e;try{return JSON.parse(t)}catch{return e}}};var h=l+p+m+`
+/* auto-fill with a CAPPED track: a cover is never narrower than 17rem and never wider than
+   20rem, so a row of two and a row of three carry the same card. The leftover width is a margin
+   at the end of the row, not extra card. */
+.mk-pubs { display: grid; gap: 20px; justify-content: start;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 20rem)); }
 
-a.mk-pub { display: flex; flex-direction: column; gap: 12px; text-decoration: none; color: inherit;
-  border-radius: var(--r-md); transition: transform 120ms ease; }
+a.mk-pub { display: block; text-decoration: none; color: inherit; border-radius: var(--r-md);
+  transition: transform 120ms ease; }
 a.mk-pub:hover, a.mk-pub:focus-visible { text-decoration: none; transform: translateY(-2px); }
 a.mk-pub:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
-/* The face. The spine is a solid bar down the binding edge: it is what makes a rectangle of type
-   read as a document rather than a panel, and it takes the tone colour so the shelf a card
-   belongs to is legible before the words are. */
+/* The face IS the card. The spine is a solid bar down the binding edge: it is what makes a
+   rectangle of type read as a document rather than a panel, and it takes the tone colour so the
+   shelf a card belongs to is legible before the words are. */
 .mk-pub-face { position: relative; aspect-ratio: 3 / 4; display: flex; flex-direction: column;
   padding: 22px 20px 20px 26px; border: 1px solid var(--border); border-radius: var(--r-md);
   background: var(--pub-wash); overflow: hidden;
-  transition: border-color 120ms ease, background 120ms ease; }
+  transition: border-color 120ms ease; }
 .mk-pub-face::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 5px;
   background: var(--pub-spine); }
 a.mk-pub:hover .mk-pub-face, a.mk-pub:focus-visible .mk-pub-face { border-color: var(--pub-spine); }
 
 .mk-pub-series { font-size: var(--fs-2xs); font-weight: 600; letter-spacing: 0.09em;
   text-transform: uppercase; color: var(--muted); }
-.mk-pub-rule { height: 1px; background: var(--border-strong); margin: 12px 0 14px; }
-/* The title is the cover. It is allowed to be big and to wrap as far as it needs; the face grows
-   no taller because the aspect ratio is fixed, so a long title simply fills more of it. */
-.mk-pub-title { font-size: clamp(1.15rem, 0.95rem + 0.8vw, 1.6rem); line-height: 1.22;
+.mk-pub-rule { height: 1px; background: var(--border-strong); margin: 10px 0 12px; }
+/* The title is the cover. It may be big and wrap as far as it needs; the face grows no taller,
+   because the aspect ratio is fixed, so a long title simply fills more of it. */
+.mk-pub-title { font-size: clamp(1.05rem, 0.9rem + 0.5vw, 1.35rem); line-height: 1.25;
   font-weight: 600; letter-spacing: -0.01em; color: var(--heading); }
-/* The go line sits on the baseline of the face, where the strapline sits on a real cover. */
-.mk-pub-go { margin-top: auto; padding-top: 14px; font-family: var(--font-mono);
+.mk-pub-note { margin-top: 10px; font-size: var(--fs-sm); line-height: 1.5; color: var(--ink-soft); }
+
+/* The fine print and the strapline travel together on the baseline of the cover, where a real
+   cover carries its imprint. */
+.mk-pub-foot { margin-top: auto; padding-top: 14px; }
+.mk-pub-meta { display: block; font-size: var(--fs-xs); line-height: 1.5; color: var(--muted); }
+.mk-pub-go { display: block; margin-top: 6px; font-family: var(--font-mono);
   font-size: var(--fs-2xs); color: var(--muted); transition: color 120ms ease; }
 a.mk-pub:hover .mk-pub-go, a.mk-pub:focus-visible .mk-pub-go { color: var(--accent); }
-
-.mk-pub-note { font-size: var(--fs-sm); line-height: 1.5; color: var(--ink-soft); }
-.mk-pub-meta { font-size: var(--fs-xs); color: var(--muted); line-height: 1.5; }
 
 :host { --pub-wash: var(--surface); --pub-spine: var(--accent); }
 .mk-pub.is-paper { --pub-wash: var(--accent-wash); --pub-spine: var(--accent); }
 .mk-pub.is-article { --pub-wash: var(--surface-2); --pub-spine: var(--muted); }
 
 /* The article face, same box and same spans, set from the baseline up: no rule under the series,
-   and the title carries the auto margin instead of the strapline so the pair falls to the foot of
-   the cover together. */
+   and the title carries the auto margin instead of the foot, so title and fine print fall to the
+   bottom of the cover together. */
 .mk-pub.is-article .mk-pub-rule { display: none; }
 .mk-pub.is-article .mk-pub-title { margin-top: auto; }
-.mk-pub.is-article .mk-pub-go { margin-top: 0; padding-top: 10px; }
+.mk-pub.is-article .mk-pub-foot { margin-top: 14px; }
 
 @media (prefers-reduced-motion: reduce) {
   a.mk-pub, .mk-pub-face, .mk-pub-go { transition: none; }
   a.mk-pub:hover, a.mk-pub:focus-visible { transform: none; }
 }
-`;function b(a){let r=[a.byline,a.length,a.date].map(e=>e==null?"":String(e).trim()).filter(e=>e!=="");return r.length===0?"":r.join(" \xB7 ")}customElements.define("cai-publication-cards",class extends i{render(a){let r=(this.json("items",[])||[]).filter(t=>t&&t.href&&t.title),e="";if(r.length>0){e='<div class="mk-pubs">';for(let t of r){let s=String(t.tone||"").toLowerCase()==="article"?"article":"paper",o=b(t);e+=`<a class="mk-pub is-${s}" href="${n(t.href)}">`,e+='<span class="mk-pub-face">',t.series&&(e+=`<span class="mk-pub-series">${n(t.series)}</span>`,e+='<span class="mk-pub-rule"></span>'),e+=`<span class="mk-pub-title">${n(t.title)}</span>`,t.go&&(e+=`<span class="mk-pub-go">${n(String(t.go))} \u2192</span>`),e+="</span>",t.note&&(e+=`<span class="mk-pub-note">${n(t.note)}</span>`),o!==""&&(e+=`<span class="mk-pub-meta">${n(o)}</span>`),e+="</a>"}e+="</div>"}a.innerHTML=`<style>${m}</style>`+f(this)+e}});
+`;function b(a){let r=[a.byline,a.length,a.date].map(e=>e==null?"":String(e).trim()).filter(e=>e!=="");return r.length===0?"":r.join(" \xB7 ")}customElements.define("cai-publication-cards",class extends i{render(a){let r=(this.json("items",[])||[]).filter(t=>t&&t.href&&t.title),e="";if(r.length>0){e='<div class="mk-pubs">';for(let t of r){let s=String(t.tone||"").toLowerCase()==="article"?"article":"paper",o=b(t);e+=`<a class="mk-pub is-${s}" href="${n(t.href)}">`,e+='<span class="mk-pub-face">',t.series&&(e+=`<span class="mk-pub-series">${n(t.series)}</span>`,e+='<span class="mk-pub-rule"></span>'),e+=`<span class="mk-pub-title">${n(t.title)}</span>`,t.note&&(e+=`<span class="mk-pub-note">${n(t.note)}</span>`),e+='<span class="mk-pub-foot">',o!==""&&(e+=`<span class="mk-pub-meta">${n(o)}</span>`),t.go&&(e+=`<span class="mk-pub-go">${n(String(t.go))} \u2192</span>`),e+="</span></span></a>"}e+="</div>"}a.innerHTML=`<style>${h}</style>`+f(this)+e}});
