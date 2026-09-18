@@ -744,6 +744,11 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker):not(.ip-prose-secondary):not(.ip-prose-fine):has(~ .ip-prose:not(.ip-kicker)) {
   font-size: var(--fs-xl); line-height: 1.5; color: var(--ink); max-width: var(--mk-measure);
 }
+/* ★ The BLOCK centres, the TEXT does not. A hero with no card beside it centres its whole stack,
+   which was centring the copy line by line too -- fine for a one-line statement, and these run to
+   six. The kicker and the headline stay centred; only the paragraphs take a fixed left edge.
+   A hero WITH a card is already left, because the two-up grid places the copy against the card. */
+.ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker) { text-align: left; }
 .ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker) strong { color: var(--heading); }
 /* the trailing microcopy prose is small + muted */
 /* ★ Only demote a trailing paragraph when there is a lede ABOVE it to be trailing after.
