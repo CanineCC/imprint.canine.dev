@@ -1333,6 +1333,17 @@
         "label": "Lede / intro paragraph",
         "type": "text",
         "default": ""
+      },
+      {
+        "name": "brand",
+        "label": "Brand accent. The island carries its own token table, so a CAI page must say \"cai\" or the covers take the family steel rather than the green the rest of the site is built from.",
+        "type": "choice",
+        "default": "cai",
+        "options": [
+          "cai",
+          "watchdog",
+          "assay"
+        ]
       }
     ]
   }
