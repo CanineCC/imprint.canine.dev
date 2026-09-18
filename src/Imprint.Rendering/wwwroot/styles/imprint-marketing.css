@@ -741,7 +741,14 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    is how most of CAI is written — was printing that paragraph larger than every other paragraph on
    the page with nothing smaller beside it to explain why, which reads as an arbitrary extra size
    rather than an intro. Alone, it falls through to the ordinary body rule and matches the site. */
-.ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker):not(.ip-prose-secondary):not(.ip-prose-fine):has(~ .ip-prose:not(.ip-kicker)) {
+/* ★ Hero copy is ONE type. The first paragraph took the lede treatment and any paragraph after it
+   fell through to body size and the muted grey, so /noise showed two six-line paragraphs of the
+   same weight set as though one outranked the other — a distinction the lengths did not support.
+   Every hero paragraph is set alike; :not(:last-of-type) keeps this away from the genuine closing
+   line ("no card", "we reply within a day"), which the rule below still demotes. A hero holding a
+   single paragraph is still excluded: with nothing to contrast against, lede size is just a size. */
+.ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker):not(.ip-prose-secondary):not(.ip-prose-fine):has(~ .ip-prose:not(.ip-kicker)),
+.ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker) ~ .ip-prose:not(.ip-kicker):not(:last-of-type):not(.ip-prose-secondary):not(.ip-prose-fine) {
   font-size: var(--fs-xl); line-height: 1.5; color: var(--ink); max-width: var(--mk-measure);
 }
 /* ★ The BLOCK centres, the TEXT does not. A hero with no card beside it centres its whole stack,
