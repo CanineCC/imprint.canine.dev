@@ -105,6 +105,7 @@ public sealed record SiteHeaderActionsChanged(HeaderAction? Cta, HeaderAction? Q
 [EventType("site.copy-line-changed", 1)]
 public sealed record SiteCopyLineChanged(CopyLine? CopyLine);
 
+[EventType("site.byline-changed", 1)]
 public sealed record SiteBylineChanged(Byline? Byline);
 
 // Which page is served at the site root. Explicit BECAUSE it used to be implicit: the home
