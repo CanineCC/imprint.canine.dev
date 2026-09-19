@@ -53,3 +53,20 @@ public sealed record HeaderAction(LocalizedText Label, Link Link)
 /// "an empty one", and events carry it by value.
 /// </summary>
 public sealed record CopyLine(LocalizedText Text);
+
+/// <summary>
+/// The footer's attribution line — who published this site, rendered as "by &lt;name&gt;".
+/// </summary>
+/// <remarks>
+/// <para>★★ THIS USED TO BE A CONSTANT IN THE TEMPLATE, and it said "by Canine Development" on every site
+/// imprint publishes. That is correct for the publisher's own properties and WRONG the moment imprint
+/// publishes a site it does not own: codeassuranceindex.info is an independent open standard whose whole
+/// claim is that it is not one company's, and its footer named a company as the author, one line under a
+/// page describing it as independent. A reader cannot tell platform attribution from ownership, and on that
+/// page the difference is the entire point.</para>
+///
+/// <para>★ Null means UNSET, and unset keeps the historical default — every existing site renders exactly
+/// as before. An explicitly empty name clears the line, for a site that should carry no attribution at all;
+/// that is why this is a nullable wrapper rather than a bare string.</para>
+/// </remarks>
+public sealed record Byline(LocalizedText Name, string? Url);

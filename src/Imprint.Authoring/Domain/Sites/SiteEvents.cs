@@ -105,6 +105,8 @@ public sealed record SiteHeaderActionsChanged(HeaderAction? Cta, HeaderAction? Q
 [EventType("site.copy-line-changed", 1)]
 public sealed record SiteCopyLineChanged(CopyLine? CopyLine);
 
+public sealed record SiteBylineChanged(Byline? Byline);
+
 // Which page is served at the site root. Explicit BECAUSE it used to be implicit: the home
 // page was whatever sat first in the menu (PageSummary.IsHome was NavigationOrder == 0), so
 // dropping "Home" from the navigation silently repointed "/" at the next top-level link and

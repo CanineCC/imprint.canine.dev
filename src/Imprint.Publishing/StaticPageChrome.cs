@@ -64,6 +64,19 @@ public sealed record StaticPageChrome
     public string? CopyLine { get; init; }
 
     /// <summary>
+    /// The footer attribution, or null to render <see cref="DefaultByline"/>.
+    /// </summary>
+    /// <remarks>An explicitly empty <see cref="SiteByline.Name"/> renders NOTHING — that is how a site the
+    /// publisher does not own opts out of being attributed to the publisher.</remarks>
+    public SiteByline? Byline { get; init; }
+
+    /// <summary>What a site that has never set a byline is attributed to: the publisher.</summary>
+    public static readonly SiteByline DefaultByline = new("Canine Development", "https://canine.dev");
+
+    /// <summary>A footer attribution: a name, and optionally somewhere it links.</summary>
+    public sealed record SiteByline(string Name, string? Url);
+
+    /// <summary>
     /// The resolved published <c>/assets/…</c> URL of the site's favicon (a small variant),
     /// or null when the site sets none — then no <c>&lt;link rel="icon"&gt;</c> is emitted.
     /// </summary>
