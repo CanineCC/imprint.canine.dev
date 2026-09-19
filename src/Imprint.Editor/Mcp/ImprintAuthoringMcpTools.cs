@@ -37,6 +37,7 @@ using SeedLocaleCmd = Imprint.Authoring.Features.Sites.SeedLocale.SeedLocale;
 using ChangeThemeTokenCmd = Imprint.Authoring.Features.Sites.ChangeThemeToken.ChangeThemeToken;
 using ChangeTypographyCmd = Imprint.Authoring.Features.Sites.ChangeTypography.ChangeTypography;
 using SetCopyLineCmd = Imprint.Authoring.Features.Sites.SetCopyLine.SetCopyLine;
+using SetBylineCmd = Imprint.Authoring.Features.Sites.SetByline.SetByline;
 using SetFaviconCmd = Imprint.Authoring.Features.Sites.SetFavicon.SetFavicon;
 using SetHomePageCmd = Imprint.Authoring.Features.Sites.SetHomePage.SetHomePage;
 using SetSocialImageCmd = Imprint.Authoring.Features.Sites.SetSocialImage.SetSocialImage;
@@ -699,6 +700,28 @@ public sealed class ImprintAuthoringMcpTools
                     panelKickerRule = updated.PanelKickerRule,
                 },
             });
+    }
+
+    [McpServerTool(Name = "set_byline")]
+    [Description("Set the footer attribution shown as 'by <name>'. Leave name empty to render NO attribution (for a site the publisher does not own). Never calling this keeps the publisher default.")]
+    public static async Task<object> SetByline(
+        [Description("The site id.")] string siteId,
+        [Description("The name to attribute the site to, or empty for no attribution at all.")] string? name,
+        [Description("Optional URL the name links to; omit for plain text.")] string? url,
+        [Description("Optional locale (default: the site's default locale).")] string? locale,
+        ICommandDispatcher dispatcher, IConfiguration config, SiteOverview sites, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        var site = sites.Get(sid);
+        if (site is null) return Fail("unknown site");
+        var lineLocale = site.DefaultLocale;
+        if (!string.IsNullOrWhiteSpace(locale) && !Locale.TryCreate(locale, out lineLocale)) return Fail($"'{locale}' is not a valid locale tag");
+
+        // An EMPTY name is a real answer here ("attribute this site to nobody"), so it is stored rather than
+        // treated as a clear. Keeping the publisher default is done by never calling this tool.
+        var updated = (site.Byline?.Name ?? LocalizedText.Empty).With(lineLocale, name ?? string.Empty);
+        return await Dispatch(dispatcher, config, new SetBylineCmd(sid, new Byline(updated, url)), ct,
+            () => new { ok = true, siteId = sid.Compact, byline = Localized(updated), url });
     }
 
     [McpServerTool(Name = "remove_locale")]

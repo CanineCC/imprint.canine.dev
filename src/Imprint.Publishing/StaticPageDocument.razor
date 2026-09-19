@@ -202,7 +202,16 @@
         {
           <span class="ip-brand-dot" aria-hidden="true"></span>
         }@Chrome.SiteName</span>
-      <span class="ip-footer-byline">by <a href="https://canine.dev">Canine Development</a></span>
+      @{
+        var byline = Chrome.Byline ?? StaticPageChrome.DefaultByline;
+      }
+      @if (!string.IsNullOrWhiteSpace(byline.Name))
+      {
+        <span class="ip-footer-byline">by @if (byline.Url is { Length: > 0 } bylineHref)
+          {<a href="@bylineHref">@byline.Name</a>}
+          else
+          {@byline.Name}</span>
+      }
       @if (Chrome.CopyLine is not null)
       {
         <p class="ip-footer-copy">@Chrome.CopyLine</p>

@@ -64,6 +64,9 @@ public sealed class Site : AggregateRoot
     public HeaderAction? HeaderQuiet { get; private set; }
     public CopyLine? CopyLine { get; private set; }
 
+    /// <summary>The footer attribution, or null to keep the publisher default.</summary>
+    public Byline? Byline { get; private set; }
+
     // Brand imagery, both optional. The favicon is the tab/bookmark icon; the header logo
     // replaces the CSS brand dot in the published header and footer. Each points at an
     // asset in the shared library (validated to exist by the slice), or null for "none".
@@ -601,6 +604,19 @@ public sealed class Site : AggregateRoot
         Raise(new SiteCopyLineChanged(copyLine));
     }
 
+    /// <summary>Set (or clear, with null) the footer attribution shown as "by &lt;name&gt;".</summary>
+    /// <remarks>Null restores the publisher's default line. A Byline whose name is empty renders NO
+    /// attribution at all — the two are different answers and the caller has to be able to say which.</remarks>
+    public void SetByline(Byline? byline)
+    {
+        if (Equals(Byline, byline))
+        {
+            return;
+        }
+
+        Raise(new SiteBylineChanged(byline));
+    }
+
     /// <summary>
     /// Replace the site's ordered deploy targets. Names identify an environment in the UI
     /// and in promotion ("promote Test → Staging"), so they must be present and unique;
@@ -814,6 +830,9 @@ public sealed class Site : AggregateRoot
                 break;
             case SiteCopyLineChanged e:
                 CopyLine = e.CopyLine;
+                break;
+            case SiteBylineChanged e:
+                Byline = e.Byline;
                 break;
             case SiteHomePageChanged e:
                 HomePageId = e.HomePageId;

@@ -371,6 +371,52 @@ public sealed class SiteChromeTests
             .When(s => s.SetCopyLine(new CopyLine(T("same"))))
             .ThenNothing();
 
+    // ------------------------------------------------------------------ byline
+    //
+    // ★ THREE STATES, and the tests exist because two of them look alike from the outside. Never set
+    //   (null) keeps the publisher's default line — that is what every existing site is, and it must not
+    //   change. Set to an empty name renders NO attribution, which is what a site the publisher does not
+    //   own needs. Those are different answers and the aggregate has to be able to hold both.
+
+    [Fact]
+    public void SetByline_raises_byline_changed()
+    {
+        var byline = new Byline(T("The Code Assurance Initiative"), "https://codeassuranceindex.info");
+
+        AggregateSpec.For<Site>()
+            .Given(Created)
+            .When(s => s.SetByline(byline))
+            .ThenRaised(new SiteBylineChanged(byline));
+    }
+
+    [Fact]
+    public void SetByline_can_return_a_site_to_the_publisher_default() =>
+        AggregateSpec.For<Site>()
+            .Given(Created, new SiteBylineChanged(new Byline(T("Someone Else"), null)))
+            .When(s => s.SetByline(null))
+            .ThenRaised(new SiteBylineChanged(null));
+
+    [Fact]
+    public void SetByline_with_an_empty_name_is_stored_not_treated_as_a_clear()
+    {
+        // The difference that matters: null means "attribute me to the publisher", empty means
+        // "attribute me to nobody". Collapsing the second into the first would silently re-attribute a
+        // site to a company that does not own it.
+        var nobody = new Byline(T(""), null);
+
+        AggregateSpec.For<Site>()
+            .Given(Created)
+            .When(s => s.SetByline(nobody))
+            .ThenRaised(new SiteBylineChanged(nobody));
+    }
+
+    [Fact]
+    public void SetByline_with_unchanged_value_raises_nothing() =>
+        AggregateSpec.For<Site>()
+            .Given(Created, new SiteBylineChanged(new Byline(T("same"), "https://example.test")))
+            .When(s => s.SetByline(new Byline(T("same"), "https://example.test")))
+            .ThenNothing();
+
     [Fact]
     public void SetCopyLine_clearing_when_already_clear_raises_nothing() =>
         AggregateSpec.For<Site>()

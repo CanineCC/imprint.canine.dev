@@ -144,6 +144,7 @@ public sealed class SitePublisher(
         private HeaderAction? _headerCta;
         private HeaderAction? _headerQuiet;
         private CopyLine? _copyLine;
+        private Byline? _byline;
         private AssetId? _faviconAssetId;
         private AssetId? _headerLogoAssetId;
         private AssetId? _socialImageAssetId;
@@ -191,6 +192,7 @@ public sealed class SitePublisher(
             _headerCta = site.HeaderCta;
             _headerQuiet = site.HeaderQuiet;
             _copyLine = site.CopyLine;
+            _byline = site.Byline;
             // Brand imagery is not necessarily referenced by any page, so its ids are
             // captured here and fed into the SAME published-asset catalog the page images
             // use (below). That copies their bytes into /assets/… and lets us resolve the
@@ -624,6 +626,7 @@ public sealed class SitePublisher(
                 HeaderQuiet = HeaderLinkFor(_headerQuiet, locale),
                 FooterGroups = FooterColumnsFor(locale),
                 CopyLine = CopyLineFor(locale),
+                Byline = BylineFor(locale),
                 FaviconUrl = _faviconUrl,
                 LogoUrl = _logoUrl,
                 LogoSvg = _logoSvg,
@@ -658,6 +661,7 @@ public sealed class SitePublisher(
                 HeaderQuiet = HeaderLinkFor(_headerQuiet, _defaultLocale),
                 FooterGroups = FooterColumnsFor(_defaultLocale),
                 CopyLine = CopyLineFor(_defaultLocale),
+                Byline = BylineFor(_defaultLocale),
                 FaviconUrl = _faviconUrl,
                 LogoUrl = _logoUrl,
                 LogoSvg = _logoSvg,
@@ -1033,6 +1037,22 @@ public sealed class SitePublisher(
         {
             var copy = _copyLine?.Text.Resolve(locale, _defaultLocale);
             return string.IsNullOrEmpty(copy) ? null : copy;
+        }
+
+        // ★ THREE ANSWERS, not two. No byline set at all (null) keeps the publisher's historical default,
+        //   so every site that has never thought about this renders exactly as it did. A byline whose name
+        //   resolves to empty means "attribute this site to nobody" — which is a real choice for a site the
+        //   publisher does not own — and is carried as an EMPTY name rather than as null, because null
+        //   already means something else here.
+        private StaticPageChrome.SiteByline? BylineFor(Locale locale)
+        {
+            if (_byline is null)
+            {
+                return null;
+            }
+
+            var name = _byline.Name.Resolve(locale, _defaultLocale) ?? string.Empty;
+            return new StaticPageChrome.SiteByline(name, string.IsNullOrWhiteSpace(_byline.Url) ? null : _byline.Url);
         }
 
         private string HomeHref(Locale locale) =>
