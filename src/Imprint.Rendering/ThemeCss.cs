@@ -74,6 +74,10 @@ public static class ThemeCss
         // theme rather than a hard-coded stack. Always the curated Mono family.
         props["--ip-font-mono"] = FontStackCss(FontStack.Mono);
         props["--ip-radius"] = $"{typography.RadiusPx}px";
+        // The Panels kicker rule is switched by `display`, not by `content` or `width`:
+        // the label is an inline-flex box with a gap, so a zero-width pseudo-element would
+        // still be a flex item and would leave the gap standing in front of every label.
+        props["--ip-kicker-rule-display"] = typography.PanelKickerRule ? "inline-block" : "none";
 
         var spacing = typography.Spacing switch
         {

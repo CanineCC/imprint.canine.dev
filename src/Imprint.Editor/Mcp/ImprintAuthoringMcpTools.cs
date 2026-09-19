@@ -34,6 +34,8 @@ using UnpublishPageCmd = Imprint.Authoring.Features.Pages.UnpublishPage.Unpublis
 using RemoveNodeCmd = Imprint.Authoring.Features.Pages.RemoveNode.RemoveNode;
 using RemoveLocaleCmd = Imprint.Authoring.Features.Sites.RemoveLocale.RemoveLocale;
 using SeedLocaleCmd = Imprint.Authoring.Features.Sites.SeedLocale.SeedLocale;
+using ChangeThemeTokenCmd = Imprint.Authoring.Features.Sites.ChangeThemeToken.ChangeThemeToken;
+using ChangeTypographyCmd = Imprint.Authoring.Features.Sites.ChangeTypography.ChangeTypography;
 using SetCopyLineCmd = Imprint.Authoring.Features.Sites.SetCopyLine.SetCopyLine;
 using SetBylineCmd = Imprint.Authoring.Features.Sites.SetByline.SetByline;
 using SetFaviconCmd = Imprint.Authoring.Features.Sites.SetFavicon.SetFavicon;
@@ -47,6 +49,7 @@ using ChangePostMetaCmd = Imprint.Authoring.Features.Posts.ChangePostMeta.Change
 using CreatePostCmd = Imprint.Authoring.Features.Posts.CreatePost.CreatePost;
 using SetSiteReviewerCmd = Imprint.Authoring.Features.Sites.SetSiteReviewer.SetSiteReviewer;
 using SubmitPostForReviewCmd = Imprint.Authoring.Features.Posts.SubmitPostForReview.SubmitPostForReview;
+using DeleteAssetCmd = Imprint.Authoring.Features.Assets.DeleteAsset.DeleteAsset;
 using TagAssetCmd = Imprint.Authoring.Features.Assets.TagAsset.TagAsset;
 using UntagAssetCmd = Imprint.Authoring.Features.Assets.UntagAsset.UntagAsset;
 using UploadAssetCmd = Imprint.Authoring.Features.Assets.UploadAsset.UploadAsset;
@@ -151,7 +154,7 @@ public sealed class ImprintAuthoringMcpTools
     }
 
     [McpServerTool(Name = "get_site")]
-    [Description("One site's chrome: locales, navigation (with groups and children), footer link groups and the fine-print copy line. Read this before set_navigation or set_copy_line — both carry the whole value, so you edit what you read back.")]
+    [Description("One site's chrome: locales, navigation (with groups and children), footer link groups, the fine-print copy line and the theme (colour tokens and typography). Read this before set_navigation, set_copy_line or set_typography — each carries the whole value, so you edit what you read back.")]
     public static object GetSite(
         [Description("The site id.")] string siteId,
         SiteOverview sites, PageList pages)
@@ -188,6 +191,26 @@ public sealed class ImprintAuthoringMcpTools
                     link = LinkView(link.Link, slugs),
                 }).ToList(),
             }).ToList(),
+            theme = new
+            {
+                tokens = ThemeTokens.All.ToDictionary(
+                    name => name,
+                    name => (object)new
+                    {
+                        light = (site.Theme.Tokens.Get(name) ?? Theme.Default.Tokens.Get(name)!).Light,
+                        dark = (site.Theme.Tokens.Get(name) ?? Theme.Default.Tokens.Get(name)!).Dark,
+                    }),
+                typography = new
+                {
+                    headingFont = site.Theme.Typography.Heading.ToString(),
+                    bodyFont = site.Theme.Typography.Body.ToString(),
+                    baseSizePx = site.Theme.Typography.BaseSizePx,
+                    scaleRatio = site.Theme.Typography.ScaleRatio,
+                    radiusPx = site.Theme.Typography.RadiusPx,
+                    spacing = site.Theme.Typography.Spacing.ToString(),
+                    panelKickerRule = site.Theme.Typography.PanelKickerRule,
+                },
+            },
         };
     }
 
@@ -611,11 +634,79 @@ public sealed class ImprintAuthoringMcpTools
             () => new { ok = true, siteId = sid.Compact, copyLine = Localized(updated) });
     }
 
-    [McpServerTool(Name = "set_byline")]
-    [Description("Set the footer attribution shown as 'by <name>'. Leave name empty to render NO attribution (for a site the publisher does not own). Omit the call entirely to keep the publisher default.")]
-    public static async Task<object> SetByline(
-        [Description("The name to attribute the site to, or empty for no attribution at all.")] string? name,
+    [McpServerTool(Name = "set_theme_token")]
+    [Description("Set ONE semantic colour token of the site's design system. Light and dark are given together because every token carries both — dark mode is CSS light-dark(), not a second theme. Tokens: background, surface, surface-alt, text, text-muted, primary, on-primary, accent, border, and the primary ramp primary-ink / primary-wash / primary-strong. Values are validated CSS colours (hex, a named colour, or rgb/hsl/oklch/color-mix); url() is refused. Read the current values with get_site first. This is site CHROME — it has no draft state and re-renders every page on the next publish pass, so say so before using it.")]
+    public static async Task<object> SetThemeToken(
         [Description("The site id.")] string siteId,
+        [Description("The token name, e.g. 'primary'.")] string token,
+        [Description("The light-mode colour, e.g. '#3b5bdb'.")] string light,
+        [Description("The dark-mode colour, e.g. '#748ffc'.")] string dark,
+        ICommandDispatcher dispatcher, IConfiguration config, SiteOverview sites, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        if (sites.Get(sid) is null) return Fail("unknown site");
+
+        return await Dispatch(
+            dispatcher, config,
+            new ChangeThemeTokenCmd(sid, token ?? string.Empty, light ?? string.Empty, dark ?? string.Empty), ct,
+            () => new { ok = true, siteId = sid.Compact, token, light, dark });
+    }
+
+    [McpServerTool(Name = "set_typography")]
+    [Description("Change the site's typography. Every argument is optional: omit one and its current value is kept, so this can move a single dial. Fonts are curated system stacks — Sans, Humanist, Geometric, Serif, Slab, Mono, Grotesk — chosen for zero third-party requests. Ranges: baseSizePx 14–20, scaleRatio 1.125–1.5, radiusPx 0–24; spacing is Compact, Comfortable or Spacious. panelKickerRule switches the short accent rule Panels sections draw in front of each kicker (off by default). This is site CHROME — no draft state, it re-renders every page on the next publish pass.")]
+    public static async Task<object> SetTypography(
+        [Description("The site id.")] string siteId,
+        [Description("Optional heading font stack: Sans, Humanist, Geometric, Serif, Slab, Mono or Grotesk.")] string? headingFont,
+        [Description("Optional body font stack: Sans, Humanist, Geometric, Serif, Slab, Mono or Grotesk.")] string? bodyFont,
+        [Description("Optional base font size in px (14–20).")] int? baseSizePx,
+        [Description("Optional type scale ratio (1.125–1.5).")] double? scaleRatio,
+        [Description("Optional corner radius in px (0–24).")] int? radiusPx,
+        [Description("Optional spacing scale: Compact, Comfortable or Spacious.")] string? spacing,
+        [Description("Optional: whether Panels sections draw the short accent rule in front of each kicker (default off).")] bool? panelKickerRule,
+        ICommandDispatcher dispatcher, IConfiguration config, SiteOverview sites, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        var site = sites.Get(sid);
+        if (site is null) return Fail("unknown site");
+
+        var current = site.Theme.Typography;
+        if (!TryEnum<FontStack>(headingFont, current.Heading, out var heading, out var headingError)) return Fail($"headingFont: {headingError}");
+        if (!TryEnum<FontStack>(bodyFont, current.Body, out var body, out var bodyError)) return Fail($"bodyFont: {bodyError}");
+        if (!TryEnum<SpacingScale>(spacing, current.Spacing, out var spacingScale, out var spacingError)) return Fail($"spacing: {spacingError}");
+
+        // Out-of-range numbers are the aggregate's call, not ours: it owns the ranges and
+        // its message names them, so forwarding keeps one source of truth.
+        var updated = new Typography(
+            heading, body,
+            baseSizePx ?? current.BaseSizePx,
+            scaleRatio ?? current.ScaleRatio,
+            radiusPx ?? current.RadiusPx,
+            spacingScale,
+            panelKickerRule ?? current.PanelKickerRule);
+
+        return await Dispatch(dispatcher, config, new ChangeTypographyCmd(sid, updated), ct,
+            () => new
+            {
+                ok = true,
+                siteId = sid.Compact,
+                typography = new
+                {
+                    headingFont = updated.Heading.ToString(),
+                    bodyFont = updated.Body.ToString(),
+                    baseSizePx = updated.BaseSizePx,
+                    scaleRatio = updated.ScaleRatio,
+                    radiusPx = updated.RadiusPx,
+                    spacing = updated.Spacing.ToString(),
+                    panelKickerRule = updated.PanelKickerRule,
+                },
+            });
+    }
+
+    [McpServerTool(Name = "set_byline")]
+    [Description("Set the footer attribution shown as 'by <name>'. Leave name empty to render NO attribution (for a site the publisher does not own). Never calling this keeps the publisher default.")]
+    public static async Task<object> SetByline(
+        [Description("The site id.")] string siteId,
+        [Description("The name to attribute the site to, or empty for no attribution at all.")] string? name,
         [Description("Optional URL the name links to; omit for plain text.")] string? url,
         [Description("Optional locale (default: the site's default locale).")] string? locale,
         ICommandDispatcher dispatcher, IConfiguration config, SiteOverview sites, CancellationToken ct = default)
@@ -780,6 +871,22 @@ public sealed class ImprintAuthoringMcpTools
         await using var stream = new MemoryStream(bytes);
         return await Dispatch(dispatcher, config, new UploadAssetDarkVariantCmd(aid, fileName, type, bytes.Length, stream), ct,
             () => new { ok = true, assetId = aid.Compact, status = "Pending", dark = true });
+    }
+
+    [McpServerTool(Name = "delete_asset")]
+    [Description("Delete one asset from the media library, bytes and all. Refused while any page or block "
+                 + "still references it — an image, video or SVG node placing it, a button linking it, or a "
+                 + "prose anchor linking it — and the refusal says how many of each, so the fix is to remove "
+                 + "those references first and call again. Not undoable: the file is gone, and a page that "
+                 + "picks it up afterwards would only find an empty reference.")]
+    public static async Task<object> DeleteAsset(
+        [Description("The asset id (compact or dashed GUID).")] string assetId,
+        ICommandDispatcher dispatcher, IConfiguration config, AssetLibrary assets, CancellationToken ct = default)
+    {
+        if (!AuthoringApi.TryAssetId(assetId, out var aid)) return Fail("invalid assetId");
+        if (assets.Get(aid) is null) return Fail("unknown asset");
+        return await Dispatch(dispatcher, config, new DeleteAssetCmd(aid), ct,
+            () => new { ok = true, assetId = aid.Compact, deleted = true });
     }
 
     [McpServerTool(Name = "list_posts")]
@@ -1147,6 +1254,25 @@ public sealed class ImprintAuthoringMcpTools
     private static object Fail(string error) => new { ok = false, error };
 
     private static object FailResult(string error, Result result) => new { ok = false, error, details = result.Errors };
+
+    /// <summary>
+    /// An OPTIONAL enum argument: absent (or blank) keeps <paramref name="fallback"/>, so a
+    /// caller can move one dial without restating the rest of a value object. A present but
+    /// unknown name is refused by name, listing the members — a silent fallback to the
+    /// current value would look like the change was applied.
+    /// </summary>
+    private static bool TryEnum<T>(string? value, T fallback, out T parsed, out string error)
+        where T : struct, Enum
+    {
+        error = string.Empty;
+        parsed = fallback;
+        if (string.IsNullOrWhiteSpace(value)) return true;
+        if (Enum.TryParse(value, ignoreCase: true, out parsed) && Enum.IsDefined(parsed)) return true;
+
+        parsed = fallback;
+        error = $"'{value}' is not one of {string.Join(", ", Enum.GetNames<T>())}";
+        return false;
+    }
 
     private static bool TryProps(string? json, out PropBag bag, out string error)
     {

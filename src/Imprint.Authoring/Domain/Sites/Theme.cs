@@ -42,19 +42,26 @@ public sealed record Theme(TokenSet Tokens, Typography Typography)
             BaseSizePx: 16,
             ScaleRatio: 1.25,
             RadiusPx: 8,
-            Spacing: SpacingScale.Comfortable));
+            Spacing: SpacingScale.Comfortable,
+            PanelKickerRule: false));
 }
 
 /// <summary>A color token: one semantic role, two values. Values are validated CSS colors.</summary>
 public sealed record ThemeToken(string Light, string Dark);
 
+/// <param name="PanelKickerRule">
+/// Whether a Panels section draws the short accent rule in front of each kicker. Off by
+/// default: it is decoration, and at kicker size it reads as a dash in the label rather
+/// than as a mark. A site that wants it back opts in.
+/// </param>
 public sealed record Typography(
     FontStack Heading,
     FontStack Body,
     int BaseSizePx,
     double ScaleRatio,
     int RadiusPx,
-    SpacingScale Spacing)
+    SpacingScale Spacing,
+    bool PanelKickerRule = false)
 {
     public const int MinBaseSizePx = 14;
     public const int MaxBaseSizePx = 20;

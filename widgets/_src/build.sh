@@ -42,6 +42,7 @@ TAGS=(
   cai-verifier
   cai-calculator
   cai-report-index
+  cai-publication-cards
   cai-dimensions
   wd-embed
   contact-form

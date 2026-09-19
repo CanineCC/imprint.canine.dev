@@ -62,6 +62,7 @@ public static class AuthoringNodeJson
 
             case RichTextNode richText:
                 props["html"] = Localized(richText.Html);
+                props["emphasis"] = richText.Emphasis.ToString();
                 break;
 
             case ButtonNode button:
@@ -211,6 +212,7 @@ public static class AuthoringNodeJson
             {
                 Id = id,
                 Html = LocalizedOf(spec, "html", locale),
+                Emphasis = Enum(spec, "emphasis", ProseEmphasis.Default),
             },
             "button" => new ButtonNode
             {
@@ -424,6 +426,7 @@ public static class AuthoringNodeJson
             RichTextNode richText => richText with
             {
                 Html = Merge(richText.Html, patch, "html", locale),
+                Emphasis = Enum(patch, "emphasis", richText.Emphasis),
             },
             ButtonNode button => button with
             {

@@ -112,6 +112,14 @@
                 }
             </div>
         </div>
+        <div class="ed-field">
+            <label for="th-panel-kicker-rule">
+                <input id="th-panel-kicker-rule" type="checkbox"
+                       checked="@typography.PanelKickerRule"
+                       @onchange="e => ApplyPanelKickerRule(e.Value is true)" />
+                Accent rule before panel kickers
+            </label>
+        </div>
     }
 </div>
 
@@ -269,6 +277,9 @@
 
     private Task ApplySpacing(SpacingScale scale) =>
         CurrentTypography is { } t ? Apply(t with { Spacing = scale }) : Task.CompletedTask;
+
+    private Task ApplyPanelKickerRule(bool on) =>
+        CurrentTypography is { } t ? Apply(t with { PanelKickerRule = on }) : Task.CompletedTask;
 
     private static int? ParseInt(ChangeEventArgs args) =>
         int.TryParse(args.Value?.ToString(), out var value) ? value : null;

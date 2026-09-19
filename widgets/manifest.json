@@ -1302,5 +1302,49 @@
       }
     ],
     "fallbackHref": "{base}/embed/{view}"
+  },
+  {
+    "tag": "cai-publication-cards",
+    "name": "CAI publication cards",
+    "description": "A shelf of publications as covers. Each card is one clickable link: a typographic cover face carrying the series and the title, with a one-line description and the byline, length and date as fine print beneath. The face is type rather than an image, so nothing has to be re-rendered when a document is reissued. Tone separates papers from articles by the face wash and the spine, and the shelf caps at three columns however wide the column is. DATA ONLY: no API base, it never fetches.",
+    "bundle": "cai-publication-cards.js",
+    "placeholder": "CAI publication cards",
+    "props": [
+      {
+        "name": "items",
+        "label": "Items (JSON array of {series, title, note, byline, date, length, href, tone, go}); tone = paper | article. Only title and href are required; a missing byline, date or length simply drops the fine-print row.",
+        "type": "text",
+        "default": "[]"
+      },
+      {
+        "name": "kicker",
+        "label": "Kicker (small uppercase intro above the shelf)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "heading",
+        "label": "Heading",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "lede",
+        "label": "Lede / intro paragraph",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "brand",
+        "label": "Brand accent. The island carries its own token table, so a CAI page must say \"cai\" or the covers take the family steel rather than the green the rest of the site is built from.",
+        "type": "choice",
+        "default": "cai",
+        "options": [
+          "cai",
+          "watchdog",
+          "assay"
+        ]
+      }
+    ]
   }
 ]

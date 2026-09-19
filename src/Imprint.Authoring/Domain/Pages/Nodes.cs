@@ -180,7 +180,36 @@ public sealed record HeadingNode : Node
 public sealed record RichTextNode : Node
 {
     public LocalizedText Html { get; init; } = LocalizedText.Empty;
+
+    /// <summary>How prominently this paragraph is set — see <see cref="ProseEmphasis"/>.</summary>
+    public ProseEmphasis Emphasis { get; init; } = ProseEmphasis.Default;
+
     public override string DisplayName => "Text";
+}
+
+/// <summary>
+/// What a paragraph is, when its position alone would say the wrong thing.
+///
+/// <para>A section that ends with a paragraph gets that paragraph set as a small closing line —
+/// "Sign in with GitHub · no card · …", "We aim to come back within one business day". That is
+/// deliberate and the estate leans on it in 215 places, so <see cref="Default"/> keeps it.</para>
+///
+/// <para>It misreads when the trailing paragraph was never a closing line but a second paragraph of
+/// real copy, which is what <see cref="Secondary"/> is for: one step down from the lede, not the
+/// fine-print floor. <see cref="FinePrint"/> is the other direction — the closing-line treatment
+/// asked for outright, so it does not depend on the paragraph happening to come last.</para>
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum ProseEmphasis
+{
+    /// <summary>Whatever the section's own rules say — including the trailing-paragraph treatment.</summary>
+    Default,
+
+    /// <summary>A supporting paragraph: one step below the lede, and never the fine-print floor.</summary>
+    Secondary,
+
+    /// <summary>The closing-line treatment, asked for rather than inherited from position.</summary>
+    FinePrint,
 }
 
 public sealed record ButtonNode : Node
