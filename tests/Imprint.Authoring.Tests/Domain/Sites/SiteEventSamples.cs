@@ -67,6 +67,16 @@ public sealed class SiteEventSamples : IEventSampleProvider
             yield return new SiteCopyLineChanged(
                 new CopyLine(LocalizedText.Of(en, "© 2025–2026 · The independent surveyor.")));
 
+            // All three byline states, because they are three different meanings on the wire and the
+            // nullable Url is the difference between a linked attribution and a plain one: a name with
+            // a link, a name without, and an EMPTY name — which is "attribute this site to nobody",
+            // not "unset". (Unset is the absence of the event, so it has no sample.)
+            yield return new SiteBylineChanged(
+                new Byline(LocalizedText.Of(en, "The Code Assurance Initiative"), "https://example.org/org"));
+            yield return new SiteBylineChanged(
+                new Byline(LocalizedText.Of(en, "The Code Assurance Initiative"), null));
+            yield return new SiteBylineChanged(new Byline(LocalizedText.Empty, null));
+
             // Brand imagery — both the "set" (an asset id) and "clear" (null) shapes, so
             // the nullable AssetId payload round-trips in both states.
             yield return new SiteHomePageChanged(PageId.New());
