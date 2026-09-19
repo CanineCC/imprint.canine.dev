@@ -34,6 +34,7 @@ using MoveNodeCmd = Imprint.Authoring.Features.Pages.MoveNode.MoveNode;
 using PublishAllStaleCmd = Imprint.Authoring.Features.Pages.PublishAllStale.PublishAllStale;
 using PublishPageCmd = Imprint.Authoring.Features.Pages.PublishPage.PublishPage;
 using RemoveNodeCmd = Imprint.Authoring.Features.Pages.RemoveNode.RemoveNode;
+using SetBylineCmd = Imprint.Authoring.Features.Sites.SetByline.SetByline;
 using SetCopyLineCmd = Imprint.Authoring.Features.Sites.SetCopyLine.SetCopyLine;
 using SetFaviconCmd = Imprint.Authoring.Features.Sites.SetFavicon.SetFavicon;
 using SetSocialImageCmd = Imprint.Authoring.Features.Sites.SetSocialImage.SetSocialImage;
@@ -190,6 +191,9 @@ public static class AuthoringApi
                 defaultLocale = site.DefaultLocale.Value,
                 locales = site.Locales.Select(l => l.Value).ToList(),
                 copyLine = site.CopyLine is null ? null : Localized(site.CopyLine.Text),
+                // Readable because it is settable, and because ABSENT and EMPTY mean different things
+                // here: null is "the publisher default applies", an empty name is "attribute to nobody".
+                byline = site.Byline is null ? null : new { name = Localized(site.Byline.Name), url = site.Byline.Url },
                 // Who has to clear a post before it goes public, and therefore whether posts on
                 // this site can be published directly at all. Readable because it is settable:
                 // a caller that can name a reviewer and not confirm one is flying blind.
@@ -790,6 +794,32 @@ public static class AuthoringApi
             return result.Succeeded
                 ? Results.Ok(new { siteId = sid.Compact, copyLine = Localized(updated) })
                 : Results.BadRequest(new { error = "copy line change failed", details = result.Errors });
+        });
+
+        // The footer's "by <name>" attribution. Three states, and they are NOT interchangeable: never
+        // calling this leaves the publisher default in place, an empty name renders no attribution at
+        // all (for a site the publisher does not own), and a name replaces the default. So an empty
+        // name is stored rather than treated as a clear - there is no route back to the default here,
+        // by design, because "I meant the default" is a decision for whoever owns the site.
+        api.MapPut("/sites/{siteId}/byline", async (
+            string siteId, BylineRequest? body, ICommandDispatcher dispatcher, SiteOverview sites, CancellationToken ct) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            var site = sites.Get(sid);
+            if (site is null) return Results.NotFound(new { error = "unknown site" });
+
+            var locale = site.DefaultLocale;
+            if (!string.IsNullOrWhiteSpace(body?.Locale) && !Locale.TryCreate(body.Locale, out locale))
+            {
+                return Results.BadRequest(new { error = $"'{body.Locale}' is not a valid locale tag" });
+            }
+
+            // Editing one locale must not drop the others, so the existing value is the base.
+            var updated = (site.Byline?.Name ?? LocalizedText.Empty).With(locale, body?.Name ?? string.Empty);
+            var result = await DispatchAs(dispatcher, actor, new SetBylineCmd(sid, new Byline(updated, body?.Url)), ct);
+            return result.Succeeded
+                ? Results.Ok(new { siteId = sid.Compact, byline = Localized(updated), url = body?.Url })
+                : Results.BadRequest(new { error = "byline change failed", details = result.Errors });
         });
 
         // The site's ordered deploy environments. Like navigation and the footer, the whole list
@@ -1804,6 +1834,7 @@ public static class AuthoringApi
 
     /// <summary>Request body for the footer's fine-print copy line (empty text clears it).</summary>
     public sealed record CopyLineRequest(string? Locale, string? Text);
+    public sealed record BylineRequest(string? Locale, string? Name, string? Url);
 
     /// <summary>Request body for setting a brand asset reference — null/absent clears it.</summary>
     public sealed record SetAssetRefRequest(string? AssetId);
