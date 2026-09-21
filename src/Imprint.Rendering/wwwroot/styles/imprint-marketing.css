@@ -601,10 +601,16 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-prose.ip-kicker {
   font-size: 0; /* collapse whitespace text nodes; the strong re-sets its own size */
 }
+/* ★ --accent-INK, not --accent. Same mistake as the full-bleed band, on the text side:
+   `--ip-primary` is chosen to be a FILL and a button, and at 12px on the page background
+   watchdog's #4682b4 measures 4.0 against AA's 4.5. `--ip-primary-ink` exists for exactly
+   this job and measures 6.7. Found the day the kicker became visible on /languages/ — it
+   had been failing wherever a kicker sits outside an ip-ap-* appearance, unseen because the
+   appearances that hide the section head were hiding it. */
 .ip-prose.ip-kicker > p > strong {
   display: inline-block;
   font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 600;
-  letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent);
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-ink);
 }
 
 /* font-size: 0 above makes any ch-based max-width compute to ZERO, which wrapped the kicker at every

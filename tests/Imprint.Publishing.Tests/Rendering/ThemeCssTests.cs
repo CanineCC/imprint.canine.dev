@@ -289,6 +289,11 @@ public sealed class ThemeCssTests
     /// <c>--muted</c>, which read as deliberate only while the accent rule sat in front of it carrying the
     /// colour; once that rule was switched off by default it left the panel eyebrow the single eyebrow on the
     /// estate with no accent on it at all.
+    /// <para>★ The token is <c>--accent-INK</c>, and that is a contrast fix, not a tidy-up. <c>--accent</c>
+    /// is chosen to be a FILL and a button; at 12px on the page background watchdog's #4682b4 measures 4.0
+    /// against AA's 4.5. The ink variant is the same hue chosen to be read, and measures 6.7. It surfaced the
+    /// day a kicker became visible on /languages/ — it had been failing wherever a kicker sits outside an
+    /// ip-ap-* appearance, unseen because the appearances that hide a section head were hiding it too.</para>
     /// </summary>
     [Fact]
     public void A_panel_kicker_takes_the_accent_colour_like_every_other_kicker()
@@ -296,7 +301,7 @@ public sealed class ThemeCssTests
         var css = WithoutComments(ThemeCss.MarketingCss);
 
         // The base rule is where the colour comes from, for panels too.
-        Assert.Contains("text-transform: uppercase; color: var(--accent);", css);
+        Assert.Contains("text-transform: uppercase; color: var(--accent-ink);", css);
 
         // The Panels override must not reintroduce a colour of its own.
         var panelRule = css[css.IndexOf(".ip-ap-panels .ip-prose.ip-kicker > p > strong {", StringComparison.Ordinal)..];
