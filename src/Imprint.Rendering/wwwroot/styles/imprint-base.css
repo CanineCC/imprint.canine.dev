@@ -46,6 +46,7 @@
 .ip-section-full { padding-inline: 0; }
 .ip-bg-surface { background: var(--ip-surface); }
 .ip-bg-surface-alt { background: var(--ip-surface-alt); }
+/* Contrast: the marketing sheet overrides this background to the STRONG variant — see there. */
 .ip-bg-primary { background: var(--ip-primary); color: var(--ip-on-primary); }
 .ip-pad-none { padding-block: 0; }
 .ip-pad-large { padding-block: var(--ip-space-8); }

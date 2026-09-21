@@ -1090,7 +1090,25 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-ap-cta .ip-prose { max-width: var(--mk-measure); text-align: center; }
 .ip-ap-cta > .ip-stack > .ip-prose:first-of-type { font-size: var(--fs-xl); color: var(--ink); }
 /* The closing band rides the Primary background (ip-bg-primary): on-primary ink and
-   inverted buttons so the calls stay readable on the accent fill. */
+   inverted buttons so the calls stay readable on the accent fill.
+
+   ★★ ON THE STRONG VARIANT, NOT THE PLAIN ONE — a measured contrast fix, not a taste change.
+   `--ip-primary` is picked to look right AS a link or a button: small coloured marks on the page
+   background. A full-bleed band inverts that — the primary becomes the BACKGROUND and the text sits
+   on it — and the same value that reads well at 14px on white does not carry text at all. Measured
+   with axe on the live sites, light mode:
+
+     watchdog #4682b4 — white 4.10, the 88 % body copy 3.57   (AA wants 4.5)
+     assay    #9a6a3c — white 4.51, so the 88 % copy fails too
+
+   The strong variant is the same hue chosen to be SAT ON: those become 6.84 / 5.73 and 9.86 / 7.99.
+   Dark mode already passed (7.18) and passes by more. It fails on every page with a closing band,
+   while /accessibility-conformance/ publishes an EN 301 549 claim anyone can check in ten seconds.
+
+   ★ Here and not in imprint-base.css: that sheet ships on EVERY page and has an 8 KB budget with
+   107 bytes left in it. ★ The fallback is load-bearing — a theme that defines no strong variant
+   keeps exactly the background it had. */
+.ip-bg-primary { background: var(--ip-primary-strong, var(--ip-primary)); }
 .ip-ap-cta.ip-bg-primary h2 { color: var(--on-accent); }
 .ip-ap-cta.ip-bg-primary > .ip-stack > .ip-prose:not(.ip-kicker) {
   color: color-mix(in srgb, var(--on-accent) 88%, transparent);

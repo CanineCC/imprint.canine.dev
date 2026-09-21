@@ -493,6 +493,25 @@ public sealed class ThemeCssTests
         }
     }
 
+    /// <summary>
+    /// ★ A full-bleed band SITS ON the primary colour; a link and a button sit on the page in it. The plain
+    /// token is chosen for the second job and fails AA at the first — measured on the live sites, light mode:
+    /// watchdog #4682b4 gives white 4.10 and its 88 % body copy 3.57, assay #9a6a3c gives 4.51, all against
+    /// AA's 4.5. The strong variant is the same hue chosen to be sat on. This is pinned because it reads as a
+    /// colour preference and would be "tidied" straight back into a failure — and we publish an EN 301 549
+    /// conformance claim a reader can check with a browser extension.
+    /// </summary>
+    [Fact]
+    public void A_full_bleed_primary_band_uses_the_strong_variant_so_its_text_clears_AA()
+    {
+        var css = WithoutComments(ThemeCss.MarketingCss);
+
+        var band = css.Split('\n').Single(l =>
+            l.TrimStart().StartsWith(".ip-bg-primary {", StringComparison.Ordinal));
+
+        Assert.Contains("var(--ip-primary-strong, var(--ip-primary))", band, StringComparison.Ordinal);
+    }
+
     /// <summary>CSS with comments removed, so an assertion about the RULES cannot be satisfied — or defeated —
     /// by the prose explaining them.</summary>
     private static string WithoutComments(string css) =>
