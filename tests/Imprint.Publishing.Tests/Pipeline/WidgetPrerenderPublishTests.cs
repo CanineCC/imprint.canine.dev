@@ -177,7 +177,7 @@ public sealed class WidgetPrerenderPublishTests
 
         Assert.Contains("Engineering teams", html, StringComparison.Ordinal);
         Assert.Contains("\u20AC245", html, StringComparison.Ordinal);
-        Assert.Contains("class=\"ip-grid\"", html, StringComparison.Ordinal);
+        Assert.Contains("class=\"ip-grid ip-grid-5up\"", html, StringComparison.Ordinal);
         Assert.DoesNotContain("data-island", html, StringComparison.Ordinal);
         Assert.DoesNotContain("Prices load here", html, StringComparison.Ordinal);
     }

@@ -427,14 +427,21 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 
 /* Pre-hydration island fallback (:not(:defined) = the custom element has not upgraded):
    a quiet, honest placeholder card instead of label-and-link run together as raw text.
-   Hydration replaces the light DOM, and a defined element drops these rules. */
-.ip-widget:not(:defined) {
+   Hydration replaces the light DOM, and a defined element drops these rules.
+
+   ★★ .ip-widget-baked IS EXCLUDED, AND THAT EXCLUSION IS LOAD-BEARING. A templated widget ships no
+   bundle on purpose, so it is `:not(:defined)` FOREVER — not for the second before hydration, but
+   permanently. Left in, this rule dressed a fully rendered price table as a "still loading"
+   placeholder: dashed border, muted 13px text, and `align-items: flex-start` shrinking the five-
+   package grid to its content width with half the section empty beside it. The state the selector
+   names — "the island has not arrived yet" — is one this element is never in. */
+.ip-widget:not(:defined):not(.ip-widget-baked) {
   display: flex; flex-direction: column; gap: 0.45rem; align-items: flex-start;
   padding: 0.9rem 1rem; border: 1px dashed var(--hairline); border-radius: var(--r-md);
   color: var(--muted); font-size: var(--fs-sm);
   box-sizing: border-box; max-width: 100%;
 }
-.ip-widget:not(:defined) .ip-widget-fallback-link { color: var(--accent-ink); }
+.ip-widget:not(:defined):not(.ip-widget-baked) .ip-widget-fallback-link { color: var(--accent-ink); }
 
 /* Wide diagrams on a phone: shrinking a 700px figure to 390 makes its labels
    unreadable. Figures authored wider than the screen keep a readable minimum and
@@ -920,6 +927,56 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-ap-pricing .ip-btn { margin-top: auto; align-self: stretch; }
 .ip-ap-pricing > .ip-stack > :not(:is(h1, h2, h3, h4, .ip-prose)) + .ip-prose:last-child {
   font-size: var(--fs-sm); color: var(--muted); text-align: center; max-width: var(--mk-measure); margin-inline: auto;
+}
+
+/* ── CATALOGUE PRICE CARDS (rendered by PricingTemplate, never authored) ───────
+   These cards are not written in the CMS — they are baked from the product's
+   billing catalogue at publish time, so their COUNT is data rather than a layout
+   choice: five packages, three on-prem sizes. .ip-grid's auto-fill cannot serve
+   that: at some widths it leaves the fifth package dangling alone on a second
+   row, at others it opens empty tracks beside the three on-prem sizes. Both
+   counts are therefore pinned, with their own breaks.
+
+   ★ The free lanes are rendered LAST by the template, which is what makes the
+   three-across step read as "the three paid packages, and the free lanes under
+   them" rather than as an arbitrary wrap. Change the order there and this
+   breakpoint stops meaning anything. */
+.ip-grid-5up { grid-template-columns: repeat(5, 1fr); }
+@container (max-width: 76rem) { .ip-grid-5up { grid-template-columns: repeat(3, 1fr); } }
+@container (max-width: 44rem) { .ip-grid-5up { grid-template-columns: repeat(2, 1fr); } }
+@container (max-width: 28rem) { .ip-grid-5up { grid-template-columns: 1fr; } }
+.ip-grid-3up { grid-template-columns: repeat(3, 1fr); }
+@container (max-width: 46rem) { .ip-grid-3up { grid-template-columns: 1fr; } }
+
+/* The price is the line a reader came for: mono numeral, like every other figure
+   on the site, with the words around it left in the UI face so the eye lands on
+   the NUMBER and not on "from". */
+.ip-price {
+  margin: 0.15rem 0 0.25rem; font-family: var(--font-mono); font-size: var(--fs-2xl);
+  font-weight: 600; color: var(--heading); letter-spacing: -0.02em; line-height: 1.15;
+}
+.ip-price-lead, .ip-price-unit, .ip-price-allowance {
+  font-family: var(--font-ui); font-weight: 400; color: var(--muted); letter-spacing: 0;
+}
+.ip-price-lead { font-size: var(--fs-sm); margin-right: 0.35em; }
+.ip-price-unit { font-size: var(--fs-sm); margin-left: 0.35em; }
+/* A free lane's allowance is a sentence, not a suffix — on its own line, or it
+   pushes the word "Free" off a 230px card. */
+.ip-price-allowance { display: block; font-size: var(--fs-sm); line-height: 1.4; margin-top: 0.2rem; }
+
+/* The bucket ladder inside a card is reference, not headline: dense, tabular and
+   quiet. Its caption is .sr-only — printed, it was the same sentence on all five
+   cards. */
+.ip-price-table {
+  border-collapse: collapse; width: 100%; font-size: var(--fs-xs); line-height: 1.5;
+  margin-top: 0.25rem;
+}
+.ip-price-table :is(th, td) { padding: 0.3rem 0; border-bottom: 1px solid var(--hairline); vertical-align: baseline; }
+.ip-price-table tr:last-child :is(th, td) { border-bottom: 0; }
+.ip-price-table th { text-align: left; font-weight: 500; color: var(--muted); white-space: nowrap; }
+.ip-price-table td {
+  text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  color: var(--ink); white-space: nowrap;
 }
 
 /* ── TABLE LIST (canonical bulleted rendering of a CMS table) ───────────────── */

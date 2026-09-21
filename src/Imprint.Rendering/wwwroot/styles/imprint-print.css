@@ -91,6 +91,9 @@
      A HYDRATED widget is deliberately left alone: the link cards carry their destinations as visible text,
      which is real reference material on paper, and wd-embed renders an architecture diagram.
      (The previous rule here named .ip-widget-placeholder / .ip-placeholder — neither class exists in the
-     published markup, so it matched nothing. The real element is <cai-link-cards class="ip-widget">.) */
-  .ip-widget:not(:defined) { display: none !important; }
+     published markup, so it matched nothing. The real element is <cai-link-cards class="ip-widget">.)
+     ★ .ip-widget-baked is NEVER "not hydrated yet": it ships no bundle and never will be defined,
+     because its content was rendered into it at publish time. It is ordinary page content — hiding it
+     on paper would take the whole price table off a printed pricing page. */
+  .ip-widget:not(:defined):not(.ip-widget-baked) { display: none !important; }
 }
