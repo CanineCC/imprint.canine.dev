@@ -200,7 +200,16 @@
   position: sticky; top: 0; z-index: 40;
   display: flex; align-items: center; gap: 1.25rem; min-height: 62px;
   padding-inline: max(1.1rem, calc(50% - 570px));
-  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  /* ★★ 86% FAILED AA, AND ONLY WHILE SCROLLED — which is why every earlier axe pass called this
+     page clean. A translucent header takes its contrast from whatever happens to be BEHIND it, so
+     the same #616b76 nav text measured 5.1:1 at the top of the page and 4.2:1 once a mid-grey
+     section had scrolled under it, on every page of both sites. A ratio that depends on the scroll
+     position is not a ratio you can claim.
+     97% bounds the composite to within a few percent of --bg whatever passes beneath, so the
+     reading is deterministic and the blur still reads as glass. Darkening the TEXT instead would
+     not have fixed it: the band behind could be the dark CTA, and no single foreground passes on
+     both ends of that range. */
+  background: color-mix(in srgb, var(--bg) 97%, transparent);
   backdrop-filter: saturate(1.1) blur(8px);
   border-bottom: 1px solid var(--hairline);
 }
@@ -1095,7 +1104,16 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    empty three-track grid. The curated set is three once the composition endpoint is on prod;
    before that the older feed can honestly yield one, and one must not look broken. */
 .ip-mix-grid { grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); }
-.ip-mix { max-width: 34rem; margin-inline: auto; }
+
+/* ★★ `margin-inline: auto` WAS ON EVERY CARD, and on a grid item that cancels the default stretch:
+   each card then sized to its own CONTENT, so three cards in three equal 384px tracks measured
+   367 / 286 / 316 — the widths were tracking the length of the repository NAME. It reads as a
+   layout that has come loose, and no amount of looking at one card shows it.
+   The centring is only ever wanted for a LONE card in a full-width row, so it is asked for that
+   way; the max-width stays on all of them, because a single card stretched across 1152px is the
+   thing the centring was added to prevent. */
+.ip-mix { max-width: 34rem; }
+.ip-mix-grid:has(> .ip-mix:only-child) > .ip-mix { margin-inline: auto; }
 .ip-mix {
   display: grid; gap: 0.5rem; align-content: start;
   border: 1px solid var(--hairline); border-radius: var(--r-lg);
