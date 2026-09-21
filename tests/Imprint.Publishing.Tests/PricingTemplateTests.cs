@@ -55,8 +55,8 @@ public sealed class PricingTemplateTests
         var html = PricingTemplate.Render(Payload)!;
         var freeSection = html[html.IndexOf("Free OSS", StringComparison.Ordinal)..];
 
-        Assert.DoesNotContain("€0</strong> / month and up", freeSection, StringComparison.Ordinal);
-        Assert.Contains("€61</strong> / month and up", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("From <strong>€0</strong>", freeSection, StringComparison.Ordinal);
+        Assert.Contains("From <strong>€61</strong> a month", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -117,5 +117,42 @@ public sealed class PricingTemplateTests
         Assert.NotNull(html);
         Assert.DoesNotContain("<script>", html, StringComparison.Ordinal);
         Assert.Contains("&lt;script&gt;", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_free_lane_says_what_is_free_and_what_comes_after()
+    {
+        // "From €0 a month" is technically true and reads as a sales line. The lane is free up to an
+        // allowance and then it is not, and both halves come from the catalogue.
+        var payload = """
+            {"cohorts":[{"key":"personal","name":"Student","tagline":"t","fromEur":"\u20AC0",
+             "isFlatPrice":false,"modules":[],
+             "buckets":[{"key":"personal","lineScansPerMonth":50000,"baseEur":"\u20AC0"},
+                        {"key":"Starter","lineScansPerMonth":250000,"baseEur":"\u20AC11"}]}],
+             "onPrem":[]}
+            """;
+
+        var html = PricingTemplate.Render(payload)!;
+
+        Assert.Contains("Free up to 50,000 lines a month", html, StringComparison.Ordinal);
+        Assert.Contains("then from <strong>€11</strong>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("From <strong>€0</strong>", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_paid_package_says_from_its_entry_price()
+    {
+        var html = PricingTemplate.Render(Payload)!;
+
+        Assert.Contains("From <strong>€61</strong> a month", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_bucket_reads_as_one_fact_with_the_price_on_the_right()
+    {
+        var html = PricingTemplate.Render(Payload)!;
+
+        Assert.Contains("XXS · 1,000,000", html, StringComparison.Ordinal);
+        Assert.Contains("text-align:right", html, StringComparison.Ordinal);
     }
 }
