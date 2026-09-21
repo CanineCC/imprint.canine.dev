@@ -154,7 +154,7 @@ public sealed class ImprintAuthoringMcpTools
     }
 
     [McpServerTool(Name = "get_site")]
-    [Description("One site's chrome: locales, navigation (with groups and children), footer link groups, the fine-print copy line and the theme (colour tokens and typography). Read this before set_navigation, set_copy_line or set_typography — each carries the whole value, so you edit what you read back.")]
+    [Description("One site's chrome: locales, navigation (with groups and children), footer link groups, the fine-print copy line, the llms.txt preamble and excluded paths, and the theme (colour tokens and typography). Read this before set_navigation, set_copy_line, set_llms_preamble, set_llms_excluded_paths or set_typography — each carries the whole value, so you edit what you read back.")]
     public static object GetSite(
         [Description("The site id.")] string siteId,
         SiteOverview sites, PageList pages)
@@ -171,6 +171,12 @@ public sealed class ImprintAuthoringMcpTools
             defaultLocale = site.DefaultLocale.Value,
             locales = site.Locales.Select(l => l.Value).ToList(),
             copyLine = site.CopyLine is null ? null : Localized(site.CopyLine.Text),
+            // The llms.txt settings are READ here because set_llms_preamble replaces the whole value:
+            // without a read there is no way to amend a preamble, only to overwrite one blind, and the
+            // Watchdog preamble alone is ~20 KB of hand-written copy. Same reason the navigation and
+            // footer are returned whole — you edit what you read back.
+            llmsPreamble = site.LlmsPreamble,
+            llmsExcludedPaths = site.LlmsExcludedPaths.ToList(),
             navigation = site.Navigation.Select(item => (object)new
             {
                 label = item.Label is null ? null : Localized(item.Label),

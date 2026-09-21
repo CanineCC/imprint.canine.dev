@@ -1,5 +1,7 @@
 using Imprint.Editor.Api;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using ModelContextProtocol.Server;
 
 namespace Imprint.Editor.Mcp;
 
@@ -20,6 +22,9 @@ public static class ImprintAuthoringMcpServer
         services.AddMcpServer()
             .WithHttpTransport()
             .WithTools<ImprintAuthoringMcpTools>();
+        // A tool that throws must SAY what it threw: this surface is driven off-network, so the caller
+        // cannot read the host journal the SDK's opaque string sends them to. See McpToolFailureFilter.
+        services.AddOptions<McpServerOptions>().Configure<ILoggerFactory>(McpToolFailureFilter.Install);
         return services;
     }
 
