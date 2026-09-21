@@ -96,9 +96,10 @@ public static class BandScaleTemplate
             }
             else
             {
-                html.Append("<p class=\"ip-rung-example ip-rung-empty\">")
-                    .Append("No published survey sits here — a published survey is a repository's best run, ")
-                    .Append("and a regression is never published.</p>");
+                // ★ The REASON is stated once, in the section's lede. Repeating it on every empty
+                //   rung printed the same two-line sentence twice under the ladder and read as a
+                //   fault rather than as a fact about the corpus.
+                html.Append("<p class=\"ip-rung-example ip-rung-empty\">No published survey in this band.</p>");
             }
 
             html.Append("</div>");
