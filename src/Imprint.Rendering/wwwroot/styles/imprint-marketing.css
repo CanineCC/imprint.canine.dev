@@ -1091,7 +1091,11 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 /* The file mix: one COLUMN PER SCAN, so the trend the copy promises is the picture.
    The first replacement drew a single three-segment bar per repository — a hairline that
    said nothing was changing, which is the opposite of the section's argument. */
-.ip-mix-grid { --ip-min-item: 300px; }
+/* auto-FIT, so a row of one is a centred card rather than a card in the left third of an
+   empty three-track grid. The curated set is three once the composition endpoint is on prod;
+   before that the older feed can honestly yield one, and one must not look broken. */
+.ip-mix-grid { grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); }
+.ip-mix { max-width: 34rem; margin-inline: auto; }
 .ip-mix {
   display: grid; gap: 0.5rem; align-content: start;
   border: 1px solid var(--hairline); border-radius: var(--r-lg);
