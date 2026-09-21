@@ -20,8 +20,16 @@ namespace Imprint.Publishing;
 /// </remarks>
 public static class PricingTemplate
 {
-    /// <summary>The template name a widget declares to select this renderer.</summary>
+    /// <summary>The packages — cohorts, their modules and their size buckets.</summary>
     public const string Name = "pricing";
+
+    /// <summary>
+    /// The self-hosted rows only. A SEPARATE template because the page keeps them in their own
+    /// section with its own heading and copy: one template rendering both would either duplicate the
+    /// on-prem table or force the page to be restructured around what the renderer happens to emit.
+    /// The page's shape is the page's business.
+    /// </summary>
+    public const string OnPremName = "pricing-onprem";
 
     /// <summary>
     /// The catalogue as imprint markup, or null when the payload carries no packages — an empty
@@ -113,21 +121,6 @@ public static class PricingTemplate
 
         html.Append("</div>");
 
-        if (root.TryGetProperty("onPrem", out var onPrem) && onPrem.ValueKind == JsonValueKind.Array
-            && onPrem.EnumerateArray().Any())
-        {
-            html.Append("<div class=\"ip-prose\"><p><strong>Self-hosted</strong> — the whole product inside your own network, billed per year.</p></div>");
-            html.Append("<table><thead><tr><th>Package</th><th>Allowance</th><th>Price a year</th></tr></thead><tbody>");
-            foreach (var row in onPrem.EnumerateArray())
-            {
-                html.Append("<tr><td>").Append(Esc(Str(row, "name"))).Append("</td><td>")
-                    .Append(Esc(YearlyAllowance(row))).Append("</td><td>")
-                    .Append(Esc(Eur(row, "pricePerYearEur"))).Append("</td></tr>");
-            }
-
-            html.Append("</tbody></table>");
-        }
-
         if (root.TryGetProperty("distribution", out var distribution)
             && distribution.ValueKind == JsonValueKind.String
             && distribution.GetString() is { Length: > 0 } sentence)
@@ -136,6 +129,43 @@ public static class PricingTemplate
         }
 
         return html.ToString();
+    }
+
+    /// <summary>The self-hosted rows as a table, or null when there are none to show.</summary>
+    public static string? RenderOnPrem(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        JsonElement root;
+        try
+        {
+            root = JsonDocument.Parse(json).RootElement;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+
+        if (!root.TryGetProperty("onPrem", out var onPrem)
+            || onPrem.ValueKind != JsonValueKind.Array
+            || !onPrem.EnumerateArray().Any())
+        {
+            return null;
+        }
+
+        var html = new StringBuilder();
+        html.Append("<table><thead><tr><th>Package</th><th>Allowance a year</th><th>Price a year</th></tr></thead><tbody>");
+        foreach (var row in onPrem.EnumerateArray())
+        {
+            html.Append("<tr><td>").Append(Esc(Str(row, "name"))).Append("</td><td>")
+                .Append(Esc(YearlyAllowance(row))).Append("</td><td>")
+                .Append(Esc(Eur(row, "pricePerYearEur"))).Append("</td></tr>");
+        }
+
+        return html.Append("</tbody></table>").ToString();
     }
 
     private static string Str(JsonElement e, string name) =>

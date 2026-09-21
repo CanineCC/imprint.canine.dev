@@ -1369,5 +1369,21 @@
         "label": "Watchdog base URL"
       }
     ]
+  },
+  {
+    "tag": "wd-pricing-onprem",
+    "name": "On-prem pricing (rendered here)",
+    "description": "The self-hosted annual packages, fetched as data from Watchdog and rendered in this site's own markup at publish time.",
+    "bundle": "",
+    "placeholder": "Self-hosted pricing is published here.",
+    "prerender": "{base}/api/public/pricing",
+    "prerenderTemplate": "pricing-onprem",
+    "fallbackHref": "{base}/embed/onprem",
+    "props": [
+      {
+        "name": "base",
+        "label": "Watchdog base URL"
+      }
+    ]
   }
 ]

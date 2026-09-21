@@ -62,11 +62,29 @@ public sealed class PricingTemplateTests
     [Fact]
     public void An_unlimited_on_prem_allowance_says_so_rather_than_going_blank()
     {
-        var html = PricingTemplate.Render(Payload)!;
+        var html = PricingTemplate.RenderOnPrem(Payload)!;
 
         Assert.Contains("600,000,000 line-scans", html, StringComparison.Ordinal);
         Assert.Contains("Unlimited", html, StringComparison.Ordinal);
         Assert.Contains("€100,000", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_packages_template_leaves_on_prem_to_its_own_section()
+    {
+        // The page keeps self-hosted in a section with its own heading and copy. One template
+        // rendering both would duplicate the table or dictate the page's shape.
+        var packages = PricingTemplate.Render(Payload)!;
+
+        Assert.DoesNotContain("On-prem", packages, StringComparison.Ordinal);
+        Assert.DoesNotContain("€100,000", packages, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_payload_with_no_on_prem_rows_renders_nothing()
+    {
+        Assert.Null(PricingTemplate.RenderOnPrem("{\"cohorts\":[],\"onPrem\":[]}"));
+        Assert.Null(PricingTemplate.RenderOnPrem(null));
     }
 
     [Fact]

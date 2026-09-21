@@ -13,6 +13,7 @@ public static class PrerenderTemplates
     public static string? Render(string? name, string? body) => name switch
     {
         PricingTemplate.Name => PricingTemplate.Render(body),
+        PricingTemplate.OnPremName => PricingTemplate.RenderOnPrem(body),
         _ => null,
     };
 }
