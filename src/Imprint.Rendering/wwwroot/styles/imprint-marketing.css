@@ -1089,6 +1089,33 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-mix-key-fine::before { background: var(--band-fair); }
 .ip-mix-key-slop::before { background: var(--band-critical); }
 
+/* ── THE BAND SCALE (the five rungs, pinned with real published surveys) ───────
+   A row per band, worst at the bottom, so the scale reads as a ladder rather than as a
+   list. The rung an empty band gets is deliberately still a rung: the published set is
+   each repository's peak run, so the bottom is usually empty, and hiding those rows
+   would turn a five-band scale into a three-band one. */
+.ip-ladder { gap: 0; border: 1px solid var(--hairline); border-radius: var(--r-lg); overflow: hidden; }
+/* A grid, not a flex row: the scores have to line up in a column, and a wrapping flex
+   row puts each one wherever its repository name happens to end. */
+.ip-rung {
+  display: grid; grid-template-columns: 11rem minmax(0, 1fr); align-items: baseline; gap: 0.3rem 1rem;
+  padding: 0.7rem 1rem; border-bottom: 1px solid var(--hairline); background: var(--surface);
+}
+@container (max-width: 34rem) { .ip-rung { grid-template-columns: 1fr; } }
+.ip-rung:last-child { border-bottom: 0; }
+.ip-rung-band { margin: 0; display: flex; align-items: baseline; gap: 0.5rem; }
+.ip-rung-band .ip-band { margin-left: 0; }
+.ip-rung-range { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; }
+.ip-rung-example {
+  margin: 0; display: flex; align-items: baseline; justify-content: space-between;
+  gap: 0.6rem; font-size: var(--fs-sm);
+}
+.ip-rung-example a { color: var(--accent-ink); text-decoration: none; overflow-wrap: anywhere; }
+.ip-rung-example a:hover { text-decoration: underline; }
+.ip-rung-score { font-size: var(--fs-xl); }
+/* An empty rung is quiet, not hidden — it is still a fact about the published set. */
+.ip-rung-empty { color: var(--muted); font-size: var(--fs-xs); max-width: 34rem; }
+
 /* ── THE ARCHITECTURE MAP (inlined SVG; the product draws it, this site paints it) ──
    The drawing arrives class-driven with its own <style> block, which is stripped before the
    figure is inlined — a <style> inside an inlined SVG is document CSS, not figure CSS, so a

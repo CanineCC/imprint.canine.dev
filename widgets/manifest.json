@@ -1489,5 +1489,21 @@
         "label": "Repository name"
       }
     ]
+  },
+  {
+    "tag": "wd-band-scale",
+    "name": "The band scale (rendered here)",
+    "description": "The fixed five-band CAI scale with a real published survey pinned to each band that has one. The band words and hues are this site's; the CUTLINES come from the payload, because they are scoring data and a fourth hand-written copy of them is how a scale drifts.",
+    "bundle": "",
+    "placeholder": "The band scale is shown here.",
+    "prerender": "{base}/api/public/reports",
+    "prerenderTemplate": "band-scale",
+    "fallbackHref": "{base}/embed/band-scale",
+    "props": [
+      {
+        "name": "base",
+        "label": "Watchdog base URL"
+      }
+    ]
   }
 ]

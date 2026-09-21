@@ -30,6 +30,7 @@ public static class PrerenderTemplates
         ScoreCardTemplate.OneName => ScoreCardTemplate.RenderOne(body, OriginOf(url)),
         FindingsTemplate.Name => FindingsTemplate.Render(body, OriginOf(url)),
         CompositionTemplate.Name => CompositionTemplate.Render(body, OriginOf(url)),
+        BandScaleTemplate.Name => BandScaleTemplate.Render(body, OriginOf(url)),
         ArchitectureSvgTemplate.Name => ArchitectureSvgTemplate.Render(body),
         _ => null,
     };

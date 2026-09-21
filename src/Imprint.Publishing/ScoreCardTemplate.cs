@@ -82,13 +82,17 @@ public static class ScoreCardTemplate
             var band = Str(report, "band");
             var key = BandKey(band);
             var hex = key is null ? HexColour(Str(report, "bandHex")) : null;
-            var tint = key is not null ? $" ink-{key}" : "";
             var style = hex is not null ? $" style=\"color:{hex}\"" : "";
 
             html.Append("<div class=\"ip-stack ip-survey\">");
             html.Append("<h3>").Append(Esc(Str(report, "display"))).Append("</h3>");
 
-            html.Append("<p class=\"ip-cai\"><span class=\"ip-cai-score").Append(tint).Append('"').Append(style)
+            // ★ The SCORE is not tinted and the band word is. Two coloured things side by side fight,
+            //   and the earlier attempt to tint both was silently ignored anyway: `.ink-exemplary` is
+            //   an existing (0,1,0) utility defined far earlier in this sheet, so `.ip-cai-score`
+            //   tied on specificity and won on order. A class that renders nothing is worse than no
+            //   class — it reads as a decision that was taken.
+            html.Append("<p class=\"ip-cai\"><span class=\"ip-cai-score\"").Append(style)
                 .Append('>').Append(Esc(Score(score))).Append("</span>")
                 .Append("<span class=\"ip-cai-unit\">/ 100</span>");
             if (band.Length > 0)
