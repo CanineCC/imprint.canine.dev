@@ -220,7 +220,7 @@ public sealed class SitePublisher(
                 }
 
                 var rendered = template.Length > 0
-                    ? PrerenderTemplates.Render(template, body)
+                    ? PrerenderTemplates.Render(template, body, url)
                     : WidgetPrerender.Reduce(body);
 
                 if (rendered is { Length: > 0 })

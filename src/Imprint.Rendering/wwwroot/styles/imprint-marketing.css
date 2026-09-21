@@ -979,6 +979,114 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
   color: var(--ink); white-space: nowrap;
 }
 
+/* ── PUBLISHED-SURVEY CARDS, FINDINGS AND THE FILE MIX (prerendered, not authored) ──
+   Everything below replaces an iframe. It is styled HERE, self-contained, rather than by
+   the section's appearance: these blocks are dropped onto pages with four different
+   appearances, and a card that is bordered on one page and naked on the next is how the
+   embed got framed in the first place. */
+.ip-grid-4up { grid-template-columns: repeat(4, 1fr); }
+@container (max-width: 62rem) { .ip-grid-4up { grid-template-columns: repeat(2, 1fr); } }
+@container (max-width: 30rem) { .ip-grid-4up { grid-template-columns: 1fr; } }
+/* auto-FIT, not auto-fill: the full gallery is however many surveys are published, and an
+   auto-fill track that nothing lands in leaves a hole the width of a card. 280px, not 250:
+   at 250 a repository name is five columns wide and breaks mid-word — "ShowMeYourCodeYouT
+   / ube/cqrs-and-event-sourcing-in-kotlin". */
+.ip-grid-cards { grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); }
+
+.ip-survey, .ip-mix {
+  border: 1px solid var(--hairline); border-radius: var(--r-lg);
+  padding: 1.1rem 1.25rem; background: var(--surface); gap: 0.4rem;
+  min-width: 0;
+}
+/* ★ NO overflow-wrap HERE. The sheet already folds every heading with `anywhere`, and `break-word`
+   is refused sheet-wide by a test with a measured reason: it wraps identically to the eye but does
+   NOT reduce min-content, so a grid or table track keeps stretching to hold the token — which is the
+   horizontal-scrollbar bug, not a fix for it. A repository name therefore breaks mid-word sometimes;
+   that is the accepted cost, and widening the track is the lever, not the wrap mode.
+   ★ Two lines reserved: a repository name is one line or two, and without the floor every card in a
+   row put its score at a different height. */
+.ip-survey h3 {
+  font-size: var(--fs-lg); font-weight: 600; margin: 0;
+  line-height: 1.3; min-height: 2.6em;
+}
+
+/* The score: mono numeral, band word beside it. */
+.ip-cai { margin: 0.1rem 0 0.2rem; display: flex; align-items: baseline; gap: 0.4rem; flex-wrap: wrap; }
+.ip-cai-score {
+  font-family: var(--font-mono); font-size: var(--fs-2xl); font-weight: 600;
+  letter-spacing: -0.02em; line-height: 1.1; color: var(--heading);
+}
+.ip-cai-unit { font-size: var(--fs-sm); color: var(--muted); }
+.ip-band {
+  margin-left: auto; font-size: var(--fs-2xs); font-weight: 600; letter-spacing: 0.02em;
+  text-transform: uppercase; white-space: nowrap; color: var(--heading);
+}
+.ip-band-exemplary { color: var(--band-exemplary-text); }
+.ip-band-healthy { color: var(--band-healthy-text); }
+.ip-band-fair { color: var(--band-fair-text); }
+.ip-band-poor { color: var(--band-poor-text); }
+.ip-band-critical { color: var(--band-critical-text); }
+
+/* A 0–100 track. Flat, not banded — this site is not given the cutlines, and drawing a
+   ladder from remembered numbers is how a fourth copy of them gets born. */
+.ip-cai-track, .ip-mix-track {
+  display: flex; height: 6px; border-radius: 999px; overflow: hidden;
+  background: var(--ip-surface-alt, var(--hairline));
+}
+/* ★ The band class has to be spelled out WITH .ip-cai-fill. `.fill-exemplary` is the site's
+   existing (0,1,0) utility and it is defined far earlier in this sheet, so a bare
+   `.ip-cai-fill { background }` here ties on specificity and wins on order — every bar drew
+   in the accent blue and the band hue was silently ignored. */
+.ip-cai-fill { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+.ip-cai-fill.fill-exemplary { background: var(--band-exemplary); }
+.ip-cai-fill.fill-healthy { background: var(--band-healthy); }
+.ip-cai-fill.fill-fair { background: var(--band-fair); }
+.ip-cai-fill.fill-poor { background: var(--band-poor); }
+.ip-cai-fill.fill-critical { background: var(--band-critical); }
+
+.ip-survey-link { margin: 0.35rem 0 0; font-size: var(--fs-sm); }
+.ip-survey-link a { color: var(--accent-ink); text-decoration: none; font-weight: 500; }
+.ip-survey-link a:hover { text-decoration: underline; }
+
+/* Findings: lens · dimension, then the sentence, then where. Three lines, because those are
+   three different KINDS of fact and running them together is what made the frame unreadable. */
+/* ★ min-width: 0 on the grid ITEMS, not just the container. A grid item's automatic minimum
+   size is its content, so one unbreakable file path — and every file path is one — pushed the
+   track wider than the card and gave the whole PAGE a horizontal scrollbar at tablet width. */
+.ip-findings { list-style: none; margin: 0.2rem 0 0; padding: 0; display: grid; gap: 0.7rem; min-width: 0; }
+.ip-findings li { display: grid; gap: 0.15rem; min-width: 0; }
+.ip-finding-lens {
+  font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--accent-ink); font-weight: 600;
+}
+.ip-finding-title { font-size: var(--fs-sm); line-height: 1.45; color: var(--ink); }
+.ip-finding-where {
+  font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+/* The file mix. The bar is decoration over the legend, never instead of it. */
+/* Two across where there is room: a full-width row holding one thin bar reads as a loading
+   skeleton, and the comparison between repositories is the whole point of the section. */
+.ip-mix-list {
+  display: grid; gap: var(--ip-space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+}
+.ip-mix { display: grid; gap: 0.45rem; align-content: start; }
+.ip-mix-name { margin: 0; font-size: var(--fs-sm); font-weight: 600; color: var(--heading); overflow-wrap: anywhere; }
+.ip-mix-name a { color: inherit; text-decoration: none; }
+.ip-mix-name a:hover { text-decoration: underline; }
+.ip-mix-seg { display: block; height: 100%; }
+.ip-mix-seg-brilliant { background: var(--band-exemplary); }
+.ip-mix-seg-fine { background: var(--band-fair); }
+.ip-mix-seg-slop { background: var(--band-critical); }
+.ip-mix-legend { margin: 0; display: flex; flex-wrap: wrap; gap: 0.15rem 1rem; font-size: var(--fs-xs); color: var(--muted); }
+.ip-mix-key { display: inline-flex; align-items: center; gap: 0.35rem; }
+.ip-mix-key::before { content: ""; width: 9px; height: 9px; border-radius: 2px; flex: none; }
+.ip-mix-key-brilliant::before { background: var(--band-exemplary); }
+.ip-mix-key-fine::before { background: var(--band-fair); }
+.ip-mix-key-slop::before { background: var(--band-critical); }
+
 /* ── TABLE LIST (canonical bulleted rendering of a CMS table) ───────────────── */
 .ip-ap-table-list > .ip-stack { align-items: stretch; }
 /* The measure cap above applies to every .ip-prose, which silently squeezed the TABLE to a reading

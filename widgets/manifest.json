@@ -1385,5 +1385,69 @@
         "label": "Watchdog base URL"
       }
     ]
+  },
+  {
+    "tag": "wd-surveys",
+    "name": "Published surveys — a short strip (rendered here)",
+    "description": "The four best published surveys: repository, CAI, band, lenses measured, and a link to read the whole thing. Fetched as data from Watchdog and rendered in this site's own markup at publish time — no frame, no bundle, no script, and every number readable by a crawler.",
+    "bundle": "",
+    "placeholder": "Published surveys are listed here.",
+    "prerender": "{base}/api/public/reports",
+    "prerenderTemplate": "score-cards",
+    "fallbackHref": "{base}/embed/score-card",
+    "props": [
+      {
+        "name": "base",
+        "label": "Watchdog base URL"
+      }
+    ]
+  },
+  {
+    "tag": "wd-surveys-all",
+    "name": "Published surveys — the whole curated feed (rendered here)",
+    "description": "Every survey in the curated public feed, best first. Same data and same markup as the short strip; a separate widget because the bake is keyed by URL and template, so two lengths of the same list need two template names.",
+    "bundle": "",
+    "placeholder": "Published surveys are listed here.",
+    "prerender": "{base}/api/public/reports",
+    "prerenderTemplate": "score-cards-full",
+    "fallbackHref": "{base}/embed/score-card",
+    "props": [
+      {
+        "name": "base",
+        "label": "Watchdog base URL"
+      }
+    ]
+  },
+  {
+    "tag": "wd-findings",
+    "name": "Real findings (rendered here)",
+    "description": "Findings from published surveys — lens, dimension, the sentence itself, and the file and line it names. Fetched as data from Watchdog and rendered in this site's own markup at publish time, so the evidence for 'findings a scanner can't produce' is finally as readable as the claim.",
+    "bundle": "",
+    "placeholder": "Real findings are listed here.",
+    "prerender": "{base}/api/public/findings",
+    "prerenderTemplate": "findings",
+    "fallbackHref": "{base}/embed/findings",
+    "props": [
+      {
+        "name": "base",
+        "label": "Watchdog base URL"
+      }
+    ]
+  },
+  {
+    "tag": "wd-file-mix",
+    "name": "File quality mix (rendered here)",
+    "description": "Brilliant / fine / slop per published repository, as a bar with the three shares printed beside it. Fetched as data from Watchdog and rendered in this site's own markup at publish time.",
+    "bundle": "",
+    "placeholder": "The file-quality mix is shown here.",
+    "prerender": "{base}/api/public/insights",
+    "prerenderTemplate": "composition",
+    "fallbackHref": "{base}/embed/composition",
+    "props": [
+      {
+        "name": "base",
+        "label": "Watchdog base URL"
+      }
+    ]
   }
 ]
