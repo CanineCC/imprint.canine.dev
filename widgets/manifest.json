@@ -377,7 +377,7 @@
       },
       {
         "name": "tip",
-        "label": "Tip beside the kicker \u2014 the (i) explanation for the section. Only shown with a kicker.",
+        "label": "Tip beside the kicker — the (i) explanation for the section. Only shown with a kicker.",
         "type": "text",
         "default": ""
       },
@@ -407,7 +407,7 @@
       },
       {
         "name": "figures",
-        "label": "Endpoint pairs (JSON array of {label, from:{value,sub}, to:{value,sub}}) \u2014 the movement stated as text beside the chart: the label as an eyebrow, then \"from \u2192 to\" in the mono face, then the population each end was taken over. One basis line when both ends share it, two when they differ.",
+        "label": "Endpoint pairs (JSON array of {label, from:{value,sub}, to:{value,sub}}) — the movement stated as text beside the chart: the label as an eyebrow, then \"from → to\" in the mono face, then the population each end was taken over. One basis line when both ends share it, two when they differ.",
         "type": "text",
         "default": ""
       },
@@ -542,7 +542,7 @@
       },
       {
         "name": "tip",
-        "label": "Tip beside the kicker \u2014 the (i) explanation for the section. Only shown with a kicker.",
+        "label": "Tip beside the kicker — the (i) explanation for the section. Only shown with a kicker.",
         "type": "text",
         "default": ""
       },
@@ -577,7 +577,10 @@
         "name": "layout",
         "label": "Density: head (masthead row, accent rule) | lead (findings grid)",
         "type": "choice",
-        "options": ["lead", "head"],
+        "options": [
+          "lead",
+          "head"
+        ],
         "default": "lead"
       },
       {
@@ -588,7 +591,7 @@
       },
       {
         "name": "tip",
-        "label": "Tip beside the kicker \u2014 the (i) explanation for the section. Only shown with a kicker (and, on cai-figure-band, only in layout=lead).",
+        "label": "Tip beside the kicker — the (i) explanation for the section. Only shown with a kicker (and, on cai-figure-band, only in layout=lead).",
         "type": "text",
         "default": ""
       },
@@ -629,7 +632,10 @@
         "name": "layout",
         "label": "Shape: table (a row per entry, with columns) | wide (one full-width bar)",
         "type": "choice",
-        "options": ["table", "wide"],
+        "options": [
+          "table",
+          "wide"
+        ],
         "default": "table"
       },
       {
@@ -664,7 +670,7 @@
       },
       {
         "name": "tip",
-        "label": "Tip beside the kicker \u2014 the (i) explanation for the section. Only shown with a kicker (and, on cai-figure-band, only in layout=lead).",
+        "label": "Tip beside the kicker — the (i) explanation for the section. Only shown with a kicker (and, on cai-figure-band, only in layout=lead).",
         "type": "text",
         "default": ""
       },
@@ -1345,6 +1351,22 @@
           "watchdog",
           "assay"
         ]
+      }
+    ]
+  },
+  {
+    "tag": "wd-pricing",
+    "name": "Pricing (rendered here)",
+    "description": "The package catalogue, fetched as data from Watchdog and rendered in this site's own markup at publish time. No frame, no island, no script.",
+    "bundle": "",
+    "placeholder": "Pricing is published here.",
+    "prerender": "{base}/api/public/pricing",
+    "prerenderTemplate": "pricing",
+    "fallbackHref": "{base}/embed/pricing",
+    "props": [
+      {
+        "name": "base",
+        "label": "Watchdog base URL"
       }
     ]
   }

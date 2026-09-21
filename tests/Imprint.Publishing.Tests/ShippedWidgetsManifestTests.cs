@@ -110,6 +110,21 @@ public sealed class ShippedWidgetsManifestTests
 
         foreach (var widget in widgets)
         {
+            // ★ A SERVER-RENDERED WIDGET HAS NO BUNDLE, AND MUST NOT. Declaring a PrerenderTemplate
+            //   means the publisher renders its markup and emits NO island — so there is nothing to
+            //   hydrate and no script to ship. Requiring a bundle here would force us to publish a
+            //   file whose only purpose would be to satisfy this check, and whose presence would be
+            //   the very thing (a hydrating island over already-rendered markup) the template exists
+            //   to avoid.
+            if (widget.PrerenderTemplate is { Length: > 0 })
+            {
+                Assert.True(
+                    string.IsNullOrEmpty(widget.Bundle),
+                    $"{widget.Tag} declares a server-side template AND a bundle — it can have one or the other, "
+                    + "or an island will hydrate over the markup the template rendered.");
+                continue;
+            }
+
             var bundlePath = Path.Combine(widgetsDir, widget.Bundle);
             if (!File.Exists(bundlePath))
             {
