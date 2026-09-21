@@ -44,6 +44,7 @@ public static class PrerenderTemplates
     public static string? RenderFromProps(string? name, Func<string, string?> props) => name switch
     {
         LinkCardsTemplate.Name => LinkCardsTemplate.Render(props),
+        FlowTemplate.Name => FlowTemplate.Render(props),
         _ => null,
     };
 

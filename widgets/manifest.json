@@ -755,8 +755,8 @@
     "tag": "cai-evidence-flow",
     "name": "CAI evidence flow",
     "description": "A left\u2192right node strip with arrow connectors and an optional dashed loop-back path \u2014 the produce \u2192 hold \u2192 consume / measure \u2192 fix \u2192 prove diagram. Nodes come from a JSON array of { title, body, tone }.",
-    "bundle": "cai-evidence-flow.js",
-    "placeholder": "Evidence flow diagram",
+    "bundle": "",
+    "placeholder": "The loop is described here.",
     "props": [
       {
         "name": "nodes",
@@ -805,7 +805,8 @@
           "cai"
         ]
       }
-    ]
+    ],
+    "propTemplate": "flow"
   },
   {
     "tag": "cai-c4-heat",

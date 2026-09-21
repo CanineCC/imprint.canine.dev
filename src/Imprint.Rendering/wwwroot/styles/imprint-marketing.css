@@ -1089,6 +1089,28 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-mix-key-fine::before { background: var(--band-fair); }
 .ip-mix-key-slop::before { background: var(--band-critical); }
 
+/* ── THE EVIDENCE FLOW (four steps, as an ordered list) ────────────────────────
+   An <ol> because the steps ARE ordered, and a row of boxes leaves that to visual
+   inference. The counter is drawn from the list, so it can never disagree with the order
+   the markup is in. */
+.ip-flow {
+  list-style: none; counter-reset: ip-flow; margin: 0; padding: 0;
+  display: grid; gap: var(--ip-space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+}
+.ip-flow-step {
+  counter-increment: ip-flow; display: grid; gap: 0.25rem; align-content: start;
+  border: 1px solid var(--hairline); border-radius: var(--r-lg);
+  padding: 0.9rem 1rem; background: var(--surface); min-width: 0;
+}
+.ip-flow-step::before {
+  content: counter(ip-flow); font-family: var(--font-mono); font-size: var(--fs-2xs);
+  font-weight: 600; color: var(--accent-ink);
+}
+.ip-flow-title { font-size: var(--fs-sm); font-weight: 600; color: var(--heading); line-height: 1.35; }
+.ip-flow-body { font-size: var(--fs-xs); color: var(--muted); line-height: 1.5; }
+.ip-flow-loop { margin: var(--ip-space-2) 0 0; font-size: var(--fs-sm); color: var(--muted); }
+
 /* ── FURTHER-READING CARDS (rendered from the node's own props) ────────────────
    A card per destination, its label above its note. The shadow-DOM version carried a mark
    per link; this one does not, and that is the trade: an icon is decoration and an href a
