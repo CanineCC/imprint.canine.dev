@@ -1273,13 +1273,20 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    also authored is a visible duplicate. Hide the section head for them — the
    widget's head is the canonical, faithfully-styled rendering. (LiveCard/hero score
    cards do NOT render a head, so ip-ap-live-card keeps its section head.) */
-.ip-ap-gallery > .ip-stack > :is(.ip-prose, h1, h2, h3),
-.ip-ap-band-scale > .ip-stack > :is(.ip-prose, h1, h2, h3),
-.ip-ap-composition > .ip-stack > :is(.ip-prose, h1, h2, h3),
-.ip-ap-flow > .ip-stack > :is(.ip-prose, h1, h2, h3),
-.ip-ap-c4-heat > .ip-stack > :is(.ip-prose, h1, h2, h3),
-.ip-ap-findings > .ip-stack > :is(.ip-prose, h1, h2, h3),
-.ip-ap-contact > .ip-stack > :is(.ip-prose, h1, h2, h3) {
+/* ★★ ONLY WHILE AN ISLAND IS RENDERING A HEAD OF ITS OWN. The premise above — "the widget
+   re-renders the kicker/heading/lede inside its shadow root, so the authored head is a visible
+   duplicate" — is FALSE for a baked widget: that one renders markup straight into the page and no
+   head at all. Without the :not(), this rule deleted the kicker, the heading AND the lede from
+   every section a bake was swapped into: /publicreports/ published 24 survey cards under nothing,
+   and /for-teams/ lost "How much of your codebase is slop — and how much is brilliant?" entirely.
+   Neither page reported an error; the copy was simply not there. */
+.ip-ap-gallery > .ip-stack:not(:has(> .ip-widget-baked)) > :is(.ip-prose, h1, h2, h3),
+.ip-ap-band-scale > .ip-stack:not(:has(> .ip-widget-baked)) > :is(.ip-prose, h1, h2, h3),
+.ip-ap-composition > .ip-stack:not(:has(> .ip-widget-baked)) > :is(.ip-prose, h1, h2, h3),
+.ip-ap-flow > .ip-stack:not(:has(> .ip-widget-baked)) > :is(.ip-prose, h1, h2, h3),
+.ip-ap-c4-heat > .ip-stack:not(:has(> .ip-widget-baked)) > :is(.ip-prose, h1, h2, h3),
+.ip-ap-findings > .ip-stack:not(:has(> .ip-widget-baked)) > :is(.ip-prose, h1, h2, h3),
+.ip-ap-contact > .ip-stack:not(:has(> .ip-widget-baked)) > :is(.ip-prose, h1, h2, h3) {
   display: none;
 }
 /* gallery + flow + bandscale + composition are wide, centered figures */
@@ -1293,6 +1300,12 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 /* a live/standalone score card is a single 460px card, centered */
 .ip-ap-live-card .ip-widget { max-width: min(460px, 100%); margin-inline: auto; }
 .ip-ap-contact .ip-widget { max-width: 40rem; margin-inline: auto; }
+/* ★ …but NOT a baked one. Every cap above is sized for a FIGURE dropped into a section — a framed
+   view is a picture on the page. Baked markup IS the section's content, and the section already
+   decided how wide the page should be: at 46rem the file-mix folded to two 362px columns inside a
+   1152px track with the rest of the row empty. Last in the file on purpose — it ties with each cap
+   on specificity and has to win. */
+[class*="ip-ap-"] .ip-widget-baked { max-width: none; margin-inline: 0; }
 /* ★ A CAPTION, which is what this size is for, sits under the thing it captions — a button row, a
    grid, a table, a figure, a code block. Keyed on "last in the section" alone it also caught the
    section's own body text whenever nothing happened to follow it, so two sections written identically

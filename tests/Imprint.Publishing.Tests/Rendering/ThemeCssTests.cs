@@ -512,6 +512,43 @@ public sealed class ThemeCssTests
         Assert.Contains("var(--ip-primary-strong, var(--ip-primary))", band, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// ★ The "hide the duplicate section head" rule exists because an ISLAND re-renders the kicker, heading
+    /// and lede inside its shadow root. A BAKED widget renders no head at all, so the same rule deletes the
+    /// section's own copy and publishes the cards under nothing — which is exactly what /publicreports/ and
+    /// /for-teams/ did, with no error anywhere. Every one of those selectors must exclude a baked widget.
+    /// </summary>
+    [Fact]
+    public void Hiding_a_sections_head_applies_only_where_an_island_renders_one()
+    {
+        var css = WithoutComments(ThemeCss.MarketingCss);
+
+        // Per RULE, not per line: the same selector shape is used elsewhere to set a measure, and a
+        // line-by-line check reads that as the defect. What matters is which selectors HIDE something.
+        foreach (var rule in css.Split('}'))
+        {
+            var brace = rule.IndexOf('{', StringComparison.Ordinal);
+            if (brace < 0 || !rule[brace..].Contains("display: none", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var selectors = rule[..brace];
+            if (!selectors.Contains("> .ip-stack", StringComparison.Ordinal)
+                || !selectors.Contains(":is(.ip-prose, h1, h2, h3)", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            Assert.True(
+                selectors.Contains(":not(:has(> .ip-widget-baked))", StringComparison.Ordinal),
+                $"A section head is hidden without excluding a baked widget: {selectors.Trim()}");
+        }
+
+        // And the exclusion is actually present, so the loop cannot pass by the rule having vanished.
+        Assert.Contains(".ip-stack:not(:has(> .ip-widget-baked)) > :is(.ip-prose, h1, h2, h3)", css);
+    }
+
     /// <summary>CSS with comments removed, so an assertion about the RULES cannot be satisfied — or defeated —
     /// by the prose explaining them.</summary>
     private static string WithoutComments(string css) =>
