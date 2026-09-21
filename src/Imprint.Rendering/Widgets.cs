@@ -65,7 +65,7 @@ public sealed record WidgetDescriptor
     public string Description { get; init; } = "";
 
     /// <summary>Relative bundle path inside the widgets directory, e.g. <c>x-countdown.js</c>.</summary>
-    public required string Bundle { get; init; }
+    public string Bundle { get; init; } = "";
 
     /// <summary>CSS aspect-ratio (e.g. <c>16 / 9</c>) reserved before hydration — zero layout shift.</summary>
     public string? AspectRatio { get; init; }
@@ -96,6 +96,18 @@ public sealed record WidgetDescriptor
     /// the last publish.</para>
     /// </summary>
     public string? Prerender { get; init; }
+
+    /// <summary>
+    /// Names a SERVER-SIDE template that turns the <see cref="Prerender"/> response into this site's
+    /// own markup at publish time — e.g. <c>pricing</c>.
+    /// <para>Declaring one changes the widget's nature: the fetched body is DATA, the rendered markup
+    /// is the element's visible content, and no island is emitted, so nothing hydrates and no iframe
+    /// is ever constructed. The element becomes a build-time include whose source of truth is another
+    /// service and whose presentation is entirely ours.</para>
+    /// <para>Without a template the fetched body is treated as HTML and reduced to a hidden,
+    /// machine-readable copy beside a live island — a different trade with a different purpose.</para>
+    /// </summary>
+    public string? PrerenderTemplate { get; init; }
 
     /// <summary>Hydrate immediately instead of on approach (for above-the-fold widgets).</summary>
     public bool Eager { get; init; }

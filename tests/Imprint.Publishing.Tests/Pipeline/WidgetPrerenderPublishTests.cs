@@ -128,4 +128,57 @@ public sealed class WidgetPrerenderPublishTests
 
         Assert.Contains("Loading the live view", host.ReadText("index.html"), StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task A_templated_widget_publishes_visible_markup_and_hydrates_nothing()
+    {
+        // ★ THE WHOLE POINT. No data-island means no script, which means no iframe — the prices are
+        //   in the page as the page's own markup, styled by the site's own stylesheet.
+        var payload = """
+            {"cohorts":[{"key":"teams","name":"Engineering teams","tagline":"t",
+             "fromEur":"\u20AC61","isFlatPrice":false,"modules":["Core survey"],
+             "buckets":[{"key":"XXS","lineScansPerMonth":1000000,"baseEur":"\u20AC245"}]}],
+             "onPrem":[]}
+            """;
+        var source = new StubSource(payload);
+        var host = new PublishingTestHost(configure: services =>
+            services.AddSingleton<IWidgetPrerenderSource>(source));
+
+        var manifest = new[]
+        {
+            new
+            {
+                tag = "wd-pricing",
+                name = "Pricing",
+                bundle = "",
+                placeholder = "Prices load here",
+                prerender = "https://app.example.test/api/public/pricing",
+                prerenderTemplate = "pricing",
+                props = Array.Empty<object>(),
+            },
+        };
+        File.WriteAllText(
+            Path.Combine(host.WidgetsDirectory, "manifest.json"),
+            System.Text.Json.JsonSerializer.Serialize(manifest));
+
+        await using var _ = host;
+        var siteId = await host.CreateSite();
+        var homeId = await host.CreatePage(siteId, "home", "Home");
+        await host.AddSection(homeId, new SectionNode
+        {
+            Id = NodeId.New(),
+            Children = NodeList.Of(new WidgetNode { Id = NodeId.New(), Tag = "wd-pricing" }),
+        });
+        await host.SetNavigation(siteId, homeId);
+        await host.Publish(homeId);
+        await host.Publisher.Synchronize();
+
+        var html = host.ReadText("index.html");
+
+        Assert.Contains("Engineering teams", html, StringComparison.Ordinal);
+        Assert.Contains("\u20AC245", html, StringComparison.Ordinal);
+        Assert.Contains("class=\"ip-grid\"", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-island", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Prices load here", html, StringComparison.Ordinal);
+    }
 }

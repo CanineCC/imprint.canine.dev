@@ -191,6 +191,7 @@ public sealed class SitePublisher(
             }
 
             var wanted = new HashSet<string>(StringComparer.Ordinal);
+            var templateOf = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var page in pages)
             {
                 foreach (var widget in NodesOf(page).OfType<WidgetNode>())
@@ -199,6 +200,7 @@ public sealed class SitePublisher(
                         && WidgetTemplate.Resolve(descriptor, descriptor.Prerender, widget.Props.Get) is { } url)
                     {
                         wanted.Add(url);
+                        templateOf[url] = descriptor.PrerenderTemplate ?? "";
                     }
                 }
             }
@@ -206,10 +208,13 @@ public sealed class SitePublisher(
             var baked = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var url in wanted.Order(StringComparer.Ordinal))
             {
-                var html = await prerenderSource.FetchAsync(new Uri(url), ct).ConfigureAwait(false);
-                if (WidgetPrerender.Reduce(html) is { } reduced)
+                var body = await prerenderSource.FetchAsync(new Uri(url), ct).ConfigureAwait(false);
+                var rendered = templateOf.TryGetValue(url, out var template) && template.Length > 0
+                    ? PrerenderTemplates.Render(template, body)
+                    : WidgetPrerender.Reduce(body);
+                if (rendered is { Length: > 0 })
                 {
-                    baked[url] = reduced;
+                    baked[url] = rendered;
                 }
             }
 
@@ -1212,6 +1217,21 @@ public sealed class SitePublisher(
             // and every later push is stored and never re-rendered: the producer reports "955 changed" and
             // the site keeps serving the first version until something site-wide (a chrome edit, a CSS or
             // renderer change) happens to re-render everything. Its content hash IS its version.
+            // ★ WHAT MAKES "UP TO DATE" WORK WITHOUT ANYONE REPUBLISHING BY HAND. A widget bake is
+            // fetched from another service, so its content can change while nothing in this site's
+            // own data moved. Hashing it into the page's dependencies means the next pass sees the
+            // page as stale and re-renders it — any pass, from any trigger, converging on current
+            // data rather than on whoever remembered to press publish.
+            foreach (var widget in NodesOf(page).OfType<WidgetNode>())
+            {
+                if (_descriptors.GetValueOrDefault(widget.Tag) is { Prerender.Length: > 0 } descriptor
+                    && WidgetTemplate.Resolve(descriptor, descriptor.Prerender, widget.Props.Get) is { } url
+                    && _prerendered.TryGetValue(url, out var bakedMarkup))
+                {
+                    tokens.Add($"bake:{url}:{Hashing.Hash16(Encoding.UTF8.GetBytes(bakedMarkup))}");
+                }
+            }
+
             if (_syndicatedHashes.TryGetValue(page.Id, out var contentHash))
             {
                 tokens.Add($"syndicated:{contentHash}");
@@ -1309,6 +1329,11 @@ public sealed class SitePublisher(
                 if (_builtInWidgetTags.Contains(tag))
                 {
                     // Built-in: copy the bundle file from the widgets directory, as always.
+                    if (descriptor.PrerenderTemplate is { Length: > 0 })
+                    {
+                        continue; // server-rendered: no island, so there is no bundle to ship
+                    }
+
                     var source = Path.Combine(options.WidgetsDirectory, descriptor.Bundle);
                     if (!File.Exists(source))
                     {

@@ -9,6 +9,7 @@ using Imprint.Authoring.Domain.Posts;
 using Imprint.Authoring.Domain.Posts.Events;
 using Imprint.Authoring.Domain.Sites;
 using Imprint.Authoring.Projections;
+using Imprint.Publishing;
 using Imprint.Authoring.Syndication;
 using Imprint.Editor.Auth;
 using Imprint.EventSourcing;
@@ -104,6 +105,23 @@ public static class AuthoringApi
         }
 
         var api = app.MapGroup("/api/authoring").AddEndpointFilter(new BearerTokenFilter(token));
+
+        // ── integrations ─────────────────────────────────────────────────────────────────────
+        //
+        // ★ THE WHOLE RECEIVER. A producer (Watchdog today) says "something you render from has
+        // changed"; we look again. The body is not read and the topic is not inspected, because
+        // nothing here depends on either: the publisher re-fetches every external dependency and
+        // compares content hashes, so it re-renders exactly the pages whose data actually moved.
+        //
+        // That is deliberate, and it is what makes the integration cheap to keep correct. A
+        // duplicate notification costs one comparison. A notification that never arrives costs
+        // freshness until the next one, never correctness. And a new topic — CAI publication, say —
+        // needs no change here at all: it is already "look again".
+        api.MapPost("/notify", (ExternalContentSignal signal) =>
+        {
+            signal.Raise();
+            return Results.Accepted();
+        });
 
         // ── reads ────────────────────────────────────────────────────────────────────────────
         api.MapGet("/sites", (SiteOverview sites) => Results.Ok(

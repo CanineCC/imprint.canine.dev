@@ -81,7 +81,11 @@ else if (descriptor is not null)
       }
     }
 
-    if (Ctx.ResolveWidgetBundle?.Invoke(descriptor.Tag) is { } bundle)
+    // ★ A TEMPLATED WIDGET NEVER HYDRATES. Its markup is already the content; loading an island
+    //   over it would replace real, styled, indexable HTML with a script's idea of the same thing —
+    //   which is the iframe this exists to remove.
+    if (descriptor.PrerenderTemplate is not { Length: > 0 }
+        && Ctx.ResolveWidgetBundle?.Invoke(descriptor.Tag) is { } bundle)
     {
       builder.AddAttribute(2, "data-island", bundle);
     }

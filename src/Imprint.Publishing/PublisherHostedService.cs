@@ -24,6 +24,7 @@ public sealed class PublisherHostedService(
     SitePublisher publisher,
     ProjectionEngine projections,
     SyndicatedPageStore syndicated,
+    ExternalContentSignal externalContent,
     SiteOverview siteOverview,
     DeployPathResolver paths,
     PublishingOptions options,
@@ -51,6 +52,11 @@ public sealed class PublisherHostedService(
         // hundred pages lands inside one debounce window and publishes once, which is the same
         // behaviour a theme-editing session already gets.
         syndicated.Changed += Wake;
+
+        // A third source: data a page renders from that lives in another service entirely. The
+        // signal carries nothing — the publisher re-fetches and compares hashes — so this is simply
+        // one more reason to look, debounced with the rest.
+        externalContent.Changed += Wake;
         try
         {
             await TrySynchronize(stoppingToken);
@@ -76,6 +82,7 @@ public sealed class PublisherHostedService(
         {
             projections.CaughtUp -= OnCaughtUp;
             syndicated.Changed -= Wake;
+            externalContent.Changed -= Wake;
         }
     }
 

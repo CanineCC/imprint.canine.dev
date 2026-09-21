@@ -17,6 +17,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(options);
         services.AddSingleton<PublisherStatus>();
+        services.AddSingleton<ExternalContentSignal>();
         services.AddSingleton<PublishGate>();
         // The publish-time widget bake. Registered here so a production publish has it and a test
         // host does not unless it asks — SitePublisher takes it as an optional dependency, and a
