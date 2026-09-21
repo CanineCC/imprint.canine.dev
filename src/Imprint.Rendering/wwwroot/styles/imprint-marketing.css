@@ -1089,6 +1089,46 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-mix-key-fine::before { background: var(--band-fair); }
 .ip-mix-key-slop::before { background: var(--band-critical); }
 
+/* ── LANGUAGE COVERAGE (one card per language, with where it stops) ────────────
+   The band word is the headline here, not a number, so it is set at the size the score
+   takes on a survey card. What does NOT resolve is printed in the same shape as what does,
+   quieter — a coverage table that lists only the wins is a sales page. */
+.ip-band-strong {
+  font-family: var(--font-mono); font-size: var(--fs-lg); font-weight: 600;
+  letter-spacing: -0.01em; color: var(--heading);
+}
+.ip-band-strong.ip-band-exemplary { color: var(--band-exemplary-text); }
+.ip-band-strong.ip-band-healthy { color: var(--band-healthy-text); }
+.ip-band-strong.ip-band-fair { color: var(--band-fair-text); }
+.ip-band-strong.ip-band-poor { color: var(--band-poor-text); }
+.ip-band-strong.ip-band-critical { color: var(--band-critical-text); }
+/* One row per language: a 250-word summary simply makes its row taller, where in a grid
+   it made every card in that row taller and gave the short ones an empty box to match. */
+.ip-langs { border: 1px solid var(--hairline); border-radius: var(--r-lg); overflow: hidden; }
+.ip-lang {
+  display: grid; grid-template-columns: 12rem minmax(0, 1fr); gap: 0.4rem 1.25rem;
+  padding: 0.9rem 1.1rem; border-bottom: 1px solid var(--hairline); background: var(--surface);
+}
+@container (max-width: 44rem) { .ip-lang { grid-template-columns: 1fr; } }
+.ip-lang:last-child { border-bottom: 0; }
+.ip-lang-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; align-content: start; }
+.ip-lang-head h3 { font-size: var(--fs-lg); font-weight: 600; margin: 0; }
+.ip-lang-body { display: grid; gap: 0.4rem; min-width: 0; }
+.ip-lang-body .ip-prose { font-size: var(--fs-sm); color: var(--ink); line-height: 1.5; }
+.ip-lens-list { margin: 0.1rem 0 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem; }
+.ip-lens-label {
+  font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--muted); margin-right: 0.3rem;
+}
+/* ★ NOT nowrap. A lens label is usually two words, but one of them is
+   "Deterministic DDD/Event-sourcing…" and a chip that refuses to wrap made it 436px wide
+   inside a 420px phone — one label gave the whole page a horizontal scrollbar. */
+.ip-lens {
+  font-size: var(--fs-2xs); padding: 1px 7px; border-radius: var(--r-sm);
+  background: var(--accent-wash); color: var(--accent-ink); overflow-wrap: anywhere;
+}
+.ip-lens-list-off .ip-lens { background: transparent; border: 1px solid var(--hairline); color: var(--muted); }
+
 /* ── THE BAND SCALE (the five rungs, pinned with real published surveys) ───────
    A row per band, worst at the bottom, so the scale reads as a ladder rather than as a
    list. The rung an empty band gets is deliberately still a rung: the published set is

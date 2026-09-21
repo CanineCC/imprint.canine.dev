@@ -1505,5 +1505,20 @@
         "label": "Watchdog base URL"
       }
     ]
+  },
+  {
+    "tag": "wd-languages",
+    "name": "Language coverage (rendered here)",
+    "description": "Every language the product models, each with its survey-clarity band, a one-line summary and the lenses that do and do not resolve. Fetched as data from Watchdog and rendered in this site's own markup at publish time \u2014 the densest piece of buying information on the site, and it used to live in a shadow root where no crawler could read it.",
+    "bundle": "",
+    "placeholder": "Language coverage is listed here.",
+    "prerender": "{base}/api/public/language-support",
+    "prerenderTemplate": "language-support",
+    "props": [
+      {
+        "name": "base",
+        "label": "Watchdog base URL"
+      }
+    ]
   }
 ]
