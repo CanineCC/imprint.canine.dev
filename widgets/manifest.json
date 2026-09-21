@@ -1495,7 +1495,7 @@
   {
     "tag": "wd-band-scale",
     "name": "The band scale (rendered here)",
-    "description": "The fixed five-band CAI scale with a real published survey pinned to each band that has one. The band words and hues are this site's; the CUTLINES come from the payload, because they are scoring data and a fourth hand-written copy of them is how a scale drifts.",
+    "description": "The fixed five-band CAI scale. The band words and hues are this site's; the CUTLINES come from the payload, because they are scoring data and a fourth hand-written copy of them is how a scale drifts. Reads the reports feed, whose band table carries the product's own words and pins a real published survey to each band; it also falls back to the procurement checklist's cutlines, which are public independently of any deploy.",
     "bundle": "",
     "placeholder": "The band scale is shown here.",
     "prerender": "{base}/api/public/reports",

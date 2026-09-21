@@ -105,6 +105,94 @@ public sealed class BandScaleTemplateTests
         }
     }
 
+    /// <summary>
+    /// The procurement checklist exactly as prod serves it, trimmed to the part this reads.
+    /// </summary>
+    /// <remarks>
+    /// ★★ THIS ENVELOPE IS WHY THE LAST IFRAME STOOD FOR A DAY. The band table on
+    /// <c>/api/public/reports</c> needs a promote; these cutlines have been public all along, in a
+    /// document llms.txt advertises as machine-readable. The dependency was mis-scoped, not blocked.
+    /// </remarks>
+    private const string Checklist = """
+        {
+          "standard": "Code Assurance Index",
+          "caiFloor": {
+            "field": "minimum CAI 0-100",
+            "suggestedFloor": 70,
+            "bandCutlines": [ 90, 70, 50, 25 ],
+            "note": "Band cutlines are 90/70/50/25; see codeassuranceindex.info/spec for the band names."
+          }
+        }
+        """;
+
+    [Fact]
+    public void The_checklists_cutlines_draw_the_same_scale()
+    {
+        // Four cutlines describe five bands: the lowest band's floor is zero, and zero is not a
+        // cutline. Read best-first in the payload, drawn best-first on the page.
+        var html = BandScaleTemplate.Render(Checklist, Origin)!;
+
+        foreach (var word in new[] { "Exemplary", "Strong", "Adequate", "Weak", "Critical" })
+        {
+            Assert.Contains($">{word}</span>", html, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("from 90", html, StringComparison.Ordinal);
+        Assert.Contains("from 70", html, StringComparison.Ordinal);
+        Assert.Contains("from 50", html, StringComparison.Ordinal);
+        Assert.Contains("under 25", html, StringComparison.Ordinal);
+
+        // No examples in this envelope, so every rung says so rather than silently shrinking.
+        Assert.Equal(5, Count(html, "ip-rung-empty"));
+    }
+
+    [Fact]
+    public void The_checklist_path_carries_no_cutline_of_its_own_either()
+    {
+        // ★★ Same guard as the band-table path, through the other envelope: move the lines and the
+        //    familiar ones must not survive anywhere in the output.
+        var moved = Checklist.Replace("[ 90, 70, 50, 25 ]", "[ 93, 77, 55, 31 ]", StringComparison.Ordinal)
+            .Replace("90/70/50/25", "elsewhere", StringComparison.Ordinal);
+
+        var html = BandScaleTemplate.Render(moved, Origin)!;
+
+        Assert.Contains("from 93", html, StringComparison.Ordinal);
+        Assert.Contains("under 31", html, StringComparison.Ordinal);
+        foreach (var remembered in new[] { "90", "70", "50", "25" })
+        {
+            Assert.DoesNotContain(remembered, html, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void A_rubric_of_a_different_shape_renders_nothing_rather_than_a_guess()
+    {
+        // ★ The five WORDS are ours; the LINES are the product's. When the count of lines stops
+        //   agreeing with the count of words, the rubric has changed shape underneath us, and
+        //   drawing it against five remembered words would be inventing a scale, not publishing one.
+        foreach (var lines in new[] { "[ 90, 70, 50 ]", "[ 90, 70, 50, 25, 10 ]", "[]" })
+        {
+            var odd = Checklist.Replace("[ 90, 70, 50, 25 ]", lines, StringComparison.Ordinal);
+            Assert.Null(BandScaleTemplate.Render(odd, Origin));
+        }
+    }
+
+    [Fact]
+    public void The_products_own_band_table_wins_when_both_are_present()
+    {
+        // The reports feed's words come from the rubric; the list in this template is a stand-in for
+        // them. Where the real thing is available it must be what renders.
+        var both = "{\"caiFloor\":{\"bandCutlines\":[90,70,50,25]},"
+            + "\"bands\":[{\"label\":\"Bottom\",\"key\":\"critical\",\"floor\":0},"
+            + "{\"label\":\"Top\",\"key\":\"exemplary\",\"floor\":42}],\"reports\":[]}";
+
+        var html = BandScaleTemplate.Render(both, Origin)!;
+
+        Assert.Contains(">Top</span>", html, StringComparison.Ordinal);
+        Assert.Contains("from 42", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Exemplary", html, StringComparison.Ordinal);
+    }
+
     private static int Count(string haystack, string needle)
     {
         var n = 0;
