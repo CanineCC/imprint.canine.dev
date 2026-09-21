@@ -27,6 +27,7 @@ public static class PrerenderTemplates
         PricingTemplate.OnPremName => PricingTemplate.RenderOnPrem(body),
         ScoreCardTemplate.Name => ScoreCardTemplate.Render(body, OriginOf(url)),
         ScoreCardTemplate.FullName => ScoreCardTemplate.RenderFull(body, OriginOf(url)),
+        ScoreCardTemplate.OneName => ScoreCardTemplate.RenderOne(body, OriginOf(url)),
         FindingsTemplate.Name => FindingsTemplate.Render(body, OriginOf(url)),
         CompositionTemplate.Name => CompositionTemplate.Render(body, OriginOf(url)),
         ArchitectureSvgTemplate.Name => ArchitectureSvgTemplate.Render(body),

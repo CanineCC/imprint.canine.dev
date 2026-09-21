@@ -109,6 +109,18 @@ public sealed class ShowcaseTemplateTests
     }
 
     [Fact]
+    public void One_card_is_one_card_and_says_so_in_its_grid()
+    {
+        // The hero sets its copy beside a SINGLE card. Four there is not more evidence, it is a
+        // broken layout — and auto-fill would give one card a 280px track in a 1100px section.
+        var html = ScoreCardTemplate.RenderOne(Reports, Origin)!;
+
+        Assert.Equal(1, Occurrences(html, "ip-survey\">"));
+        Assert.Contains("ip-grid ip-grid-1up", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("a/b", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void A_curated_list_says_how_much_it_is_a_selection_from()
     {
         // Four cards with no frame around them read as "four surveys exist".

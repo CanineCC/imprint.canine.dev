@@ -984,6 +984,8 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    the section's appearance: these blocks are dropped onto pages with four different
    appearances, and a card that is bordered on one page and naked on the next is how the
    embed got framed in the first place. */
+/* One card is one card: auto-fill would give it a 280px track in a 1100px section. */
+.ip-grid-1up { grid-template-columns: 1fr; }
 .ip-grid-4up { grid-template-columns: repeat(4, 1fr); }
 @container (max-width: 62rem) { .ip-grid-4up { grid-template-columns: repeat(2, 1fr); } }
 @container (max-width: 30rem) { .ip-grid-4up { grid-template-columns: 1fr; } }

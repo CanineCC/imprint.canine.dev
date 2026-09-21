@@ -4,7 +4,7 @@
     "name": "Countdown",
     "description": "Counts down to a date and time. Great for launches and events.",
     "bundle": "x-countdown.js",
-    "placeholder": "Counting down…",
+    "placeholder": "Counting down\u2026",
     "props": [
       {
         "name": "until",
@@ -116,7 +116,7 @@
   {
     "tag": "cai-score-card",
     "name": "CAI score card",
-    "description": "The Codebase Assurance Index score card: band chip, band-inked score, the worst→best band ladder with a “you are here” marker, trend sparkline, lens bars and detail rows. Fetches the published gallery (/api/oss) when an API base is set and renders the HERO — the highest-scoring published repo; falls back to the labelled sample.",
+    "description": "The Codebase Assurance Index score card: band chip, band-inked score, the worst\u2192best band ladder with a \u201cyou are here\u201d marker, trend sparkline, lens bars and detail rows. Fetches the published gallery (/api/oss) when an API base is set and renders the HERO \u2014 the highest-scoring published repo; falls back to the labelled sample.",
     "bundle": "cai-score-card.js",
     "placeholder": "CAI score card",
     "props": [
@@ -128,31 +128,31 @@
       },
       {
         "name": "owner",
-        "label": "Owner — pick a real published repo (with name)",
+        "label": "Owner \u2014 pick a real published repo (with name)",
         "type": "text",
         "default": ""
       },
       {
         "name": "name",
-        "label": "Repo name — pick a real published repo (with owner)",
+        "label": "Repo name \u2014 pick a real published repo (with owner)",
         "type": "text",
         "default": ""
       },
       {
         "name": "card",
-        "label": "Sample-card fallback (JSON — name, owner, score, series, arcFirst, arcBest, lenses, rows)",
+        "label": "Sample-card fallback (JSON \u2014 name, owner, score, series, arcFirst, arcBest, lenses, rows)",
         "type": "text",
         "default": ""
       },
       {
         "name": "score",
-        "label": "CAI score 0–100 (overrides card)",
+        "label": "CAI score 0\u2013100 (overrides card)",
         "type": "number",
         "default": ""
       },
       {
         "name": "seal-text",
-        "label": "Seal badge text (e.g. ✓ Signed by Watchdog)",
+        "label": "Seal badge text (e.g. \u2713 Signed by Watchdog)",
         "type": "text",
         "default": ""
       },
@@ -184,7 +184,7 @@
   {
     "tag": "cai-card-gallery",
     "name": "CAI score-card gallery",
-    "description": "A responsive grid of CAI score cards — the public-record home gallery of real published surveys (quiet-peer cards, not the accent hero artifact). Fetches the published gallery (/api/oss) when an API base is set and shows three distinct cards, hero excluded — the second-best by score, the most-improved by delta, and a random one; falls back to the labelled sample cards.",
+    "description": "A responsive grid of CAI score cards \u2014 the public-record home gallery of real published surveys (quiet-peer cards, not the accent hero artifact). Fetches the published gallery (/api/oss) when an API base is set and shows three distinct cards, hero excluded \u2014 the second-best by score, the most-improved by delta, and a random one; falls back to the labelled sample cards.",
     "bundle": "cai-card-gallery.js",
     "placeholder": "CAI score-card gallery",
     "props": [
@@ -246,7 +246,7 @@
   {
     "tag": "cai-band-scale",
     "name": "CAI band scale",
-    "description": "The canonical CAI presentation scale: five bands worst→best, cutlines 25/50/70/90, the display words, and an optional Score pin. Pins at the HERO published card's bestScore (the highest-scoring published repo, from /api/oss) when an API base is set; falls back to the seeded score.",
+    "description": "The canonical CAI presentation scale: five bands worst\u2192best, cutlines 25/50/70/90, the display words, and an optional Score pin. Pins at the HERO published card's bestScore (the highest-scoring published repo, from /api/oss) when an API base is set; falls back to the seeded score.",
     "bundle": "cai-band-scale.js",
     "placeholder": "CAI band scale",
     "props": [
@@ -258,7 +258,7 @@
       },
       {
         "name": "score",
-        "label": "Seeded pin score fallback (optional, 0–100)",
+        "label": "Seeded pin score fallback (optional, 0\u2013100)",
         "type": "number",
         "default": ""
       },
@@ -302,13 +302,13 @@
   {
     "tag": "cai-lens-gauges",
     "name": "CAI lens gauges",
-    "description": "The lenses as gauges: each score inked with its band, a bar to read at a glance, and an optional note per lens — today the band word, the gating dimension once a card carries one. DATA ONLY: there is no API base and it never fetches, so every number comes from the page that renders it and this island cannot show one repository's figures under another's name.",
+    "description": "The lenses as gauges: each score inked with its band, a bar to read at a glance, and an optional note per lens \u2014 today the band word, the gating dimension once a card carries one. DATA ONLY: there is no API base and it never fetches, so every number comes from the page that renders it and this island cannot show one repository's figures under another's name.",
     "bundle": "cai-lens-gauges.js",
     "placeholder": "CAI lens gauges",
     "props": [
       {
         "name": "lenses",
-        "label": "Lenses (JSON array of {label, value, note}) — value null renders an em dash",
+        "label": "Lenses (JSON array of {label, value, note}) \u2014 value null renders an em dash",
         "type": "text",
         "default": "[]"
       },
@@ -353,7 +353,7 @@
     "props": [
       {
         "name": "series",
-        "label": "Scores oldest→newest (JSON array of numbers)",
+        "label": "Scores oldest\u2192newest (JSON array of numbers)",
         "type": "text",
         "default": "[]"
       },
@@ -377,7 +377,7 @@
       },
       {
         "name": "tip",
-        "label": "Tip beside the kicker — the (i) explanation for the section. Only shown with a kicker.",
+        "label": "Tip beside the kicker \u2014 the (i) explanation for the section. Only shown with a kicker.",
         "type": "text",
         "default": ""
       },
@@ -401,13 +401,13 @@
       },
       {
         "name": "sampled",
-        "label": "The series is ALREADY a regular sample — one point per interval, drawn as sent (e.g. \"weekly\"). Leave it empty for a raw series: the chart then keeps only the first and last of each run of identical scores, which is what stops a nightly-scanned repository drawing a solid bar of dots. Set it and every point is drawn, the word is printed to the reader (\"weekly sample 3 of 10\"), and the chart states that each point is the newest reading on or before its own date — so set it only when that is how the series was resampled.",
+        "label": "The series is ALREADY a regular sample \u2014 one point per interval, drawn as sent (e.g. \"weekly\"). Leave it empty for a raw series: the chart then keeps only the first and last of each run of identical scores, which is what stops a nightly-scanned repository drawing a solid bar of dots. Set it and every point is drawn, the word is printed to the reader (\"weekly sample 3 of 10\"), and the chart states that each point is the newest reading on or before its own date \u2014 so set it only when that is how the series was resampled.",
         "type": "text",
         "default": ""
       },
       {
         "name": "figures",
-        "label": "Endpoint pairs (JSON array of {label, from:{value,sub}, to:{value,sub}}) — the movement stated as text beside the chart: the label as an eyebrow, then \"from → to\" in the mono face, then the population each end was taken over. One basis line when both ends share it, two when they differ.",
+        "label": "Endpoint pairs (JSON array of {label, from:{value,sub}, to:{value,sub}}) \u2014 the movement stated as text beside the chart: the label as an eyebrow, then \"from \u2192 to\" in the mono face, then the population each end was taken over. One basis line when both ends share it, two when they differ.",
         "type": "text",
         "default": ""
       },
@@ -422,13 +422,13 @@
   {
     "tag": "cai-survey-list",
     "name": "CAI survey list",
-    "description": "A measured corpus a reader can work through: the band distribution as a bar that IS the band filter, a search box, a sort, and the projects as cards. One control rather than a chart and a separate filter row that can disagree with each other. DATA ONLY: no API base, it never fetches, so a language page cannot list another language's projects — and the full list ships in the attribute, so a reader who never runs the script still finds every one.",
+    "description": "A measured corpus a reader can work through: the band distribution as a bar that IS the band filter, a search box, a sort, and the projects as cards. One control rather than a chart and a separate filter row that can disagree with each other. DATA ONLY: no API base, it never fetches, so a language page cannot list another language's projects \u2014 and the full list ships in the attribute, so a reader who never runs the script still finds every one.",
     "bundle": "cai-survey-list.js",
     "placeholder": "CAI survey list",
     "props": [
       {
         "name": "projects",
-        "label": "Projects (JSON array of {owner, name, score, loc, day, at, href}) — `at` is ISO 8601 and enables the by-date sort",
+        "label": "Projects (JSON array of {owner, name, score, loc, day, at, href}) \u2014 `at` is ISO 8601 and enables the by-date sort",
         "type": "text",
         "default": "[]"
       },
@@ -467,25 +467,25 @@
   {
     "tag": "cai-language-board",
     "name": "CAI language board",
-    "description": "Every measured language as a row: the DISTRIBUTION of its projects' CAI scores in ten-point bins on one shared 0–100 axis that is never scaled to the data — these are CAI scores, and 60 means the same thing on every row — with the median, the middle half, and how deep the survey of them reached. The chart IS the list: each row links to that language's field guide. Search and sort included. The ungrouped count is stated separately and never sorted away, so the totals reconcile. DATA ONLY: no API base, it never fetches.",
+    "description": "Every measured language as a row: the DISTRIBUTION of its projects' CAI scores in ten-point bins on one shared 0\u2013100 axis that is never scaled to the data \u2014 these are CAI scores, and 60 means the same thing on every row \u2014 with the median, the middle half, and how deep the survey of them reached. The chart IS the list: each row links to that language's field guide. Search and sort included. The ungrouped count is stated separately and never sorted away, so the totals reconcile. DATA ONLY: no API base, it never fetches.",
     "bundle": "cai-language-board.js",
     "placeholder": "CAI language board",
     "props": [
       {
         "name": "languages",
-        "label": "Languages (JSON array of {name, count, median, low, high, dist[10], depth, depthOf, href}) — dist is the count of projects per ten-point bin; depth is dimensions resolved, null where none was recorded",
+        "label": "Languages (JSON array of {name, count, median, low, high, dist[10], depth, depthOf, href}) \u2014 dist is the count of projects per ten-point bin; depth is dimensions resolved, null where none was recorded",
         "type": "text",
         "default": "[]"
       },
       {
         "name": "depth-note",
-        "label": "Depth note — what the depth column means and how much of the board it covers",
+        "label": "Depth note \u2014 what the depth column means and how much of the board it covers",
         "type": "text",
         "default": ""
       },
       {
         "name": "ungrouped",
-        "label": "Ungrouped projects (JSON {count}) — stated so the totals reconcile",
+        "label": "Ungrouped projects (JSON {count}) \u2014 stated so the totals reconcile",
         "type": "text",
         "default": ""
       },
@@ -524,7 +524,7 @@
   {
     "tag": "cai-link-cards",
     "name": "CAI link cards",
-    "description": "Where a reader goes next, as cards with a mark on each rather than a row of underlined sentences that all look like footnotes. The icon is a claim about the destination: the forge's own mark for a repository link, the HTML5 mark for a report served as HTML (not a PDF glyph, which would promise a download that does not exist), and the shared canine badge tinted with that product's accent for Watchdog and CAI — the same mark the site headers use, so a card cannot drift into being a second logo. DATA ONLY: no API base, it never fetches.",
+    "description": "Where a reader goes next, as cards with a mark on each rather than a row of underlined sentences that all look like footnotes. The icon is a claim about the destination: the forge's own mark for a repository link, the HTML5 mark for a report served as HTML (not a PDF glyph, which would promise a download that does not exist), and the shared canine badge tinted with that product's accent for Watchdog and CAI \u2014 the same mark the site headers use, so a card cannot drift into being a second logo. DATA ONLY: no API base, it never fetches.",
     "bundle": "cai-link-cards.js",
     "placeholder": "CAI link cards",
     "props": [
@@ -542,7 +542,7 @@
       },
       {
         "name": "tip",
-        "label": "Tip beside the kicker — the (i) explanation for the section. Only shown with a kicker.",
+        "label": "Tip beside the kicker \u2014 the (i) explanation for the section. Only shown with a kicker.",
         "type": "text",
         "default": ""
       },
@@ -569,7 +569,7 @@
   {
     "tag": "cai-figure-band",
     "name": "CAI figure band",
-    "description": "A row of figures — each a value with the words that complete it and an optional (i) — at either of two densities. \"head\" is a masthead: a kicker and a dateline on the left, small-caps captions over 18px mono values on the right, ruled off with the accent. \"lead\" is a findings band: 36px mono values in an auto-fitting grid, each over its label and a small mono basis line. A figure's tone inks its value with a CAI band; no tone leaves it in the body ink. DATA ONLY: no API base, it never fetches.",
+    "description": "A row of figures \u2014 each a value with the words that complete it and an optional (i) \u2014 at either of two densities. \"head\" is a masthead: a kicker and a dateline on the left, small-caps captions over 18px mono values on the right, ruled off with the accent. \"lead\" is a findings band: 36px mono values in an auto-fitting grid, each over its label and a small mono basis line. A figure's tone inks its value with a CAI band; no tone leaves it in the body ink. DATA ONLY: no API base, it never fetches.",
     "bundle": "cai-figure-band.js",
     "placeholder": "CAI figure band",
     "props": [
@@ -591,13 +591,13 @@
       },
       {
         "name": "tip",
-        "label": "Tip beside the kicker — the (i) explanation for the section. Only shown with a kicker (and, on cai-figure-band, only in layout=lead).",
+        "label": "Tip beside the kicker \u2014 the (i) explanation for the section. Only shown with a kicker (and, on cai-figure-band, only in layout=lead).",
         "type": "text",
         "default": ""
       },
       {
         "name": "dateline",
-        "label": "Dateline (\"head\" only — the large date beneath the kicker)",
+        "label": "Dateline (\"head\" only \u2014 the large date beneath the kicker)",
         "type": "text",
         "default": ""
       },
@@ -624,7 +624,7 @@
   {
     "tag": "cai-share-bars",
     "name": "CAI share bars",
-    "description": "A population split into named parts and drawn to scale, as one wide bar (\"wide\") or as a table of rows with a bar each (\"table\"). ★ A row whose population was not measured draws NO bar and says so: a 0% bar reads as \"none affected\", which is the same error as counting an unscanned project as a clean one. Geometry comes from each part's weight; the number a reader sees is the pre-formatted count beside it. DATA ONLY: no API base, it never fetches.",
+    "description": "A population split into named parts and drawn to scale, as one wide bar (\"wide\") or as a table of rows with a bar each (\"table\"). \u2605 A row whose population was not measured draws NO bar and says so: a 0% bar reads as \"none affected\", which is the same error as counting an unscanned project as a clean one. Geometry comes from each part's weight; the number a reader sees is the pre-formatted count beside it. DATA ONLY: no API base, it never fetches.",
     "bundle": "cai-share-bars.js",
     "placeholder": "CAI share bars",
     "props": [
@@ -640,7 +640,7 @@
       },
       {
         "name": "columns",
-        "label": "Column headings (JSON array of strings, \"table\" only — one per entry in each row's cells)",
+        "label": "Column headings (JSON array of strings, \"table\" only \u2014 one per entry in each row's cells)",
         "type": "text",
         "default": "[]"
       },
@@ -670,7 +670,7 @@
       },
       {
         "name": "tip",
-        "label": "Tip beside the kicker — the (i) explanation for the section. Only shown with a kicker (and, on cai-figure-band, only in layout=lead).",
+        "label": "Tip beside the kicker \u2014 the (i) explanation for the section. Only shown with a kicker (and, on cai-figure-band, only in layout=lead).",
         "type": "text",
         "default": ""
       },
@@ -753,7 +753,7 @@
   {
     "tag": "cai-evidence-flow",
     "name": "CAI evidence flow",
-    "description": "A left→right node strip with arrow connectors and an optional dashed loop-back path — the produce → hold → consume / measure → fix → prove diagram. Nodes come from a JSON array of { title, body, tone }.",
+    "description": "A left\u2192right node strip with arrow connectors and an optional dashed loop-back path \u2014 the produce \u2192 hold \u2192 consume / measure \u2192 fix \u2192 prove diagram. Nodes come from a JSON array of { title, body, tone }.",
     "bundle": "cai-evidence-flow.js",
     "placeholder": "Evidence flow diagram",
     "props": [
@@ -809,13 +809,13 @@
   {
     "tag": "cai-c4-heat",
     "name": "CAI C4 architecture heat-map",
-    "description": "The C4 architecture heat-map carousel — bounded contexts and how they talk, coloured by health — the same map watchdog.canine.dev renders in the app's C4 wheel. Live only: fetches the public C4 list (/api/public/c4, richest first) when an API base is set and cycles the repos with prev/next, loading each one's real C4 heat SVG; shows nothing without a live source.",
+    "description": "The C4 architecture heat-map carousel \u2014 bounded contexts and how they talk, coloured by health \u2014 the same map watchdog.canine.dev renders in the app's C4 wheel. Live only: fetches the public C4 list (/api/public/c4, richest first) when an API base is set and cycles the repos with prev/next, loading each one's real C4 heat SVG; shows nothing without a live source.",
     "bundle": "cai-c4-heat.js",
     "placeholder": "C4 architecture heat-map",
     "props": [
       {
         "name": "api-base",
-        "label": "Live API base URL (required — this widget is live-only)",
+        "label": "Live API base URL (required \u2014 this widget is live-only)",
         "type": "url",
         "default": ""
       },
@@ -859,7 +859,7 @@
   {
     "tag": "cai-findings",
     "name": "CAI findings a scanner can't produce",
-    "description": "The deterministic architecture / domain-model / event findings located to file:line, from real published reports — a carousel with the honest “showing X of Y” and a link to the full report. Fetches the public findings feed (/api/public/findings, strongest repo first) when an API base is set and cycles the repos with prev/next; falls back to a small labelled sample.",
+    "description": "The deterministic architecture / domain-model / event findings located to file:line, from real published reports \u2014 a carousel with the honest \u201cshowing X of Y\u201d and a link to the full report. Fetches the public findings feed (/api/public/findings, strongest repo first) when an API base is set and cycles the repos with prev/next; falls back to a small labelled sample.",
     "bundle": "cai-findings.js",
     "placeholder": "Findings a scanner can't produce",
     "props": [
@@ -909,7 +909,7 @@
   {
     "tag": "cai-language-support",
     "name": "Language survey-clarity (FIT) matrix",
-    "description": "Every language Watchdog supports, grouped by FIT band (survey clarity — how clearly a language leads to a complete DDD / event-sourcing / event-driven / vertical-slice survey, NOT a grade of the language or code), best-first, with each language's applicability (0–10) and the lenses that apply vs are N/A. Fetches the public matrix (/api/public/language-support) when an API base is set and AUTO-UPDATES as new languages are signed off; falls back to a small labelled sample.",
+    "description": "Every language Watchdog supports, grouped by FIT band (survey clarity \u2014 how clearly a language leads to a complete DDD / event-sourcing / event-driven / vertical-slice survey, NOT a grade of the language or code), best-first, with each language's applicability (0\u201310) and the lenses that apply vs are N/A. Fetches the public matrix (/api/public/language-support) when an API base is set and AUTO-UPDATES as new languages are signed off; falls back to a small labelled sample.",
     "bundle": "cai-language-support.js",
     "placeholder": "Language survey-clarity (FIT) matrix",
     "props": [
@@ -959,7 +959,7 @@
   {
     "tag": "cai-dimensions",
     "name": "Rubric dimension catalogue (live)",
-    "description": "Every dimension and lens in the CAI rubric, read LIVE from the published archive with a version picker. Rubrics are immutable and a score always names the one it was computed under, so a reader holding an older survey can select THAT version and read the definitions it was scored against. Fetches /api/rubrics and /api/rubrics/{version}/catalog when an API base is set and AUTO-UPDATES on every rubric publication — it never snapshots the catalogue, which is how the old hand-copied table drifted four versions stale. Falls back to a small labelled sample when the archive is unreachable.",
+    "description": "Every dimension and lens in the CAI rubric, read LIVE from the published archive with a version picker. Rubrics are immutable and a score always names the one it was computed under, so a reader holding an older survey can select THAT version and read the definitions it was scored against. Fetches /api/rubrics and /api/rubrics/{version}/catalog when an API base is set and AUTO-UPDATES on every rubric publication \u2014 it never snapshots the catalogue, which is how the old hand-copied table drifted four versions stale. Falls back to a small labelled sample when the archive is unreachable.",
     "bundle": "cai-dimensions.js",
     "placeholder": "Rubric dimension catalogue",
     "props": [
@@ -997,10 +997,10 @@
   },
   {
     "tag": "cai-public-reports",
-    "name": "Public reports — surveyed-corpus shop window",
-    "description": "A curated, capped shop window on Watchdog's surveyed OSS corpus. Leads with the corpus scale ('N,000+ repositories surveyed'), shows a language-diverse best-first set of at most 24 survey cards, and lets a visitor filter by language/lens or search by name — the filter hits the whole corpus server-side, so search implies depth the grid never dumps. Each card deep-links to the full signed survey on the app. Fetches /api/public/reports when an API base is set; falls back to a small labelled sample.",
+    "name": "Public reports \u2014 surveyed-corpus shop window",
+    "description": "A curated, capped shop window on Watchdog's surveyed OSS corpus. Leads with the corpus scale ('N,000+ repositories surveyed'), shows a language-diverse best-first set of at most 24 survey cards, and lets a visitor filter by language/lens or search by name \u2014 the filter hits the whole corpus server-side, so search implies depth the grid never dumps. Each card deep-links to the full signed survey on the app. Fetches /api/public/reports when an API base is set; falls back to a small labelled sample.",
     "bundle": "cai-public-reports.js",
-    "placeholder": "Public reports — surveyed-corpus shop window",
+    "placeholder": "Public reports \u2014 surveyed-corpus shop window",
     "props": [
       {
         "name": "api-base",
@@ -1048,7 +1048,7 @@
   {
     "tag": "contact-form",
     "name": "Contact form",
-    "description": "A contact form with a topic selector (?topic= prefill), name / email / organisation / message fields and a spam honeypot. Submits via fetch() to the `action` endpoint (default: the imprint editor's anonymous /api/contact) and reports success/failure inline. The inbox recipients live in the private `recipients` prop (falling back to the endpoint's server config) — never in the page.",
+    "description": "A contact form with a topic selector (?topic= prefill), name / email / organisation / message fields and a spam honeypot. Submits via fetch() to the `action` endpoint (default: the imprint editor's anonymous /api/contact) and reports success/failure inline. The inbox recipients live in the private `recipients` prop (falling back to the endpoint's server config) \u2014 never in the page.",
     "bundle": "contact-form.js",
     "placeholder": "Contact form",
     "props": [
@@ -1066,7 +1066,7 @@
       },
       {
         "name": "recipients",
-        "label": "Send submissions to (email, comma-separate for several — never published)",
+        "label": "Send submissions to (email, comma-separate for several \u2014 never published)",
         "type": "text",
         "default": "",
         "private": true
@@ -1117,7 +1117,7 @@
     "props": [
       {
         "name": "api-base",
-        "label": "CAI API base URL (required — the verifier calls it)",
+        "label": "CAI API base URL (required \u2014 the verifier calls it)",
         "type": "url",
         "default": "https://codeassuranceindex.info"
       },
@@ -1155,13 +1155,13 @@
   {
     "tag": "cai-calculator",
     "name": "Score an evidence bundle",
-    "description": "Paste an evidence bundle and watch the open scorer fold it into the ten lens scores and the 0–100 CAI, in front of the reader. When the bundle also states a published headline, the result is checked against it — so this is the calculator AND the falsifiability demonstration: a mismatch is proof the published number does not follow from the evidence. Folds server-side through the same reference scorer the surveyor uses, so it can never disagree with the standard.",
+    "description": "Paste an evidence bundle and watch the open scorer fold it into the ten lens scores and the 0\u2013100 CAI, in front of the reader. When the bundle also states a published headline, the result is checked against it \u2014 so this is the calculator AND the falsifiability demonstration: a mismatch is proof the published number does not follow from the evidence. Folds server-side through the same reference scorer the surveyor uses, so it can never disagree with the standard.",
     "bundle": "cai-calculator.js",
     "placeholder": "Score an evidence bundle",
     "props": [
       {
         "name": "api-base",
-        "label": "CAI API base URL (required — the scorer calls it)",
+        "label": "CAI API base URL (required \u2014 the scorer calls it)",
         "type": "url",
         "default": "https://codeassuranceindex.info"
       },
@@ -1198,10 +1198,10 @@
   },
   {
     "tag": "cai-report-index",
-    "name": "Public surveys — the full browsable record",
+    "name": "Public surveys \u2014 the full browsable record",
     "description": "Every published survey, with filters for language and for the lenses that fired. The lens filter is the interesting one: a conditional lens only fires when the architecture calls for it, so filtering by Event Sourcing means 'show me the event-sourced codebases'. Complements cai-card-gallery, which shows a curated three for a landing page. Fetches {api-base}/api/oss.",
     "bundle": "cai-report-index.js",
-    "placeholder": "Public surveys — the full browsable record",
+    "placeholder": "Public surveys \u2014 the full browsable record",
     "props": [
       {
         "name": "api-base",
@@ -1243,7 +1243,7 @@
   {
     "tag": "wd-embed",
     "name": "Live Watchdog view (embed)",
-    "description": "Frames a view rendered by the Watchdog app itself — its own components, its own stylesheet, against real published data. Nothing is re-drawn here, so it can never drift from the product. 'findings' and 'composition' are carousels over the curated top 10 repositories, each slide naming its repo. The server refuses any repo that has not published a survey. Leave Repository empty for the curated set (or the app's hero pick for a single card). The frame sizes itself to its content.",
+    "description": "Frames a view rendered by the Watchdog app itself \u2014 its own components, its own stylesheet, against real published data. Nothing is re-drawn here, so it can never drift from the product. 'findings' and 'composition' are carousels over the curated top 10 repositories, each slide naming its repo. The server refuses any repo that has not published a survey. Leave Repository empty for the curated set (or the app's hero pick for a single card). The frame sizes itself to its content.",
     "bundle": "wd-embed.js",
     "placeholder": "Live Watchdog view",
     "props": [
@@ -1267,7 +1267,7 @@
       },
       {
         "name": "repo",
-        "label": "Repository (owner/name — empty = the app's hero pick)",
+        "label": "Repository (owner/name \u2014 empty = the app's hero pick)",
         "type": "text",
         "default": ""
       },
@@ -1388,8 +1388,8 @@
   },
   {
     "tag": "wd-surveys",
-    "name": "Published surveys — a short strip (rendered here)",
-    "description": "The four best published surveys: repository, CAI, band, lenses measured, and a link to read the whole thing. Fetched as data from Watchdog and rendered in this site's own markup at publish time — no frame, no bundle, no script, and every number readable by a crawler.",
+    "name": "Published surveys \u2014 a short strip (rendered here)",
+    "description": "The four best published surveys: repository, CAI, band, lenses measured, and a link to read the whole thing. Fetched as data from Watchdog and rendered in this site's own markup at publish time \u2014 no frame, no bundle, no script, and every number readable by a crawler.",
     "bundle": "",
     "placeholder": "Published surveys are listed here.",
     "prerender": "{base}/api/public/reports",
@@ -1404,7 +1404,7 @@
   },
   {
     "tag": "wd-surveys-all",
-    "name": "Published surveys — the whole curated feed (rendered here)",
+    "name": "Published surveys \u2014 the whole curated feed (rendered here)",
     "description": "Every survey in the curated public feed, best first. Same data and same markup as the short strip; a separate widget because the bake is keyed by URL and template, so two lengths of the same list need two template names.",
     "bundle": "",
     "placeholder": "Published surveys are listed here.",
@@ -1421,7 +1421,7 @@
   {
     "tag": "wd-findings",
     "name": "Real findings (rendered here)",
-    "description": "Findings from published surveys — lens, dimension, the sentence itself, and the file and line it names. Fetched as data from Watchdog and rendered in this site's own markup at publish time, so the evidence for 'findings a scanner can't produce' is finally as readable as the claim.",
+    "description": "Findings from published surveys \u2014 lens, dimension, the sentence itself, and the file and line it names. Fetched as data from Watchdog and rendered in this site's own markup at publish time, so the evidence for 'findings a scanner can't produce' is finally as readable as the claim.",
     "bundle": "",
     "placeholder": "Real findings are listed here.",
     "prerender": "{base}/api/public/findings",
@@ -1443,6 +1443,22 @@
     "prerender": "{base}/api/public/insights",
     "prerenderTemplate": "composition",
     "fallbackHref": "{base}/embed/composition",
+    "props": [
+      {
+        "name": "base",
+        "label": "Watchdog base URL"
+      }
+    ]
+  },
+  {
+    "tag": "wd-survey",
+    "name": "One published survey (rendered here)",
+    "description": "A single survey card \u2014 repository, CAI, band, lenses measured, and a link to read it. For a hero, where the copy sits beside one card rather than above a strip of them.",
+    "bundle": "",
+    "placeholder": "A published survey is shown here.",
+    "prerender": "{base}/api/public/reports",
+    "prerenderTemplate": "score-card",
+    "fallbackHref": "{base}/embed/score-card",
     "props": [
       {
         "name": "base",

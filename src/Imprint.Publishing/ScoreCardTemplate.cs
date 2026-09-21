@@ -34,12 +34,20 @@ public static class ScoreCardTemplate
     /// <summary>The whole curated feed, for the page that exists to list it.</summary>
     public const string FullName = "score-cards-full";
 
+    /// <summary>
+    /// One card. The hero puts the copy on the left and a single card on the right, so a strip of
+    /// four there is not "more evidence", it is a broken layout.
+    /// </summary>
+    public const string OneName = "score-card";
+
     /// <summary>How many cards the short strip shows. Four fills a row and leaves none dangling.</summary>
     private const int StripCount = 4;
 
     public static string? Render(string? json, string? origin) => Render(json, origin, StripCount);
 
     public static string? RenderFull(string? json, string? origin) => Render(json, origin, int.MaxValue);
+
+    public static string? RenderOne(string? json, string? origin) => Render(json, origin, 1);
 
     private static string? Render(string? json, string? origin, int take)
     {
@@ -60,7 +68,12 @@ public static class ScoreCardTemplate
 
         var html = new StringBuilder();
         html.Append("<div class=\"ip-grid ")
-            .Append(reports.Count == StripCount ? "ip-grid-4up" : "ip-grid-cards")
+            .Append(take switch
+            {
+                1 => "ip-grid-1up",
+                StripCount => "ip-grid-4up",
+                _ => "ip-grid-cards",
+            })
             .Append("\">");
 
         foreach (var report in reports)
