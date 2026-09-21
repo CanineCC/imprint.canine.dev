@@ -281,27 +281,6 @@ public sealed class ShowcaseTemplateTests
         Assert.DoesNotContain("no/brilliant", html, StringComparison.Ordinal);
     }
 
-    /// <summary>
-    /// ★ The older insights feed carries the same series under different names (`display`,
-    /// `fileQuality`). Reading both is what let the chart ship before the new endpoint reached prod —
-    /// repointing the widget first would have put a placeholder sentence on a live marketing page.
-    /// </summary>
-    [Fact]
-    public void The_older_insights_envelope_carries_the_same_fact_and_is_read_too()
-    {
-        const string insights = """
-            {"items":[{"display":"a/b","reportUrl":"/api/oss/a/b/report",
-              "fileQuality":[{"brilliant":10,"fine":70,"slop":20,"scoredFiles":8},
-                             {"brilliant":60,"fine":32,"slop":8,"scoredFiles":12}]}]}
-            """;
-
-        var html = CompositionTemplate.Render(insights, Origin)!;
-
-        Assert.Contains("a/b", html, StringComparison.Ordinal);
-        Assert.Equal(2, Occurrences(html, "ip-mix-col"));
-        Assert.Contains("60 % brilliant", html, StringComparison.Ordinal);
-    }
-
     [Fact]
     public void A_repository_with_no_history_is_not_drawn_as_an_empty_chart()
     {

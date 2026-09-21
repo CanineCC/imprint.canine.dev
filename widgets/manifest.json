@@ -1442,7 +1442,7 @@
     "description": "Slop versus brilliant, scan by scan, for published repositories that show all three bands. Each column is one scan, so the trend the copy promises is the picture \u2014 and every column's numbers are in the markup, not only in the bar.",
     "bundle": "",
     "placeholder": "The file-quality mix is shown here.",
-    "prerender": "{base}/api/public/insights",
+    "prerender": "{base}/api/public/composition",
     "prerenderTemplate": "composition",
     "fallbackHref": "{base}/embed/composition",
     "props": [

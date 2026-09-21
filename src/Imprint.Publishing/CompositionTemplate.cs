@@ -55,17 +55,18 @@ public static class CompositionTemplate
             return null;
         }
 
-        // ★ TWO ENVELOPES, ONE FACT. /api/public/composition carries `repo` + `history`; the older
-        //   /api/public/insights carries `display` + `fileQuality`, which is the same series under a
-        //   different name. Reading both is what lets this ship BEFORE the new endpoint reaches prod
-        //   — repointing the widget first would have put a placeholder sentence on a live marketing
-        //   page until the next promote. Delete the insights branch once the widget is repointed.
+        // ★ The second envelope is GONE, as its own note said it should be once the widget was
+        //   repointed. It read the older /api/public/insights (`display` + `fileQuality`) so the
+        //   chart could ship before /api/public/composition reached prod — repointing first would
+        //   have put a placeholder sentence on a live marketing page until the next promote. The
+        //   endpoint answers 200 now, `wd-file-mix` reads it, and a branch kept past the migration it
+        //   existed for is a second shape nobody tests against real data again.
         var repos = Array(root, "items")
             .Select(r => new
             {
-                Repo = Str(r, "repo") is { Length: > 0 } name ? name : Str(r, "display"),
+                Repo = Str(r, "repo"),
                 Url = Str(r, "reportUrl"),
-                History = Array(r, "history") is { Count: > 0 } h ? h : Array(r, "fileQuality"),
+                History = Array(r, "history"),
                 Latest = r.TryGetProperty("latest", out var l) ? l : default,
             })
             .Where(r => r.Repo.Length > 0 && r.History.Count > 0)
