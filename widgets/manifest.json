@@ -525,8 +525,8 @@
     "tag": "cai-link-cards",
     "name": "CAI link cards",
     "description": "Where a reader goes next, as cards with a mark on each rather than a row of underlined sentences that all look like footnotes. The icon is a claim about the destination: the forge's own mark for a repository link, the HTML5 mark for a report served as HTML (not a PDF glyph, which would promise a download that does not exist), and the shared canine badge tinted with that product's accent for Watchdog and CAI \u2014 the same mark the site headers use, so a card cannot drift into being a second logo. DATA ONLY: no API base, it never fetches.",
-    "bundle": "cai-link-cards.js",
-    "placeholder": "CAI link cards",
+    "bundle": "",
+    "placeholder": "Further reading is listed here.",
     "props": [
       {
         "name": "links",
@@ -564,7 +564,8 @@
         "type": "text",
         "default": ""
       }
-    ]
+    ],
+    "propTemplate": "link-cards"
   },
   {
     "tag": "cai-figure-band",

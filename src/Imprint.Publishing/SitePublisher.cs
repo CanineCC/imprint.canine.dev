@@ -685,6 +685,7 @@ public sealed class SitePublisher(
                 ResolveWidget = tag => _descriptors.GetValueOrDefault(tag),
                 ResolveWidgetBundle = tag => _widgetFiles.TryGetValue(tag, out var file) ? $"/{file.RelativePath}" : null,
                 ResolvePrerendered = key => _prerendered.GetValueOrDefault(key),
+                RenderFromProps = PrerenderTemplates.RenderFromProps,
             };
 
             var chrome = new StaticPageChrome

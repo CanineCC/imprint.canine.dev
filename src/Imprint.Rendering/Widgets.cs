@@ -121,6 +121,22 @@ public sealed record WidgetDescriptor
     /// </summary>
     public string? PrerenderTemplate { get; init; }
 
+    /// <summary>
+    /// Names a server-side template that renders this widget from its OWN PROPS, with no fetch.
+    /// </summary>
+    /// <remarks>
+    /// <para>★ THE DIFFERENCE FROM <see cref="PrerenderTemplate"/> IS WHERE THE DATA LIVES, AND IT
+    /// DECIDES WHERE THE RENDERING CAN HAPPEN. A prerendered widget's data comes from a URL, so it is
+    /// baked once at publish time and cached by (url, template) — which is exactly why that cache
+    /// cannot see props: one fragment is shared by every instance reading that URL. A prop-driven
+    /// widget has no URL and nothing to share; its content is authored on the node. It is therefore
+    /// rendered HERE, at page-render time, where the props are in hand and no cache is involved.</para>
+    /// <para>The effect on the element is the same as a bake: real markup inside it, no island, no
+    /// script, nothing to hydrate — and the same <c>ip-widget-baked</c> marker, because every
+    /// stylesheet rule that has to tell content from a loading placeholder asks that question.</para>
+    /// </remarks>
+    public string? PropTemplate { get; init; }
+
     /// <summary>Hydrate immediately instead of on approach (for above-the-fold widgets).</summary>
     public bool Eager { get; init; }
 

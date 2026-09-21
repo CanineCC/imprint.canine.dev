@@ -116,7 +116,9 @@ public sealed class ShippedWidgetsManifestTests
             //   file whose only purpose would be to satisfy this check, and whose presence would be
             //   the very thing (a hydrating island over already-rendered markup) the template exists
             //   to avoid.
-            if (widget.PrerenderTemplate is { Length: > 0 })
+            //   The same holds for a PropTemplate, which renders from the node's own props instead of
+            //   a fetched body: different timing, identical consequence for the bundle.
+            if (widget.PrerenderTemplate is { Length: > 0 } || widget.PropTemplate is { Length: > 0 })
             {
                 Assert.True(
                     string.IsNullOrEmpty(widget.Bundle),

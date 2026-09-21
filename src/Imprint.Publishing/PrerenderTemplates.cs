@@ -36,6 +36,17 @@ public static class PrerenderTemplates
         _ => null,
     };
 
+    /// <summary>
+    /// The markup for a widget rendered from its OWN props. Same shape of answer as
+    /// <see cref="Render"/> — an unknown name renders nothing rather than something unexpected — and
+    /// a separate lookup because these templates take no fetched body at all.
+    /// </summary>
+    public static string? RenderFromProps(string? name, Func<string, string?> props) => name switch
+    {
+        LinkCardsTemplate.Name => LinkCardsTemplate.Render(props),
+        _ => null,
+    };
+
     /// <summary>Scheme and host of the fetch URL, or null when there isn't one to trust.</summary>
     private static string? OriginOf(string? url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps

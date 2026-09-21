@@ -1089,6 +1089,21 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-mix-key-fine::before { background: var(--band-fair); }
 .ip-mix-key-slop::before { background: var(--band-critical); }
 
+/* ── FURTHER-READING CARDS (rendered from the node's own props) ────────────────
+   A card per destination, its label above its note. The shadow-DOM version carried a mark
+   per link; this one does not, and that is the trade: an icon is decoration and an href a
+   crawler can follow is not. */
+.ip-linkcards { --ip-min-item: 260px; }
+.ip-linkcard {
+  display: grid; gap: 0.2rem; align-content: start; text-decoration: none;
+  border: 1px solid var(--hairline); border-radius: var(--r-lg);
+  padding: 0.85rem 1rem; background: var(--surface); min-width: 0;
+}
+a.ip-linkcard:hover { border-color: var(--accent); }
+.ip-linkcard-label { font-size: var(--fs-sm); font-weight: 600; color: var(--heading); line-height: 1.35; }
+a.ip-linkcard:hover .ip-linkcard-label { color: var(--accent-ink); }
+.ip-linkcard-note { font-size: var(--fs-2xs); color: var(--muted); overflow-wrap: anywhere; }
+
 /* ── LANGUAGE COVERAGE (one card per language, with where it stops) ────────────
    The band word is the headline here, not a number, so it is set at the size the score
    takes on a survey card. What does NOT resolve is printed in the same shape as what does,

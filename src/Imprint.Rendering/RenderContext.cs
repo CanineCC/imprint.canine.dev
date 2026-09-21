@@ -48,6 +48,22 @@ public sealed record RenderContext
     public Func<string, string?>? ResolvePrerendered { get; init; }
 
     /// <summary>
+    /// Renders a widget from its OWN props, for a descriptor that names a
+    /// <see cref="WidgetDescriptor.PropTemplate"/>. Given the template name and a lookup over the
+    /// instance's declared props, returns this site's markup — or null, which leaves the widget
+    /// exactly as it was.
+    /// </summary>
+    /// <remarks>
+    /// ★ A SEPARATE SEAM FROM <see cref="ResolvePrerendered"/> BECAUSE THE TIMING IS DIFFERENT, not
+    /// because the output is. A bake is fetched and cached by (url, template) at publish time, which
+    /// is why that cache cannot see props — one fragment serves every instance reading that URL. A
+    /// prop-driven widget has nothing to share and no fetch to amortise, so it renders here, per
+    /// instance, with the props in hand. Static mode only, for the same reason: the editor canvas
+    /// shows the live island.
+    /// </remarks>
+    public Func<string, Func<string, string?>, string?>? RenderFromProps { get; init; }
+
+    /// <summary>
     /// Every in-page id already emitted on this page, so a heading can tell whether its
     /// slug is taken. Deliberately mutable inside an otherwise immutable context: ids are
     /// unique per rendered document, and a context is built per page per locale, so this

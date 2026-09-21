@@ -41,7 +41,7 @@ else if (descriptor is not null)
     //   editor is excluded on purpose — its canvas shows the live island, and a bake there would be
     //   a second copy of the same data sitting under it.
     //   Resolved FIRST because it decides attributes as well as content.
-    var baked = editorAttributes ? null : Prerendered(descriptor);
+    var baked = editorAttributes ? null : (Prerendered(descriptor) ?? FromProps(descriptor));
 
     builder.OpenElement(0, descriptor.Tag);
 
@@ -93,10 +93,13 @@ else if (descriptor is not null)
       }
     }
 
-    // ★ A TEMPLATED WIDGET NEVER HYDRATES. Its markup is already the content; loading an island
-    //   over it would replace real, styled, indexable HTML with a script's idea of the same thing —
-    //   which is the iframe this exists to remove.
+    // ★ A TEMPLATED WIDGET NEVER HYDRATES, whichever kind of template it names. Its markup is
+    //   already the content; loading an island over it would replace real, styled, indexable HTML
+    //   with a script's idea of the same thing — which is the iframe this exists to remove.
+    //   Keyed on the TEMPLATE, not on `baked is null`: a template that rendered nothing this time
+    //   must still not pull a bundle over markup the manifest says this site owns.
     if (descriptor.PrerenderTemplate is not { Length: > 0 }
+        && descriptor.PropTemplate is not { Length: > 0 }
         && Ctx.ResolveWidgetBundle?.Invoke(descriptor.Tag) is { } bundle)
     {
       builder.AddAttribute(2, "data-island", bundle);
@@ -156,6 +159,13 @@ else if (descriptor is not null)
   /// <summary>The bake the publisher fetched for THIS instance, found by the URL its
   /// <see cref="WidgetDescriptor.Prerender"/> template resolves to — the same URL the publisher
   /// keyed it by, through the same resolver, so the two cannot drift apart.</summary>
+  /// <summary>This site's markup for a widget rendered from its OWN props — no fetch, no cache,
+  /// because there is nothing to share between instances and nothing to amortise.</summary>
+  private string? FromProps(WidgetDescriptor descriptor) =>
+    Ctx.RenderFromProps is { } render && descriptor.PropTemplate is { Length: > 0 } template
+      ? render(template, Node.Props.Get)
+      : null;
+
   private string? Prerendered(WidgetDescriptor descriptor) =>
     Ctx.ResolvePrerendered is { } lookup
       && WidgetTemplate.Resolve(descriptor, descriptor.Prerender, Node.Props.Get) is { } url
