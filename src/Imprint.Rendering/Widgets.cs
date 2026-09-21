@@ -9,6 +9,55 @@ namespace Imprint.Rendering;
 /// prop form, a placeholder) and everything the publisher needs (the bundle to copy)
 /// lives in the manifest — adding a widget requires no C#.
 /// </summary>
+/// <summary>
+/// Resolves a widget URL template — <c>{prop}</c> tokens against an instance's declared prop values.
+/// <para>ONE implementation on purpose. The view uses it for the pre-hydration fallback link and for
+/// finding this instance's publish-time bake; the publisher uses it to decide what to fetch and to
+/// key the result. If those two ever resolved the same template differently, the publisher would
+/// bake under one URL and the view would look under another, and the bake would silently never
+/// appear — a failure that looks exactly like the feature being off.</para>
+/// </summary>
+public static class WidgetTemplate
+{
+    /// <summary>
+    /// The resolved absolute https URL, or null. Null when: there is no template; a token names a
+    /// prop the manifest does not declare, or declares <see cref="WidgetProp.Private"/>, or the
+    /// instance leaves empty; a token is left unresolved; or the result is not absolute https.
+    /// An unresolved token is a broken promise rather than a partial URL, so it yields nothing.
+    /// </summary>
+    public static string? Resolve(WidgetDescriptor descriptor, string? template, Func<string, string?> value)
+    {
+        ArgumentNullException.ThrowIfNull(descriptor);
+        ArgumentNullException.ThrowIfNull(value);
+        if (template is not { Length: > 0 } resolved)
+        {
+            return null;
+        }
+
+        foreach (var prop in descriptor.Props)
+        {
+            var token = "{" + prop.Name + "}";
+            if (!resolved.Contains(token, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (prop.Private || value(prop.Name) is not { Length: > 0 } filled)
+            {
+                return null;
+            }
+
+            resolved = resolved.Replace(token, filled.TrimEnd('/'), StringComparison.Ordinal);
+        }
+
+        return !resolved.Contains('{', StringComparison.Ordinal)
+            && Uri.TryCreate(resolved, UriKind.Absolute, out var uri)
+            && uri.Scheme == Uri.UriSchemeHttps
+          ? uri.ToString()
+          : null;
+    }
+}
+
 public sealed record WidgetDescriptor
 {
     public required string Tag { get; init; }
@@ -32,6 +81,21 @@ public sealed record WidgetDescriptor
     /// data instead of a dead label. Anything unresolved or non-https renders no link at all.
     /// </summary>
     public string? FallbackHref { get; init; }
+
+    /// <summary>
+    /// Optional URL TEMPLATE, resolved exactly like <see cref="FallbackHref"/>, whose response is
+    /// fetched AT PUBLISH TIME and baked into the element's light DOM as machine-readable markup.
+    /// <para>Why it exists: a widget that renders itself in a shadow root (or an iframe inside one)
+    /// puts nothing in the published HTML. A crawler, an LLM, or a reader without JavaScript then
+    /// sees an empty custom element — which is how a pricing page came to carry 7,700 characters and
+    /// not one price. The fetched fragment is reduced to a semantic subset (see
+    /// <c>WidgetPrerender</c>) and emitted as the element's children, so the facts are in the
+    /// document even though the live view is what a browser displays.</para>
+    /// <para>A fetch that fails changes nothing: the element renders exactly as it does without this
+    /// field. A stale bake is the cost — the live view is always current, the baked copy is as old as
+    /// the last publish.</para>
+    /// </summary>
+    public string? Prerender { get; init; }
 
     /// <summary>Hydrate immediately instead of on approach (for above-the-fold widgets).</summary>
     public bool Eager { get; init; }

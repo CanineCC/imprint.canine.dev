@@ -40,6 +40,14 @@ public sealed record RenderContext
     public Func<string, string?>? ResolveWidgetBundle { get; init; }
 
     /// <summary>
+    /// The publish-time bake for a widget instance, keyed by the URL its
+    /// <see cref="WidgetDescriptor.Prerender"/> template resolved to. Null (or a null result) means
+    /// nothing was baked — the view renders exactly as it did before. Static mode only: the editor
+    /// canvas shows the live island, so a bake there would be a second copy of the same data.
+    /// </summary>
+    public Func<string, string?>? ResolvePrerendered { get; init; }
+
+    /// <summary>
     /// Every in-page id already emitted on this page, so a heading can tell whether its
     /// slug is taken. Deliberately mutable inside an otherwise immutable context: ids are
     /// unique per rendered document, and a context is built per page per locale, so this

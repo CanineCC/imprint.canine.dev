@@ -1301,7 +1301,8 @@
         "default": "320"
       }
     ],
-    "fallbackHref": "{base}/embed/{view}"
+    "fallbackHref": "{base}/embed/{view}",
+    "prerender": "{base}/embed/{view}"
   },
   {
     "tag": "cai-publication-cards",

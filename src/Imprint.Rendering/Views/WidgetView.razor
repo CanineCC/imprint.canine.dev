@@ -99,7 +99,19 @@ else if (descriptor is not null)
       builder.AddAttribute(4, "style", $"aspect-ratio: {aspect}");
     }
 
-    builder.AddContent(5, descriptor.Placeholder);
+    // ★ The publish-time bake, when there is one: real words inside the element, so the published
+    //   HTML carries the facts even though a browser paints the island's shadow root instead. The
+    //   editor is excluded on purpose — its canvas shows the live island, and a bake there would be
+    //   a second copy of the same data sitting under it.
+    var baked = editorAttributes ? null : Prerendered(descriptor);
+    if (baked is not null)
+    {
+      builder.AddContent(5, new MarkupString(baked));
+    }
+    else
+    {
+      builder.AddContent(5, descriptor.Placeholder);
+    }
 
     // The pre-hydration fallback gets a REAL link when the manifest declares one: a visitor without
     // JavaScript (and a crawler) reaches the live view instead of a dead label. Hydration replaces
@@ -122,34 +134,16 @@ else if (descriptor is not null)
   /// token must resolve to a non-empty value, and the result must be absolute https — otherwise no
   /// link renders at all: a dead or author-forged href is worse than none.
   /// </summary>
-  private string? FallbackHref(WidgetDescriptor descriptor)
-  {
-    if (descriptor.FallbackHref is not { Length: > 0 } template)
-    {
-      return null;
-    }
+  private string? FallbackHref(WidgetDescriptor descriptor) =>
+    WidgetTemplate.Resolve(descriptor, descriptor.FallbackHref, Node.Props.Get);
 
-    var href = template;
-    foreach (var prop in descriptor.Props)
-    {
-      var token = "{" + prop.Name + "}";
-      if (!href.Contains(token, StringComparison.Ordinal))
-      {
-        continue;
-      }
+  /// <summary>The bake the publisher fetched for THIS instance, found by the URL its
+  /// <see cref="WidgetDescriptor.Prerender"/> template resolves to — the same URL the publisher
+  /// keyed it by, through the same resolver, so the two cannot drift apart.</summary>
+  private string? Prerendered(WidgetDescriptor descriptor) =>
+    Ctx.ResolvePrerendered is { } lookup
+      && WidgetTemplate.Resolve(descriptor, descriptor.Prerender, Node.Props.Get) is { } url
+        ? lookup(url)
+        : null;
 
-      if (prop.Private || Node.Props.Get(prop.Name) is not { Length: > 0 } value)
-      {
-        return null;   // an unresolved token is a broken promise, not a partial link
-      }
-
-      href = href.Replace(token, value.TrimEnd('/'), StringComparison.Ordinal);
-    }
-
-    return href.Contains('{', StringComparison.Ordinal) is false
-        && Uri.TryCreate(href, UriKind.Absolute, out var uri)
-        && uri.Scheme == Uri.UriSchemeHttps
-      ? uri.ToString()
-      : null;
-  }
 }

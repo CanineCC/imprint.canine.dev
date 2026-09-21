@@ -45,7 +45,8 @@ public sealed class SitePublisher(
     IMediaStore mediaStore,
     PublisherStatus status,
     PublishGate gate,
-    ILoggerFactory loggerFactory)
+    ILoggerFactory loggerFactory,
+    IWidgetPrerenderSource? prerenderSource = null)
 {
     private readonly ILogger _logger = loggerFactory.CreateLogger<SitePublisher>();
 
@@ -71,7 +72,8 @@ public sealed class SitePublisher(
             var pass = new Pass(
                 options, target.Site, target.OutputPath, target.BaseUrl, target.IncludeDrafts,
                 publishedContent, publishedPosts, syndicated,
-                assetLibrary, blockLibrary, widgetRegistry, mediaStore, loggerFactory, _logger);
+                assetLibrary, blockLibrary, widgetRegistry, mediaStore, loggerFactory, _logger,
+                prerenderSource);
             var report = await pass.Run(ct);
             status.Record(report);
             return report;
@@ -98,7 +100,8 @@ public sealed class SitePublisher(
         WidgetRegistry widgetRegistry,
         IMediaStore mediaStore,
         ILoggerFactory loggerFactory,
-        ILogger logger)
+        ILogger logger,
+        IWidgetPrerenderSource? prerenderSource)
     {
         private sealed record PagePlan(
             PublishedPage Page,
@@ -171,6 +174,47 @@ public sealed class SitePublisher(
         private Dictionary<string, WidgetDescriptor> _descriptors = [];
         private HashSet<string> _builtInWidgetTags = new(StringComparer.Ordinal);
         private SortedDictionary<string, (string RelativePath, string Hash, byte[] Bytes)> _widgetFiles = new(StringComparer.Ordinal);
+
+        /// <summary>Publish-time widget bakes, keyed by the URL the instance's template resolved to.</summary>
+        private Dictionary<string, string> _prerendered = new(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Fetch and reduce every distinct widget bake this site needs. Never throws and never fails
+        /// a publish: a URL that does not answer is simply absent from the result.
+        /// </summary>
+        private async Task<Dictionary<string, string>> BakeWidgetFragments(
+            IReadOnlyList<PublishedPage> pages, CancellationToken ct)
+        {
+            if (prerenderSource is null)
+            {
+                return new Dictionary<string, string>(StringComparer.Ordinal);
+            }
+
+            var wanted = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var page in pages)
+            {
+                foreach (var widget in NodesOf(page).OfType<WidgetNode>())
+                {
+                    if (_descriptors.GetValueOrDefault(widget.Tag) is { Prerender.Length: > 0 } descriptor
+                        && WidgetTemplate.Resolve(descriptor, descriptor.Prerender, widget.Props.Get) is { } url)
+                    {
+                        wanted.Add(url);
+                    }
+                }
+            }
+
+            var baked = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var url in wanted.Order(StringComparer.Ordinal))
+            {
+                var html = await prerenderSource.FetchAsync(new Uri(url), ct).ConfigureAwait(false);
+                if (WidgetPrerender.Reduce(html) is { } reduced)
+                {
+                    baked[url] = reduced;
+                }
+            }
+
+            return baked;
+        }
         private PublishedAssetCatalog _assets = null!;
         private string _cssFile = "";
 
@@ -267,6 +311,11 @@ public sealed class SitePublisher(
                 page => page.Id,
                 page => (IReadOnlyList<string>)
                     [.. NodesOf(page).OfType<WidgetNode>().Select(widget => widget.Tag).Distinct().Order(StringComparer.Ordinal)]);
+
+            // ---- publish-time widget bakes. Distinct URLs only: the same pricing embed appears on
+            // several pages and is worth exactly one request. A null result is simply absent from the
+            // map, and WidgetView then renders the element as it always did — see WidgetPrerender.
+            _prerendered = await BakeWidgetFragments(ordered, ct).ConfigureAwait(false);
 
             // Brand assets ride the same catalog as page images: their bytes land under
             // assets/ (CopyAssets) and stay unswept (DesiredFiles), so the published/preview
@@ -607,6 +656,7 @@ public sealed class SitePublisher(
                 ResolveBlock = id => blockLibrary.Get(id)?.Spec,
                 ResolveWidget = tag => _descriptors.GetValueOrDefault(tag),
                 ResolveWidgetBundle = tag => _widgetFiles.TryGetValue(tag, out var file) ? $"/{file.RelativePath}" : null,
+                ResolvePrerendered = url => _prerendered.GetValueOrDefault(url),
             };
 
             var chrome = new StaticPageChrome

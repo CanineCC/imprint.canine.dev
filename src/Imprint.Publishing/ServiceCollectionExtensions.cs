@@ -18,6 +18,18 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(options);
         services.AddSingleton<PublisherStatus>();
         services.AddSingleton<PublishGate>();
+        // The publish-time widget bake. Registered here so a production publish has it and a test
+        // host does not unless it asks — SitePublisher takes it as an optional dependency, and a
+        // publisher without one behaves exactly as it did before the feature existed.
+        //
+        // ★ A SHORT TIMEOUT IS THE POINT. This runs inside a publish, once per distinct fragment
+        // URL, and a publish that hangs is worse than a page without its bake — so the client gives
+        // up quickly and the fetcher turns that into "no bake" rather than an error.
+        services.AddHttpClient<IWidgetPrerenderSource, HttpWidgetPrerenderSource>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(8);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("imprint-publisher/1.0 (+prerender)");
+        });
         services.AddSingleton<SitePublisher>();
         services.AddSingleton<DeployPathResolver>();
         services.AddSingleton<SiteDeployService>();
