@@ -1522,5 +1522,20 @@
         "label": "Watchdog base URL"
       }
     ]
+  },
+  {
+    "tag": "wd-survey-detail",
+    "name": "One published survey, in full (rendered here)",
+    "description": "A real published survey as the page's own content: the score and its band, the trend as a sentence, every lens it measured, and what the run recorded about the codebase \u2014 rebuild cost, bus factor, size. One fetch, so the card cannot disagree with itself.",
+    "bundle": "",
+    "placeholder": "A published survey is shown here.",
+    "prerender": "{base}/api/public/verdicts",
+    "prerenderTemplate": "survey-detail",
+    "props": [
+      {
+        "name": "base",
+        "label": "Watchdog base URL"
+      }
+    ]
   }
 ]

@@ -1095,6 +1095,17 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-mix-key-fine::before { background: var(--band-fair); }
 .ip-mix-key-slop::before { background: var(--band-critical); }
 
+/* ── ONE SURVEY IN FULL (the card Assay leads with) ────────────────────────────
+   The trend is a SENTENCE, not a sparkline: a sparkline is a picture of the fact, and the
+   two numbers either side of the arrow are the fact. */
+.ip-survey-detail { max-width: 26rem; }
+.ip-trend { margin: 0.2rem 0 0; display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.4rem; }
+.ip-trend-from { font-family: var(--font-mono); font-size: var(--fs-lg); color: var(--muted); }
+.ip-trend-arrow { color: var(--muted); }
+.ip-trend-to { font-family: var(--font-mono); font-size: var(--fs-lg); font-weight: 600; color: var(--heading); }
+.ip-trend-note { font-size: var(--fs-xs); color: var(--muted); margin-left: auto; }
+.ip-lens-table td { font-variant-numeric: tabular-nums; }
+
 /* ── THE EVIDENCE FLOW (four steps, as an ordered list) ────────────────────────
    An <ol> because the steps ARE ordered, and a row of boxes leaves that to visual
    inference. The counter is drawn from the list, so it can never disagree with the order
