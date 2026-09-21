@@ -120,7 +120,12 @@ else if (descriptor is not null)
     // The pre-hydration fallback gets a REAL link when the manifest declares one: a visitor without
     // JavaScript (and a crawler) reaches the live view instead of a dead label. Hydration replaces
     // this light DOM wholesale, so a hydrated visitor never sees it.
-    if (FallbackHref(descriptor) is { } href)
+    //
+    // ★ NOT WHEN THE CONTENT IS ALREADY HERE. The link offers a way to go and see the real thing;
+    //   once a bake has rendered the real thing in place, it offers a trip to the framed view this
+    //   page exists to have stopped framing — a live "Open the live view →" under a fully rendered
+    //   price list, pointing at /embed/pricing.
+    if (baked is null && FallbackHref(descriptor) is { } href)
     {
       builder.OpenElement(7, "a");
       builder.AddAttribute(8, "class", "ip-widget-fallback-link");

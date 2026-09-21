@@ -234,4 +234,45 @@ public sealed class WidgetPrerenderPublishTests
         Assert.DoesNotContain("fallback", html, StringComparison.Ordinal);      // neither fell back
         Assert.Single(source.Requested);                                        // and it fetched ONCE
     }
+
+    [Fact]
+    public async Task A_rendered_widget_does_not_offer_a_link_to_the_view_it_replaced()
+    {
+        var source = new StubSource("""
+            {"cohorts":[{"key":"t","name":"Engineering teams","fromEur":"\u20AC61","modules":[],"buckets":[]}],"onPrem":[]}
+            """);
+        var host = new PublishingTestHost(configure: services =>
+            services.AddSingleton<IWidgetPrerenderSource>(source));
+        File.WriteAllText(
+            Path.Combine(host.WidgetsDirectory, "manifest.json"),
+            System.Text.Json.JsonSerializer.Serialize(new[]
+            {
+                new
+                {
+                    tag = "wd-pricing", name = "Pricing", bundle = "", placeholder = "fallback",
+                    prerender = "https://app.example.test/api/public/pricing",
+                    prerenderTemplate = "pricing",
+                    fallbackHref = "https://app.example.test/embed/pricing",
+                    props = Array.Empty<object>(),
+                },
+            }));
+
+        await using var _ = host;
+        var siteId = await host.CreateSite();
+        var homeId = await host.CreatePage(siteId, "home", "Home");
+        await host.AddSection(homeId, new SectionNode
+        {
+            Id = NodeId.New(),
+            Children = NodeList.Of(new WidgetNode { Id = NodeId.New(), Tag = "wd-pricing" }),
+        });
+        await host.SetNavigation(siteId, homeId);
+        await host.Publish(homeId);
+        await host.Publisher.Synchronize();
+
+        var html = host.ReadText("index.html");
+
+        Assert.Contains("Engineering teams", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Open the live view", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("/embed/pricing", html, StringComparison.Ordinal);
+    }
 }
