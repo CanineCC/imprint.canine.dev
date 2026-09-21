@@ -118,6 +118,11 @@ public sealed class ShowcaseTemplateTests
         Assert.Equal(1, Occurrences(html, "ip-survey\">"));
         Assert.Contains("ip-grid ip-grid-1up", html, StringComparison.Ordinal);
         Assert.DoesNotContain("a/b", html, StringComparison.Ordinal);
+
+        // And no "Showing 1 of 3,112" beside it: that line exists to stop a STRIP reading as "four
+        // surveys exist", which one card never does — next to a hero it is a sentence about the
+        // widget rather than about the product.
+        Assert.DoesNotContain("Showing", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -243,16 +248,39 @@ public sealed class ShowcaseTemplateTests
     }
 
     [Fact]
-    public void An_svg_carrying_a_style_block_is_refused_rather_than_repaired()
+    public void A_style_block_is_removed_from_the_drawing_not_carried_into_the_page()
     {
-        // ★ This is why the architecture map is not inlined yet. A <style> inside an SVG that is
-        //   inlined into the page is NOT scoped to the drawing — it restyles the whole document, so a
-        //   figure fetched from another service could hide or impersonate anything on the page. The
-        //   guard's allowlist excludes it deliberately, and the right fix is for the drawing to carry
-        //   presentation attributes, not for this to relax.
-        const string svg = """<svg xmlns="http://www.w3.org/2000/svg"><style>body{display:none}</style><text>x</text></svg>""";
+        // ★★ A <style> inside an SVG that is INLINED into the page is not scoped to the drawing — it
+        //   is ordinary document CSS, so a figure fetched from another service could restyle, hide or
+        //   impersonate anything on the page. The product's map really does ship one, and every
+        //   selector in it happens to start with .wd-c4 — but that is a fact about today's payload,
+        //   not something a guard can rely on. Remove the element; the site's own sheet paints the
+        //   classes.
+        const string svg = """
+            <svg xmlns="http://www.w3.org/2000/svg" class="wd-c4"><style>body{display:none}</style>
+            <title>Map</title><text class="name">Gateway</text></svg>
+            """;
 
-        Assert.Null(ArchitectureSvgTemplate.Render(svg));
+        var html = ArchitectureSvgTemplate.Render(svg)!;
+
+        Assert.DoesNotContain("<style", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("display:none", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("<title", html, StringComparison.Ordinal);
+        Assert.Contains(">Gateway<", html, StringComparison.Ordinal);
+        Assert.Contains("class=\"name\"", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void An_svg_that_is_unsafe_for_any_other_reason_is_still_refused()
+    {
+        // Stripping two known-bad elements must not be mistaken for sanitising: everything else still
+        // goes through the guard exactly as before.
+        Assert.Null(ArchitectureSvgTemplate.Render(
+            """<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>"""));
+        Assert.Null(ArchitectureSvgTemplate.Render(
+            """<svg xmlns="http://www.w3.org/2000/svg"><text onclick="alert(1)">x</text></svg>"""));
+        Assert.Null(ArchitectureSvgTemplate.Render(
+            """<svg xmlns="http://www.w3.org/2000/svg"><foreignObject><b>x</b></foreignObject></svg>"""));
     }
 
     [Fact]

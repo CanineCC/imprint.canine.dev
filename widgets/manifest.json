@@ -1465,5 +1465,29 @@
         "label": "Watchdog base URL"
       }
     ]
+  },
+  {
+    "tag": "wd-architecture",
+    "name": "Architecture map (rendered here)",
+    "description": "The C4 architecture map a published survey drew from the code, inlined as SVG so every component name is real, selectable, translatable text. Not a picture of a diagram: a flat image would be exactly as unreadable to a crawler as the iframe it replaces, and would fail WCAG 2.2 1.4.5 on our own site.",
+    "bundle": "",
+    "placeholder": "An architecture map is shown here.",
+    "prerender": "{base}/api/public/c4/{owner}/{name}.svg",
+    "prerenderTemplate": "architecture-svg",
+    "fallbackHref": "{base}/embed/c4",
+    "props": [
+      {
+        "name": "base",
+        "label": "Watchdog base URL"
+      },
+      {
+        "name": "owner",
+        "label": "Repository owner (a published survey)"
+      },
+      {
+        "name": "name",
+        "label": "Repository name"
+      }
+    ]
   }
 ]

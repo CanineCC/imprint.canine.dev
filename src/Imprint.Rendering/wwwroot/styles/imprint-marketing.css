@@ -1089,6 +1089,38 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-mix-key-fine::before { background: var(--band-fair); }
 .ip-mix-key-slop::before { background: var(--band-critical); }
 
+/* ── THE ARCHITECTURE MAP (inlined SVG; the product draws it, this site paints it) ──
+   The drawing arrives class-driven with its own <style> block, which is stripped before the
+   figure is inlined — a <style> inside an inlined SVG is document CSS, not figure CSS, so a
+   drawing fetched from another service could restyle anything on the page. The classes are
+   the contract that survives; these are their values, in this site's tokens, so the map
+   themes light and dark with everything around it.
+   ★ Keep the class names in step with Kennel's C4SvgRenderer. A class that loses its rule
+   does not fail — it draws in the browser's SVG defaults (black fill, no stroke), which
+   looks like a rendering bug rather than a missing stylesheet. */
+.ip-architecture svg { display: block; width: 100%; height: auto; }
+.wd-c4 { font-family: var(--font-ui); }
+.wd-c4 .banner { font-weight: 600; font-size: 13.5px; fill: var(--heading); }
+.wd-c4 .sub { font-size: 11.5px; fill: var(--muted); }
+.wd-c4 .qual { font-size: 9.5px; fill: var(--muted); opacity: 0.8; }
+.wd-c4 .name { font-weight: 600; font-size: 13.5px; fill: var(--ink); }
+.wd-c4 .tag { font-size: 10.5px; fill: var(--accent-ink); }
+.wd-c4 .meta { font-size: 11px; fill: var(--muted); }
+.wd-c4 .box { fill: var(--bg); stroke: var(--hairline); stroke-width: 1.25; }
+.wd-c4 .edge { stroke: var(--hairline); stroke-width: 1.5; fill: none; }
+.wd-c4 .edge-coupling { stroke: var(--band-critical); stroke-width: 2.2; }
+.wd-c4 .arrow { fill: var(--hairline); }
+.wd-c4 .arrow-red { fill: var(--band-critical); }
+/* Per-repo DENSITY fills and portfolio LANDSCAPE fills share the band vocabulary.
+   ★ Mixed from the band hue and the PAGE background rather than from five new "wash" tokens:
+   a wash that is a fixed light-mode tint is a pale box on a dark page, and this sheet already
+   carries the five hues as light/dark pairs. One source, both themes. */
+.wd-c4 .band-clean .box, .wd-c4 .band-exemplary .box, .wd-c4 .band-healthy .box { fill: color-mix(in srgb, var(--band-healthy) 14%, var(--bg)); stroke: var(--band-healthy); }
+.wd-c4 .band-fair .box { fill: color-mix(in srgb, var(--band-fair) 14%, var(--bg)); stroke: var(--band-fair); }
+.wd-c4 .band-weak .box, .wd-c4 .band-poor .box { fill: color-mix(in srgb, var(--band-poor) 14%, var(--bg)); stroke: var(--band-poor); }
+.wd-c4 .band-critical .box { fill: color-mix(in srgb, var(--band-critical) 14%, var(--bg)); stroke: var(--band-critical); }
+.wd-c4 .band-none .box { fill: var(--surface); stroke: var(--hairline); }
+
 /* ── TABLE LIST (canonical bulleted rendering of a CMS table) ───────────────── */
 .ip-ap-table-list > .ip-stack { align-items: stretch; }
 /* The measure cap above applies to every .ip-prose, which silently squeezed the TABLE to a reading

@@ -149,7 +149,11 @@ public static class ScoreCardTemplate
         //   runs 98, 86, 83 … 59, 51 and then 89, 81, 76 — a descending curated head with a tail the
         //   product appends for its own reasons. The sentence was a claim about the payload that the
         //   payload does not make, and it would have been published beside the numbers disproving it.
-        if (Number(root, "matched") is { } matched && matched > reports.Count)
+        // ★ Not under ONE card. "Showing 1 of 3,112 published surveys" beside a hero card is a
+        //   sentence about the widget rather than about the product, and the hero's own copy has
+        //   already said what the reader is looking at. The line exists to stop a STRIP reading as
+        //   "four surveys exist"; a single card never reads that way.
+        if (reports.Count > 1 && Number(root, "matched") is { } matched && matched > reports.Count)
         {
             html.Append("<div class=\"ip-prose\"><p>Showing ")
                 .Append(Esc(Group(reports.Count))).Append(" of <strong>")
