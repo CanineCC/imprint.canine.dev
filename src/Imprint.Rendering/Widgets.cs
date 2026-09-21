@@ -25,6 +25,18 @@ public static class WidgetTemplate
     /// instance leaves empty; a token is left unresolved; or the result is not absolute https.
     /// An unresolved token is a broken promise rather than a partial URL, so it yields nothing.
     /// </summary>
+    /// <summary>
+    /// The cache key for a publish-time bake: the URL it was fetched from AND the template that
+    /// rendered it.
+    /// <para>★ Both halves are load-bearing. Two widgets can read ONE endpoint and render different
+    /// parts of it — a pricing page does exactly that, with the packages in one section and the
+    /// self-hosted rows in another. Keyed by URL alone the second overwrites the first, one rendering
+    /// is produced, and both sections look it up.</para>
+    /// <para>It lives beside <see cref="Resolve"/> for the same reason Resolve does: the publisher
+    /// writes this key and the view reads it, and a key built twice is a key that can differ.</para>
+    /// </summary>
+    public static string BakeKey(string url, string? template) => $"{url}\n{template}";
+
     public static string? Resolve(WidgetDescriptor descriptor, string? template, Func<string, string?> value)
     {
         ArgumentNullException.ThrowIfNull(descriptor);

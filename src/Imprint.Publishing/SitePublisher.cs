@@ -175,7 +175,7 @@ public sealed class SitePublisher(
         private HashSet<string> _builtInWidgetTags = new(StringComparer.Ordinal);
         private SortedDictionary<string, (string RelativePath, string Hash, byte[] Bytes)> _widgetFiles = new(StringComparer.Ordinal);
 
-        /// <summary>Publish-time widget bakes, keyed by the URL the instance's template resolved to.</summary>
+        /// <summary>Publish-time widget bakes, keyed by <see cref="BakeKey"/>.</summary>
         private Dictionary<string, string> _prerendered = new(StringComparer.Ordinal);
 
         /// <summary>
@@ -190,8 +190,12 @@ public sealed class SitePublisher(
                 return new Dictionary<string, string>(StringComparer.Ordinal);
             }
 
-            var wanted = new HashSet<string>(StringComparer.Ordinal);
-            var templateOf = new Dictionary<string, string>(StringComparer.Ordinal);
+            // ★ KEYED BY (URL, TEMPLATE), NOT BY URL. Two widgets can read the SAME endpoint and render
+            // different parts of it — the pricing page does exactly that: one section shows the packages
+            // and another the self-hosted rows, both from /api/public/pricing. Keyed by URL alone the
+            // second widget's template overwrote the first's, one rendering was produced, and both
+            // sections looked it up: the page published two placeholders and nothing said why.
+            var wanted = new HashSet<(string Url, string Template)>();
             foreach (var page in pages)
             {
                 foreach (var widget in NodesOf(page).OfType<WidgetNode>())
@@ -199,22 +203,41 @@ public sealed class SitePublisher(
                     if (_descriptors.GetValueOrDefault(widget.Tag) is { Prerender.Length: > 0 } descriptor
                         && WidgetTemplate.Resolve(descriptor, descriptor.Prerender, widget.Props.Get) is { } url)
                     {
-                        wanted.Add(url);
-                        templateOf[url] = descriptor.PrerenderTemplate ?? "";
+                        wanted.Add((url, descriptor.PrerenderTemplate ?? ""));
                     }
                 }
             }
 
+            // One fetch per distinct URL even when several templates read it.
+            var bodies = new Dictionary<string, string?>(StringComparer.Ordinal);
             var baked = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (var url in wanted.Order(StringComparer.Ordinal))
+            foreach (var (url, template) in wanted.OrderBy(w => w.Url, StringComparer.Ordinal).ThenBy(w => w.Template, StringComparer.Ordinal))
             {
-                var body = await prerenderSource.FetchAsync(new Uri(url), ct).ConfigureAwait(false);
-                var rendered = templateOf.TryGetValue(url, out var template) && template.Length > 0
+                if (!bodies.TryGetValue(url, out var body))
+                {
+                    body = await prerenderSource.FetchAsync(new Uri(url), ct).ConfigureAwait(false);
+                    bodies[url] = body;
+                }
+
+                var rendered = template.Length > 0
                     ? PrerenderTemplates.Render(template, body)
                     : WidgetPrerender.Reduce(body);
+
                 if (rendered is { Length: > 0 })
                 {
-                    baked[url] = rendered;
+                    baked[WidgetTemplate.BakeKey(url, template)] = rendered;
+                    logger.LogInformation(
+                        "Prerendered {Chars} characters for {Url} via template '{Template}'.",
+                        rendered.Length, url, template.Length > 0 ? template : "(reduce)");
+                }
+                else
+                {
+                    // ★ SAY SO. A bake that produces nothing publishes the widget's fallback, which on a
+                    // pricing page is a sentence where the prices should be — and until this line existed
+                    // the only evidence was the absence of prices on a live page.
+                    logger.LogWarning(
+                        "Prerender produced nothing for {Url} via template '{Template}' ({Bytes} bytes fetched); the widget publishes its fallback.",
+                        url, template.Length > 0 ? template : "(reduce)", body?.Length ?? 0);
                 }
             }
 
@@ -661,7 +684,7 @@ public sealed class SitePublisher(
                 ResolveBlock = id => blockLibrary.Get(id)?.Spec,
                 ResolveWidget = tag => _descriptors.GetValueOrDefault(tag),
                 ResolveWidgetBundle = tag => _widgetFiles.TryGetValue(tag, out var file) ? $"/{file.RelativePath}" : null,
-                ResolvePrerendered = url => _prerendered.GetValueOrDefault(url),
+                ResolvePrerendered = key => _prerendered.GetValueOrDefault(key),
             };
 
             var chrome = new StaticPageChrome
@@ -1226,9 +1249,9 @@ public sealed class SitePublisher(
             {
                 if (_descriptors.GetValueOrDefault(widget.Tag) is { Prerender.Length: > 0 } descriptor
                     && WidgetTemplate.Resolve(descriptor, descriptor.Prerender, widget.Props.Get) is { } url
-                    && _prerendered.TryGetValue(url, out var bakedMarkup))
+                    && _prerendered.TryGetValue(WidgetTemplate.BakeKey(url, descriptor.PrerenderTemplate), out var bakedMarkup))
                 {
-                    tokens.Add($"bake:{url}:{Hashing.Hash16(Encoding.UTF8.GetBytes(bakedMarkup))}");
+                    tokens.Add($"bake:{url}:{descriptor.PrerenderTemplate}:{Hashing.Hash16(Encoding.UTF8.GetBytes(bakedMarkup))}");
                 }
             }
 

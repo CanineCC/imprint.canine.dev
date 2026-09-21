@@ -181,4 +181,57 @@ public sealed class WidgetPrerenderPublishTests
         Assert.DoesNotContain("data-island", html, StringComparison.Ordinal);
         Assert.DoesNotContain("Prices load here", html, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task Two_widgets_reading_ONE_endpoint_each_get_their_own_template_output()
+    {
+        // ★ THE REGRESSION. The pricing page shows packages in one section and self-hosted rows in
+        //   another, both from /api/public/pricing. Keyed by URL alone the second widget's template
+        //   overwrote the first's, one rendering was produced, both sections looked it up — and the
+        //   page published two placeholders with nothing in the log to say why.
+        var payload = """
+            {"cohorts":[{"key":"teams","name":"Engineering teams","tagline":"t","fromEur":"\u20AC61",
+             "isFlatPrice":false,"modules":[],"buckets":[]}],
+             "onPrem":[{"key":"L","name":"On-prem L","lineScansPerYear":600000000,"pricePerYearEur":100000}]}
+            """;
+        var source = new StubSource(payload);
+        var host = new PublishingTestHost(configure: services =>
+            services.AddSingleton<IWidgetPrerenderSource>(source));
+
+        object Widget(string tag, string template) => new
+        {
+            tag,
+            name = tag,
+            bundle = "",
+            placeholder = $"{tag} fallback",
+            prerender = "https://app.example.test/api/public/pricing",
+            prerenderTemplate = template,
+            props = Array.Empty<object>(),
+        };
+        File.WriteAllText(
+            Path.Combine(host.WidgetsDirectory, "manifest.json"),
+            System.Text.Json.JsonSerializer.Serialize(
+                new[] { Widget("wd-pricing", "pricing"), Widget("wd-pricing-onprem", "pricing-onprem") }));
+
+        await using var _ = host;
+        var siteId = await host.CreateSite();
+        var homeId = await host.CreatePage(siteId, "home", "Home");
+        await host.AddSection(homeId, new SectionNode
+        {
+            Id = NodeId.New(),
+            Children = NodeList.Of(
+                new WidgetNode { Id = NodeId.New(), Tag = "wd-pricing" },
+                new WidgetNode { Id = NodeId.New(), Tag = "wd-pricing-onprem" }),
+        });
+        await host.SetNavigation(siteId, homeId);
+        await host.Publish(homeId);
+        await host.Publisher.Synchronize();
+
+        var html = host.ReadText("index.html");
+
+        Assert.Contains("Engineering teams", html, StringComparison.Ordinal);   // the packages template
+        Assert.Contains("On-prem L", html, StringComparison.Ordinal);           // the on-prem template
+        Assert.DoesNotContain("fallback", html, StringComparison.Ordinal);      // neither fell back
+        Assert.Single(source.Requested);                                        // and it fetched ONCE
+    }
 }
