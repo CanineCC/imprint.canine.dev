@@ -935,6 +935,20 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
   font-size: var(--fs-sm); color: var(--muted); text-align: center; max-width: var(--mk-measure); margin-inline: auto;
 }
 
+/* ── THREE CARDS FILL THE TRACK ───────────────────────────────────────────────
+   `.ip-grid`'s auto-fill opens as many 16rem tracks as the section can hold, so THREE
+   cards in a 72rem track got four tracks and left the last one empty: the row stopped
+   ~300px short of the right edge and read as a layout that had run out rather than one
+   that had finished. The sheet already pins the count for 2 and for 4 — three was simply
+   never written, and three is the commonest shape on the estate (steps, panels, the
+   on-prem sizes, half the feature grids).
+   ★ Same stepping as the others: three across, then one. Two-across of three leaves a
+   dangling card, which is the thing being fixed. */
+.ip-grid:has(> :nth-child(3):last-child) { grid-template-columns: repeat(3, 1fr); }
+@container (max-width: 44rem) {
+  .ip-grid:has(> :nth-child(3):last-child) { grid-template-columns: 1fr; }
+}
+
 /* ── CATALOGUE PRICE CARDS (rendered by PricingTemplate, never authored) ───────
    These cards are not written in the CMS — they are baked from the product's
    billing catalogue at publish time, so their COUNT is data rather than a layout
@@ -1074,26 +1088,48 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 }
 
 /* The file mix. The bar is decoration over the legend, never instead of it. */
-/* Two across where there is room: a full-width row holding one thin bar reads as a loading
-   skeleton, and the comparison between repositories is the whole point of the section. */
-.ip-mix-list {
-  display: grid; gap: var(--ip-space-3);
-  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+/* The file mix: one COLUMN PER SCAN, so the trend the copy promises is the picture.
+   The first replacement drew a single three-segment bar per repository — a hairline that
+   said nothing was changing, which is the opposite of the section's argument. */
+.ip-mix-grid { --ip-min-item: 300px; }
+.ip-mix {
+  display: grid; gap: 0.5rem; align-content: start;
+  border: 1px solid var(--hairline); border-radius: var(--r-lg);
+  padding: 1rem 1.1rem; background: var(--surface); min-width: 0;
 }
-.ip-mix { display: grid; gap: 0.45rem; align-content: start; }
 .ip-mix-name { margin: 0; font-size: var(--fs-sm); font-weight: 600; color: var(--heading); overflow-wrap: anywhere; }
 .ip-mix-name a { color: inherit; text-decoration: none; }
 .ip-mix-name a:hover { text-decoration: underline; }
-.ip-mix-seg { display: block; height: 100%; }
+
+/* The chart. A list, because the columns are a list of measurements a reader should be able
+   to walk — the bars are the decoration over it. */
+.ip-mix-chart {
+  list-style: none; margin: 0.2rem 0 0; padding: 0;
+  display: flex; align-items: flex-end; gap: 3px; height: 108px;
+}
+.ip-mix-col {
+  flex: 1 1 0; min-width: 0; height: 100%;
+  display: flex; flex-direction: column-reverse;   /* brilliant grows up from the floor */
+  border-radius: 2px; overflow: hidden; background: var(--ip-surface-alt, var(--hairline));
+}
+.ip-mix-seg { display: block; width: 100%; }
 .ip-mix-seg-brilliant { background: var(--band-exemplary); }
 .ip-mix-seg-fine { background: var(--band-fair); }
 .ip-mix-seg-slop { background: var(--band-critical); }
-.ip-mix-legend { margin: 0; display: flex; flex-wrap: wrap; gap: 0.15rem 1rem; font-size: var(--fs-xs); color: var(--muted); }
+
+/* The axis, as three words. A column chart with no axis is a shape, and half of readers
+   will assume the newest scan is on the left. */
+.ip-mix-axis {
+  margin: 0; display: flex; justify-content: space-between; align-items: baseline;
+  font-size: var(--fs-2xs); color: var(--muted); letter-spacing: 0.02em;
+}
+.ip-mix-legend { margin: 0; display: flex; flex-wrap: wrap; gap: 0.15rem 0.9rem; font-size: var(--fs-xs); color: var(--muted); }
 .ip-mix-key { display: inline-flex; align-items: center; gap: 0.35rem; }
 .ip-mix-key::before { content: ""; width: 9px; height: 9px; border-radius: 2px; flex: none; }
 .ip-mix-key-brilliant::before { background: var(--band-exemplary); }
 .ip-mix-key-fine::before { background: var(--band-fair); }
 .ip-mix-key-slop::before { background: var(--band-critical); }
+.ip-mix-files { margin: 0; font-size: var(--fs-2xs); color: var(--muted); }
 
 /* ── ONE SURVEY IN FULL (the card Assay leads with) ────────────────────────────
    The trend is a SENTENCE, not a sparkline: a sparkline is a picture of the fact, and the

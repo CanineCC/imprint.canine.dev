@@ -198,53 +198,117 @@ public sealed class ShowcaseTemplateTests
         Assert.Contains("&lt;img", html, StringComparison.Ordinal);
     }
 
-    private const string Insights = """
+    private const string Composition = """
         {
           "items": [
-            { "display": "a/b", "reportUrl": "/api/oss/a/b/report",
-              "fileQuality": [ { "brilliant": 10, "fine": 80, "slop": 10 },
-                               { "brilliant": 70.8, "fine": 29.2, "slop": 0 } ] }
+            { "repo": "a/b", "reportUrl": "/api/oss/a/b/report",
+              "latest": { "brilliant": 70.8, "fine": 26.7, "slop": 2.5, "scoredFiles": 24 },
+              "history": [
+                { "at": "2026-05-01T00:00:00+00:00", "brilliant": 10, "fine": 80, "slop": 10, "scoredFiles": 20 },
+                { "at": "2026-06-01T00:00:00+00:00", "brilliant": 45, "fine": 55, "slop": 0, "scoredFiles": 22 },
+                { "at": "2026-07-01T00:00:00+00:00", "brilliant": 70.8, "fine": 26.7, "slop": 2.5, "scoredFiles": 24 }
+              ] }
           ]
         }
         """;
 
     [Fact]
-    public void The_file_mix_reads_the_LAST_entry_because_it_is_a_series()
+    public void The_mix_draws_a_column_PER_SCAN_because_the_trend_is_the_argument()
     {
-        // Element zero is the mix the repository had when it was FIRST surveyed — for a repository
-        // that improved, precisely the number it would least like shown, and it would look right.
-        var html = CompositionTemplate.Render(Insights, Origin)!;
+        // ★ The section's copy promises "the trend shows it falling". A single latest figure cannot
+        //   show a trend — the first replacement drew one bar per repository and said nothing was
+        //   changing, which is the opposite of the argument the section makes.
+        var html = CompositionTemplate.Render(Composition, Origin)!;
+
+        Assert.Equal(3, Occurrences(html, "ip-mix-col"));
+        Assert.Contains("ip-mix-chart", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Every_column_carries_its_numbers_in_the_markup()
+    {
+        // A stacked bar with no text is a picture of data. This is data with a picture over it.
+        var html = CompositionTemplate.Render(Composition, Origin)!;
+
+        Assert.Contains("1 May 2026: 10 % brilliant, 80 % fine, 10 % slop", html, StringComparison.Ordinal);
+        Assert.Contains("1 Jul 2026: 70.8 % brilliant, 26.7 % fine, 2.5 % slop", html, StringComparison.Ordinal);
+        Assert.Contains("sr-only", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_latest_mix_is_printed_in_words_because_that_is_what_a_reader_quotes()
+    {
+        var html = CompositionTemplate.Render(Composition, Origin)!;
 
         Assert.Contains("70.8 % brilliant", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("10 % brilliant", html, StringComparison.Ordinal);
+        Assert.Contains("26.7 % fine", html, StringComparison.Ordinal);
+        Assert.Contains("2.5 % slop", html, StringComparison.Ordinal);
+        Assert.Contains("24 files scored", html, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void The_file_mix_prints_its_shares_as_words_not_only_as_a_bar()
+    public void A_zero_band_draws_no_segment_at_all()
     {
-        var html = CompositionTemplate.Render(Insights, Origin)!;
+        // A zero-height segment still shows as a sliver of a category that is not there.
+        var html = CompositionTemplate.Render(Composition, Origin)!;
 
-        Assert.Contains("29.2 % fine", html, StringComparison.Ordinal);
-        Assert.Contains("0 % slop", html, StringComparison.Ordinal);
-        Assert.Contains("aria-label=\"70.8 % brilliant, 29.2 % fine, 0 % slop\"", html, StringComparison.Ordinal);
+        // The middle scan reached 0 % slop; the other two did not.
+        Assert.Equal(2, Occurrences(html, "ip-mix-seg-slop"));
+        Assert.Equal(3, Occurrences(html, "ip-mix-seg-brilliant"));
     }
 
+    /// <summary>
+    /// ★★ THE CURATION, AND WHY IT IS HERE AS WELL AS IN THE PRODUCT. The framed view only ever
+    /// showed repositories with all three bands above zero — "a repo with no slop proves nothing
+    /// about measuring slop, and one with no brilliant reads as a hit piece". The first replacement
+    /// dropped that rule and published a section answering "how much of your codebase is slop?" with
+    /// four repositories at 0 %, which is worse than publishing nothing.
+    /// </summary>
     [Fact]
-    public void A_zero_share_draws_no_segment_at_all()
+    public void A_repository_with_no_slop_is_not_shown_because_it_proves_nothing()
     {
-        // A zero-width span still takes its border and reads as a sliver of a category that isn't there.
-        var html = CompositionTemplate.Render(Insights, Origin)!;
+        const string flattering = """
+            {"items":[
+              {"repo":"all/brilliant","history":[{"brilliant":100,"fine":0,"slop":0}]},
+              {"repo":"no/brilliant","history":[{"brilliant":0,"fine":80,"slop":20}]},
+              {"repo":"a/real-mix","history":[{"brilliant":60,"fine":30,"slop":10}]}]}
+            """;
 
-        Assert.DoesNotContain("ip-mix-seg-slop", html, StringComparison.Ordinal);
-        Assert.Contains("ip-mix-key-slop", html, StringComparison.Ordinal);
+        var html = CompositionTemplate.Render(flattering, Origin)!;
+
+        Assert.Contains("a/real-mix", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("all/brilliant", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("no/brilliant", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// ★ The older insights feed carries the same series under different names (`display`,
+    /// `fileQuality`). Reading both is what let the chart ship before the new endpoint reached prod —
+    /// repointing the widget first would have put a placeholder sentence on a live marketing page.
+    /// </summary>
+    [Fact]
+    public void The_older_insights_envelope_carries_the_same_fact_and_is_read_too()
+    {
+        const string insights = """
+            {"items":[{"display":"a/b","reportUrl":"/api/oss/a/b/report",
+              "fileQuality":[{"brilliant":10,"fine":70,"slop":20,"scoredFiles":8},
+                             {"brilliant":60,"fine":32,"slop":8,"scoredFiles":12}]}]}
+            """;
+
+        var html = CompositionTemplate.Render(insights, Origin)!;
+
+        Assert.Contains("a/b", html, StringComparison.Ordinal);
+        Assert.Equal(2, Occurrences(html, "ip-mix-col"));
+        Assert.Contains("60 % brilliant", html, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void A_repository_with_no_measured_mix_is_skipped_rather_than_drawn_empty()
+    public void A_repository_with_no_history_is_not_drawn_as_an_empty_chart()
     {
         Assert.Null(CompositionTemplate.Render(
-            "{\"items\":[{\"display\":\"a/b\",\"fileQuality\":[{\"brilliant\":null,\"fine\":null,\"slop\":null}]}]}",
-            Origin));
+            "{\"items\":[{\"repo\":\"a/b\",\"history\":[]}]}", Origin));
+        Assert.Null(CompositionTemplate.Render("{\"items\":[]}", Origin));
+        Assert.Null(CompositionTemplate.Render(null, Origin));
     }
 
     [Fact]
