@@ -1390,12 +1390,12 @@
   },
   {
     "tag": "wd-surveys",
-    "name": "Published surveys — a short strip (rendered here)",
-    "description": "The four best published surveys: repository, CAI, band, lenses measured, and a link to read the whole thing. Fetched as data from Watchdog and rendered in this site's own markup at publish time — no frame, no bundle, no script, and every number readable by a crawler.",
+    "name": "Published surveys, four across (rendered here)",
+    "description": "Four real published surveys as full cards — score, band, ladder, trend line, every lens with its own bar and what each run recorded. The same card the hero shows, four across.",
     "bundle": "",
     "placeholder": "Published surveys are listed here.",
-    "prerender": "{base}/api/public/reports",
-    "prerenderTemplate": "score-cards",
+    "prerender": "{base}/api/public/verdicts",
+    "prerenderTemplate": "survey-details",
     "fallbackHref": "{base}/embed/score-card",
     "props": [
       {
@@ -1454,13 +1454,12 @@
   },
   {
     "tag": "wd-survey",
-    "name": "One published survey (rendered here)",
-    "description": "A single survey card — repository, CAI, band, lenses measured, and a link to read it. For a hero, where the copy sits beside one card rather than above a strip of them.",
+    "name": "One published survey, in full (rendered here)",
+    "description": "A real published survey as the page's own content: the score and its band, the banded ladder, the trend as a line and a sentence, every lens it measured with its own bar, and what the run recorded about the codebase — rebuild cost, bus factor, size. One fetch, so the card cannot disagree with itself.",
     "bundle": "",
     "placeholder": "A published survey is shown here.",
-    "prerender": "{base}/api/public/reports",
-    "prerenderTemplate": "score-card",
-    "fallbackHref": "{base}/embed/score-card",
+    "prerender": "{base}/api/public/verdicts",
+    "prerenderTemplate": "survey-detail",
     "props": [
       {
         "name": "base",
@@ -1564,7 +1563,7 @@
   {
     "tag": "wd-survey-detail",
     "name": "One published survey, in full (rendered here)",
-    "description": "A real published survey as the page's own content: the score and its band, the trend as a sentence, every lens it measured, and what the run recorded about the codebase — rebuild cost, bus factor, size. One fetch, so the card cannot disagree with itself.",
+    "description": "A real published survey as the page's own content: the score and its band, the banded ladder, the trend as a line and a sentence, every lens it measured with its own bar, and what the run recorded about the codebase — rebuild cost, bus factor, size. One fetch, so the card cannot disagree with itself.",
     "bundle": "",
     "placeholder": "A published survey is shown here.",
     "prerender": "{base}/api/public/verdicts",

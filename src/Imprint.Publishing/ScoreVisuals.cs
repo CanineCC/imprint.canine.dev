@@ -120,6 +120,94 @@ public static class ScoreVisuals
     }
 
     /// <summary>
+    /// The lens table: one bar per measured lens, each inked in its own band, with the value beside it.
+    /// </summary>
+    /// <remarks>
+    /// ★★ THIS IS THE HALF THAT MADE FOUR CARDS LOOK LIKE FOUR PRODUCTS. The lens scores were drawn
+    /// by one template out of four; the other three printed "6 lenses measured" — a COUNT where the
+    /// card they were copied from showed the six numbers. A count says the survey happened; the bars
+    /// say what it found, and they are the reason a reader can see that one lens is dragging the
+    /// score down without reading six figures.
+    /// </remarks>
+    public static string Lenses(JsonElement root, IReadOnlyList<(string Label, double Value)> measured,
+        string? hex, string caption)
+    {
+        if (measured.Count == 0)
+        {
+            return "";
+        }
+
+        var html = new StringBuilder();
+        html.Append("<table class=\"ip-price-table ip-lens-table\"><caption class=\"sr-only\">")
+            .Append(Esc(caption)).Append(" — score by lens</caption><tbody>");
+
+        foreach (var (label, value) in measured)
+        {
+            var v = Math.Clamp(value, 0, 100);
+            var key = BandKeyOf(root, v);
+            html.Append("<tr><th scope=\"row\">").Append(Esc(label)).Append("</th>")
+                .Append("<td class=\"ip-lens-barcell\"><span class=\"ip-lens-bar\"><span class=\"ip-lens-fill")
+                .Append(key is not null ? $" fill-{key}" : "").Append("\" style=\"width:")
+                .Append(Esc(Score(v))).Append('%')
+                .Append(key is null && hex is not null ? $";background:{hex}" : "").Append("\"></span></span></td>")
+                .Append("<td class=\"ip-lens-value").Append(key is not null ? $" ink-{key}" : "")
+                .Append("\">").Append(Esc(Cai(value))).Append("</td></tr>");
+        }
+
+        return html.Append("</tbody></table>").ToString();
+    }
+
+    /// <summary>The arc: where the repository started, where it is now, and the distance travelled.</summary>
+    /// <remarks>
+    /// ★ THE DELTA IS THE DIFFERENCE BETWEEN THE TWO NUMBERS THE READER CAN SEE. Taking it from the
+    /// raw values printed "62 → 98 … up 35.6", which is an arithmetic error to anyone who checks it —
+    /// and the arc is printed precisely so that it will be checked.
+    /// </remarks>
+    public static string Trend(JsonElement item, double score, string? key)
+    {
+        if (Number(item, "firstScore") is not { } first
+            || Number(item, "scanCount") is not { } scans
+            || scans <= 1)
+        {
+            return "";
+        }
+
+        var delta = Math.Round(score, MidpointRounding.AwayFromZero) - Math.Round(first, MidpointRounding.AwayFromZero);
+        return "<p class=\"ip-trend\"><span class=\"ip-trend-from\">" + Esc(Cai(first))
+             + "</span><span class=\"ip-trend-arrow\" aria-hidden=\"true\">→</span>"
+             + "<span class=\"ip-trend-to" + (key is not null ? " ink-" + key : "") + "\">"
+             + Esc(Cai(score)) + "</span><span class=\"ip-trend-note\">"
+             + Esc(delta >= 0
+                 ? $"up {Cai(delta)} over {Group(scans)} scans"
+                 : $"down {Cai(Math.Abs(delta))} over {Group(scans)} scans")
+             + "</span></p>";
+    }
+
+    /// <summary>What the run recorded about the codebase. Already-escaped values.</summary>
+    /// <remarks>
+    /// ★ A row renders only when the payload carries it. A placeholder row is worse than a missing
+    /// one, because it looks measured.
+    /// </remarks>
+    public static string Facts(IReadOnlyList<(string Label, string Html)> facts, string caption)
+    {
+        if (facts.Count == 0)
+        {
+            return "";
+        }
+
+        var html = new StringBuilder();
+        html.Append("<table class=\"ip-price-table\"><caption class=\"sr-only\">")
+            .Append(Esc(caption)).Append(" — what the run recorded</caption><tbody>");
+        foreach (var (label, value) in facts)
+        {
+            html.Append("<tr><th scope=\"row\">").Append(Esc(label)).Append("</th><td>")
+                .Append(value).Append("</td></tr>");
+        }
+
+        return html.Append("</tbody></table>").ToString();
+    }
+
+    /// <summary>
     /// The css key for the band a value falls in, read from the payload's floors — or null.
     /// </summary>
     /// <remarks>

@@ -31,9 +31,16 @@ public sealed class SurveyCardTemplateTests
     {
         var html = SurveyCardTemplate.Render(Payload, Origin)!;
 
-        Assert.Contains(">86.8</span>", html, StringComparison.Ordinal);
+        // ★★ 87, NOT 86.8 — the whole number the product publishes, the same on every card. This
+        //    file is the third to assert a tenth that the gallery, the report and the island card all
+        //    round away; a repository read 98 in one section and 97.6 in the next because of it.
+        Assert.Contains(">87</span>", html, StringComparison.Ordinal);
         Assert.Contains("Code health", html, StringComparison.Ordinal);
-        Assert.Contains(">94.8</span>", html, StringComparison.Ordinal);
+
+        // ★ THE LENSES ARE BARS NOW, not a list of numbers — the same body every other card draws.
+        //   A bar is what makes one weak lens visible beside five strong ones.
+        Assert.Contains("ip-lens-fill", html, StringComparison.Ordinal);
+        Assert.Contains(">95</td>", html, StringComparison.Ordinal);
         Assert.Contains("13,014 lines", html, StringComparison.Ordinal);
         Assert.Contains("~€550,000", html, StringComparison.Ordinal);
         Assert.Contains("rubric-2026.09.15", html, StringComparison.Ordinal);

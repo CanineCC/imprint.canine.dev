@@ -49,71 +49,58 @@ public static class SurveyCardTemplate
         var html = new StringBuilder();
         html.Append("<div class=\"ip-stack ip-survey ip-survey-card\">");
 
-        html.Append("<p class=\"ip-survey-headline\"><span class=\"ip-cai-score\">")
-            .Append(Esc(Score(score)))
-            .Append("</span><span class=\"ip-cai-unit\"> / 100</span></p>");
+        // ★★ THE SAME BODY AS EVERY OTHER CARD. This one drew a headline and a flat bar while the
+        //    card it sits beside on the same estate drew a ladder, lens bars and the facts — four
+        //    templates, four drawings of one object, which reads as four products rather than one
+        //    measurement shown four times. What differs here is only what the payload can support:
+        //    no owner/name (the page names the repository), no band word and no series.
+        html.Append("<p class=\"ip-cai\"><span class=\"ip-cai-kicker\">CAI</span>")
+            .Append("<span class=\"ip-cai-score\">").Append(Esc(Cai(score)))
+            .Append("</span><span class=\"ip-cai-unit\">/ 100</span></p>");
 
-        // The bar is the same track the other cards use, so one score reads the same everywhere.
-        html.Append("<div class=\"ip-cai ip-cai-track\"><span class=\"ip-cai-fill\" style=\"width:")
-            .Append(Esc(Score(Math.Clamp(score, 0, 100)))).Append("%\"></span></div>");
+        // No bands in this payload, so this is the flat bar — the honest degradation, not a design.
+        html.Append(ScoreVisuals.Ladder(root, score, null, null));
 
-        var lenses = Array(root, "lenses")
+        // ★ THE LENS SCORES ARE IN THIS PAYLOAD AND WERE PRINTED AS A LIST OF NUMBERS. They are the
+        //   same six readings the island card draws as bars; drawing them as bars is what makes a
+        //   weak lens visible beside five strong ones.
+        var byLens = Array(root, "lenses")
             .Select(l => (Key: Str(l, "lens"), Score: Number(l, "score")))
             .Where(l => l.Score is not null)
             .ToDictionary(l => l.Key, l => l.Score!.Value, StringComparer.Ordinal);
 
-        if (lenses.Count > 0)
-        {
-            html.Append("<ul class=\"ip-survey-lenses\">");
-            foreach (var (key, label) in Lenses)
-            {
-                if (!lenses.TryGetValue(key, out var value))
-                {
-                    continue;
-                }
+        var measured = Lenses
+            .Where(l => byLens.ContainsKey(l.Key))
+            .Select(l => (l.Label, byLens[l.Key]))
+            .ToList();
 
-                html.Append("<li><span class=\"ip-survey-lens\">").Append(Esc(label))
-                    .Append("</span><span class=\"ip-survey-lens-score\">").Append(Esc(Score(value)))
-                    .Append("</span></li>");
-            }
-
-            html.Append("</ul>");
-        }
+        html.Append(ScoreVisuals.Lenses(root, measured, null, "This repository"));
 
         // What the run recorded. Each row is dropped when the payload does not carry it.
-        var facts = new List<(string Label, string Value)>();
+        var facts = new List<(string Label, string Html)>();
         if (Number(root, "productionLoc") is { } loc && loc > 0)
         {
-            facts.Add(("Measured", $"{Group(loc)} lines"));
+            facts.Add(("Measured", Esc($"{Group(loc)} lines")));
         }
 
         if (Str(root, "rebuildCost") is { Length: > 0 } rebuild)
         {
-            facts.Add(("Rebuild cost", rebuild));
+            facts.Add(("Rebuild cost", Esc(rebuild)));
         }
 
         if (Number(root, "analyzableProjects") is { } projects && projects > 0)
         {
-            facts.Add(("Projects", Group(projects)));
+            facts.Add(("Projects", Esc(Group(projects))));
         }
 
         if (Str(root, "rubricVersion") is { Length: > 0 } rubric)
         {
             // ★ The rubric a number was produced under travels WITH the number. A score quoted
             //   without it cannot be recomputed, and recomputability is the whole claim.
-            facts.Add(("Rubric", rubric));
+            facts.Add(("Rubric", Esc(rubric)));
         }
 
-        if (facts.Count > 0)
-        {
-            html.Append("<dl class=\"ip-survey-facts\">");
-            foreach (var (label, value) in facts)
-            {
-                html.Append("<dt>").Append(Esc(label)).Append("</dt><dd>").Append(Esc(value)).Append("</dd>");
-            }
-
-            html.Append("</dl>");
-        }
+        html.Append(ScoreVisuals.Facts(facts, "This repository"));
 
         return html.Append("</div>").ToString();
     }
