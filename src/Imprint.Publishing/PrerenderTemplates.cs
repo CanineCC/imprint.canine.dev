@@ -32,6 +32,7 @@ public static class PrerenderTemplates
         CompositionTemplate.Name => CompositionTemplate.Render(body, OriginOf(url)),
         BandScaleTemplate.Name => BandScaleTemplate.Render(body, OriginOf(url)),
         SurveyDetailTemplate.Name => SurveyDetailTemplate.Render(body, OriginOf(url)),
+        SurveyCardTemplate.Name => SurveyCardTemplate.Render(body, OriginOf(url)),
         LanguageSupportTemplate.Name => LanguageSupportTemplate.Render(body),
         ArchitectureSvgTemplate.Name => ArchitectureSvgTemplate.Render(body),
         _ => null,
