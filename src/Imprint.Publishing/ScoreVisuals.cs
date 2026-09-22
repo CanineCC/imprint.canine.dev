@@ -31,10 +31,18 @@ public static class ScoreVisuals
     /// has parsed a digit. The band-scale ladder still uses the bare word, where the word IS the row:
     /// two treatments of one vocabulary, not a rename.</para>
     /// </remarks>
-    public static string Head(JsonElement item, string band, string? key, string style)
+    public static string Head(JsonElement item, string band, string? key, string style) =>
+        Head(Str(item, "name"), Str(item, "owner"), Str(item, "display"), band, key, style);
+
+    /// <summary>The same head for a payload that does not name the repository it describes.</summary>
+    /// <remarks>
+    /// ★ THE EVIDENCE BUNDLE CARRIES NO OWNER AND NO NAME — it is the measurement, not the card —
+    /// so the card it feeds had no title at all while every other card on the estate led with one.
+    /// The url names the repository (<c>/api/public/oss/{owner}/{name}/evidence</c>) and the url is
+    /// what the bake is keyed by, so it is the one place that cannot disagree with the payload.
+    /// </remarks>
+    public static string Head(string name, string owner, string display, string band, string? key, string style)
     {
-        var name = Str(item, "name");
-        var owner = Str(item, "owner");
 
         var html = new StringBuilder();
         html.Append("<div class=\"ip-survey-top\"><h3 class=\"ip-survey-id\">");
@@ -48,7 +56,7 @@ public static class ScoreVisuals
         }
         else
         {
-            html.Append("<span class=\"ip-survey-repo\">").Append(Esc(Str(item, "display"))).Append("</span>");
+            html.Append("<span class=\"ip-survey-repo\">").Append(Esc(display)).Append("</span>");
         }
 
         html.Append("</h3>");

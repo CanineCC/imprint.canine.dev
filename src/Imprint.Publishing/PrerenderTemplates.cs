@@ -33,7 +33,9 @@ public static class PrerenderTemplates
         BandScaleTemplate.Name => BandScaleTemplate.Render(body, OriginOf(url)),
         SurveyDetailTemplate.Name => SurveyDetailTemplate.Render(body, OriginOf(url)),
         SurveyDetailTemplate.StripName => SurveyDetailTemplate.RenderStrip(body, OriginOf(url)),
-        SurveyCardTemplate.Name => SurveyCardTemplate.Render(body, OriginOf(url)),
+        // ★ The WHOLE url, not just its origin: this payload does not name the repository it
+        //   describes, and the url does — `/api/public/oss/{owner}/{name}/evidence`.
+        SurveyCardTemplate.Name => SurveyCardTemplate.Render(body, OriginOf(url), url),
         ExamPoolTemplate.Name => ExamPoolTemplate.Render(body, OriginOf(url)),
         LanguageSupportTemplate.Name => LanguageSupportTemplate.Render(body),
         ArchitectureSvgTemplate.Name => ArchitectureSvgTemplate.Render(body),

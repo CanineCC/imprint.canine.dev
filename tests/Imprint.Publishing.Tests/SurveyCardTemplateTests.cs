@@ -156,4 +156,39 @@ public sealed class SurveyCardTemplateTests
 
         return dir?.FullName ?? throw new InvalidOperationException("could not find the repository root");
     }
+
+    /// <summary>
+    /// ★★ THE CARD LEADS WITH THE REPOSITORY, and this payload does not name one. The URL does, and
+    /// the URL is what the bake is keyed by, so it is the one source that cannot disagree with the
+    /// body that was fetched. Without this the card was the only one on the estate with no title —
+    /// the first thing a reader notices when two sites show "the same" card.
+    /// </summary>
+    [Fact]
+    public void The_repository_is_read_out_of_the_url_the_payload_came_from()
+    {
+        var html = SurveyCardTemplate.Render(
+            Payload, Origin, Origin + "/api/public/oss/code-assurance-initiative/CodeAssuranceIndex/evidence")!;
+
+        Assert.Contains("<span class=\"ip-survey-repo\">CodeAssuranceIndex</span>", html, StringComparison.Ordinal);
+        Assert.Contains("<span class=\"ip-survey-by\">by code-assurance-initiative</span>", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_url_that_names_no_repository_gets_no_title_rather_than_a_wrong_one()
+    {
+        // Rendering somebody else's name, or a fragment of a path, is worse than rendering none.
+        Assert.DoesNotContain("ip-survey-repo", SurveyCardTemplate.Render(Payload, Origin, null)!, StringComparison.Ordinal);
+        Assert.DoesNotContain("ip-survey-repo", SurveyCardTemplate.Render(Payload, Origin, Origin + "/evidence")!, StringComparison.Ordinal);
+    }
+
+    /// <summary>★ Read positionally from the end: an added prefix segment must not shift the pair.</summary>
+    [Fact]
+    public void An_extra_path_segment_does_not_shift_which_two_segments_are_the_repository()
+    {
+        var html = SurveyCardTemplate.Render(
+            Payload, Origin, Origin + "/v2/api/public/oss/acme/api/evidence")!;
+
+        Assert.Contains(">api</span>", html, StringComparison.Ordinal);
+        Assert.Contains("by acme", html, StringComparison.Ordinal);
+    }
 }

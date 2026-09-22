@@ -39,7 +39,29 @@ public static class SurveyCardTemplate
         ("eventSourcing", "Event sourcing"),
     ];
 
-    public static string? Render(string? json, string? origin)
+    /// <summary>The owner and name out of <c>/api/public/oss/{owner}/{name}/evidence</c>, or empties.</summary>
+    /// <remarks>
+    /// ★ Read POSITIONALLY from the end, not by a fixed index: the path is built by the widget's own
+    /// prerender pattern, and an added prefix segment would silently shift a fixed index onto the
+    /// wrong part of it. The two segments before <c>evidence</c> are the pair, wherever they sit.
+    /// </remarks>
+    private static (string Owner, string Name) RepositoryIn(string? url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            return ("", "");
+        }
+
+        var parts = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        // ★ System.Array, spelled out: `using static TemplateJson` brings an `Array(...)` METHOD
+        //   into scope and the bare name resolves to that one.
+        var at = System.Array.LastIndexOf(parts, "evidence");
+        return at >= 2
+            ? (Uri.UnescapeDataString(parts[at - 2]), Uri.UnescapeDataString(parts[at - 1]))
+            : ("", "");
+    }
+
+    public static string? Render(string? json, string? origin, string? url = null)
     {
         if (Root(json) is not { } root || Number(root, "headlineScore") is not { } score)
         {
@@ -48,6 +70,17 @@ public static class SurveyCardTemplate
 
         var html = new StringBuilder();
         html.Append("<div class=\"ip-stack ip-survey ip-survey-card\">");
+
+        // ★★ THE CARD LEADS WITH THE REPOSITORY, LIKE EVERY OTHER CARD ON THE ESTATE — and this one
+        //    did not, which is the first thing a reader notices when two sites show "the same" card.
+        //    The payload is the measurement and does not name what it measured; the URL does, and the
+        //    URL is what the bake is keyed by, so it cannot disagree with the body it fetched.
+        //    ★ Still no band chip: this payload carries no cutlines, and a band is a cutline question.
+        //    Inferring one from a remembered 90/70/50/25 is exactly what BandScaleTemplate refuses.
+        if (RepositoryIn(url) is var (owner, name) && name.Length > 0)
+        {
+            html.Append(ScoreVisuals.Head(name, owner, owner.Length > 0 ? $"{owner}/{name}" : name, "", null, ""));
+        }
 
         // ★★ THE SAME BODY AS EVERY OTHER CARD. This one drew a headline and a flat bar while the
         //    card it sits beside on the same estate drew a ladder, lens bars and the facts — four
