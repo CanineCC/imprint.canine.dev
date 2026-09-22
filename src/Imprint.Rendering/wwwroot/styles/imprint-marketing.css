@@ -1372,7 +1372,12 @@ a.ip-linkcard:hover .ip-linkcard-go, a.ip-linkcard:focus-visible .ip-linkcard-go
   width: 24px; height: 26px; display: block;
   -webkit-mask: var(--badge) no-repeat center / contain; mask: var(--badge) no-repeat center / contain;
 }
+/* ★ THE CAI MARK IS AN IMAGE, NOT A MASK. The badge below is one shape tinted per product; the
+   standard's own mark is five band hues and a marker, and tinting it to one colour would throw away
+   the thing that makes it that mark. So it is drawn, not masked. */
+.ip-linkcard-mark { width: 26px; height: 26px; display: block; }
 .ip-linkcard-badge.is-watchdog { background: var(--ip-wd-accent, #35618a); }
+.ip-linkcard-badge.is-assay { background: var(--ip-assay-accent, #6a4f9c); }
 .ip-linkcard-badge.is-cai { background: var(--ip-cai-accent, #2e7d64); }
 /* ★ Every text row is pinned to column 2. The mark reserves only rows 1-2, so a four-row card
    (label, figure, note, go) would otherwise auto-place its fourth row UNDER the icon. */
@@ -1395,6 +1400,7 @@ a.ip-linkcard:hover .ip-linkcard-label { color: var(--accent-ink); }
   :root:not([data-theme="light"]) .ip-linkcard-badge.is-cai { background: #6fbfa4; }
 }
 :root[data-theme="dark"] .ip-linkcard-badge.is-watchdog { background: #7faace; }
+:root[data-theme="dark"] .ip-linkcard-badge.is-assay { background: #a98fd8; }
 :root[data-theme="dark"] .ip-linkcard-badge.is-cai { background: #6fbfa4; }
 
 /* ── LANGUAGE COVERAGE (one card per language, with where it stops) ────────────

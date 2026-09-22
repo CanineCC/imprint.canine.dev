@@ -42,7 +42,7 @@ public static class SurveyDetailTemplate
     ];
 
     /// <summary>The whole card, for the page that leads with ONE published survey.</summary>
-    public static string? Render(string? json, string? origin) => Render(json, origin, 1);
+    public static string? Render(string? json, string? origin, string? url = null) => Render(json, origin, 1, url);
 
     /// <summary>
     /// The same card, four across, for a strip that says "here are real reports".
@@ -56,20 +56,28 @@ public static class SurveyDetailTemplate
     /// </remarks>
     public const string StripName = "survey-details";
 
-    public static string? RenderStrip(string? json, string? origin) => Render(json, origin, StripCount);
+    public static string? RenderStrip(string? json, string? origin) => Render(json, origin, StripCount, null);
 
     /// <summary>Four fills a row and leaves none dangling.</summary>
     private const int StripCount = 4;
 
-    private static string? Render(string? json, string? origin, int take)
+    private static string? Render(string? json, string? origin, int take, string? url)
     {
         if (Root(json) is not { } root)
         {
             return null;
         }
 
+        var wanted = RepositoryIn(url);
         var items = Array(root, "items")
             .Where(i => Str(i, "display").Length > 0 && Number(i, "bestScore") is not null)
+            // ★★ A NAMED REPOSITORY IS SELECTED HERE TOO, NOT ONLY BY THE SERVER. The feed filters on
+            //    `?repo=`, and a deployment that predates that parameter ignores it and answers with
+            //    the whole cohort — at which point a card that named one repository would silently
+            //    render a DIFFERENT one. Filtering again on the name in the url makes the two agree:
+            //    the server narrows it when it can, and this refuses to draw the wrong survey when it
+            //    cannot. An unmatched name renders nothing, which is visible; the wrong survey is not.
+            .Where(i => wanted is null || string.Equals(Str(i, "display"), wanted, StringComparison.OrdinalIgnoreCase))
             .Take(take)
             .ToList();
 
@@ -103,6 +111,27 @@ public static class SurveyDetailTemplate
         }
 
         return html.ToString();
+    }
+
+    /// <summary>The <c>repo=</c> this url asks for, or null when it names none.</summary>
+    private static string? RepositoryIn(string? url)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Query.Length < 2)
+        {
+            return null;
+        }
+
+        foreach (var pair in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var cut = pair.IndexOf('=');
+            if (cut > 0 && pair[..cut] == "repo")
+            {
+                var value = Uri.UnescapeDataString(pair[(cut + 1)..]).Trim();
+                return value.Length > 0 ? value : null;
+            }
+        }
+
+        return null;
     }
 
     private static string Card(JsonElement root, JsonElement item, string? origin)

@@ -1,4 +1,4 @@
-var u=`
+var b=`
 :host {
   /* neutrals \u2014 dark "graphite" */
   --bg: #15191e;
@@ -302,7 +302,7 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
   .rail { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .rail-side { padding-top: 0; }
 }
-`;function k({kicker:o,tip:r,content:t}){return`<div class="rail"><div class="rail-side"><span class="rail-kicker">${a(o)}</span>`+h(r,{label:o})+`</div><div class="rail-body">${t}</div></div>`}var y=new Set(["exemplary","healthy","fair","poor","critical"]),$=u+g+x+v+w+`
+`;function k({kicker:o,tip:r,content:t}){return`<div class="rail"><div class="rail-side"><span class="rail-kicker">${a(o)}</span>`+h(r,{label:o})+`</div><div class="rail-body">${t}</div></div>`}var y=new Set(["exemplary","healthy","fair","poor","critical"]),$=b+g+x+v+w+`
 .fb-cap { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
 .fb-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .fb-support { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
@@ -323,14 +323,28 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
    paragraph rather than as a set of readings. auto-fit keeps them side by side while they fit and
    folds them cleanly when they do not. */
 .fb-head-figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 14px 28px; position: relative; flex: 1 1 100%; min-width: 0; }
+  gap: 14px; position: relative; flex: 1 1 100%; min-width: 0; align-items: stretch; }
 /* The masthead's (i)s are hint-right, and their subject is the FIGURES ROW: right-anchored to
    it, at most 320px, never wider than the row. At 400px the row wraps to the island's full
    width and the tip still cannot reach past either edge. See hint.js for the reasoning. */
 .fb-head-figs .info-hint { position: static; }
 .fb-head-figs .info-hint-tip { right: 0; left: auto; max-width: min(320px, 100%); }
-.fb-head-fig { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.fb-head-lead { font-size: 18px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+/* \u2605\u2605 THEY ARE CARDS, NOT A ROW OF TEXT. Four figures set as bare stacked lines read as one
+   paragraph with odd spacing \u2014 the owner called it "one big mess" \u2014 because nothing tells the eye
+   where one reading ends and the next begins. A box does: same border, radius, padding and surface
+   as every other card on the estate, and align-items:stretch on the grid makes them one height
+   whatever the longest support line is. The GAP shrinks with the box, because a border already
+   does the separating that 28px of air was doing badly. */
+.fb-head-fig { display: flex; flex-direction: column; gap: 3px; min-width: 0;
+  border: 1px solid var(--hairline); border-radius: var(--r-md, 10px);
+  padding: 11px 13px; background: var(--surface); }
+.fb-head-lead { font-size: 20px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums; }
+/* \u2605 NOT margin-top:auto on the value. It would push the value AND the support line below it to
+   the bottom of the box, so four cards with support lines of different lengths would put their
+   values at four different heights \u2014 the opposite of what the boxes are for. Label, value, support,
+   top down; the grid makes the boxes equal, and that is enough. */
+.fb-head-fig .fb-support { margin-top: 2px; }
 
 /* \u2500\u2500 lead: the findings band \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
    auto-fit + minmax collapses to one column on its own at 400px; no media query needed. The
@@ -352,4 +366,4 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
    two-line label. */
 .fb-label-row { display: flex; align-items: flex-start; }
 .fb-cap-row { display: flex; align-items: center; }
-`;customElements.define("cai-figure-band",class extends f{render(o){let r=(this.getAttribute("layout")||"lead").trim().toLowerCase()==="head"?"head":"lead",t=(this.json("figures",[])||[]).filter(e=>e&&e.lead!=null&&String(e.lead)!==""),n=(this.getAttribute("kicker")||"").trim(),d=this.getAttribute("dateline"),s=this.getAttribute("footnote"),c=e=>{let l=String(e.tone||"").trim().toLowerCase();return y.has(l)?` ink-${l}`:""},i=`<style>${$}</style>`;if(r==="head"){if(i+='<div class="fb-head">',(n||d)&&(i+='<div class="fb-head-id">',n&&(i+=`<span class="fb-cap fb-head-kicker">${a(n)}</span>`),d&&(i+=`<span class="fb-dateline">${a(d)}</span>`),i+="</div>"),t.length>0){i+='<div class="fb-head-figs">';for(let e of t){i+='<div class="fb-head-fig">';let l=e.label==null?"":String(e.label);i+='<div class="fb-cap-row">',i+=`<span class="fb-cap">${a(l)}</span>`,i+=h(e.tip,{right:!0,label:l||"More information"}),i+="</div>",i+=`<span class="fb-mono fb-head-lead${c(e)}">${a(String(e.lead))}</span>`,e.support&&(i+=`<span class="fb-support">${a(String(e.support))}</span>`),i+="</div>"}i+="</div>"}i+="</div>"}else{let e="";if(t.length>0){e+='<div class="fb-lead-grid">';for(let l of t){e+='<div class="fb-lead-fig">',e+=`<span class="fb-mono fb-lead-lead${c(l)}">${a(String(l.lead))}</span>`;let m=l.label==null?"":String(l.label),b=h(l.tip,{label:m||"More information"});(m||b)&&(e+='<div class="fb-label-row">',e+=`<span class="fb-lead-label">${a(m)}</span>`,e+=b,e+="</div>"),l.support&&(e+=`<span class="fb-support">${a(String(l.support))}</span>`),e+="</div>"}e+="</div>"}s&&(e+=`<p class="fb-foot">${p(s)}</p>`),i+=n?k({kicker:n,tip:this.getAttribute("tip"),content:e}):e}r==="head"&&s&&(i+=`<p class="fb-foot">${p(s)}</p>`),o.innerHTML=i}});
+`;customElements.define("cai-figure-band",class extends f{render(o){let r=(this.getAttribute("layout")||"lead").trim().toLowerCase()==="head"?"head":"lead",t=(this.json("figures",[])||[]).filter(e=>e&&e.lead!=null&&String(e.lead)!==""),n=(this.getAttribute("kicker")||"").trim(),d=this.getAttribute("dateline"),s=this.getAttribute("footnote"),c=e=>{let l=String(e.tone||"").trim().toLowerCase();return y.has(l)?` ink-${l}`:""},i=`<style>${$}</style>`;if(r==="head"){if(i+='<div class="fb-head">',(n||d)&&(i+='<div class="fb-head-id">',n&&(i+=`<span class="fb-cap fb-head-kicker">${a(n)}</span>`),d&&(i+=`<span class="fb-dateline">${a(d)}</span>`),i+="</div>"),t.length>0){i+='<div class="fb-head-figs">';for(let e of t){i+='<div class="fb-head-fig">';let l=e.label==null?"":String(e.label);i+='<div class="fb-cap-row">',i+=`<span class="fb-cap">${a(l)}</span>`,i+=h(e.tip,{right:!0,label:l||"More information"}),i+="</div>",i+=`<span class="fb-mono fb-head-lead${c(e)}">${a(String(e.lead))}</span>`,e.support&&(i+=`<span class="fb-support">${a(String(e.support))}</span>`),i+="</div>"}i+="</div>"}i+="</div>"}else{let e="";if(t.length>0){e+='<div class="fb-lead-grid">';for(let l of t){e+='<div class="fb-lead-fig">',e+=`<span class="fb-mono fb-lead-lead${c(l)}">${a(String(l.lead))}</span>`;let m=l.label==null?"":String(l.label),u=h(l.tip,{label:m||"More information"});(m||u)&&(e+='<div class="fb-label-row">',e+=`<span class="fb-lead-label">${a(m)}</span>`,e+=u,e+="</div>"),l.support&&(e+=`<span class="fb-support">${a(String(l.support))}</span>`),e+="</div>"}e+="</div>"}s&&(e+=`<p class="fb-foot">${p(s)}</p>`),i+=n?k({kicker:n,tip:this.getAttribute("tip"),content:e}):e}r==="head"&&s&&(i+=`<p class="fb-foot">${p(s)}</p>`),o.innerHTML=i}});

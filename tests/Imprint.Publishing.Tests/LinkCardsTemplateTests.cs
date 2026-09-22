@@ -84,4 +84,61 @@ public sealed class LinkCardsTemplateTests
 
         Assert.Contains("ip-linkcards", html, StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// ★★ THE MARK FOLLOWS WHERE THE CARD GOES. Every survey page carries two cards generated with
+    /// icon "doc" that point at the corpus on codeassuranceindex.info — so they wore a generic page
+    /// glyph beside a card for the same site wearing its badge. And "Verify this score yourself",
+    /// which points at the standard, wore the STUDIO's badge tinted green rather than the standard's
+    /// own mark. The owner found both by reading the markup.
+    /// </summary>
+    [Fact]
+    public void A_generic_icon_takes_the_mark_of_the_site_it_points_at()
+    {
+        var html = LinkCardsTemplate.Render(Props("""
+            [{"icon":"doc","label":"How this project compares","href":"https://codeassuranceindex.info/state-of-the-corpus/"},
+             {"icon":"doc","label":"A real document","href":"https://example.com/whitepaper"},
+             {"icon":"","label":"The repository","href":"https://github.com/acme/api"}]
+            """))!;
+
+        Assert.Contains("/brand/cai-mark.svg", html, StringComparison.Ordinal);
+        // The one that points nowhere in particular keeps the document glyph.
+        Assert.Contains("M9.2 1.4H4a1.6", html, StringComparison.Ordinal);
+        Assert.Contains("M8 0C3.58 0 0 3.58 0 8", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_standards_own_mark_is_drawn_not_the_studio_badge_tinted()
+    {
+        var html = LinkCardsTemplate.Render(Props("""
+            [{"icon":"cai","label":"Verify this score yourself","href":"https://codeassuranceindex.info/verify/"}]
+            """))!;
+
+        Assert.Contains("/brand/cai-mark.svg", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("canine-badge.svg", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void An_explicit_icon_still_wins_over_the_destination()
+    {
+        // The caller's word is honoured when it says something. Only "doc" and "" defer.
+        var html = LinkCardsTemplate.Render(Props("""
+            [{"icon":"github","label":"Read it on the standard's site","href":"https://codeassuranceindex.info/spec/"}]
+            """))!;
+
+        Assert.Contains("M8 0C3.58 0 0 3.58 0 8", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("cai-mark.svg", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_preprod_or_local_host_resolves_the_same_as_the_live_one()
+    {
+        // ★ Matched on the host SUFFIX: a mark that is right on prod and wrong everywhere it is
+        //   reviewed is a mark nobody trusts.
+        var html = LinkCardsTemplate.Render(Props("""
+            [{"icon":"doc","label":"The corpus","href":"https://preprod.codeassuranceindex.info/state-of-the-corpus/"}]
+            """))!;
+
+        Assert.Contains("/brand/cai-mark.svg", html, StringComparison.Ordinal);
+    }
 }

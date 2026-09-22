@@ -68,14 +68,28 @@ const CSS = TOKENS_CSS + BASE_CSS + SCORECARD_CSS + HINT_CSS + RAIL_CSS + `
    paragraph rather than as a set of readings. auto-fit keeps them side by side while they fit and
    folds them cleanly when they do not. */
 .fb-head-figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 14px 28px; position: relative; flex: 1 1 100%; min-width: 0; }
+  gap: 14px; position: relative; flex: 1 1 100%; min-width: 0; align-items: stretch; }
 /* The masthead's (i)s are hint-right, and their subject is the FIGURES ROW: right-anchored to
    it, at most 320px, never wider than the row. At 400px the row wraps to the island's full
    width and the tip still cannot reach past either edge. See hint.js for the reasoning. */
 .fb-head-figs .info-hint { position: static; }
 .fb-head-figs .info-hint-tip { right: 0; left: auto; max-width: min(320px, 100%); }
-.fb-head-fig { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.fb-head-lead { font-size: 18px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+/* ★★ THEY ARE CARDS, NOT A ROW OF TEXT. Four figures set as bare stacked lines read as one
+   paragraph with odd spacing — the owner called it "one big mess" — because nothing tells the eye
+   where one reading ends and the next begins. A box does: same border, radius, padding and surface
+   as every other card on the estate, and align-items:stretch on the grid makes them one height
+   whatever the longest support line is. The GAP shrinks with the box, because a border already
+   does the separating that 28px of air was doing badly. */
+.fb-head-fig { display: flex; flex-direction: column; gap: 3px; min-width: 0;
+  border: 1px solid var(--hairline); border-radius: var(--r-md, 10px);
+  padding: 11px 13px; background: var(--surface); }
+.fb-head-lead { font-size: 20px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums; }
+/* ★ NOT margin-top:auto on the value. It would push the value AND the support line below it to
+   the bottom of the box, so four cards with support lines of different lengths would put their
+   values at four different heights — the opposite of what the boxes are for. Label, value, support,
+   top down; the grid makes the boxes equal, and that is enough. */
+.fb-head-fig .fb-support { margin-top: 2px; }
 
 /* ── lead: the findings band ─────────────────────────────────────────────────
    auto-fit + minmax collapses to one column on its own at 400px; no media query needed. The

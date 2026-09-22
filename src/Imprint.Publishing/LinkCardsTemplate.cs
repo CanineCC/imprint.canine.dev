@@ -62,7 +62,7 @@ public static class LinkCardsTemplate
                 : "<span class=\"ip-linkcard\">");
 
             html.Append("<span class=\"ip-linkcard-ico\" aria-hidden=\"true\">")
-                .Append(Mark(Str(link, "icon")))
+                .Append(Mark(Str(link, "icon"), href))
                 .Append("</span>");
 
             html.Append("<span class=\"ip-linkcard-label\">").Append(label).Append("</span>");
@@ -115,6 +115,14 @@ public static class LinkCardsTemplate
             """
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M1.5 0h21l-1.91 21.563L11.977 24l-8.564-2.438L1.5 0zm7.031 9.75l-.232-2.718 10.059.003.23-2.622L5.412 4.41l.698 8.01h9.126l-.326 3.426-2.91.804-2.955-.81-.188-2.11H6.248l.33 4.171L12 19.351l5.379-1.443.744-8.157H8.531z"/></svg>
             """,
+        ["bitbucket"] =
+            """
+            <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M.78 1.02a.63.63 0 0 0-.63.73l2.18 13.2c.05.3.31.53.62.53h10.4c.23 0 .43-.17.47-.4l2.18-13.33a.63.63 0 0 0-.63-.73H.78Zm9.1 9.4H6.16l-1-5.23h5.64l-.92 5.23Z"/></svg>
+            """,
+        ["azure"] =
+            """
+            <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M15.5 3.62v8.55l-3.5 2.87-5.43-1.98v1.96l-3.07-4.01 8.99.7V4.32L15.5 3.62ZM12.6 4.4 7.2 1.02v2.15L2.24 4.63.5 6.87v4.9l2.06.9V6.42L12.6 4.4Z"/></svg>
+            """,
         ["doc"] =
             """
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.2 1.4H4a1.6 1.6 0 0 0-1.6 1.6v10A1.6 1.6 0 0 0 4 14.6h8a1.6 1.6 0 0 0 1.6-1.6V5.8Z"/><path d="M9.2 1.4v4.4h4.4"/><path d="M5.6 8.4h4.8M5.6 11h4.8"/></svg>
@@ -124,6 +132,16 @@ public static class LinkCardsTemplate
     /// <summary>The site's own badge, tinted by mask rather than redrawn — one shape, one mark.</summary>
     private const string Badge = "/brand/canine-badge.svg";
 
+    /// <summary>The Code Assurance Index's own mark — five band chips and the marker on them.</summary>
+    /// <remarks>
+    /// ★★ NOT THE CANINE BADGE TINTED GREEN. The island this was ported from masks one shared badge
+    /// and tints it per product, and that is what shipped here — so a card reading "Verify this score
+    /// yourself", pointing at codeassuranceindex.info, wore the studio's badge. The standard has a
+    /// logo of its own, and a link to the standard should carry it. It is full colour by design (the
+    /// five band hues ARE the mark), so unlike the badge it is not masked.
+    /// </remarks>
+    private const string CaiMark = "/brand/cai-mark.svg";
+
     /// <summary>
     /// The mark for a card: our own badge for the two products, an SVG otherwise.
     /// </summary>
@@ -132,16 +150,75 @@ public static class LinkCardsTemplate
     /// mark at all would be a different shape from the ones beside it, and the grid pins every text
     /// row to column 2 on the assumption that column 1 is always filled.
     /// </remarks>
-    private static string Mark(string icon)
+    private static string Mark(string icon, string? href)
     {
         var key = icon.Trim().ToLowerInvariant();
-        if (key is "watchdog" or "cai")
+        if (key.Length == 0 || key == "doc")
+        {
+            // ★★ THE MARK FOLLOWS WHERE THE CARD GOES. Two cards on every survey page point at the
+            //    corpus on codeassuranceindex.info and were generated with icon "doc", so they wore
+            //    a generic page glyph beside a card for the same site that wore its badge. The
+            //    caller's word is honoured when it says something; when it says "a document", the
+            //    destination is a better answer than the default, and it cannot go stale the way a
+            //    second hand-maintained list of icons would.
+            key = FromHref(href) ?? key;
+        }
+
+        if (key == "cai")
+        {
+            return $"<img class=\"ip-linkcard-mark\" src=\"{CaiMark}\" alt=\"\" width=\"26\" height=\"26\" />";
+        }
+
+        if (key == "watchdog" || key == "assay")
         {
             return $"<span class=\"ip-linkcard-badge is-{key}\" style=\"--badge:url('{Badge}')\"></span>";
         }
 
         return Icons.TryGetValue(key, out var svg) ? svg : Icons["doc"];
     }
+
+    /// <summary>Which mark a destination asks for, or null when it does not say.</summary>
+    /// <remarks>
+    /// ★ HOST FIRST, then the path's own extension. Matched on the host SUFFIX so a preprod or local
+    /// address resolves the same as the live one — a mark that is right on prod and wrong everywhere
+    /// it is reviewed is a mark nobody trusts.
+    /// </remarks>
+    private static string? FromHref(string? href)
+    {
+        if (href is not { Length: > 0 })
+        {
+            return null;
+        }
+
+        if (Uri.TryCreate(href, UriKind.Absolute, out var uri))
+        {
+            var host = uri.Host.ToLowerInvariant();
+            if (Hosts.FirstOrDefault(h => host == h.Host || host.EndsWith("." + h.Host, StringComparison.Ordinal)) is { Mark.Length: > 0 } hit)
+            {
+                return hit.Mark;
+            }
+        }
+
+        // A site-relative href has no host, so the PAGE's own site is the only thing it can mean —
+        // which the template does not know. Fall back to the extension, and otherwise say nothing.
+        var path = (Uri.TryCreate(href, UriKind.Absolute, out var abs) ? abs.AbsolutePath : href).ToLowerInvariant();
+        return path.EndsWith(".html", StringComparison.Ordinal) || path.EndsWith(".htm", StringComparison.Ordinal)
+            ? "html"
+            : null;
+    }
+
+    /// <summary>The hosts whose own mark a card should carry.</summary>
+    private static readonly (string Host, string Mark)[] Hosts =
+    [
+        ("codeassuranceindex.info", "cai"),
+        ("watchdog.canine.dev", "watchdog"),
+        ("assay.canine.dev", "assay"),
+        ("github.com", "github"),
+        ("gitlab.com", "gitlab"),
+        ("bitbucket.org", "bitbucket"),
+        ("dev.azure.com", "azure"),
+        ("visualstudio.com", "azure"),
+    ];
 
     /// <summary>An absolute http(s) URL, a site-relative path, or null. Nothing else is emitted.</summary>
     private static string? Href(string value)

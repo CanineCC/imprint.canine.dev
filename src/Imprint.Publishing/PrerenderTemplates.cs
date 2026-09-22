@@ -31,7 +31,9 @@ public static class PrerenderTemplates
         FindingsTemplate.Name => FindingsTemplate.Render(body, OriginOf(url)),
         CompositionTemplate.Name => CompositionTemplate.Render(body, OriginOf(url)),
         BandScaleTemplate.Name => BandScaleTemplate.Render(body, OriginOf(url)),
-        SurveyDetailTemplate.Name => SurveyDetailTemplate.Render(body, OriginOf(url)),
+        // ★ The whole url: this feed can be asked for ONE repository by `?repo=`, and the card
+        //   must refuse to draw a different one if a deployment ignores that parameter.
+        SurveyDetailTemplate.Name => SurveyDetailTemplate.Render(body, OriginOf(url), url),
         SurveyDetailTemplate.StripName => SurveyDetailTemplate.RenderStrip(body, OriginOf(url)),
         // ★ The WHOLE url, not just its origin: this payload does not name the repository it
         //   describes, and the url does — `/api/public/oss/{owner}/{name}/evidence`.

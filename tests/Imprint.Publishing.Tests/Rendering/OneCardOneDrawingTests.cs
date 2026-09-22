@@ -122,4 +122,39 @@ public sealed class OneCardOneDrawingTests
         Assert.Contains("ip-lens-fill fill-exemplary", html, StringComparison.Ordinal);
         Assert.Contains("ip-lens-fill fill-fair", html, StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// ★★ A CARD THAT NAMES A REPOSITORY NEVER DRAWS A DIFFERENT ONE. The feed filters on `?repo=`;
+    /// a deployment that predates that parameter ignores it and answers with the whole cohort. Left
+    /// to the server alone, a card for one repository would then silently show whichever survey
+    /// happened to rank first — on a front page, under a heading naming the project.
+    /// </summary>
+    [Fact]
+    public void A_url_naming_a_repository_draws_that_one_even_if_the_server_ignored_the_filter()
+    {
+        var html = PrerenderTemplates.Render(
+            SurveyDetailTemplate.Name, Verdicts, Origin + "/api/public/verdicts?repo=acme/api")!;
+
+        Assert.Contains(">api</span>", html, StringComparison.Ordinal);
+        Assert.Contains("by acme", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("ruben-rasmussen", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_named_repository_the_payload_does_not_hold_renders_nothing_rather_than_the_wrong_one()
+    {
+        // Nothing is visible — the widget publishes its fallback and somebody notices. The wrong
+        // survey under the right heading is not visible at all.
+        Assert.Null(PrerenderTemplates.Render(
+            SurveyDetailTemplate.Name, Verdicts, Origin + "/api/public/verdicts?repo=CanineCC/kennel.canine.dev"));
+    }
+
+    [Fact]
+    public void A_url_naming_no_repository_still_leads_with_the_first_of_the_cohort()
+    {
+        var html = PrerenderTemplates.Render(
+            SurveyDetailTemplate.Name, Verdicts, Origin + "/api/public/verdicts")!;
+
+        Assert.Contains(">auth</span>", html, StringComparison.Ordinal);
+    }
 }
