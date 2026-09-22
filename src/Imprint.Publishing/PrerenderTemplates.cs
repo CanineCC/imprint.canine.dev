@@ -33,6 +33,7 @@ public static class PrerenderTemplates
         BandScaleTemplate.Name => BandScaleTemplate.Render(body, OriginOf(url)),
         SurveyDetailTemplate.Name => SurveyDetailTemplate.Render(body, OriginOf(url)),
         SurveyCardTemplate.Name => SurveyCardTemplate.Render(body, OriginOf(url)),
+        ExamPoolTemplate.Name => ExamPoolTemplate.Render(body, OriginOf(url)),
         LanguageSupportTemplate.Name => LanguageSupportTemplate.Render(body),
         ArchitectureSvgTemplate.Name => ArchitectureSvgTemplate.Render(body),
         _ => null,

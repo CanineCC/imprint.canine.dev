@@ -1516,6 +1516,21 @@
     ]
   },
   {
+    "tag": "wd-question-pool",
+    "name": "The staff exam question pool (rendered here)",
+    "description": "Every question a colleague can be asked, grouped, as ordinary visible text. It replaces a frame and is NOT a hidden machine-readable copy: an earlier attempt baked a duplicate into the light DOM and left the iframe drawing the page, which solved the sub-goal and not the goal. The bake is keyed by the payload's content hash, so editing the questionnaire database makes the page stale and the next pass re-renders it. The endpoint carries prompts only — never options, never an answer key.",
+    "bundle": "",
+    "placeholder": "The question pool is shown here.",
+    "prerender": "{base}/api/public/exam-pool",
+    "prerenderTemplate": "exam-pool",
+    "props": [
+      {
+        "name": "base",
+        "label": "Watchdog base URL"
+      }
+    ]
+  },
+  {
     "tag": "wd-band-scale",
     "name": "The band scale (rendered here)",
     "description": "The fixed five-band CAI scale. The band words and hues are this site's; the CUTLINES come from the payload, because they are scoring data and a fourth hand-written copy of them is how a scale drifts. Reads the reports feed, whose band table carries the product's own words and pins a real published survey to each band; it also falls back to the procurement checklist's cutlines, which are public independently of any deploy.",

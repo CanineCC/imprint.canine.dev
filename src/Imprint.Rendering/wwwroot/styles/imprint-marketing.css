@@ -1186,6 +1186,28 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-survey-facts dt { color: var(--muted); }
 .ip-survey-facts dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap: anywhere; }
 
+/* ── THE STAFF EXAM QUESTION POOL ──────────────────────────────────────────────
+   169 questions is a long page, so the job of the styling is legibility at length: a
+   measure that does not run the full width, generous line-height, and a count on each
+   group heading so a reader can see the shape before scrolling it. The numbers come from
+   the payload (`value` on each <li>), never from the list's own counter — a colleague
+   refers to "number 42", and a list that renumbered per group would rename every question
+   the moment a group gained one. */
+.ip-pool { gap: var(--ip-space-4); }
+.ip-pool-rule { margin: 0; color: var(--muted); font-size: var(--fs-sm); }
+.ip-pool-group { display: grid; gap: 0.5rem; }
+.ip-pool-heading {
+  margin: 0; font-size: var(--fs-md); font-weight: 600; color: var(--heading);
+  display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap;
+}
+.ip-pool-count { font-size: var(--fs-xs); font-weight: 400; color: var(--muted); }
+.ip-pool-list {
+  margin: 0; padding-left: 2.4rem; display: grid; gap: 0.4rem;
+  max-width: 60ch; line-height: 1.55;
+}
+.ip-pool-list li { padding-left: 0.2rem; }
+.ip-pool-list li::marker { color: var(--muted); font-variant-numeric: tabular-nums; }
+
 /* ── THE EVIDENCE FLOW (four steps, as an ordered list) ────────────────────────
    An <ol> because the steps ARE ordered, and a row of boxes leaves that to visual
    inference. The counter is drawn from the list, so it can never disagree with the order
