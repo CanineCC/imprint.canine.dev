@@ -28,7 +28,7 @@ public static class LinkCardsTemplate
     /// <summary>The prop carrying the links, as a JSON array.</summary>
     private const string LinksProp = "links";
 
-    public static string? Render(Func<string, string?> props)
+    public static string? Render(Func<string, string?> props, string? site = null)
     {
         ArgumentNullException.ThrowIfNull(props);
 
@@ -62,7 +62,7 @@ public static class LinkCardsTemplate
                 : "<span class=\"ip-linkcard\">");
 
             html.Append("<span class=\"ip-linkcard-ico\" aria-hidden=\"true\">")
-                .Append(Mark(Str(link, "icon"), href))
+                .Append(Mark(Str(link, "icon"), href, site))
                 .Append("</span>");
 
             html.Append("<span class=\"ip-linkcard-label\">").Append(label).Append("</span>");
@@ -150,7 +150,7 @@ public static class LinkCardsTemplate
     /// mark at all would be a different shape from the ones beside it, and the grid pins every text
     /// row to column 2 on the assumption that column 1 is always filled.
     /// </remarks>
-    private static string Mark(string icon, string? href)
+    private static string Mark(string icon, string? href, string? site)
     {
         var key = icon.Trim().ToLowerInvariant();
         if (key.Length == 0 || key == "doc")
@@ -161,7 +161,7 @@ public static class LinkCardsTemplate
             //    caller's word is honoured when it says something; when it says "a document", the
             //    destination is a better answer than the default, and it cannot go stale the way a
             //    second hand-maintained list of icons would.
-            key = FromHref(href) ?? key;
+            key = FromHref(href, site) ?? key;
         }
 
         if (key == "cai")
@@ -183,11 +183,22 @@ public static class LinkCardsTemplate
     /// address resolves the same as the live one — a mark that is right on prod and wrong everywhere
     /// it is reviewed is a mark nobody trusts.
     /// </remarks>
-    private static string? FromHref(string? href)
+    private static string? FromHref(string? href, string? site)
     {
         if (href is not { Length: > 0 })
         {
             return null;
+        }
+
+        // ★★ A SITE-RELATIVE HREF MEANS THIS SITE, and until the render carried the site's own
+        //    address that was the one destination a card could not name. Every survey page on the
+        //    standard's site carries two cards pointing at its own corpus — "/state-of-the-corpus/"
+        //    — and they wore a generic document glyph beside a card for the SAME SITE wearing its
+        //    mark. Resolving against the site turns "somewhere here" into an answer.
+        if (href.StartsWith('/') && !href.StartsWith("//", StringComparison.Ordinal)
+            && site is { Length: > 0 } && Uri.TryCreate(site, UriKind.Absolute, out var root))
+        {
+            href = new Uri(root, href).ToString();
         }
 
         if (Uri.TryCreate(href, UriKind.Absolute, out var uri))
@@ -199,8 +210,8 @@ public static class LinkCardsTemplate
             }
         }
 
-        // A site-relative href has no host, so the PAGE's own site is the only thing it can mean —
-        // which the template does not know. Fall back to the extension, and otherwise say nothing.
+        // A relative href on a site with no published address left: the extension is all that is
+        // left to read, and otherwise say nothing rather than guess.
         var path = (Uri.TryCreate(href, UriKind.Absolute, out var abs) ? abs.AbsolutePath : href).ToLowerInvariant();
         return path.EndsWith(".html", StringComparison.Ordinal) || path.EndsWith(".htm", StringComparison.Ordinal)
             ? "html"

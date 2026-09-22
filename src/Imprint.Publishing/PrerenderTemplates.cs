@@ -49,9 +49,9 @@ public static class PrerenderTemplates
     /// <see cref="Render"/> — an unknown name renders nothing rather than something unexpected — and
     /// a separate lookup because these templates take no fetched body at all.
     /// </summary>
-    public static string? RenderFromProps(string? name, Func<string, string?> props) => name switch
+    public static string? RenderFromProps(string? name, Func<string, string?> props, string? site = null) => name switch
     {
-        LinkCardsTemplate.Name => LinkCardsTemplate.Render(props),
+        LinkCardsTemplate.Name => LinkCardsTemplate.Render(props, site),
         FlowTemplate.Name => FlowTemplate.Render(props),
         _ => null,
     };

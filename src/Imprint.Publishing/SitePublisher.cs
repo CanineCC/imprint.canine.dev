@@ -703,7 +703,13 @@ public sealed class SitePublisher(
                 ResolveWidget = tag => _descriptors.GetValueOrDefault(tag),
                 ResolveWidgetBundle = tag => _widgetFiles.TryGetValue(tag, out var file) ? $"/{file.RelativePath}" : null,
                 ResolvePrerendered = key => _prerendered.GetValueOrDefault(key),
-                RenderFromProps = PrerenderTemplates.RenderFromProps,
+                // ★ THE SITE'S OWN ADDRESS TRAVELS WITH THE RENDER. A prop-rendered template sees
+                //   only props, so a SITE-RELATIVE href in them ("/state-of-the-corpus/") is a
+                //   destination it cannot name — and a link card could not tell "somewhere on this
+                //   site" from "a document somewhere". Bound here because this is the one place that
+                //   knows which site is being written.
+                RenderFromProps = (template, props) =>
+                    PrerenderTemplates.RenderFromProps(template, props, _baseUrl),
             };
 
             var chrome = new StaticPageChrome

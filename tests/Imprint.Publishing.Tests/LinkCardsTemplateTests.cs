@@ -16,6 +16,18 @@ public sealed class LinkCardsTemplateTests
 
     private static Func<string, string?> Props(string? links) => name => name == "links" ? links : null;
 
+    private static int Occurrences(string haystack, string needle)
+    {
+        var n = 0;
+        for (var i = haystack.IndexOf(needle, StringComparison.Ordinal); i >= 0;
+             i = haystack.IndexOf(needle, i + needle.Length, StringComparison.Ordinal))
+        {
+            n++;
+        }
+
+        return n;
+    }
+
     [Fact]
     public void Every_link_becomes_a_real_anchor_a_crawler_can_follow()
     {
@@ -165,5 +177,49 @@ public sealed class LinkCardsTemplateTests
             Assert.True(shipped.Contains(m.Groups[1].Value),
                 $"{m.Groups[1].Value} is referenced by a card but no site writes it");
         }
+    }
+
+    /// <summary>
+    /// ★★ A SITE-RELATIVE HREF MEANS THIS SITE. Every survey page on the standard's site carries two
+    /// cards pointing at its own corpus — "/state-of-the-corpus/" — and they wore a generic document
+    /// glyph beside a card for the SAME SITE wearing its mark, because a prop-rendered template sees
+    /// only props and could not name "somewhere here". The render now carries the site's address.
+    /// </summary>
+    [Fact]
+    public void A_site_relative_href_takes_the_mark_of_the_site_it_is_rendered_for()
+    {
+        const string cards = """
+            [{"icon":"doc","label":"How this project compares","href":"/state-of-the-corpus/"},
+             {"icon":"doc","label":"What was found in csharp projects","href":"/state-of-the-corpus/language/csharp/"}]
+            """;
+
+        var onTheStandard = LinkCardsTemplate.Render(Props(cards), "https://codeassuranceindex.info")!;
+        var onTheSurveyor = LinkCardsTemplate.Render(Props(cards), "https://watchdog.canine.dev")!;
+
+        Assert.Equal(2, Occurrences(onTheStandard, "/brand/cai-mark.svg"));
+        Assert.Equal(2, Occurrences(onTheSurveyor, "ip-linkcard-badge is-watchdog"));
+    }
+
+    [Fact]
+    public void With_no_site_address_a_relative_href_keeps_the_document_glyph()
+    {
+        // Saying nothing beats guessing: the same path means a different site on a different site.
+        var html = LinkCardsTemplate.Render(Props("""
+            [{"icon":"doc","label":"The corpus","href":"/state-of-the-corpus/"}]
+            """))!;
+
+        Assert.DoesNotContain("cai-mark.svg", html, StringComparison.Ordinal);
+        Assert.Contains("M9.2 1.4H4a1.6", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_protocol_relative_href_is_not_treated_as_this_site()
+    {
+        // "//example.com/x" is absolute-with-inherited-scheme, not a path on this site.
+        var html = LinkCardsTemplate.Render(Props("""
+            [{"icon":"doc","label":"Elsewhere","href":"//example.com/state-of-the-corpus/"}]
+            """), "https://codeassuranceindex.info")!;
+
+        Assert.DoesNotContain("cai-mark.svg", html, StringComparison.Ordinal);
     }
 }
