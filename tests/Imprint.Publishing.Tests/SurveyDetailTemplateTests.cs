@@ -34,9 +34,18 @@ public sealed class SurveyDetailTemplateTests
         Assert.Contains("<h3>ruben-rasmussen/auth</h3>", html, StringComparison.Ordinal);
         Assert.Contains(">97.6</span>", html, StringComparison.Ordinal);
         Assert.Contains("Exemplary", html, StringComparison.Ordinal);
-        Assert.Contains("<th scope=\"row\">Code health</th><td>98.2</td>", html, StringComparison.Ordinal);
-        Assert.Contains("<th scope=\"row\">Security</th><td>100</td>", html, StringComparison.Ordinal);
+        // ★ A BAR AND ITS NUMBER, not a number alone. The bar is what makes "one lens is dragging
+        //   this down" visible without reading five figures — which is why the widget drew them and
+        //   why the bake looked so much poorer than the island it replaced.
+        Assert.Contains("<th scope=\"row\">Code health</th>", html, StringComparison.Ordinal);
+        Assert.Contains("<td class=\"ip-lens-value\">98.2</td>", html, StringComparison.Ordinal);
+        Assert.Contains("<th scope=\"row\">Security</th>", html, StringComparison.Ordinal);
+        Assert.Contains("<td class=\"ip-lens-value\">100</td>", html, StringComparison.Ordinal);
         Assert.Contains("Domain modelling", html, StringComparison.Ordinal);
+
+        // Every measured lens gets a bar, and the fill is the score.
+        Assert.Equal(6, Occurrences(html, "ip-lens-fill"));
+        Assert.Contains("width:98.2%", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -141,5 +150,14 @@ public sealed class SurveyDetailTemplateTests
 
         Assert.DoesNotContain("<img", html, StringComparison.Ordinal);
         Assert.Contains("&lt;img", html, StringComparison.Ordinal);
+    }
+
+    private static int Occurrences(string haystack, string needle)
+    {
+        var n = 0;
+        for (var i = haystack.IndexOf(needle, StringComparison.Ordinal); i >= 0;
+             i = haystack.IndexOf(needle, i + needle.Length, StringComparison.Ordinal)) { n++; }
+
+        return n;
     }
 }

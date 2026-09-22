@@ -318,7 +318,12 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
 .fb-head-kicker { color: var(--accent); }
 .fb-dateline { font-size: 30px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1;
   color: var(--heading); overflow-wrap: anywhere; }
-.fb-head-figs { display: flex; flex-wrap: wrap; gap: 14px 28px; position: relative; }
+/* \u2605 AN EQUAL GRID, NOT A FLOWING ROW. As flex-wrap each figure took the width of its own text,
+   so a long one (a rubric span) pushed the rest into an uneven huddle and the band read as a
+   paragraph rather than as a set of readings. auto-fit keeps them side by side while they fit and
+   folds them cleanly when they do not. */
+.fb-head-figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px 28px; position: relative; flex: 1 1 100%; min-width: 0; }
 /* The masthead's (i)s are hint-right, and their subject is the FIGURES ROW: right-anchored to
    it, at most 320px, never wider than the row. At 400px the row wraps to the island's full
    width and the tip still cannot reach past either edge. See hint.js for the reasoning. */

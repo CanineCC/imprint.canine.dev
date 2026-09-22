@@ -73,14 +73,14 @@ public static class SurveyDetailTemplate
 
         html.Append("</p>");
 
-        html.Append("<div class=\"ip-cai-track\" role=\"img\" aria-label=\"")
-            .Append(Esc(Score(score))).Append(" out of 100\">")
-            .Append("<span class=\"ip-cai-fill").Append(key is not null ? $" fill-{key}" : "")
-            .Append("\" style=\"width:").Append(Esc(Score(Math.Clamp(score, 0, 100)))).Append("%")
-            .Append(hex is not null ? $";background:{hex}" : "").Append("\"></span></div>");
+        html.Append(ScoreVisuals.Ladder(root, score, hex, key));
 
-        // The trend as a SENTENCE. A sparkline is a picture of this fact and cannot be read; the
-        // numbers either side of the arrow are the fact itself.
+        // ★ THE LINE AND THE SENTENCE, not one or the other. The note that used to stand here said
+        //   "a sparkline is a picture of this fact and cannot be read" and shipped the numbers alone.
+        //   The shape is a DIFFERENT fact from the endpoints: 62 to 98 in one jump and 62 to 98 by
+        //   steady work are the same two numbers and not the same story.
+        html.Append(ScoreVisuals.Sparkline(item, hex));
+
         if (Number(item, "firstScore") is { } first
             && Number(item, "scanCount") is { } scans
             && scans > 1)
@@ -103,12 +103,19 @@ public static class SurveyDetailTemplate
 
         if (measured.Count > 0)
         {
+            // ★ A BAR PER LENS, not a column of numbers. The number is kept beside it — the bar
+            //   is what makes "one lens is dragging this down" visible without reading five figures,
+            //   which is the whole reason the widget drew them.
             html.Append("<table class=\"ip-price-table ip-lens-table\"><caption class=\"sr-only\">")
                 .Append(Esc(Str(item, "display"))).Append(" — score by lens</caption><tbody>");
             foreach (var (label, value) in measured)
             {
-                html.Append("<tr><th scope=\"row\">").Append(Esc(label)).Append("</th><td>")
-                    .Append(Esc(Score(value!.Value))).Append("</td></tr>");
+                var v = Math.Clamp(value!.Value, 0, 100);
+                html.Append("<tr><th scope=\"row\">").Append(Esc(label)).Append("</th>")
+                    .Append("<td class=\"ip-lens-barcell\"><span class=\"ip-lens-bar\"><span class=\"ip-lens-fill\" style=\"width:")
+                    .Append(Esc(Score(v))).Append('%')
+                    .Append(hex is not null ? $";background:{hex}" : "").Append("\"></span></span></td>")
+                    .Append("<td class=\"ip-lens-value\">").Append(Esc(Score(value.Value))).Append("</td></tr>");
             }
 
             html.Append("</tbody></table>");

@@ -1240,6 +1240,20 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    Geometry, icon set and badge are now ported from widgets/_src/cai-link-cards.js so the two
    cannot disagree: two columns at 19rem, the mark spanning rows 1-2, every text row pinned to
    column 2 so a card with a figure and a card without are the same shape. */
+/* ── THE SPARKLINE AND THE LENS BARS ───────────────────────────────────────────
+   Both were dropped by the bake and both are how the card is READ at a glance: the line says
+   whether the score was earned steadily or in one jump, and the bars say which lens is dragging.
+   The numbers stay beside them; the drawing is not a replacement for the reading. */
+.ip-cai-spark { height: 34px; margin: 0.2rem 0 0; color: var(--muted); }
+.ip-cai-spark svg { width: 100%; height: 100%; display: block; }
+.ip-lens-barcell { width: 55%; }
+.ip-lens-bar {
+  display: block; height: 8px; border-radius: var(--r-full);
+  background: var(--surface-2); overflow: hidden; min-width: 0;
+}
+.ip-lens-fill { display: block; height: 100%; border-radius: var(--r-full); background: var(--accent); }
+.ip-lens-value { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
 /* ── THE BANDED LADDER WITH A PIN ──────────────────────────────────────────────
    The widget this replaced drew the real ladder; the bake drew a flat bar, on a note claiming the
    cutlines were unavailable. They are in the same payload. Each rung is FLEX-SIZED from the
