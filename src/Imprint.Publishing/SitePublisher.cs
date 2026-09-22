@@ -175,16 +175,6 @@ public sealed class SitePublisher(
         private HashSet<string> _builtInWidgetTags = new(StringComparer.Ordinal);
         private SortedDictionary<string, (string RelativePath, string Hash, byte[] Bytes)> _widgetFiles = new(StringComparer.Ordinal);
 
-        /// <summary>The descriptor's context url, resolved without props — or "" when it has none.</summary>
-        /// <remarks>
-        /// ★ THE LOOKUP MUST DERIVE IT THE SAME WAY THE BAKE DID, or the key misses and the widget
-        /// publishes its fallback with nothing to say why. One function, called from both sides.
-        /// </remarks>
-        private static string ContextUrlOf(WidgetDescriptor descriptor) =>
-            descriptor.PrerenderContext is { Length: > 0 } pattern
-                ? WidgetTemplate.Resolve(descriptor, pattern, _ => null) ?? ""
-                : "";
-
         /// <summary>Publish-time widget bakes, keyed by <see cref="BakeKey"/>.</summary>
         private Dictionary<string, string> _prerendered = new(StringComparer.Ordinal);
 
@@ -216,9 +206,7 @@ public sealed class SitePublisher(
                         // ★ THE CONTEXT URL TAKES NO PROPS. It supplies facts shared by every card —
                         //   the band cutlines — rather than choosing a subject, so resolving it
                         //   against props would invite a per-instance fetch for an identical answer.
-                        var context = descriptor.PrerenderContext is { Length: > 0 } pattern
-                            ? WidgetTemplate.Resolve(descriptor, pattern, _ => null) ?? ""
-                            : "";
+                        var context = WidgetTemplate.ContextUrl(descriptor, widget.Props.Get);
                         wanted.Add((url, descriptor.PrerenderTemplate ?? "", context));
                     }
                 }
@@ -1281,7 +1269,8 @@ public sealed class SitePublisher(
                 if (_descriptors.GetValueOrDefault(widget.Tag) is { Prerender.Length: > 0 } descriptor
                     && WidgetTemplate.Resolve(descriptor, descriptor.Prerender, widget.Props.Get) is { } url
                     && _prerendered.TryGetValue(
-                        WidgetTemplate.BakeKey(url, descriptor.PrerenderTemplate, ContextUrlOf(descriptor)),
+                        WidgetTemplate.BakeKey(url, descriptor.PrerenderTemplate,
+                            WidgetTemplate.ContextUrl(descriptor, widget.Props.Get)),
                         out var bakedMarkup))
                 {
                     tokens.Add($"bake:{url}:{descriptor.PrerenderTemplate}:{Hashing.Hash16(Encoding.UTF8.GetBytes(bakedMarkup))}");

@@ -38,6 +38,25 @@ public static class WidgetTemplate
     public static string BakeKey(string url, string? template, string? context = null) =>
         context is { Length: > 0 } ? $"{url}\n{template}\n{context}" : $"{url}\n{template}";
 
+    /// <summary>
+    /// The descriptor's context url for these props — or "" when it declares none.
+    /// </summary>
+    /// <remarks>
+    /// ★★ ONE FUNCTION, BECAUSE THE BAKE AND THE LOOKUP MUST AGREE EXACTLY. They are in different
+    /// assemblies and run at different times; if either derives this key differently the lookup
+    /// misses, the widget silently publishes its fallback, and nothing says why.
+    /// <para>★ AND IT TAKES THE PROPS. The first attempt passed none, on the reasoning that a
+    /// context is shared by every instance and so cannot depend on one — but the pattern is
+    /// <c>{base}/api/public/reports</c> and <c>base</c> IS a prop. It resolved to null, no context
+    /// was ever fetched, and every card drew the flat bar exactly as before, with a green deploy and
+    /// a green suite. Shared means the pattern names nothing per-instance, not that props are
+    /// withheld from it.</para>
+    /// </remarks>
+    public static string ContextUrl(WidgetDescriptor descriptor, Func<string, string?> props) =>
+        descriptor.PrerenderContext is { Length: > 0 } pattern
+            ? Resolve(descriptor, pattern, props) ?? ""
+            : "";
+
     public static string? Resolve(WidgetDescriptor descriptor, string? template, Func<string, string?> value)
     {
         ArgumentNullException.ThrowIfNull(descriptor);

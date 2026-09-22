@@ -169,7 +169,8 @@ else if (descriptor is not null)
   private string? Prerendered(WidgetDescriptor descriptor) =>
     Ctx.ResolvePrerendered is { } lookup
       && WidgetTemplate.Resolve(descriptor, descriptor.Prerender, Node.Props.Get) is { } url
-        ? lookup(WidgetTemplate.BakeKey(url, descriptor.PrerenderTemplate))
+        ? lookup(WidgetTemplate.BakeKey(
+            url, descriptor.PrerenderTemplate, WidgetTemplate.ContextUrl(descriptor, Node.Props.Get)))
         : null;
 
 }
