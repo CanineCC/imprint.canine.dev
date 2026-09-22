@@ -25,6 +25,11 @@ public static class FontAssets
         // render-blocking and on a strict size budget, and a mask image is neither — it also
         // caches once for the whole site instead of riding every stylesheet revision.
         Load("brand/canine-badge.svg", "Imprint.Rendering.brand.canine-badge.svg"),
+        // ★★ AND THE STANDARD'S OWN MARK, for the same reason and with the same consequence if it is
+        //    forgotten: a link card referencing a file no site writes renders a BROKEN IMAGE, and the
+        //    markup looks perfectly correct in a diff. This list is the only thing that puts a file
+        //    under a published site root — adding the file to wwwroot is not enough.
+        Load("brand/cai-mark.svg", "Imprint.Rendering.brand.cai-mark.svg"),
     ];
 
     private static FontFile Load(string relativePath, string resource)

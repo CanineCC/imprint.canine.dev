@@ -141,4 +141,29 @@ public sealed class LinkCardsTemplateTests
 
         Assert.Contains("/brand/cai-mark.svg", html, StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// ★★ A MARK THIS TEMPLATE REFERENCES MUST BE A FILE SOME SITE ACTUALLY WRITES. The markup was
+    /// correct and the card rendered a BROKEN IMAGE, because adding the svg to wwwroot is not what
+    /// puts it under a published site root — <see cref="Imprint.Rendering.FontAssets"/> is, and it
+    /// had not been told. Caught by looking at the render; invisible in a diff.
+    /// </summary>
+    [Fact]
+    public void Every_mark_this_template_references_is_shipped_with_the_site()
+    {
+        var shipped = Imprint.Rendering.FontAssets.All.Select(f => "/" + f.RelativePath).ToHashSet(StringComparer.Ordinal);
+
+        var html = LinkCardsTemplate.Render(Props("""
+            [{"icon":"cai","label":"The standard","href":"https://codeassuranceindex.info/"},
+             {"icon":"watchdog","label":"The surveyor","href":"https://watchdog.canine.dev/"},
+             {"icon":"assay","label":"The buyer's side","href":"https://assay.canine.dev/"}]
+            """))!;
+
+        foreach (System.Text.RegularExpressions.Match m in
+                 System.Text.RegularExpressions.Regex.Matches(html, @"(/brand/[A-Za-z0-9._-]+)"))
+        {
+            Assert.True(shipped.Contains(m.Groups[1].Value),
+                $"{m.Groups[1].Value} is referenced by a card but no site writes it");
+        }
+    }
 }
