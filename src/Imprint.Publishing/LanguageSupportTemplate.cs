@@ -52,9 +52,9 @@ public static class LanguageSupportTemplate
             var band = Str(language, "bandLabel");
             var key = Str(language, "bandCss");
 
-            html.Append("<div class=\"ip-lang\">");
+            html.Append("<div class=\"ip-langrow\">");
 
-            html.Append("<div class=\"ip-lang-head\">");
+            html.Append("<div class=\"ip-langrow-head\">");
             html.Append("<h3>").Append(Esc(Str(language, "displayName"))).Append("</h3>");
             if (band.Length > 0)
             {
@@ -70,7 +70,7 @@ public static class LanguageSupportTemplate
 
             html.Append("</div>");
 
-            html.Append("<div class=\"ip-lang-body\">");
+            html.Append("<div class=\"ip-langrow-body\">");
             if (Str(language, "summary") is { Length: > 0 } summary)
             {
                 html.Append("<div class=\"ip-prose\"><p>").Append(Esc(summary)).Append("</p></div>");

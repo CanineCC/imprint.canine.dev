@@ -61,16 +61,86 @@ public static class LinkCardsTemplate
                 ? $"<a class=\"ip-linkcard\" href=\"{Esc(href)}\">"
                 : "<span class=\"ip-linkcard\">");
 
+            html.Append("<span class=\"ip-linkcard-ico\" aria-hidden=\"true\">")
+                .Append(Mark(Str(link, "icon")))
+                .Append("</span>");
+
             html.Append("<span class=\"ip-linkcard-label\">").Append(label).Append("</span>");
+
+            // The widget carries these two optional rows and the grid reserves a place for them.
+            if (Str(link, "figure") is { Length: > 0 } figure)
+            {
+                html.Append("<span class=\"ip-linkcard-figure\">").Append(Esc(figure)).Append("</span>");
+            }
+
             if (note.Length > 0)
             {
                 html.Append("<span class=\"ip-linkcard-note\">").Append(Esc(note)).Append("</span>");
+            }
+
+            if (Str(link, "go") is { Length: > 0 } go)
+            {
+                html.Append("<span class=\"ip-linkcard-go\">").Append(Esc(go)).Append(" \u2192</span>");
             }
 
             html.Append(href is not null ? "</a>" : "</span>");
         }
 
         return html.Append("</div>").ToString();
+    }
+
+
+    /// <summary>
+    /// The marks, taken VERBATIM from <c>widgets/_src/cai-link-cards.js</c>.
+    /// </summary>
+    /// <remarks>
+    /// ★★ THE BAKE DROPPED THESE ENTIRELY AND I DID NOT NOTICE. Every card carries an
+    /// <c>icon</c> and the first version of this template never read the field, so six cards on
+    /// every survey page lost their mark and became two lines of text in a box. The template
+    /// rendered, the tests passed, and the page was plainly worse than the island it replaced.
+    /// They are copied rather than redrawn so a card cannot disagree with the widget about what
+    /// GitHub looks like.
+    /// </remarks>
+    private static readonly Dictionary<string, string> Icons = new(StringComparer.Ordinal)
+    {
+        ["github"] =
+            """
+            <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+            """,
+        ["gitlab"] =
+            """
+            <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="m15.73 6.49-.02-.06-2.17-5.66a.57.57 0 0 0-.22-.27.58.58 0 0 0-.88.27L10.98 5.2H5.03L3.57.77a.58.58 0 0 0-.88-.27.57.57 0 0 0-.22.27L.3 6.43l-.02.06a4.03 4.03 0 0 0 1.34 4.65l.01.01.02.01 3.3 2.47 1.63 1.23.99.75a.68.68 0 0 0 .82 0l.99-.75 1.64-1.23 3.32-2.48.01-.01a4.03 4.03 0 0 0 1.34-4.65Z"/></svg>
+            """,
+        ["html"] =
+            """
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M1.5 0h21l-1.91 21.563L11.977 24l-8.564-2.438L1.5 0zm7.031 9.75l-.232-2.718 10.059.003.23-2.622L5.412 4.41l.698 8.01h9.126l-.326 3.426-2.91.804-2.955-.81-.188-2.11H6.248l.33 4.171L12 19.351l5.379-1.443.744-8.157H8.531z"/></svg>
+            """,
+        ["doc"] =
+            """
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.2 1.4H4a1.6 1.6 0 0 0-1.6 1.6v10A1.6 1.6 0 0 0 4 14.6h8a1.6 1.6 0 0 0 1.6-1.6V5.8Z"/><path d="M9.2 1.4v4.4h4.4"/><path d="M5.6 8.4h4.8M5.6 11h4.8"/></svg>
+            """,
+    };
+
+    /// <summary>The site's own badge, tinted by mask rather than redrawn — one shape, one mark.</summary>
+    private const string Badge = "/brand/canine-badge.svg";
+
+    /// <summary>
+    /// The mark for a card: our own badge for the two products, an SVG otherwise.
+    /// </summary>
+    /// <remarks>
+    /// ★ An unknown icon falls back to the document, exactly as the widget does. A card with no
+    /// mark at all would be a different shape from the ones beside it, and the grid pins every text
+    /// row to column 2 on the assumption that column 1 is always filled.
+    /// </remarks>
+    private static string Mark(string icon)
+    {
+        var key = icon.Trim().ToLowerInvariant();
+        if (key is "watchdog" or "cai")
+        {
+            return $"<span class=\"ip-linkcard-badge is-{key}\" style=\"--badge:url('{Badge}')\"></span>";
+        }
+
+        return Icons.TryGetValue(key, out var svg) ? svg : Icons["doc"];
     }
 
     /// <summary>An absolute http(s) URL, a site-relative path, or null. Nothing else is emitted.</summary>

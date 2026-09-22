@@ -103,15 +103,15 @@ public static class ScoreCardTemplate
 
             html.Append("</p>");
 
-            // The bar is 0–100 flat, not the banded ladder: the cutlines are SCORING data and this site
-            // is not given them. Drawing a ladder from remembered numbers is how a fourth copy of 90/70/
-            // 50/25 gets born — and it would be wrong for any repository pinned to a rubric that moves
-            // them. A pin on a plain scale says exactly what the payload said and nothing more.
-            html.Append("<div class=\"ip-cai-track\" role=\"img\" aria-label=\"")
-                .Append(Esc(Score(score))).Append(" out of 100\">")
-                .Append("<span class=\"ip-cai-fill").Append(key is not null ? $" fill-{key}" : "")
-                .Append("\" style=\"width:").Append(Esc(Score(Math.Clamp(score, 0, 100)))).Append("%")
-                .Append(hex is not null ? $";background:{hex}" : "").Append("\"></span></div>");
+            // ★★ THE BANDED LADDER, AND THE COMMENT THAT USED TO SIT HERE WAS WRONG. It said "the
+            //    cutlines are SCORING data and this site is not given them", and drew a flat 0-100
+            //    bar instead. The cutlines are in THIS payload: /api/public/reports carries a `bands`
+            //    table with a floor per band, which is what BandScaleTemplate reads. So the card drew
+            //    a plain bar where the widget it replaced drew the real ladder with a pin, and the
+            //    reason recorded for it was a fact nobody had checked.
+            //    Every number below still comes from the payload, which was the actual rule: no
+            //    cutline is written in this file, and with no band table the flat bar is drawn.
+            html.Append(Ladder(root, score, hex, key));
 
             var lenses = Strings(report, "lenses").Count;
             var language = Str(report, "primaryLanguage");
@@ -166,6 +166,61 @@ public static class ScoreCardTemplate
         }
 
         return html.ToString();
+    }
+
+    /// <summary>
+    /// The banded ladder with the score pinned on it, or a flat bar when the payload has no bands.
+    /// </summary>
+    /// <remarks>
+    /// <para>★★ THE CUTLINES COME FROM THE PAYLOAD AND ARE NEVER WRITTEN HERE — the same rule
+    /// <see cref="BandScaleTemplate"/> keeps, for the same reason: the lines belong to the rubric, a
+    /// repository can be pinned to one that moves them, and a hand-written copy of 90/70/50/25 is how
+    /// a scale drifts. Each rung is sized from the floor of the NEXT band, so the ladder is whatever
+    /// the rubric says it is.</para>
+    /// <para>★ No band table in the payload means the FLAT bar, not a remembered ladder. That is the
+    /// honest degradation, and it is what an older feed gets.</para>
+    /// </remarks>
+    private static string Ladder(JsonElement root, double score, string? hex, string? key)
+    {
+        var pin = Math.Clamp(score, 0, 100);
+        var label = $"{Score(score)} out of 100";
+
+        var bands = Array(root, "bands")
+            .Select(b => (Key: Str(b, "key"), Floor: Number(b, "floor")))
+            .Where(b => b.Floor is not null)
+            .OrderBy(b => b.Floor!.Value)
+            .ToList();
+
+        if (bands.Count < 2)
+        {
+            return "<div class=\"ip-cai-track\" role=\"img\" aria-label=\"" + Esc(label) + "\">"
+                 + "<span class=\"ip-cai-fill" + (key is not null ? $" fill-{key}" : "") + "\" style=\"width:"
+                 + Esc(Score(pin)) + "%" + (hex is not null ? $";background:{hex}" : "") + "\"></span></div>";
+        }
+
+        var html = new StringBuilder();
+        html.Append("<div class=\"ip-cai-ladder\" role=\"img\" aria-label=\"").Append(Esc(label)).Append("\">");
+
+        for (var i = 0; i < bands.Count; i++)
+        {
+            var from = bands[i].Floor!.Value;
+            var to = i + 1 < bands.Count ? bands[i + 1].Floor!.Value : 100d;
+            var span = to - from;
+            if (span <= 0)
+            {
+                continue;
+            }
+
+            html.Append("<span class=\"ip-cai-rung")
+                .Append(bands[i].Key.Length > 0 ? " ip-cai-rung-" + Esc(bands[i].Key) : "")
+                .Append("\" style=\"flex:").Append(Esc(Score(span))).Append("\"></span>");
+        }
+
+        // The pin is the reading, on the same 0-100 axis the rungs are laid out on.
+        html.Append("<span class=\"ip-cai-pin\" style=\"left:").Append(Esc(Score(pin))).Append('%')
+            .Append(hex is not null ? ";--pin:" + hex : "").Append("\"></span>");
+
+        return html.Append("</div>").ToString();
     }
 
     /// <summary>

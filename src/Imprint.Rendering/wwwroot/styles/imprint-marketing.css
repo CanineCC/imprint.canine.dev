@@ -1231,19 +1231,81 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-flow-loop { margin: var(--ip-space-2) 0 0; font-size: var(--fs-sm); color: var(--muted); }
 
 /* ── FURTHER-READING CARDS (rendered from the node's own props) ────────────────
-   A card per destination, its label above its note. The shadow-DOM version carried a mark
-   per link; this one does not, and that is the trade: an icon is decoration and an href a
-   crawler can follow is not. */
-.ip-linkcards { --ip-min-item: 260px; }
-.ip-linkcard {
-  display: grid; gap: 0.2rem; align-content: start; text-decoration: none;
-  border: 1px solid var(--hairline); border-radius: var(--r-lg);
-  padding: 0.85rem 1rem; background: var(--surface); min-width: 0;
+   ★★ THE MARK IS NOT DECORATION, AND THE NOTE THAT USED TO SIT HERE SAYING IT WAS is the reason
+   six cards on every survey page shipped as two lines of text in a box. The trade it claimed —
+   "an icon is decoration and an href a crawler can follow is not" — was never a trade: a crawler
+   reads the href either way, and the mark is how a reader tells the repository from the report
+   from the corpus at a glance. The bake replaced a 10-of-10 card with a 4-of-10 one and the
+   justification was written into the sheet so it would not be questioned.
+   Geometry, icon set and badge are now ported from widgets/_src/cai-link-cards.js so the two
+   cannot disagree: two columns at 19rem, the mark spanning rows 1-2, every text row pinned to
+   column 2 so a card with a figure and a card without are the same shape. */
+/* ── THE BANDED LADDER WITH A PIN ──────────────────────────────────────────────
+   The widget this replaced drew the real ladder; the bake drew a flat bar, on a note claiming the
+   cutlines were unavailable. They are in the same payload. Each rung is FLEX-SIZED from the
+   rubric's own floors, so the geometry is the rubric's and not this sheet's. */
+.ip-cai-ladder {
+  display: flex; align-items: stretch; position: relative; isolation: isolate;
+  height: 12px; border-radius: var(--r-full); overflow: visible; margin: 0.35rem 0 0;
 }
-a.ip-linkcard:hover { border-color: var(--accent); }
-.ip-linkcard-label { font-size: var(--fs-sm); font-weight: 600; color: var(--heading); line-height: 1.35; }
+.ip-cai-rung { display: block; min-width: 0; background: var(--hairline); }
+.ip-cai-rung:first-child { border-top-left-radius: var(--r-full); border-bottom-left-radius: var(--r-full); }
+.ip-cai-rung:last-child { border-top-right-radius: var(--r-full); border-bottom-right-radius: var(--r-full); }
+.ip-cai-rung-critical  { background: var(--band-critical); }
+.ip-cai-rung-poor      { background: var(--band-poor); }
+.ip-cai-rung-fair      { background: var(--band-fair); }
+.ip-cai-rung-healthy   { background: var(--band-healthy); }
+.ip-cai-rung-exemplary { background: var(--band-exemplary); }
+/* The pin sits ON the ladder, centred on its own position, with a ring so it reads against any
+   rung colour underneath it. */
+.ip-cai-pin {
+  position: absolute; top: 50%; width: 14px; height: 14px; z-index: 1;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: var(--pin, var(--heading)); border: 2px solid var(--surface); border-radius: 3px;
+}
+
+.ip-linkcards { --ip-min-item: 19rem; max-width: 46rem; margin-inline: auto; }
+.ip-linkcard {
+  display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: start;
+  align-content: start; text-decoration: none;
+  border: 1px solid var(--hairline); border-radius: var(--r-md);
+  padding: 14px 16px; background: var(--surface); min-width: 0;
+  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+a.ip-linkcard:hover, a.ip-linkcard:focus-visible {
+  border-color: var(--accent); background: var(--surface-2); transform: translateY(-1px);
+}
+a.ip-linkcard:hover .ip-linkcard-go, a.ip-linkcard:focus-visible .ip-linkcard-go { color: var(--accent); }
+.ip-linkcard-ico { grid-row: 1 / span 2; width: 26px; height: 26px; display: block; color: var(--muted); }
+.ip-linkcard-ico svg { width: 100%; height: 100%; display: block; }
+.ip-linkcard-badge {
+  width: 24px; height: 26px; display: block;
+  -webkit-mask: var(--badge) no-repeat center / contain; mask: var(--badge) no-repeat center / contain;
+}
+.ip-linkcard-badge.is-watchdog { background: var(--ip-wd-accent, #35618a); }
+.ip-linkcard-badge.is-cai { background: var(--ip-cai-accent, #2e7d64); }
+/* ★ Every text row is pinned to column 2. The mark reserves only rows 1-2, so a four-row card
+   (label, figure, note, go) would otherwise auto-place its fourth row UNDER the icon. */
+.ip-linkcard-label, .ip-linkcard-figure, .ip-linkcard-note, .ip-linkcard-go { grid-column: 2; }
+.ip-linkcard-label { font-size: var(--fs-sm); font-weight: 650; color: var(--heading); line-height: 1.4; }
 a.ip-linkcard:hover .ip-linkcard-label { color: var(--accent-ink); }
-.ip-linkcard-note { font-size: var(--fs-2xs); color: var(--muted); overflow-wrap: anywhere; }
+.ip-linkcard-figure {
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  font-size: 22px; font-weight: 700; color: var(--ink); line-height: 1.15;
+}
+/* A long forge path breaks between segments rather than mid-word: "…/Captur a" reads as a typo,
+   and these notes are addresses a reader may want to recognise. */
+.ip-linkcard-note { font-size: var(--fs-2xs); color: var(--muted); line-height: 1.5; overflow-wrap: anywhere; }
+.ip-linkcard-go {
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  font-size: var(--fs-2xs); color: var(--muted); padding-top: 2px; transition: color 120ms ease;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ip-linkcard-badge.is-watchdog { background: #7faace; }
+  :root:not([data-theme="light"]) .ip-linkcard-badge.is-cai { background: #6fbfa4; }
+}
+:root[data-theme="dark"] .ip-linkcard-badge.is-watchdog { background: #7faace; }
+:root[data-theme="dark"] .ip-linkcard-badge.is-cai { background: #6fbfa4; }
 
 /* ── LANGUAGE COVERAGE (one card per language, with where it stops) ────────────
    The band word is the headline here, not a number, so it is set at the size the score
@@ -1259,18 +1321,23 @@ a.ip-linkcard:hover .ip-linkcard-label { color: var(--accent-ink); }
 .ip-band-strong.ip-band-poor { color: var(--band-poor-text); }
 .ip-band-strong.ip-band-critical { color: var(--band-critical-text); }
 /* One row per language: a 250-word summary simply makes its row taller, where in a grid
-   it made every card in that row taller and gave the short ones an empty box to match. */
+   it made every card in that row taller and gave the short ones an empty box to match.
+   ★★ THE ROW IS `.ip-langrow`, NOT `.ip-lang`. It was `.ip-lang`, which is ALSO the header's
+   EN/DA switcher — a different component entirely, defined 900 lines earlier. This rule wins on
+   source order, so the switcher silently became a two-column grid and its first link took the
+   12rem track: EN rendered 192px wide on every page of every multilingual site, and nothing about
+   this file looked wrong. Two components may not share a class name. */
 .ip-langs { border: 1px solid var(--hairline); border-radius: var(--r-lg); overflow: hidden; }
-.ip-lang {
+.ip-langrow {
   display: grid; grid-template-columns: 12rem minmax(0, 1fr); gap: 0.4rem 1.25rem;
   padding: 0.9rem 1.1rem; border-bottom: 1px solid var(--hairline); background: var(--surface);
 }
-@container (max-width: 44rem) { .ip-lang { grid-template-columns: 1fr; } }
-.ip-lang:last-child { border-bottom: 0; }
-.ip-lang-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; align-content: start; }
-.ip-lang-head h3 { font-size: var(--fs-lg); font-weight: 600; margin: 0; }
-.ip-lang-body { display: grid; gap: 0.4rem; min-width: 0; }
-.ip-lang-body .ip-prose { font-size: var(--fs-sm); color: var(--ink); line-height: 1.5; }
+@container (max-width: 44rem) { .ip-langrow { grid-template-columns: 1fr; } }
+.ip-langrow:last-child { border-bottom: 0; }
+.ip-langrow-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; align-content: start; }
+.ip-langrow-head h3 { font-size: var(--fs-lg); font-weight: 600; margin: 0; }
+.ip-langrow-body { display: grid; gap: 0.4rem; min-width: 0; }
+.ip-langrow-body .ip-prose { font-size: var(--fs-sm); color: var(--ink); line-height: 1.5; }
 .ip-lens-list { margin: 0.1rem 0 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem; }
 .ip-lens-label {
   font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: 0.05em;
@@ -1348,10 +1415,18 @@ a.ip-linkcard:hover .ip-linkcard-label { color: var(--accent-ink); }
 .ip-ap-table-list > .ip-stack { align-items: stretch; }
 /* The measure cap above applies to every .ip-prose, which silently squeezed the TABLE to a reading
    column and left the right half of the section empty ("the ui tilts"). A table is not prose: it
-   spans. Its intro paragraph still reads at measure. */
-/* The :not() is required: without it this is (0,3,1) and LOSES to the lede rule's (0,4,1), which is
-   why the squeeze described above was never actually fixed. */
-.ip-ap-table-list > .ip-stack > .ip-prose:has(ul):not(.ip-kicker) { max-width: none; }
+   spans. Its intro paragraph still reads at measure.
+   ★★ AND IT HAD STILL NEVER WORKED. The rule below used to read
+     .ip-ap-table-list > .ip-stack > .ip-prose:has(ul):not(.ip-kicker)
+   at (0,4,1), with a note claiming the :not() was what made it beat "the lede rule's (0,4,1)". It was
+   measured against the wrong rule. What actually caps this element is the 18px/42rem pair about 700
+   lines above, whose selector carries an attribute plus SIX :not()s plus three classes — (0,10,0) —
+   so the un-cap lost by six. The timeline on canine.dev rendered 672px inside a 1152px section, and
+   the comment sat right here saying it was fixed.
+   The selector now MIRRORS that rule and adds to it, which is the only way to be sure: same
+   attribute, same six exclusions, plus .ip-ap-table-list and :has(ul). Measured before shipping by
+   injecting it into the live page: 672px -> 1152px, two 575px columns. */
+[class*="ip-ap-"].ip-ap-table-list:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > .ip-prose:has(ul):not(.ip-kicker) { max-width: none; }
 /* A REAL table. The content model has no <table> — canonical rich text is p/ul/ol/li/strong/em/a/br —
    so each CELL is its own <li> and the grid does the rest. Column count defaults to 3; a section
    whose anchor ends in "-cols4" declares four (the subprocessor list). Below 40rem every table
