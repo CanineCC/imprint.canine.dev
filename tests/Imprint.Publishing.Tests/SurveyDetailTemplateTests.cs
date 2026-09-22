@@ -31,21 +31,83 @@ public sealed class SurveyDetailTemplateTests
     {
         var html = SurveyDetailTemplate.Render(Payload, Origin)!;
 
-        Assert.Contains("<h3>ruben-rasmussen/auth</h3>", html, StringComparison.Ordinal);
-        Assert.Contains(">97.6</span>", html, StringComparison.Ordinal);
+        Assert.Contains("<span class=\"ip-survey-repo\">auth</span>", html, StringComparison.Ordinal);
+        Assert.Contains("<span class=\"ip-survey-by\">by ruben-rasmussen</span>", html, StringComparison.Ordinal);
+        // ★★ 98, NOT 97.6. This feed carries `bestScore: 97.6` where /api/public/reports carries
+        //    `score: 98` for the same run, and the strip and the hero sat one section apart printing
+        //    both. The published figure is the whole number.
+        Assert.Contains(">98</span>", html, StringComparison.Ordinal);
+        // Not ">97.6<": the tenth survives in the bar GEOMETRY, which is a drawing rather than a
+        // figure. What must not appear is a printed 97.6 anywhere a reader reads a number.
+        Assert.DoesNotContain(">97.6", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("97.6 out of", html, StringComparison.Ordinal);
         Assert.Contains("Exemplary", html, StringComparison.Ordinal);
         // ★ A BAR AND ITS NUMBER, not a number alone. The bar is what makes "one lens is dragging
         //   this down" visible without reading five figures — which is why the widget drew them and
         //   why the bake looked so much poorer than the island it replaced.
         Assert.Contains("<th scope=\"row\">Code health</th>", html, StringComparison.Ordinal);
-        Assert.Contains("<td class=\"ip-lens-value\">98.2</td>", html, StringComparison.Ordinal);
+        Assert.Contains(">98</td>", html, StringComparison.Ordinal);
         Assert.Contains("<th scope=\"row\">Security</th>", html, StringComparison.Ordinal);
-        Assert.Contains("<td class=\"ip-lens-value\">100</td>", html, StringComparison.Ordinal);
+        Assert.Contains(">100</td>", html, StringComparison.Ordinal);
         Assert.Contains("Domain modelling", html, StringComparison.Ordinal);
 
         // Every measured lens gets a bar, and the fill is the score.
         Assert.Equal(6, Occurrences(html, "ip-lens-fill"));
         Assert.Contains("width:98.2%", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>The same payload with the band table the verdicts feed now carries.</summary>
+    private static string Banded => Payload.Replace(
+        "\"cohort\": null,",
+        """
+        "cohort": null,
+        "bands": [
+          { "label": "Critical", "key": "critical", "floor": 0 },
+          { "label": "Weak", "key": "poor", "floor": 25 },
+          { "label": "Adequate", "key": "fair", "floor": 50 },
+          { "label": "Strong", "key": "healthy", "floor": 70 },
+          { "label": "Exemplary", "key": "exemplary", "floor": 90 }
+        ],
+        """,
+        StringComparison.Ordinal);
+
+    [Fact]
+    public void Each_lens_is_inked_in_its_own_band_rather_than_the_headlines()
+    {
+        // ★ SIX GREEN BARS UNDER A GREEN SCORE SAY ONLY "this repository is green". A fair lens
+        //   among five strong ones is the entire reason the table is drawn rather than listed, and
+        //   it is invisible if every bar takes the headline's colour.
+        var html = SurveyDetailTemplate.Render(
+            Banded.Replace("\"productionReadiness\": 96.2", "\"productionReadiness\": 61", StringComparison.Ordinal),
+            Origin)!;
+
+        Assert.Contains("ip-lens-fill fill-exemplary", html, StringComparison.Ordinal);
+        Assert.Contains("ip-lens-fill fill-fair", html, StringComparison.Ordinal);
+        Assert.Contains("ip-lens-value ink-fair", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void With_no_band_table_no_bar_claims_a_band()
+    {
+        // ★★ THE CUTLINES ARE SCORING DATA AND THEY COME FROM THE PAYLOAD. Deciding that a 96 is
+        //    "Strong" needs the LINES; with no band table the honest answer is the accent, not a
+        //    band word inferred from numbers remembered in this repository.
+        var html = SurveyDetailTemplate.Render(Payload, Origin)!;
+
+        Assert.DoesNotContain("ip-lens-fill fill-", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("ip-lens-value ink-", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("ip-cai-ladder", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_band_table_turns_the_flat_bar_into_the_real_ladder()
+    {
+        var html = SurveyDetailTemplate.Render(Banded, Origin)!;
+
+        Assert.Contains("ip-cai-ladder", html, StringComparison.Ordinal);
+        Assert.Contains("ip-cai-rung-exemplary", html, StringComparison.Ordinal);
+        Assert.Contains("ip-cai-pin", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("ip-cai-track", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -63,8 +125,11 @@ public sealed class SurveyDetailTemplateTests
     {
         var html = SurveyDetailTemplate.Render(Payload, Origin)!;
 
+        // ★ THE DELTA IS THE DIFFERENCE BETWEEN THE TWO NUMBERS THE READER CAN SEE. Taking it from
+        //   the raw values printed "62 → 98 … up 35.6", which is an arithmetic error to anyone who
+        //   checks it, and the arc is printed precisely so that it will be checked.
         Assert.Contains(">62</span>", html, StringComparison.Ordinal);
-        Assert.Contains("up 35.6 over 18 scans", html, StringComparison.Ordinal);
+        Assert.Contains("up 36 over 18 scans", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -82,7 +147,7 @@ public sealed class SurveyDetailTemplateTests
         var html = SurveyDetailTemplate.Render(
             Payload.Replace("\"firstScore\": 62", "\"firstScore\": 99", StringComparison.Ordinal), Origin)!;
 
-        Assert.Contains("down 1.4 over 18 scans", html, StringComparison.Ordinal);
+        Assert.Contains("down 1 over 18 scans", html, StringComparison.Ordinal);
         Assert.DoesNotContain("up -", html, StringComparison.Ordinal);
     }
 

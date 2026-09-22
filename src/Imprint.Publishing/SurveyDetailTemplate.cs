@@ -61,17 +61,8 @@ public static class SurveyDetailTemplate
 
         var html = new StringBuilder();
         html.Append("<div class=\"ip-stack ip-survey ip-survey-detail\">");
-        html.Append("<h3>").Append(Esc(Str(item, "display"))).Append("</h3>");
-
-        html.Append("<p class=\"ip-cai\"><span class=\"ip-cai-score\"").Append(style).Append('>')
-            .Append(Esc(Score(score))).Append("</span><span class=\"ip-cai-unit\">/ 100</span>");
-        if (band.Length > 0)
-        {
-            html.Append("<span class=\"ip-band").Append(key is not null ? $" ip-band-{key}" : "").Append('"')
-                .Append(style).Append('>').Append(Esc(band)).Append("</span>");
-        }
-
-        html.Append("</p>");
+        html.Append(ScoreVisuals.Head(item, band, key, style));
+        html.Append(ScoreVisuals.ScoreLine(score, key, style));
 
         html.Append(ScoreVisuals.Ladder(root, score, hex, key));
 
@@ -79,20 +70,26 @@ public static class SurveyDetailTemplate
         //   "a sparkline is a picture of this fact and cannot be read" and shipped the numbers alone.
         //   The shape is a DIFFERENT fact from the endpoints: 62 to 98 in one jump and 62 to 98 by
         //   steady work are the same two numbers and not the same story.
-        html.Append(ScoreVisuals.Sparkline(item, hex));
+        html.Append(ScoreVisuals.Sparkline(item, hex, key));
 
         if (Number(item, "firstScore") is { } first
             && Number(item, "scanCount") is { } scans
             && scans > 1)
         {
-            var delta = score - first;
-            html.Append("<p class=\"ip-trend\"><span class=\"ip-trend-from\">").Append(Esc(Score(first)))
+            // ★ THE ARC IS STATED IN THE PUBLISHED FIGURES, so the delta is the difference between
+            //   the two numbers the reader can see. Taking it from the raw values instead printed
+            //   "62 → 98 … up 35.6", which is an arithmetic error to every reader who checks it.
+            var from = Math.Round(first, MidpointRounding.AwayFromZero);
+            var to = Math.Round(score, MidpointRounding.AwayFromZero);
+            var delta = to - from;
+            html.Append("<p class=\"ip-trend\"><span class=\"ip-trend-from\">").Append(Esc(Cai(first)))
                 .Append("</span><span class=\"ip-trend-arrow\" aria-hidden=\"true\">→</span>")
-                .Append("<span class=\"ip-trend-to\">").Append(Esc(Score(score))).Append("</span>")
+                .Append("<span class=\"ip-trend-to").Append(key is not null ? $" ink-{key}" : "").Append("\">")
+                .Append(Esc(Cai(score))).Append("</span>")
                 .Append("<span class=\"ip-trend-note\">")
                 .Append(Esc(delta >= 0
-                    ? $"up {Score(delta)} over {Group(scans)} scans"
-                    : $"down {Score(Math.Abs(delta))} over {Group(scans)} scans"))
+                    ? $"up {Cai(delta)} over {Group(scans)} scans"
+                    : $"down {Cai(Math.Abs(delta))} over {Group(scans)} scans"))
                 .Append("</span></p>");
         }
 
@@ -111,11 +108,20 @@ public static class SurveyDetailTemplate
             foreach (var (label, value) in measured)
             {
                 var v = Math.Clamp(value!.Value, 0, 100);
+
+                // ★ EACH LENS IN ITS OWN BAND, not all six in the headline's colour. Six green bars
+                //   under a green score say only "this repository is green"; a fair one among five
+                //   strong ones is the whole reason the table is drawn rather than listed. The key
+                //   comes from the payload's floors (ScoreVisuals.BandKeyOf) — no cutline is written
+                //   here — and with no band table every bar falls back to the accent.
+                var lensKey = ScoreVisuals.BandKeyOf(root, v);
                 html.Append("<tr><th scope=\"row\">").Append(Esc(label)).Append("</th>")
-                    .Append("<td class=\"ip-lens-barcell\"><span class=\"ip-lens-bar\"><span class=\"ip-lens-fill\" style=\"width:")
+                    .Append("<td class=\"ip-lens-barcell\"><span class=\"ip-lens-bar\"><span class=\"ip-lens-fill")
+                    .Append(lensKey is not null ? $" fill-{lensKey}" : "").Append("\" style=\"width:")
                     .Append(Esc(Score(v))).Append('%')
-                    .Append(hex is not null ? $";background:{hex}" : "").Append("\"></span></span></td>")
-                    .Append("<td class=\"ip-lens-value\">").Append(Esc(Score(value.Value))).Append("</td></tr>");
+                    .Append(lensKey is null && hex is not null ? $";background:{hex}" : "").Append("\"></span></span></td>")
+                    .Append("<td class=\"ip-lens-value").Append(lensKey is not null ? $" ink-{lensKey}" : "")
+                    .Append("\">").Append(Esc(Cai(value.Value))).Append("</td></tr>");
             }
 
             html.Append("</tbody></table>");

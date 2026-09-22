@@ -1015,6 +1015,10 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    embed got framed in the first place. */
 /* One card is one card: auto-fill would give it a 280px track in a 1100px section. */
 .ip-grid-1up { grid-template-columns: 1fr; }
+/* A hero is ONE card with the page's argument beside it, so its number is the page's headline and
+   takes the size the island card gives it. The same size in a four-up strip would shout over the
+   three cards next to it, which is why this is scoped to the 1-up grid rather than set on the card. */
+.ip-grid-1up .ip-cai-score { font-size: var(--fs-4xl, 40px); }
 .ip-grid-4up { grid-template-columns: repeat(4, 1fr); }
 @container (max-width: 62rem) { .ip-grid-4up { grid-template-columns: repeat(2, 1fr); } }
 @container (max-width: 30rem) { .ip-grid-4up { grid-template-columns: 1fr; } }
@@ -1029,24 +1033,60 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
   padding: 1.1rem 1.25rem; background: var(--surface); gap: 0.4rem;
   min-width: 0;
 }
-/* ★ NO overflow-wrap HERE. The sheet already folds every heading with `anywhere`, and `break-word`
-   is refused sheet-wide by a test with a measured reason: it wraps identically to the eye but does
-   NOT reduce min-content, so a grid or table track keeps stretching to hold the token — which is the
-   horizontal-scrollbar bug, not a fix for it. A repository name therefore breaks mid-word sometimes;
-   that is the accepted cost, and widening the track is the lever, not the wrap mode.
-   ★ Two lines reserved: a repository name is one line or two, and without the floor every card in a
-   row put its score at a different height. */
-.ip-survey h3 {
+/* ★★ THE NAME AND THE OWNER ARE TWO LINES, NOT ONE TOKEN. The old heading printed `owner/name`
+   as a single string, and because this sheet refuses `break-word` sheet-wide (it wraps the same to
+   the eye but does NOT reduce min-content, so a grid track keeps stretching to hold the token —
+   the horizontal-scrollbar bug, not a fix for it), a long repository broke mid-word across three
+   lines and shifted that one card's score, ladder and link below its neighbours'. Two nowrap lines
+   with an ellipsis each are a fixed height whatever the name is, which is what makes a row of four
+   cards read as a row. ★ The floor stays for a repository with no owner. */
+.ip-survey-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
+.ip-survey h3, .ip-survey-id {
   font-size: var(--fs-lg); font-weight: 600; margin: 0;
-  line-height: 1.3; min-height: 2.6em;
+  line-height: 1.3; min-height: 2.6em; min-width: 0;
+}
+.ip-survey-repo {
+  display: block; font-weight: 600; color: var(--heading);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ip-survey-by {
+  display: block; font-size: var(--fs-xs); font-weight: 400; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
-/* The score: mono numeral, band word beside it. */
-.ip-cai { margin: 0.1rem 0 0.2rem; display: flex; align-items: baseline; gap: 0.4rem; flex-wrap: wrap; }
+/* The band as a tinted pill beside the name — the verdict, said before the reader parses a digit.
+   ★ `.ip-band` (the bare uppercase word) is still used by the band-scale ladder, where the word IS
+   the row and a pill would be wrong; these are two treatments of one vocabulary, not a rename. */
+.ip-chip {
+  display: inline-flex; align-items: center; flex: none; white-space: nowrap;
+  font-size: var(--fs-2xs); font-weight: 600; letter-spacing: 0.02em;
+  border-radius: var(--r-full); padding: 0.15rem 0.55rem; color: var(--heading);
+}
+.ip-chip-exemplary { background: color-mix(in srgb, var(--band-exemplary) 16%, transparent); color: var(--band-exemplary-text); }
+.ip-chip-healthy { background: color-mix(in srgb, var(--band-healthy) 16%, transparent); color: var(--band-healthy-text); }
+.ip-chip-fair { background: color-mix(in srgb, var(--band-fair) 16%, transparent); color: var(--band-fair-text); }
+.ip-chip-poor { background: color-mix(in srgb, var(--band-poor) 16%, transparent); color: var(--band-poor-text); }
+.ip-chip-critical { background: color-mix(in srgb, var(--band-critical) 16%, transparent); color: var(--band-critical-text); }
+
+/* The score: mono numeral, inked in its own band, under a quiet CAI kicker. */
+.ip-cai { margin: 0.35rem 0 0.2rem; display: flex; align-items: baseline; gap: 0.4rem; flex-wrap: wrap; }
+.ip-cai-kicker {
+  font-size: var(--fs-2xs); font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted);
+}
 .ip-cai-score {
   font-family: var(--font-mono); font-size: var(--fs-2xl); font-weight: 600;
   letter-spacing: -0.02em; line-height: 1.1; color: var(--heading);
 }
+/* ★★ BOTH CLASSES, ALWAYS. `.ink-exemplary` is an existing (0,1,0) utility defined ~870 lines
+   earlier in this sheet, so `.ip-cai-score` ties on specificity and wins on ORDER — written alone
+   the ink renders nothing, which is how the tint was lost the first time and recorded as a
+   decision. (0,2,0) beats (0,1,0) and cannot be undone by source order. */
+.ip-cai-score.ink-exemplary { color: var(--band-exemplary-text); }
+.ip-cai-score.ink-healthy { color: var(--band-healthy-text); }
+.ip-cai-score.ink-fair { color: var(--band-fair-text); }
+.ip-cai-score.ink-poor { color: var(--band-poor-text); }
+.ip-cai-score.ink-critical { color: var(--band-critical-text); }
 .ip-cai-unit { font-size: var(--fs-sm); color: var(--muted); }
 .ip-band {
   margin-left: auto; font-size: var(--fs-2xs); font-weight: 600; letter-spacing: 0.02em;
@@ -1058,8 +1098,9 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-band-poor { color: var(--band-poor-text); }
 .ip-band-critical { color: var(--band-critical-text); }
 
-/* A 0–100 track. Flat, not banded — this site is not given the cutlines, and drawing a
-   ladder from remembered numbers is how a fourth copy of them gets born. */
+/* A 0–100 track. This is the DEGRADATION, not the design: it is drawn only when the payload
+   carries no band table, because a ladder built from remembered cutlines is how a fourth copy of
+   them gets born. When the floors are in the payload `.ip-cai-ladder` below draws the real scale. */
 .ip-cai-track, .ip-mix-track {
   display: flex; height: 6px; border-radius: 999px; overflow: hidden;
   background: var(--ip-surface-alt, var(--hairline));
@@ -1161,6 +1202,11 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-trend-from { font-family: var(--font-mono); font-size: var(--fs-lg); color: var(--muted); }
 .ip-trend-arrow { color: var(--muted); }
 .ip-trend-to { font-family: var(--font-mono); font-size: var(--fs-lg); font-weight: 600; color: var(--heading); }
+.ip-trend-to.ink-exemplary { color: var(--band-exemplary-text); }
+.ip-trend-to.ink-healthy { color: var(--band-healthy-text); }
+.ip-trend-to.ink-fair { color: var(--band-fair-text); }
+.ip-trend-to.ink-poor { color: var(--band-poor-text); }
+.ip-trend-to.ink-critical { color: var(--band-critical-text); }
 .ip-trend-note { font-size: var(--fs-xs); color: var(--muted); margin-left: auto; }
 .ip-lens-table td { font-variant-numeric: tabular-nums; }
 
@@ -1245,6 +1291,11 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    whether the score was earned steadily or in one jump, and the bars say which lens is dragging.
    The numbers stay beside them; the drawing is not a replacement for the reading. */
 .ip-cai-spark { height: 34px; margin: 0.2rem 0 0; color: var(--muted); }
+.ip-cai-spark.ink-exemplary { color: var(--band-exemplary-text); }
+.ip-cai-spark.ink-healthy { color: var(--band-healthy-text); }
+.ip-cai-spark.ink-fair { color: var(--band-fair-text); }
+.ip-cai-spark.ink-poor { color: var(--band-poor-text); }
+.ip-cai-spark.ink-critical { color: var(--band-critical-text); }
 .ip-cai-spark svg { width: 100%; height: 100%; display: block; }
 .ip-lens-barcell { width: 55%; }
 .ip-lens-bar {
@@ -1253,6 +1304,19 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 }
 .ip-lens-fill { display: block; height: 100%; border-radius: var(--r-full); background: var(--accent); }
 .ip-lens-value { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* ★★ BOTH CLASSES, for the reason spelled out at .ip-cai-score: `.fill-*` and `.ink-*` are existing
+   (0,1,0) utilities defined ~1,080 lines earlier, so written alone they tie on specificity and lose
+   on source order — the band hue renders as the accent and nothing looks wrong. */
+.ip-lens-fill.fill-exemplary { background: var(--band-exemplary); }
+.ip-lens-fill.fill-healthy { background: var(--band-healthy); }
+.ip-lens-fill.fill-fair { background: var(--band-fair); }
+.ip-lens-fill.fill-poor { background: var(--band-poor); }
+.ip-lens-fill.fill-critical { background: var(--band-critical); }
+.ip-lens-value.ink-exemplary { color: var(--band-exemplary-text); }
+.ip-lens-value.ink-healthy { color: var(--band-healthy-text); }
+.ip-lens-value.ink-fair { color: var(--band-fair-text); }
+.ip-lens-value.ink-poor { color: var(--band-poor-text); }
+.ip-lens-value.ink-critical { color: var(--band-critical-text); }
 
 /* ── THE BANDED LADDER WITH A PIN ──────────────────────────────────────────────
    The widget this replaced drew the real ladder; the bake drew a flat bar, on a note claiming the

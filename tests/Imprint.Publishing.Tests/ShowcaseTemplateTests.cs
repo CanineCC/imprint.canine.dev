@@ -32,19 +32,33 @@ public sealed class ShowcaseTemplateTests
     {
         var html = ScoreCardTemplate.Render(Reports, Origin)!;
 
-        Assert.Contains("<h3>ruben-rasmussen/auth</h3>", html, StringComparison.Ordinal);
+        // ★ THE REPOSITORY IS TWO LINES, NOT ONE TOKEN. `owner/name` as a single heading wraps
+        //   mid-word — this sheet refuses `break-word` sheet-wide, with a measured reason — so a long
+        //   repository took three lines in a 280px card and pushed that card's score, ladder and link
+        //   below its neighbours'. Both facts are still text, which is what this test is for.
+        Assert.Contains("<span class=\"ip-survey-repo\">auth</span>", html, StringComparison.Ordinal);
+        Assert.Contains("<span class=\"ip-survey-by\">by ruben-rasmussen</span>", html, StringComparison.Ordinal);
         Assert.Contains(">98</span>", html, StringComparison.Ordinal);
         Assert.Contains("Exemplary", html, StringComparison.Ordinal);
         Assert.Contains("2 lenses measured · C#", html, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void A_score_keeps_one_decimal_only_when_it_has_one()
+    public void The_headline_score_is_the_whole_number_the_product_publishes()
     {
+        // ★★ THIS TEST USED TO ASSERT THE OPPOSITE, AND THE OPPOSITE PUT TWO NUMBERS FOR ONE
+        //    REPOSITORY ON ONE PAGE. /api/public/reports carries `score: 98` where
+        //    /api/public/verdicts carries `bestScore: 97.6` for the same run, so the strip and the
+        //    hero — one section apart — printed 98 and 97.6 and read as two measurements. The
+        //    published figure is the whole number: the gallery, the report and the island card all
+        //    print it, and the tenth is not a precision this index claims.
         var html = ScoreCardTemplate.Render(Reports, Origin)!;
 
         Assert.Contains(">98</span>", html, StringComparison.Ordinal);
-        Assert.Contains(">61.5</span>", html, StringComparison.Ordinal);
+        Assert.Contains(">62</span>", html, StringComparison.Ordinal);
+        // Not "61.5": the tenth survives in the bar GEOMETRY, a drawing rather than a figure.
+        Assert.DoesNotContain(">61.5", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("61.5 out of", html, StringComparison.Ordinal);
         Assert.DoesNotContain("98.0", html, StringComparison.Ordinal);
     }
 
@@ -55,7 +69,8 @@ public sealed class ShowcaseTemplateTests
         // dark card is the kind of thing that passes review and fails a contrast check.
         var html = ScoreCardTemplate.Render(Reports, Origin)!;
 
-        Assert.Contains("ip-band-exemplary", html, StringComparison.Ordinal);
+        Assert.Contains("ip-chip-exemplary", html, StringComparison.Ordinal);
+        Assert.Contains("ink-exemplary", html, StringComparison.Ordinal);
         Assert.DoesNotContain("#0E5C3A", html, StringComparison.Ordinal);
     }
 

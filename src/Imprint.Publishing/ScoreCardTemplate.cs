@@ -85,32 +85,14 @@ public static class ScoreCardTemplate
             var style = hex is not null ? $" style=\"color:{hex}\"" : "";
 
             html.Append("<div class=\"ip-stack ip-survey\">");
-            html.Append("<h3>").Append(Esc(Str(report, "display"))).Append("</h3>");
 
-            // ★ The SCORE is not tinted and the band word is. Two coloured things side by side fight,
-            //   and the earlier attempt to tint both was silently ignored anyway: `.ink-exemplary` is
-            //   an existing (0,1,0) utility defined far earlier in this sheet, so `.ip-cai-score`
-            //   tied on specificity and won on order. A class that renders nothing is worse than no
-            //   class — it reads as a decision that was taken.
-            html.Append("<p class=\"ip-cai\"><span class=\"ip-cai-score\"").Append(style)
-                .Append('>').Append(Esc(Score(score))).Append("</span>")
-                .Append("<span class=\"ip-cai-unit\">/ 100</span>");
-            if (band.Length > 0)
-            {
-                html.Append("<span class=\"ip-band").Append(key is not null ? $" ip-band-{key}" : "").Append('"')
-                    .Append(style).Append('>').Append(Esc(band)).Append("</span>");
-            }
+            // ★ THE HEAD AND THE SCORE LINE ARE SHARED. The strip, the hero and the full survey drew
+            //   the same two things three ways until this moved to ScoreVisuals: one printed
+            //   `owner/name` as a wrapping token, one floated the band word right, and none of them
+            //   inked the number. Three drawings of one card read as three measurements.
+            html.Append(ScoreVisuals.Head(report, band, key, style));
+            html.Append(ScoreVisuals.ScoreLine(score, key, style));
 
-            html.Append("</p>");
-
-            // ★★ THE BANDED LADDER, AND THE COMMENT THAT USED TO SIT HERE WAS WRONG. It said "the
-            //    cutlines are SCORING data and this site is not given them", and drew a flat 0-100
-            //    bar instead. The cutlines are in THIS payload: /api/public/reports carries a `bands`
-            //    table with a floor per band, which is what BandScaleTemplate reads. So the card drew
-            //    a plain bar where the widget it replaced drew the real ladder with a pin, and the
-            //    reason recorded for it was a fact nobody had checked.
-            //    Every number below still comes from the payload, which was the actual rule: no
-            //    cutline is written in this file, and with no band table the flat bar is drawn.
             html.Append(ScoreVisuals.Ladder(root, score, hex, key));
 
             var lenses = Strings(report, "lenses").Count;

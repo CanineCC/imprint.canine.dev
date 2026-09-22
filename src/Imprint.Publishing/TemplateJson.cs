@@ -73,6 +73,20 @@ internal static class TemplateJson
     public static string Score(double value) =>
         value.ToString(Math.Abs(value - Math.Round(value)) < 0.05 ? "0" : "0.0", CultureInfo.InvariantCulture);
 
+    /// <summary>
+    /// A CAI as the product publishes it: a whole number.
+    /// </summary>
+    /// <remarks>
+    /// ★★ TWO FEEDS ROUND DIFFERENTLY AND THE SAME REPOSITORY READ 98 AND 97.6 ON ONE PAGE.
+    /// <c>/api/public/reports</c> carries <c>score: 98</c>; <c>/api/public/verdicts</c> carries
+    /// <c>bestScore: 97.6</c> for the same run. The strip and the hero sat one section apart and
+    /// disagreed, which reads as two measurements rather than one shown twice. The published figure
+    /// is the whole number — that is what the gallery, the report and the island card all print —
+    /// so every card prints it, and the tenth is not a precision this index claims.
+    /// </remarks>
+    public static string Cai(double value) =>
+        Math.Round(value, MidpointRounding.AwayFromZero).ToString("0", CultureInfo.InvariantCulture);
+
     public static string Group(double value) => value.ToString("#,##0", CultureInfo.InvariantCulture);
 
     /// <summary>
