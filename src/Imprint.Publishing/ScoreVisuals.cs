@@ -196,7 +196,7 @@ public static class ScoreVisuals
         }
 
         var html = new StringBuilder();
-        html.Append("<table class=\"ip-price-table\"><caption class=\"sr-only\">")
+        html.Append("<table class=\"ip-price-table ip-fact-table\"><caption class=\"sr-only\">")
             .Append(Esc(caption)).Append(" — what the run recorded</caption><tbody>");
         foreach (var (label, value) in facts)
         {

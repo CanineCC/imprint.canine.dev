@@ -1301,6 +1301,12 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    label took what it needed, and the value had nothing left — "Security" and "100" touched. The bar
    is the flexible part (it is a drawing, it can be any width); the label and the value are text and
    get what they need. */
+/* ★ THE FACTS VALUE MAY WRAP. `.ip-price-table td` is nowrap, which is right for a price and wrong
+   for "15 June 2026 · 35,954 lines": in a four-up card that is 225px of unbreakable text in a 240px
+   box, and it spilled 9px past the card's own edge. A class of its own rather than a `:not()` —
+   the lens value still needs nowrap, and that is a rule about a different cell, not a narrower
+   version of this one. */
+.ip-fact-table td { white-space: normal; }
 .ip-lens-table { table-layout: auto; }
 .ip-lens-table th { width: 1%; white-space: nowrap; padding-right: 0.5rem; }
 .ip-lens-barcell { width: auto; min-width: 2.5rem; }
