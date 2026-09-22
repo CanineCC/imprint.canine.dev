@@ -35,7 +35,8 @@ public static class WidgetTemplate
     /// <para>It lives beside <see cref="Resolve"/> for the same reason Resolve does: the publisher
     /// writes this key and the view reads it, and a key built twice is a key that can differ.</para>
     /// </summary>
-    public static string BakeKey(string url, string? template) => $"{url}\n{template}";
+    public static string BakeKey(string url, string? template, string? context = null) =>
+        context is { Length: > 0 } ? $"{url}\n{template}\n{context}" : $"{url}\n{template}";
 
     public static string? Resolve(WidgetDescriptor descriptor, string? template, Func<string, string?> value)
     {
@@ -120,6 +121,26 @@ public sealed record WidgetDescriptor
     /// machine-readable copy beside a live island — a different trade with a different purpose.</para>
     /// </summary>
     public string? PrerenderTemplate { get; init; }
+
+    /// <summary>
+    /// A SECOND url whose body is handed to the template alongside <see cref="Prerender"/>'s.
+    /// </summary>
+    /// <remarks>
+    /// <para>★★ WHY A CARD NEEDS TWO. The published-survey card wants the score, the history and the
+    /// lenses — which one feed carries — and the BAND CUTLINES, which decide which word and which
+    /// hue a score gets. The cutlines are scoring data: they belong to the rubric, this site must
+    /// never hold a hand-written copy (see <c>BandScaleTemplate</c>), and the feed carrying the
+    /// history does not publish them. With one fetch the card had to choose which half to go
+    /// without, and it drew a flat grey bar on every site for want of four numbers that are public
+    /// at a different address.</para>
+    /// <para>★ IT IS CONTEXT, NOT A SECOND SUBJECT. The first url decides WHAT the widget is about;
+    /// this one only supplies shared facts that qualify it. So it takes no props and is the same for
+    /// every instance — which means one fetch for the whole site, not one per card.</para>
+    /// <para>The bake key covers both, so two widgets differing only in context cannot share a
+    /// fragment. A context that does not answer changes nothing: the template renders from the first
+    /// body alone, exactly as it did before.</para>
+    /// </remarks>
+    public string? PrerenderContext { get; init; }
 
     /// <summary>
     /// Names a server-side template that renders this widget from its OWN PROPS, with no fetch.

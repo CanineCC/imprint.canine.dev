@@ -175,6 +175,16 @@ public sealed class SitePublisher(
         private HashSet<string> _builtInWidgetTags = new(StringComparer.Ordinal);
         private SortedDictionary<string, (string RelativePath, string Hash, byte[] Bytes)> _widgetFiles = new(StringComparer.Ordinal);
 
+        /// <summary>The descriptor's context url, resolved without props — or "" when it has none.</summary>
+        /// <remarks>
+        /// ★ THE LOOKUP MUST DERIVE IT THE SAME WAY THE BAKE DID, or the key misses and the widget
+        /// publishes its fallback with nothing to say why. One function, called from both sides.
+        /// </remarks>
+        private static string ContextUrlOf(WidgetDescriptor descriptor) =>
+            descriptor.PrerenderContext is { Length: > 0 } pattern
+                ? WidgetTemplate.Resolve(descriptor, pattern, _ => null) ?? ""
+                : "";
+
         /// <summary>Publish-time widget bakes, keyed by <see cref="BakeKey"/>.</summary>
         private Dictionary<string, string> _prerendered = new(StringComparer.Ordinal);
 
@@ -195,7 +205,7 @@ public sealed class SitePublisher(
             // and another the self-hosted rows, both from /api/public/pricing. Keyed by URL alone the
             // second widget's template overwrote the first's, one rendering was produced, and both
             // sections looked it up: the page published two placeholders and nothing said why.
-            var wanted = new HashSet<(string Url, string Template)>();
+            var wanted = new HashSet<(string Url, string Template, string Context)>();
             foreach (var page in pages)
             {
                 foreach (var widget in NodesOf(page).OfType<WidgetNode>())
@@ -203,7 +213,13 @@ public sealed class SitePublisher(
                     if (_descriptors.GetValueOrDefault(widget.Tag) is { Prerender.Length: > 0 } descriptor
                         && WidgetTemplate.Resolve(descriptor, descriptor.Prerender, widget.Props.Get) is { } url)
                     {
-                        wanted.Add((url, descriptor.PrerenderTemplate ?? ""));
+                        // ★ THE CONTEXT URL TAKES NO PROPS. It supplies facts shared by every card —
+                        //   the band cutlines — rather than choosing a subject, so resolving it
+                        //   against props would invite a per-instance fetch for an identical answer.
+                        var context = descriptor.PrerenderContext is { Length: > 0 } pattern
+                            ? WidgetTemplate.Resolve(descriptor, pattern, _ => null) ?? ""
+                            : "";
+                        wanted.Add((url, descriptor.PrerenderTemplate ?? "", context));
                     }
                 }
             }
@@ -211,7 +227,10 @@ public sealed class SitePublisher(
             // One fetch per distinct URL even when several templates read it.
             var bodies = new Dictionary<string, string?>(StringComparer.Ordinal);
             var baked = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (var (url, template) in wanted.OrderBy(w => w.Url, StringComparer.Ordinal).ThenBy(w => w.Template, StringComparer.Ordinal))
+            foreach (var (url, template, context) in wanted
+                         .OrderBy(w => w.Url, StringComparer.Ordinal)
+                         .ThenBy(w => w.Template, StringComparer.Ordinal)
+                         .ThenBy(w => w.Context, StringComparer.Ordinal))
             {
                 if (!bodies.TryGetValue(url, out var body))
                 {
@@ -219,13 +238,24 @@ public sealed class SitePublisher(
                     bodies[url] = body;
                 }
 
+                // Shares the same per-URL cache, so a context every card names is fetched ONCE.
+                string? contextBody = null;
+                if (context.Length > 0)
+                {
+                    if (!bodies.TryGetValue(context, out contextBody))
+                    {
+                        contextBody = await prerenderSource.FetchAsync(new Uri(context), ct).ConfigureAwait(false);
+                        bodies[context] = contextBody;
+                    }
+                }
+
                 var rendered = template.Length > 0
-                    ? PrerenderTemplates.Render(template, body, url)
+                    ? PrerenderTemplates.Render(template, body, url, contextBody)
                     : WidgetPrerender.Reduce(body);
 
                 if (rendered is { Length: > 0 })
                 {
-                    baked[WidgetTemplate.BakeKey(url, template)] = rendered;
+                    baked[WidgetTemplate.BakeKey(url, template, context)] = rendered;
                     logger.LogInformation(
                         "Prerendered {Chars} characters for {Url} via template '{Template}'.",
                         rendered.Length, url, template.Length > 0 ? template : "(reduce)");
@@ -1250,7 +1280,9 @@ public sealed class SitePublisher(
             {
                 if (_descriptors.GetValueOrDefault(widget.Tag) is { Prerender.Length: > 0 } descriptor
                     && WidgetTemplate.Resolve(descriptor, descriptor.Prerender, widget.Props.Get) is { } url
-                    && _prerendered.TryGetValue(WidgetTemplate.BakeKey(url, descriptor.PrerenderTemplate), out var bakedMarkup))
+                    && _prerendered.TryGetValue(
+                        WidgetTemplate.BakeKey(url, descriptor.PrerenderTemplate, ContextUrlOf(descriptor)),
+                        out var bakedMarkup))
                 {
                     tokens.Add($"bake:{url}:{descriptor.PrerenderTemplate}:{Hashing.Hash16(Encoding.UTF8.GetBytes(bakedMarkup))}");
                 }

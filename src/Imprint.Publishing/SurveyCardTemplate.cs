@@ -39,6 +39,41 @@ public static class SurveyCardTemplate
         ("eventSourcing", "Event sourcing"),
     ];
 
+    /// <summary>The band word a score falls in, read from the payload's own floors — or null.</summary>
+    /// <remarks>
+    /// ★★ THE WORD IS LOOKED UP, NOT REMEMBERED. The label and the floor travel together in the band
+    /// table, so naming a band is reading the row the score lands in. With no table there is no word:
+    /// this card printed none for exactly that reason, and the comment that used to sit here said it
+    /// could never have one. It can, once it is handed the table.
+    /// </remarks>
+    private static string? BandFor(JsonElement scale, double score)
+    {
+        string? label = null;
+        var best = double.NegativeInfinity;
+        foreach (var band in Array(scale, "bands"))
+        {
+            if (Number(band, "floor") is { } floor && floor <= score && floor >= best
+                && Str(band, "label") is { Length: > 0 } name)
+            {
+                best = floor;
+                label = name;
+            }
+        }
+
+        return label;
+    }
+
+    /// <summary>The site's css key for a band word — presentation, the same split every card uses.</summary>
+    private static string? BandKey(string band) => band switch
+    {
+        "Exemplary" => "exemplary",
+        "Strong" => "healthy",
+        "Adequate" => "fair",
+        "Weak" => "poor",
+        "Critical" => "critical",
+        _ => null,
+    };
+
     /// <summary>The owner and name out of <c>/api/public/oss/{owner}/{name}/evidence</c>, or empties.</summary>
     /// <remarks>
     /// ★ Read POSITIONALLY from the end, not by a fixed index: the path is built by the widget's own
@@ -61,12 +96,20 @@ public static class SurveyCardTemplate
             : ("", "");
     }
 
-    public static string? Render(string? json, string? origin, string? url = null)
+    public static string? Render(string? json, string? origin, string? url = null, string? context = null)
     {
         if (Root(json) is not { } root || Number(root, "headlineScore") is not { } score)
         {
             return null;
         }
+
+        // ★ THE CUTLINES COME FROM THE CONTEXT FEED, because this one is the evidence bundle and
+        //   is served BYTE-EXACT so a reader can compare its digest against a signed delivery — a
+        //   band table can never be added to it. That is why this card drew a flat bar and no band
+        //   word while the card beside it on another site drew the real scale.
+        var scale = ScoreVisuals.Bands(root, Root(context));
+        var band = BandFor(scale, score);
+        var key = band is null ? null : BandKey(band);
 
         var html = new StringBuilder();
         html.Append("<div class=\"ip-stack ip-survey ip-survey-card\">");
@@ -79,7 +122,7 @@ public static class SurveyCardTemplate
         //    Inferring one from a remembered 90/70/50/25 is exactly what BandScaleTemplate refuses.
         if (RepositoryIn(url) is var (owner, name) && name.Length > 0)
         {
-            html.Append(ScoreVisuals.Head(name, owner, owner.Length > 0 ? $"{owner}/{name}" : name, "", null, ""));
+            html.Append(ScoreVisuals.Head(name, owner, owner.Length > 0 ? $"{owner}/{name}" : name, band ?? "", key, ""));
         }
 
         // ★★ THE SAME BODY AS EVERY OTHER CARD. This one drew a headline and a flat bar while the
@@ -87,12 +130,10 @@ public static class SurveyCardTemplate
         //    templates, four drawings of one object, which reads as four products rather than one
         //    measurement shown four times. What differs here is only what the payload can support:
         //    no owner/name (the page names the repository), no band word and no series.
-        html.Append("<p class=\"ip-cai\"><span class=\"ip-cai-kicker\">CAI</span>")
-            .Append("<span class=\"ip-cai-score\">").Append(Esc(Cai(score)))
-            .Append("</span><span class=\"ip-cai-unit\">/ 100</span></p>");
+        html.Append(ScoreVisuals.ScoreLine(score, key, ""));
 
         // No bands in this payload, so this is the flat bar — the honest degradation, not a design.
-        html.Append(ScoreVisuals.Ladder(root, score, null, null));
+        html.Append(ScoreVisuals.Ladder(scale, score, null, key));
 
         // ★ THE LENS SCORES ARE IN THIS PAYLOAD AND WERE PRINTED AS A LIST OF NUMBERS. They are the
         //   same six readings the island card draws as bars; drawing them as bars is what makes a
@@ -107,7 +148,7 @@ public static class SurveyCardTemplate
             .Select(l => (l.Label, byLens[l.Key]))
             .ToList();
 
-        html.Append(ScoreVisuals.Lenses(root, measured, null, "This repository"));
+        html.Append(ScoreVisuals.Lenses(scale, measured, null, "This repository"));
 
         // What the run recorded. Each row is dropped when the payload does not carry it.
         var facts = new List<(string Label, string Html)>();

@@ -1402,7 +1402,8 @@
         "name": "base",
         "label": "Watchdog base URL"
       }
-    ]
+    ],
+    "prerenderContext": "{base}/api/public/reports"
   },
   {
     "tag": "wd-surveys-all",
@@ -1465,7 +1466,8 @@
         "name": "base",
         "label": "Watchdog base URL"
       }
-    ]
+    ],
+    "prerenderContext": "{base}/api/public/reports"
   },
   {
     "tag": "wd-architecture",
@@ -1512,7 +1514,8 @@
         "name": "name",
         "label": "Repository name"
       }
-    ]
+    ],
+    "prerenderContext": "{base}/api/public/reports"
   },
   {
     "tag": "wd-question-pool",
@@ -1573,6 +1576,7 @@
         "name": "base",
         "label": "Watchdog base URL"
       }
-    ]
+    ],
+    "prerenderContext": "{base}/api/public/reports"
   }
 ]

@@ -21,7 +21,7 @@ public static class PrerenderTemplates
     /// keyed by (url, template) and cannot see props: a prop that changed the output would produce one
     /// fragment shared by instances that disagreed about it.
     /// </param>
-    public static string? Render(string? name, string? body, string? url = null) => name switch
+    public static string? Render(string? name, string? body, string? url = null, string? context = null) => name switch
     {
         PricingTemplate.Name => PricingTemplate.Render(body),
         PricingTemplate.OnPremName => PricingTemplate.RenderOnPrem(body),
@@ -33,11 +33,11 @@ public static class PrerenderTemplates
         BandScaleTemplate.Name => BandScaleTemplate.Render(body, OriginOf(url)),
         // ★ The whole url: this feed can be asked for ONE repository by `?repo=`, and the card
         //   must refuse to draw a different one if a deployment ignores that parameter.
-        SurveyDetailTemplate.Name => SurveyDetailTemplate.Render(body, OriginOf(url), url),
-        SurveyDetailTemplate.StripName => SurveyDetailTemplate.RenderStrip(body, OriginOf(url)),
+        SurveyDetailTemplate.Name => SurveyDetailTemplate.Render(body, OriginOf(url), url, context),
+        SurveyDetailTemplate.StripName => SurveyDetailTemplate.RenderStrip(body, OriginOf(url), context),
         // ★ The WHOLE url, not just its origin: this payload does not name the repository it
         //   describes, and the url does — `/api/public/oss/{owner}/{name}/evidence`.
-        SurveyCardTemplate.Name => SurveyCardTemplate.Render(body, OriginOf(url), url),
+        SurveyCardTemplate.Name => SurveyCardTemplate.Render(body, OriginOf(url), url, context),
         ExamPoolTemplate.Name => ExamPoolTemplate.Render(body, OriginOf(url)),
         LanguageSupportTemplate.Name => LanguageSupportTemplate.Render(body),
         ArchitectureSvgTemplate.Name => ArchitectureSvgTemplate.Render(body),

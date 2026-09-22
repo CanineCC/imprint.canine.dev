@@ -42,7 +42,8 @@ public static class SurveyDetailTemplate
     ];
 
     /// <summary>The whole card, for the page that leads with ONE published survey.</summary>
-    public static string? Render(string? json, string? origin, string? url = null) => Render(json, origin, 1, url);
+    public static string? Render(string? json, string? origin, string? url = null, string? context = null) =>
+        Render(json, origin, 1, url, context);
 
     /// <summary>
     /// The same card, four across, for a strip that says "here are real reports".
@@ -56,13 +57,15 @@ public static class SurveyDetailTemplate
     /// </remarks>
     public const string StripName = "survey-details";
 
-    public static string? RenderStrip(string? json, string? origin) => Render(json, origin, StripCount, null);
+    public static string? RenderStrip(string? json, string? origin, string? context = null) =>
+        Render(json, origin, StripCount, null, context);
 
     /// <summary>Four fills a row and leaves none dangling.</summary>
     private const int StripCount = 4;
 
-    private static string? Render(string? json, string? origin, int take, string? url)
+    private static string? Render(string? json, string? origin, int take, string? url, string? context)
     {
+        var ctx = Root(context);
         if (Root(json) is not { } root)
         {
             return null;
@@ -88,25 +91,28 @@ public static class SurveyDetailTemplate
 
         if (take == 1)
         {
-            return Card(root, items[0], origin);
+            return Card(root, items[0], origin, ctx);
         }
 
         var html = new StringBuilder();
         html.Append("<div class=\"ip-grid ip-grid-4up\">");
         foreach (var item in items)
         {
-            html.Append(Card(root, item, origin));
+            html.Append(Card(root, item, origin, ctx));
         }
 
         html.Append("</div>");
 
-        // The corpus total is the honest frame around a curated strip — without it, four cards read
-        // as "four surveys exist".
-        if (Number(root, "total") is { } total && total > items.Count)
+        // ★ THE DENOMINATOR TOO. This feed publishes `total`; the reports feed calls the same fact
+        //   `matched`. Either is the honest frame around a strip of four — without one, four cards
+        //   read as "four surveys exist".
+        var total = Number(root, "total")
+            ?? (ctx is { } c ? Number(c, "matched") : null);
+        if (total is { } shown && shown > items.Count)
         {
             html.Append("<div class=\"ip-prose\"><p>Showing ")
                 .Append(Esc(Group(items.Count))).Append(" of <strong>")
-                .Append(Esc(Group(total)))
+                .Append(Esc(Group(shown)))
                 .Append("</strong> published surveys — every one of them readable in full.</p></div>");
         }
 
@@ -134,8 +140,10 @@ public static class SurveyDetailTemplate
         return null;
     }
 
-    private static string Card(JsonElement root, JsonElement item, string? origin)
+    private static string Card(JsonElement root, JsonElement item, string? origin, JsonElement? context)
     {
+        // The cutlines may live in this feed or in the context one; one function decides.
+        var scale = ScoreVisuals.Bands(root, context);
         var score = Number(item, "bestScore") ?? 0;
         var band = Str(item, "band");
         var key = BandKey(band);
@@ -146,7 +154,7 @@ public static class SurveyDetailTemplate
         html.Append("<div class=\"ip-stack ip-survey ip-survey-detail\">");
         html.Append(ScoreVisuals.Head(item, band, key, style));
         html.Append(ScoreVisuals.ScoreLine(score, key, style));
-        html.Append(ScoreVisuals.Ladder(root, score, hex, key));
+        html.Append(ScoreVisuals.Ladder(scale, score, hex, key));
         html.Append(ScoreVisuals.Sparkline(item, hex, key));
         html.Append(ScoreVisuals.Trend(item, score, key));
 
@@ -156,7 +164,7 @@ public static class SurveyDetailTemplate
             .Select(l => (l.Label, l.Value!.Value))
             .ToList();
 
-        html.Append(ScoreVisuals.Lenses(root, measured, hex, Str(item, "display")));
+        html.Append(ScoreVisuals.Lenses(scale, measured, hex, Str(item, "display")));
 
         var facts = new List<(string Label, string Html)>();
         if (Date(Str(item, "publishedAt")) is { } published)

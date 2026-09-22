@@ -83,6 +83,30 @@ public static class ScoreVisuals
         + Esc(Cai(score)) + "</span><span class=\"ip-cai-unit\">/ 100</span></p>";
 
     /// <summary>
+    /// The band table: the subject's own, or the context's, or none.
+    /// </summary>
+    /// <remarks>
+    /// <para>★★ THE CUTLINES ARE STILL NEVER WRITTEN HERE. They come from a payload, exactly as
+    /// before — this only widens WHICH payload may carry them. A card's own feed publishes the
+    /// score, the history and the lenses; the lines that decide which word and which hue that score
+    /// gets belong to the rubric and are published at their own address. Asking a card to go without
+    /// a scale because its feed does not repeat them is how every baked card on the estate came to
+    /// draw a flat grey bar.</para>
+    /// <para>★ THE SUBJECT WINS. If the card's own feed carries a band table, that one is used: it
+    /// was computed for this reading, and a context fetched separately could in principle be a
+    /// revision ahead.</para>
+    /// </remarks>
+    public static JsonElement Bands(JsonElement root, JsonElement? context)
+    {
+        if (Array(root, "bands").Any())
+        {
+            return root;
+        }
+
+        return context is { } ctx && Array(ctx, "bands").Any() ? ctx : root;
+    }
+
+    /// <summary>
     /// The banded ladder with the score pinned on it, or a flat bar when the payload has no bands.
     /// </summary>
     public static string Ladder(JsonElement root, double score, string? hex, string? key)
