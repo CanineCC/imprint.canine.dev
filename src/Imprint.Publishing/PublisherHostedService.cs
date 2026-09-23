@@ -59,19 +59,33 @@ public sealed class PublisherHostedService(
         externalContent.Changed += Wake;
         try
         {
-            await TrySynchronize(stoppingToken);
+            var stale = await TrySynchronize(stoppingToken);
             var debounce = TimeSpan.FromMilliseconds(Math.Max(0, options.DebounceMilliseconds));
+            var attempt = 0;
             while (!stoppingToken.IsCancellationRequested)
             {
-                await pending.WaitAsync(stoppingToken);
+                // ★★ A STALE PUBLISH RETRIES ITSELF, and nothing else in this loop does. Every other
+                // reason to publish is an EVENT — a page edit, a syndication push, a producer saying
+                // "look again" — and an event that already happened will not happen twice. So a publish
+                // that could not reach the service it bakes from would otherwise hold the last good
+                // content forever and never try again: never blank, but permanently behind. Backing off
+                // 1, 2, 4 … to five minutes, this keeps asking until a publish comes back clean.
+                var waited = stale > 0
+                    ? await pending.WaitAsync(RetryDelay(attempt), stoppingToken)
+                    : await WaitForeverAsync(pending, stoppingToken);
 
-                // Quiet-period debounce: every further catch-up inside the window
-                // restarts the wait; publish only once the events stop arriving.
-                while (await pending.WaitAsync(debounce, stoppingToken))
+                if (waited)
                 {
+                    // Quiet-period debounce: every further catch-up inside the window
+                    // restarts the wait; publish only once the events stop arriving.
+                    while (await pending.WaitAsync(debounce, stoppingToken))
+                    {
+                    }
                 }
 
-                await TrySynchronize(stoppingToken);
+                var before = stale;
+                stale = await TrySynchronize(stoppingToken);
+                attempt = stale > 0 && before > 0 ? attempt + 1 : 0;
             }
         }
         catch (OperationCanceledException)
@@ -86,18 +100,34 @@ public sealed class PublisherHostedService(
         }
     }
 
-    private async Task TrySynchronize(CancellationToken ct)
+    /// <summary>How long to wait before asking again after a publish that could not reach something.</summary>
+    /// <remarks>★ 1, 2, 4, 8 … capped at five minutes. Short enough that a brief outage costs one
+    /// stale interval, long enough that a service down for an afternoon is not hammered.</remarks>
+    private static TimeSpan RetryDelay(int attempt) =>
+        TimeSpan.FromSeconds(Math.Min(300, Math.Pow(2, Math.Min(attempt, 9))));
+
+    /// <summary>Waits for work with no deadline, and always reports that it waited.</summary>
+    private static async Task<bool> WaitForeverAsync(SemaphoreSlim pending, CancellationToken ct)
+    {
+        await pending.WaitAsync(ct).ConfigureAwait(false);
+        return true;
+    }
+
+    /// <summary>Publishes every target and returns how many fragments could not be reached.</summary>
+    private async Task<int> TrySynchronize(CancellationToken ct)
     {
         // Per-target guard: one site's publish failing (an unwritable folder, a render
         // error) must not stall the sites after it in the loop — publishing is a
         // projection, and a projection failure must not take the editing plane down with
         // it. The next catch-up pass retries the failed site.
+        var stale = 0;
         foreach (var target in ResolveTargets())
         {
             ct.ThrowIfCancellationRequested();
             try
             {
-                await publisher.Synchronize(target, ct);
+                var report = await publisher.Synchronize(target, ct);
+                stale += report.StaleBakes;
             }
             catch (OperationCanceledException)
             {
@@ -108,6 +138,15 @@ public sealed class PublisherHostedService(
                 logger.LogError(e, "Publishing site {SiteId} failed; will retry on the next change.", target.Site.Id);
             }
         }
+
+        if (stale > 0)
+        {
+            logger.LogWarning(
+                "{Stale} widget fragment(s) could not be fetched; those pages kept the last bake that worked "
+                + "and this publish will be retried until every fragment arrives.", stale);
+        }
+
+        return stale;
     }
 
     /// <summary>

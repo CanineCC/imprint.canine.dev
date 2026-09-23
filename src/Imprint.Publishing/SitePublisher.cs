@@ -179,12 +179,26 @@ public sealed class SitePublisher(
         private Dictionary<string, string> _prerendered = new(StringComparer.Ordinal);
 
         /// <summary>
+        /// How many fragments this publish could not fetch — each one either kept its previous bake or
+        /// fell back to a placeholder.
+        /// </summary>
+        /// <remarks>
+        /// ★★ THE OTHER HALF OF KEEPING THE OLD BAKE. Keeping it stops a page going blank; on its own it
+        /// would also let a page sit on last week's prices forever, because the only thing that re-bakes
+        /// is a signal, and a signal that already fired will not fire again. So a publish that could not
+        /// reach something SAYS SO in its report, and the hosted service keeps waking until a publish
+        /// comes back clean. Never blank, and never quietly stale.
+        /// </remarks>
+        private int _staleBakes;
+
+        /// <summary>
         /// Fetch and reduce every distinct widget bake this site needs. Never throws and never fails
         /// a publish: a URL that does not answer is simply absent from the result.
         /// </summary>
         private async Task<Dictionary<string, string>> BakeWidgetFragments(
             IReadOnlyList<PublishedPage> pages, CancellationToken ct)
         {
+            var memory = new BakeMemory(_outputRoot, logger);
             if (prerenderSource is null)
             {
                 return new Dictionary<string, string>(StringComparer.Ordinal);
@@ -241,20 +255,39 @@ public sealed class SitePublisher(
                     ? PrerenderTemplates.Render(template, body, url, contextBody)
                     : WidgetPrerender.Reduce(body);
 
+                var bakeKey = WidgetTemplate.BakeKey(url, template, context);
                 if (rendered is { Length: > 0 })
                 {
-                    baked[WidgetTemplate.BakeKey(url, template, context)] = rendered;
+                    baked[bakeKey] = rendered;
+                    memory.Remember(bakeKey, rendered);
                     logger.LogInformation(
                         "Prerendered {Chars} characters for {Url} via template '{Template}'.",
                         rendered.Length, url, template.Length > 0 ? template : "(reduce)");
                 }
+                else if (memory.Recall(bakeKey) is { Length: > 0 } remembered)
+                {
+                    // ★★ KEEP WHAT THE PAGE ALREADY HAD. The choice here is not between a bake and a
+                    // placeholder — it is between the last prices that arrived and NO prices, and a
+                    // published page is a static file that serves whichever we choose until something
+                    // publishes it again. Stale is a smaller lie than absent. See BakeMemory for the
+                    // afternoon this cost.
+                    baked[bakeKey] = remembered;
+                    _staleBakes++;
+                    logger.LogWarning(
+                        "Prerender produced nothing for {Url} via template '{Template}' ({Bytes} bytes fetched); "
+                        + "KEEPING the last bake that worked ({Chars} characters). The publish is stale and will "
+                        + "be retried until it is not.",
+                        url, template.Length > 0 ? template : "(reduce)", body?.Length ?? 0, remembered.Length);
+                }
                 else
                 {
-                    // ★ SAY SO. A bake that produces nothing publishes the widget's fallback, which on a
-                    // pricing page is a sentence where the prices should be — and until this line existed
-                    // the only evidence was the absence of prices on a live page.
+                    // ★ SAY SO. A bake that produces nothing and has nothing remembered publishes the
+                    // widget's fallback, which on a pricing page is a sentence where the prices should be.
+                    // This is the honest answer for a page that has never had a bake, and only that.
+                    _staleBakes++;
                     logger.LogWarning(
-                        "Prerender produced nothing for {Url} via template '{Template}' ({Bytes} bytes fetched); the widget publishes its fallback.",
+                        "Prerender produced nothing for {Url} via template '{Template}' ({Bytes} bytes fetched) "
+                        + "and nothing is remembered; the widget publishes its fallback.",
                         url, template.Length > 0 ? template : "(reduce)", body?.Length ?? 0);
                 }
             }
@@ -428,7 +461,10 @@ public sealed class SitePublisher(
                 .ToList();
             return new PublishReport(
                 pagesRendered, pagesRemoved, _filesWritten, _bytesWritten, errors,
-                DateTimeOffset.UtcNow, Stopwatch.GetElapsedTime(startedTimestamp));
+                DateTimeOffset.UtcNow, Stopwatch.GetElapsedTime(startedTimestamp))
+            {
+                StaleBakes = _staleBakes,
+            };
         }
 
         // ------------------------------------------------------------------ planning
