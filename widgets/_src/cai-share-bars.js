@@ -154,6 +154,15 @@ a.sb-label:hover { color: var(--accent); text-decoration: none; }
 .sb-wide-bar { display: flex; height: 28px; gap: 2px; border-radius: 3px; overflow: hidden; }
 .sb-wide-part { display: flex; align-items: center; min-width: 0; padding: 0 11px; }
 .sb-wide-part.is-accent { background: var(--accent); }
+/* ★★ --accent IS A FILL TO LOOK AT, NOT A BACKGROUND TO PUT TEXT ON. In the light theme the
+   family default is #4682b4 and --on-accent is white: 4.1:1 behind an 11.5px bold label, where AA
+   asks 4.5. The stylesheet already records the same mistake on the text side ("--accent-INK, not
+   --accent... measures 4.0 against AA's 4.5"); this is its mirror image. --accent-strong is the
+   token every other filled-and-labelled surface uses — .cai-seal, .btn-primary, the header CTA —
+   and it measures 9.1:1 here. Light only: in the dark theme the pair is already a dark label on a
+   light blue at 7:1, and swapping the fill there would pale the bar for nothing.
+   Found by running axe over these pages for the first time; the island had never been checked. */
+:host([data-theme="light"]) .sb-wide-part.is-accent { background: var(--accent-strong); }
 .sb-wide-part.is-band { /* fill-* supplies the background */ }
 .sb-wide-part.is-track { background: var(--surface-2); }
 .sb-wide-part > span { font-family: var(--font-mono); font-variant-numeric: tabular-nums;
