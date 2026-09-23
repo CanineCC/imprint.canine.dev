@@ -152,7 +152,15 @@ const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + HINT_CSS 
 .mk-trend-end.fill-fair { fill: var(--band-fair); }
 .mk-trend-end.fill-poor { fill: var(--band-poor); }
 .mk-trend-end.fill-critical { fill: var(--band-critical); }
-.mk-trend-endlabel { font-family: var(--font-mono); font-size: 15px; font-weight: 700; }
+/* ★★ THE INK CLASS COULD NOT REACH THIS LABEL. The end label is written with the band's ink class
+   beside it (mk-trend-endlabel ink-healthy), and the .ink-* rules set color — which an SVG <text>
+   ignores, exactly as the shared .fill-* rules' background was ignored by the circle above. So the
+   label fell back to the SVG default fill, which is BLACK: correct on white, and 1.11:1 against
+   #0F1115 in the dark scheme. The one number a reader looks for was the one that disappeared.
+   fill: currentColor is what lets color flow in. Found by screenshotting the portrait in the dark
+   scheme (CAI shoot.mjs --theme dark), where the check that now catches it also lives. */
+.mk-trend-endlabel { font-family: var(--font-mono); font-size: 15px; font-weight: 700;
+  fill: currentColor; }
 .mk-trend-date { fill: var(--muted); font-size: 12px; }
 .mk-trend-hit { fill: transparent; cursor: default; }
 .mk-trend-hit:hover + .mk-trend-dot, .mk-trend-hit:focus + .mk-trend-dot { stroke: var(--accent-strong); }
