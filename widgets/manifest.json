@@ -1245,7 +1245,7 @@
   {
     "tag": "wd-embed",
     "name": "Live Watchdog view (embed)",
-    "description": "Frames a view rendered by the Watchdog app itself — its own components, its own stylesheet, against real published data. Nothing is re-drawn here, so it can never drift from the product. 'findings' and 'composition' are carousels over the curated top 10 repositories, each slide naming its repo. The server refuses any repo that has not published a survey. Leave Repository empty for the curated set (or the app's hero pick for a single card). The frame sizes itself to its content.",
+    "description": "Frames a view rendered by the Watchdog app itself — its own components, its own stylesheet, against real published data. Nothing is re-drawn here, so it can never drift from the product. 'findings' and 'composition' are carousels over the curated top 10 repositories, each slide naming its repo. The server refuses any repo that has not published a survey. Leave Repository empty for the curated set (or the app's hero pick for a single card). The frame sizes itself to its content. 'cli-builder' is the self-serve CLI picker: it renders no survey data at all, and is framed here for the same reason the others are — the dimensions a composed scanner ships and the languages it can be built for are facts about the product, and a hand-written copy on this site would be a second place for them to be wrong. The page carries the prose; the frame carries the picker.",
     "bundle": "wd-embed.js",
     "placeholder": "Live Watchdog view",
     "props": [
@@ -1264,7 +1264,8 @@
           "score-card",
           "findings",
           "composition",
-          "band-scale"
+          "band-scale",
+          "cli-builder"
         ]
       },
       {
