@@ -1448,32 +1448,63 @@ a.ip-linkcard:hover .ip-linkcard-label { color: var(--accent-ink); }
 }
 .ip-lens-list-off .ip-lens { background: transparent; border: 1px solid var(--hairline); color: var(--muted); }
 
-/* ── THE BAND SCALE (the five rungs, pinned with real published surveys) ───────
-   A row per band, worst at the bottom, so the scale reads as a ladder rather than as a
-   list. The rung an empty band gets is deliberately still a rung: the published set is
-   each repository's peak run, so the bottom is usually empty, and hiding those rows
-   would turn a five-band scale into a three-band one. */
-.ip-ladder { gap: 0; border: 1px solid var(--hairline); border-radius: var(--r-lg); overflow: hidden; }
-/* A grid, not a flex row: the scores have to line up in a column, and a wrapping flex
-   row puts each one wherever its repository name happens to end. */
+/* ── THE BAND SCALE (five tiles, worst → best, pinned with real published surveys) ──
+   The template writes the rungs best-first; row-reverse lays them out worst-first, so the
+   row reads the way the sentence over it does ("from worst to best"). Each rung is a tile
+   with its band's colour along the top edge.
+   ★ THE THRESHOLD IS THE POINT OF THE GRAPHIC, so the floor number (.ip-rung-floor) is the
+   large figure, in the band's colour; the published example sits small at the foot of the
+   tile, under a hairline. The example areas share one minimum height so the hairlines line
+   up across the row even where the text runs to two lines.
+   The rung an empty band gets is deliberately still a tile: the published set is each
+   repository's peak run, so the bottom is usually empty, and hiding those rungs would turn a
+   five-band scale into a three-band one. Narrow containers fall back to a stacked list,
+   best at the top, with the colour on the left edge. */
+.ip-ladder {
+  display: flex; flex-direction: row-reverse; align-items: stretch; gap: 0.75rem;
+  border: 0; border-radius: 0; overflow: visible;
+}
 .ip-rung {
-  display: grid; grid-template-columns: 11rem minmax(0, 1fr); align-items: baseline; gap: 0.3rem 1rem;
-  padding: 0.7rem 1rem; border-bottom: 1px solid var(--hairline); background: var(--surface);
+  --rung: var(--hairline);
+  flex: 1 1 0; min-width: 0;
+  display: flex; flex-direction: column; gap: 0.9rem;
+  padding: 1rem 1.1rem 1.1rem;
+  background: var(--surface);
+  border: 1px solid var(--hairline); border-top: 5px solid var(--rung);
+  border-radius: var(--r-lg);
 }
-@container (max-width: 34rem) { .ip-rung { grid-template-columns: 1fr; } }
-.ip-rung:last-child { border-bottom: 0; }
-.ip-rung-band { margin: 0; display: flex; align-items: baseline; gap: 0.5rem; }
-.ip-rung-band .ip-band { margin-left: 0; }
-.ip-rung-range { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; }
+.ip-rung:has(.ip-band-critical)  { --rung: var(--band-critical);  --rung-ink: var(--band-critical-text); }
+.ip-rung:has(.ip-band-poor)      { --rung: var(--band-poor);      --rung-ink: var(--band-poor-text); }
+.ip-rung:has(.ip-band-fair)      { --rung: var(--band-fair);      --rung-ink: var(--band-fair-text); }
+.ip-rung:has(.ip-band-healthy)   { --rung: var(--band-healthy);   --rung-ink: var(--band-healthy-text); }
+.ip-rung:has(.ip-band-exemplary) { --rung: var(--band-exemplary); --rung-ink: var(--band-exemplary-text); }
+.ip-rung-band { margin: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 0.35rem; }
+.ip-rung-band .ip-band { margin-left: 0; font-size: var(--fs-xs); letter-spacing: 0.06em; color: var(--rung-ink, var(--heading)); }
+.ip-rung-range { font-family: var(--font-ui); font-size: var(--fs-sm); color: var(--muted); white-space: nowrap; }
+.ip-rung-floor {
+  margin-left: 0.15rem; font-size: var(--fs-4xl); font-weight: 700; line-height: 1;
+  letter-spacing: -0.01em; color: var(--rung-ink, var(--ink));
+}
 .ip-rung-example {
-  margin: 0; display: flex; align-items: baseline; justify-content: space-between;
-  gap: 0.6rem; font-size: var(--fs-sm);
+  margin: auto 0 0; padding-top: 0.7rem; border-top: 1px solid var(--hairline);
+  display: flex; flex-direction: row-reverse; justify-content: flex-end; align-items: baseline;
+  gap: 0.45rem; font-size: var(--fs-sm); min-width: 0; min-height: calc(0.7rem + 1px + 2.9em);
 }
-.ip-rung-example a { color: var(--accent-ink); text-decoration: none; overflow-wrap: anywhere; }
+.ip-rung-example a { color: var(--accent-ink); text-decoration: none; overflow-wrap: anywhere; min-width: 0; }
 .ip-rung-example a:hover { text-decoration: underline; }
-.ip-rung-score { font-size: var(--fs-xl); }
+.ip-rung-score { font-size: var(--fs-sm); font-weight: 700; line-height: 1.3; color: var(--ink); }
 /* An empty rung is quiet, not hidden — it is still a fact about the published set. */
-.ip-rung-empty { color: var(--muted); font-size: var(--fs-xs); max-width: 34rem; }
+.ip-rung-empty { display: block; color: var(--muted); font-size: var(--fs-sm); line-height: 1.45; }
+@container (max-width: 50rem) {
+  .ip-ladder { flex-direction: column; gap: 0.5rem; }
+  .ip-rung {
+    display: grid; grid-template-columns: minmax(7rem, 8.5rem) minmax(0, 1fr); align-items: center;
+    gap: 0.25rem 1rem; padding: 0.8rem 1rem;
+    border-top: 1px solid var(--hairline); border-left: 5px solid var(--rung);
+  }
+  .ip-rung-floor { font-size: var(--fs-3xl); }
+  .ip-rung-example { margin: 0; padding-top: 0; border-top: 0; min-height: 0; }
+}
 
 /* ── THE ARCHITECTURE MAP (inlined SVG; the product draws it, this site paints it) ──
    The drawing arrives class-driven with its own <style> block, which is stripped before the

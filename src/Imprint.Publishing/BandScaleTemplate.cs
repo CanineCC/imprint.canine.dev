@@ -27,7 +27,9 @@ namespace Imprint.Publishing;
 /// <para><b>Bounds are stated as the payload states them.</b> Each band gets "from {floor}", because
 /// that is exactly what a floor means and it cannot be wrong at the boundary; the bottom band, whose
 /// floor is zero, reads "under {the next floor}" instead, which is the same fact said the way a
-/// reader would say it. Writing "70–89" would be inventing a top end the data does not carry.</para>
+/// reader would say it. Writing "70–89" would be inventing a top end the data does not carry. The
+/// number sits in an element of its own (<c>ip-rung-floor</c>) because the threshold is what the
+/// graphic is for and is drawn large; the word stays plain text beside it.</para>
 /// <para><b>A band with no example says so.</b> The published set is each repository's PEAK run — a
 /// regression is never published — so the bottom of the scale is usually empty. Silently dropping
 /// those rungs would turn a five-band scale into a three-band one and quietly flatter the corpus.</para>
@@ -65,11 +67,14 @@ public static class BandScaleTemplate
                 .Append(key.Length > 0 ? $" ip-band-{Esc(key)}" : "").Append("\">")
                 .Append(Esc(label)).Append("</span>");
 
-            html.Append("<span class=\"ip-rung-range\">")
-                .Append(Esc(i == 0 && floor <= 0 && bands.Count > 1
-                    ? $"under {Score(bands[1].Floor)}"
-                    : $"from {Score(floor)}"))
-                .Append("</span>");
+            // ★ The THRESHOLD is what this graphic is for, so its number is an element of its own and
+            //   can be drawn large; the word stays plain text beside it, so the rung still reads
+            //   "from 90" / "under 25" exactly as the payload states the bound.
+            var (word, bound) = i == 0 && floor <= 0 && bands.Count > 1
+                ? ("under", bands[1].Floor)
+                : ("from", floor);
+            html.Append("<span class=\"ip-rung-range\">").Append(word)
+                .Append(" <span class=\"ip-rung-floor\">").Append(Esc(Score(bound))).Append("</span></span>");
 
             html.Append("</p>");
 

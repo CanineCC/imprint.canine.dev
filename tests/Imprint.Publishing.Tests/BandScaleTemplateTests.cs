@@ -1,3 +1,4 @@
+using System.Text;
 using Imprint.Publishing;
 
 namespace Imprint.Publishing.Tests;
@@ -54,11 +55,23 @@ public sealed class BandScaleTemplateTests
         // "70–89" would be inventing a top end the data does not carry.
         var html = BandScaleTemplate.Render(Payload, Origin)!;
 
-        Assert.Contains("from 90", html, StringComparison.Ordinal);
-        Assert.Contains("from 70", html, StringComparison.Ordinal);
-        Assert.Contains("under 25", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("from 0", html, StringComparison.Ordinal);
+        Assert.Contains("from 90", Text(html), StringComparison.Ordinal);
+        Assert.Contains("from 70", Text(html), StringComparison.Ordinal);
+        Assert.Contains("under 25", Text(html), StringComparison.Ordinal);
+        Assert.DoesNotContain("from 0", Text(html), StringComparison.Ordinal);
         Assert.DoesNotContain("–", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_threshold_is_an_element_of_its_own_so_it_can_be_drawn_large()
+    {
+        // ★ The lines between the bands are what this graphic is for, so the number is styled on
+        //   its own; the word stays plain text beside it, and the rung still reads "from 90".
+        var html = BandScaleTemplate.Render(Payload, Origin)!;
+
+        Assert.Contains("from <span class=\"ip-rung-floor\">90</span>", html, StringComparison.Ordinal);
+        Assert.Contains("under <span class=\"ip-rung-floor\">25</span>", html, StringComparison.Ordinal);
+        Assert.Equal(5, Count(html, "ip-rung-floor"));
     }
 
     [Fact]
@@ -97,8 +110,8 @@ public sealed class BandScaleTemplateTests
 
         var html = BandScaleTemplate.Render(moved, Origin)!;
 
-        Assert.Contains("from 93", html, StringComparison.Ordinal);
-        Assert.Contains("under 31", html, StringComparison.Ordinal);
+        Assert.Contains("from 93", Text(html), StringComparison.Ordinal);
+        Assert.Contains("under 31", Text(html), StringComparison.Ordinal);
         foreach (var remembered in new[] { "90", "70", "50", "25" })
         {
             Assert.DoesNotContain(remembered, html, StringComparison.Ordinal);
@@ -137,10 +150,10 @@ public sealed class BandScaleTemplateTests
             Assert.Contains($">{word}</span>", html, StringComparison.Ordinal);
         }
 
-        Assert.Contains("from 90", html, StringComparison.Ordinal);
-        Assert.Contains("from 70", html, StringComparison.Ordinal);
-        Assert.Contains("from 50", html, StringComparison.Ordinal);
-        Assert.Contains("under 25", html, StringComparison.Ordinal);
+        Assert.Contains("from 90", Text(html), StringComparison.Ordinal);
+        Assert.Contains("from 70", Text(html), StringComparison.Ordinal);
+        Assert.Contains("from 50", Text(html), StringComparison.Ordinal);
+        Assert.Contains("under 25", Text(html), StringComparison.Ordinal);
 
         // No examples in this envelope, so every rung says so rather than silently shrinking.
         Assert.Equal(5, Count(html, "ip-rung-empty"));
@@ -156,8 +169,8 @@ public sealed class BandScaleTemplateTests
 
         var html = BandScaleTemplate.Render(moved, Origin)!;
 
-        Assert.Contains("from 93", html, StringComparison.Ordinal);
-        Assert.Contains("under 31", html, StringComparison.Ordinal);
+        Assert.Contains("from 93", Text(html), StringComparison.Ordinal);
+        Assert.Contains("under 31", Text(html), StringComparison.Ordinal);
         foreach (var remembered in new[] { "90", "70", "50", "25" })
         {
             Assert.DoesNotContain(remembered, html, StringComparison.Ordinal);
@@ -189,8 +202,23 @@ public sealed class BandScaleTemplateTests
         var html = BandScaleTemplate.Render(both, Origin)!;
 
         Assert.Contains(">Top</span>", html, StringComparison.Ordinal);
-        Assert.Contains("from 42", html, StringComparison.Ordinal);
+        Assert.Contains("from 42", Text(html), StringComparison.Ordinal);
         Assert.DoesNotContain("Exemplary", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>What a reader sees: the markup with its tags removed.</summary>
+    private static string Text(string html)
+    {
+        var text = new StringBuilder(html.Length);
+        var inTag = false;
+        foreach (var c in html)
+        {
+            if (c == '<') { inTag = true; }
+            else if (c == '>') { inTag = false; }
+            else if (!inTag) { text.Append(c); }
+        }
+
+        return text.ToString();
     }
 
     private static int Count(string haystack, string needle)
