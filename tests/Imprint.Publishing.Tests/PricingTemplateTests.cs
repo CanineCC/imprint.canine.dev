@@ -269,6 +269,234 @@ public sealed class PricingTemplateTests
         Assert.Contains($"<th scope=\"row\">B · {lines:#,##0}</th>", html, StringComparison.Ordinal);
     }
 
+    // ── The plans row (RenderPlans) ──────────────────────────────────────────────
+    // Two catalogues: the one the product serves today (every paid package priced by bucket, two
+    // free lanes with ladders) and one shaped like the announced change of model (flat prices with
+    // an included allowance, no ladders). The row has to read right for both, because the page
+    // follows the catalogue without anyone rewriting it.
+
+    private const string TodayCatalogue = """
+        {
+          "currency": "EUR", "distribution": null,
+          "cohorts": [
+            { "key": "personal", "name": "Student", "tagline": "Your own projects.", "fromEur": "€0",
+              "isFlatPrice": false, "modules": ["Core survey"],
+              "buckets": [ { "key": "personal", "lineScansPerMonth": 50000, "baseEur": "€0" },
+                           { "key": "Starter", "lineScansPerMonth": 250000, "baseEur": "€11" } ] },
+            { "key": "freelancer", "name": "Freelancer", "tagline": "For one-person shops.", "fromEur": "€24",
+              "isFlatPrice": false, "modules": ["Core survey"],
+              "buckets": [ { "key": "Starter", "lineScansPerMonth": 250000, "baseEur": "€24" },
+                           { "key": "XXS", "lineScansPerMonth": 1000000, "baseEur": "€95" } ] },
+            { "key": "teams", "name": "Engineering teams", "tagline": "The whole product.", "fromEur": "€61",
+              "isFlatPrice": false, "modules": ["Core survey", "Agent-fix loop"],
+              "buckets": [ { "key": "Starter", "lineScansPerMonth": 250000, "baseEur": "€61" },
+                           { "key": "XXS", "lineScansPerMonth": 1000000, "baseEur": "€245" } ] },
+            { "key": "enterprise", "name": "Enterprise", "tagline": "Under your governance.", "fromEur": "€124",
+              "isFlatPrice": false, "modules": ["Core survey", "Enterprise SSO"],
+              "buckets": [ { "key": "Starter", "lineScansPerMonth": 250000, "baseEur": "€124" },
+                           { "key": "XXS", "lineScansPerMonth": 1000000, "baseEur": "€495" } ] },
+            { "key": "freeoss", "name": "Free OSS", "tagline": "Open source.", "fromEur": "€0",
+              "isFlatPrice": false, "modules": ["Core survey"],
+              "buckets": [ { "key": "oss", "lineScansPerMonth": 100000, "baseEur": "€0" },
+                           { "key": "Starter", "lineScansPerMonth": 250000, "baseEur": "€18" } ] }
+          ],
+          "onPrem": [
+            { "key": "L", "name": "On-prem L", "blurb": "", "lineScansPerYear": 600000000, "pricePerYearEur": 100000.00 },
+            { "key": "XL", "name": "On-prem XL", "blurb": "", "lineScansPerYear": 1800000000, "pricePerYearEur": 200000.00 },
+            { "key": "XXL", "name": "On-prem XXL", "blurb": "", "lineScansPerYear": null, "pricePerYearEur": 500000.00 }
+          ]
+        }
+        """;
+
+    // Deliberately NOT in price order: the row, not the catalogue, puts the cheapest first.
+    private const string NewModelCatalogue = """
+        {
+          "cohorts": [
+            { "key": "professional", "name": "Professional", "tagline": "For teams of any size.", "fromEur": "€1,995",
+              "isFlatPrice": true, "includedLocScans": 15000000, "modules": ["Core survey", "Enterprise SSO"], "buckets": [] },
+            { "key": "contributor", "name": "Contributor Unlimited", "tagline": "For one person.", "fromEur": "€95",
+              "isFlatPrice": true, "includedLocScans": 1000000, "modules": ["Core survey"], "buckets": [] },
+            { "key": "contributor-free", "name": "Contributor Free", "tagline": "For one person, free.", "fromEur": "€0",
+              "isFlatPrice": true, "includedLocScans": 250000, "modules": ["Core survey"], "buckets": [] }
+          ],
+          "onPrem": [
+            { "key": "L", "name": "On-prem L", "lineScansPerYear": 600000000, "pricePerYearEur": 100000 },
+            { "key": "XL", "name": "On-prem XL", "lineScansPerYear": 1800000000, "pricePerYearEur": 200000 },
+            { "key": "XXL", "name": "On-prem XXL", "lineScansPerYear": null, "pricePerYearEur": 500000 }
+          ]
+        }
+        """;
+
+    [Fact]
+    public void Plans_are_ordered_cheapest_first_with_on_prem_last()
+    {
+        // The two free lanes tie at €0 and keep the catalogue's order between them.
+        var html = PricingTemplate.RenderPlans(TodayCatalogue)!;
+
+        AssertInOrder(html, "<h3>Student</h3>", "<h3>Free OSS</h3>", "<h3>Freelancer</h3>",
+            "<h3>Engineering teams</h3>", "<h3>Enterprise</h3>", "<h3>On-prem</h3>");
+    }
+
+    [Fact]
+    public void The_new_model_is_ordered_the_same_way_whatever_order_the_catalogue_sends()
+    {
+        var html = PricingTemplate.RenderPlans(NewModelCatalogue)!;
+
+        AssertInOrder(html, "<h3>Contributor Free</h3>", "<h3>Contributor Unlimited</h3>",
+            "<h3>Professional</h3>", "<h3>On-prem</h3>");
+    }
+
+    [Fact]
+    public void A_bucket_priced_plan_shows_its_entry_price_and_what_that_price_buys()
+    {
+        var html = PricingTemplate.RenderPlans(TodayCatalogue)!;
+
+        Assert.Contains(
+            "<p class=\"ip-price\"><span class=\"ip-price-lead\">From</span>€61<span class=\"ip-price-unit\">a month</span></p>"
+            + "<p class=\"ip-plan-allowance\">For up to 250,000 line-scans a month</p>",
+            html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_bucket_ladder_is_folded_under_see_every_price()
+    {
+        var html = PricingTemplate.RenderPlans(TodayCatalogue)!;
+
+        Assert.Contains("<details class=\"ip-plan-prices\"><summary>See every price</summary>", html, StringComparison.Ordinal);
+        Assert.Contains("<th scope=\"row\">1M line-scans</th><td>€245</td>", html, StringComparison.Ordinal);
+        Assert.Contains(
+            "<caption class=\"sr-only\">Engineering teams: price a month by line-scan allowance</caption>",
+            html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_free_lane_says_how_far_free_goes_and_what_comes_after_it()
+    {
+        var html = PricingTemplate.RenderPlans(TodayCatalogue)!;
+
+        Assert.Contains(
+            "<p class=\"ip-price\">Free</p><p class=\"ip-plan-allowance\">Up to 50,000 line-scans a month, then from €11</p>",
+            html, StringComparison.Ordinal);
+        Assert.Contains("<th scope=\"row\">50k line-scans</th><td>Free</td>", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_flat_plan_shows_one_price_and_its_allowance_with_nothing_to_fold()
+    {
+        // "From" would promise a ladder, and a fold would open onto nothing.
+        var html = PricingTemplate.RenderPlans(NewModelCatalogue)!;
+
+        Assert.Contains(
+            "<p class=\"ip-price\">€95<span class=\"ip-price-unit\">a month</span></p>"
+            + "<p class=\"ip-plan-allowance\">Up to 1,000,000 line-scans a month</p>",
+            html, StringComparison.Ordinal);
+        Assert.Contains("<p class=\"ip-price\">€1,995<span class=\"ip-price-unit\">a month</span></p>",
+            html, StringComparison.Ordinal);
+        Assert.DoesNotContain("ip-price-lead", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("<details", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_free_plan_with_a_stated_allowance_says_free_and_how_far()
+    {
+        var html = PricingTemplate.RenderPlans(NewModelCatalogue)!;
+
+        Assert.Contains(
+            "<p class=\"ip-price\">Free</p><p class=\"ip-plan-allowance\">Up to 250,000 line-scans a month</p>",
+            html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_modules_are_the_included_list()
+    {
+        var html = PricingTemplate.RenderPlans(TodayCatalogue)!;
+
+        Assert.Contains(
+            "<p class=\"ip-plan-label\">Included</p><ul class=\"ip-plan-included\"><li>Core survey</li><li>Agent-fix loop</li></ul>",
+            html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void On_prem_is_one_card_priced_at_its_smallest_size_with_the_larger_sizes_listed()
+    {
+        var html = PricingTemplate.RenderPlans(TodayCatalogue)!;
+
+        Assert.Contains(
+            "<div class=\"ip-plan ip-plan-onprem\"><h3>On-prem</h3>"
+            + "<p class=\"ip-price\">€100,000<span class=\"ip-price-unit\">a year</span></p>"
+            + "<p class=\"ip-plan-allowance\">On-prem L: 600,000,000 line-scans a year</p>",
+            html, StringComparison.Ordinal);
+        Assert.Contains("<th scope=\"row\">On-prem XL · 1.8B a year</th><td>€200,000</td>", html, StringComparison.Ordinal);
+        Assert.Contains("<th scope=\"row\">On-prem XXL · unlimited</th><td>€500,000</td>", html, StringComparison.Ordinal);
+        Assert.Equal(1, Occurrences(html, "ip-plan-onprem"));
+    }
+
+    [Fact]
+    public void Without_on_prem_rows_there_is_no_on_prem_card()
+    {
+        var html = PricingTemplate.RenderPlans(
+            "{\"cohorts\":[{\"name\":\"P\",\"fromEur\":\"€1\",\"modules\":[],\"buckets\":[]}],\"onPrem\":[]}")!;
+
+        Assert.DoesNotContain("ip-plan-onprem", html, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("not json")]
+    [InlineData("{\"cohorts\":[]}")]
+    public void A_catalogue_with_no_packages_renders_no_plans_row(string? payload)
+    {
+        Assert.Null(PricingTemplate.RenderPlans(payload));
+    }
+
+    [Fact]
+    public void A_price_with_no_digits_sorts_last_rather_than_passing_for_the_cheapest()
+    {
+        var html = PricingTemplate.RenderPlans(
+            "{\"cohorts\":[{\"name\":\"Odd\",\"fromEur\":\"ask\",\"modules\":[],\"buckets\":[]},"
+            + "{\"name\":\"Cheap\",\"fromEur\":\"€5\",\"modules\":[],\"buckets\":[]}]}")!;
+
+        AssertInOrder(html, "<h3>Cheap</h3>", "<h3>Odd</h3>");
+    }
+
+    [Fact]
+    public void Plan_text_from_the_catalogue_is_escaped()
+    {
+        var html = PricingTemplate.RenderPlans(
+            "{\"cohorts\":[{\"name\":\"<script>x</script>\",\"tagline\":\"<b>t</b>\",\"fromEur\":\"€1\","
+            + "\"modules\":[\"<i>m</i>\"],\"buckets\":[]}]}")!;
+
+        Assert.DoesNotContain("<script>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("<b>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("<i>", html, StringComparison.Ordinal);
+        Assert.Contains("&lt;script&gt;", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_publisher_routes_the_plans_layout_and_the_original_layout_is_unchanged()
+    {
+        // The live page keeps the original widget until an editor swaps it, so the original
+        // template must render exactly as before alongside the new one.
+        var plans = PrerenderTemplates.Render(PricingTemplate.PlansName, TodayCatalogue)!;
+        var original = PrerenderTemplates.Render(PricingTemplate.Name, TodayCatalogue)!;
+
+        Assert.Contains("class=\"ip-plans\"", plans, StringComparison.Ordinal);
+        Assert.Contains("class=\"ip-grid ip-grid-5up\"", original, StringComparison.Ordinal);
+        Assert.DoesNotContain("ip-plans", original, StringComparison.Ordinal);
+    }
+
+    private static void AssertInOrder(string html, params string[] fragments)
+    {
+        var positions = fragments.Select(f => html.IndexOf(f, StringComparison.Ordinal)).ToList();
+
+        Assert.DoesNotContain(-1, positions);
+        Assert.Equal(positions.OrderBy(p => p), positions);
+    }
+
+    private static int Occurrences(string html, string fragment) =>
+        (html.Length - html.Replace(fragment, "", StringComparison.Ordinal).Length) / fragment.Length;
+
     private static string Bucket(long lines) =>
         $$"""
           {"cohorts":[{"name":"P","fromEur":"€1","modules":[],

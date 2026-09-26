@@ -32,6 +32,23 @@ public static class PricingTemplate
     public const string OnPremName = "pricing-onprem";
 
     /// <summary>
+    /// The plans row: every package AND the self-hosted sizes as one row of cards, cheapest first,
+    /// with on-prem as the last card.
+    /// </summary>
+    /// <remarks>
+    /// <para>★ BUILT FOR BOTH SHAPES OF CATALOGUE. Today every paid package is priced by bucket, so
+    /// its card shows the entry price and folds the whole ladder under "See every price". A package
+    /// the catalogue marks <c>isFlatPrice</c> has ONE price and, where the catalogue states it, an
+    /// included allowance (<c>includedLocScans</c>); its card shows exactly that, with nothing to
+    /// fold. When the catalogue moves from one model to the other, the page follows it on the next
+    /// publish without anyone rewriting a price.</para>
+    /// <para>A separate name from <see cref="Name"/>, so the page that uses the original layout keeps
+    /// it until an editor swaps the widget. The bake is keyed by (url, template), so the two layouts
+    /// never share a fragment.</para>
+    /// </remarks>
+    public const string PlansName = "pricing-plans";
+
+    /// <summary>
     /// The catalogue as imprint markup, or null when the payload carries no packages — an empty
     /// price list is worse than the fallback, because it reads as "free" rather than as "unknown".
     /// </summary>
@@ -220,6 +237,273 @@ public static class PricingTemplate
         }
 
         return html.Append("</div>").ToString();
+    }
+
+    /// <summary>
+    /// The plans row as imprint markup, or null when the payload carries no packages. An empty
+    /// price list reads as "free", which is worse than the fallback.
+    /// </summary>
+    public static string? RenderPlans(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        JsonElement root;
+        try
+        {
+            root = JsonDocument.Parse(json).RootElement;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+
+        if (!root.TryGetProperty("cohorts", out var cohorts) || cohorts.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        // ★ CHEAPEST FIRST, with the catalogue deciding between equals. How many packages there are
+        //   is data: five today, fewer after the change of model. Ordering by price is the one rule
+        //   that reads right for both, free first and then each step up, without a list of package
+        //   names in this file.
+        var plans = cohorts.EnumerateArray()
+            .Where(c => Str(c, "name").Length > 0)
+            .Select((plan, index) => (plan, index))
+            .OrderBy(x => Amount(Str(x.plan, "fromEur")))
+            .ThenBy(x => x.index)
+            .Select(x => x.plan)
+            .ToList();
+        if (plans.Count == 0)
+        {
+            return null;
+        }
+
+        var sizes = root.TryGetProperty("onPrem", out var onPrem) && onPrem.ValueKind == JsonValueKind.Array
+            ? onPrem.EnumerateArray()
+                .Where(row => Str(row, "name").Length > 0)
+                .Select((row, index) => (row, index))
+                .OrderBy(x => YearlyAmount(x.row))
+                .ThenBy(x => x.index)
+                .Select(x => x.row)
+                .ToList()
+            : [];
+
+        var html = new StringBuilder();
+        html.Append("<div class=\"ip-plans\">");
+        foreach (var plan in plans)
+        {
+            AppendPlan(html, plan);
+        }
+
+        if (sizes.Count > 0)
+        {
+            AppendOnPrem(html, sizes);
+        }
+
+        html.Append("</div>");
+
+        if (root.TryGetProperty("distribution", out var distribution)
+            && distribution.ValueKind == JsonValueKind.String
+            && distribution.GetString() is { Length: > 0 } sentence)
+        {
+            html.Append("<div class=\"ip-prose\"><p>").Append(Esc(sentence)).Append("</p></div>");
+        }
+
+        return html.ToString();
+    }
+
+    private static void AppendPlan(StringBuilder html, JsonElement plan)
+    {
+        var name = Str(plan, "name");
+        var buckets = plan.TryGetProperty("buckets", out var b) && b.ValueKind == JsonValueKind.Array
+            ? b.EnumerateArray().ToList()
+            : [];
+        var free = IsZero(Str(plan, "fromEur"));
+        var flat = plan.TryGetProperty("isFlatPrice", out var f) && f.ValueKind == JsonValueKind.True;
+
+        html.Append("<div class=\"ip-plan\">");
+        html.Append("<h3>").Append(Esc(name)).Append("</h3>");
+        if (Str(plan, "tagline") is { Length: > 0 } tagline)
+        {
+            html.Append("<p class=\"ip-plan-for\">").Append(Esc(tagline)).Append("</p>");
+        }
+
+        // A flat package has one price, not a starting price: "from" would promise a ladder that
+        // does not exist. A free package is "Free", never "€0 a month".
+        html.Append("<p class=\"ip-price\">");
+        if (free)
+        {
+            html.Append("Free");
+        }
+        else
+        {
+            if (!flat)
+            {
+                html.Append("<span class=\"ip-price-lead\">From</span>");
+            }
+
+            html.Append(Esc(Str(plan, "fromEur"))).Append("<span class=\"ip-price-unit\">a month</span>");
+        }
+
+        html.Append("</p>");
+
+        if (Allowance(plan, buckets, free, flat) is { Length: > 0 } allowance)
+        {
+            html.Append("<p class=\"ip-plan-allowance\">").Append(Esc(allowance)).Append("</p>");
+        }
+
+        if (plan.TryGetProperty("modules", out var modules) && modules.ValueKind == JsonValueKind.Array)
+        {
+            var names = modules.EnumerateArray().Select(m => m.GetString() ?? "").Where(m => m.Length > 0).ToList();
+            if (names.Count > 0)
+            {
+                html.Append("<p class=\"ip-plan-label\">Included</p><ul class=\"ip-plan-included\">");
+                foreach (var module in names)
+                {
+                    html.Append("<li>").Append(Esc(module)).Append("</li>");
+                }
+
+                html.Append("</ul>");
+            }
+        }
+
+        // ★ THE LADDER FOLDS AWAY, and only where there is one. Open, every card carried eight or
+        //   nine rows, forty-odd prices across the row, and the packages could no longer be compared
+        //   at a glance. Folded, the entry price does that job and the ladder is one click away. A
+        //   flat package has no ladder, so it gets no fold rather than an empty one.
+        if (!flat && buckets.Count > 1)
+        {
+            html.Append("<details class=\"ip-plan-prices\"><summary>See every price</summary>")
+                .Append("<table class=\"ip-price-table\"><caption class=\"sr-only\">").Append(Esc(name))
+                .Append(": price a month by line-scan allowance</caption><tbody>");
+            foreach (var bucket in buckets)
+            {
+                var price = Str(bucket, "baseEur");
+                html.Append("<tr><th scope=\"row\">").Append(Esc(CompactLines(bucket))).Append(" line-scans</th><td>")
+                    .Append(IsZero(price) ? "Free" : Esc(price)).Append("</td></tr>");
+            }
+
+            html.Append("</tbody></table></details>");
+        }
+
+        html.Append("</div>");
+    }
+
+    /// <summary>
+    /// What the price buys, as one sentence, or empty when the catalogue says nothing about it.
+    /// </summary>
+    /// <remarks>
+    /// ★ An allowance the catalogue states outright wins. It is the whole deal of a flat package, and
+    /// a free package that states one needs no ladder to say how far "free" goes. Otherwise the ladder
+    /// speaks: a free lane is free up to its first row and then priced from its first paid row, and a
+    /// paid package's entry price is the price of its first row.
+    /// </remarks>
+    private static string Allowance(JsonElement plan, List<JsonElement> buckets, bool free, bool flat)
+    {
+        if (Number(plan, "includedLocScans") is { } included && included > 0)
+        {
+            return "Up to " + included.ToString("#,##0", CultureInfo.InvariantCulture) + " line-scans a month";
+        }
+
+        if (buckets.Count == 0 || Lines(buckets[0]) is not { Length: > 0 } first)
+        {
+            return "";
+        }
+
+        if (free)
+        {
+            var firstPaid = buckets.FirstOrDefault(x => !IsZero(Str(x, "baseEur")));
+            return firstPaid.ValueKind == JsonValueKind.Object
+                ? "Up to " + first + " line-scans a month, then from " + Str(firstPaid, "baseEur")
+                : "Up to " + first + " line-scans a month";
+        }
+
+        return flat ? "" : "For up to " + first + " line-scans a month";
+    }
+
+    /// <summary>
+    /// ★ ONE CARD, NOT THREE. In the plans row, self-hosting is one choice beside the packages, and
+    /// its sizes are how big that choice is, so they are listed inside it. Three cards would read as
+    /// three more packages. The smallest size is the card's price, as a package's first row is.
+    /// </summary>
+    private static void AppendOnPrem(StringBuilder html, List<JsonElement> sizes)
+    {
+        var entry = sizes[0];
+        html.Append("<div class=\"ip-plan ip-plan-onprem\">");
+        html.Append("<h3>On-prem</h3>");
+        html.Append("<p class=\"ip-price\">").Append(Esc(Eur(entry, "pricePerYearEur")))
+            .Append("<span class=\"ip-price-unit\">a year</span></p>");
+        html.Append("<p class=\"ip-plan-allowance\">").Append(Esc(Str(entry, "name"))).Append(": ")
+            .Append(Esc(YearlyAllowance(entry))).Append("</p>");
+        if (Str(entry, "blurb") is { Length: > 0 } blurb)
+        {
+            html.Append("<p class=\"ip-plan-for\">").Append(Esc(blurb)).Append("</p>");
+        }
+
+        if (sizes.Count > 1)
+        {
+            html.Append("<table class=\"ip-price-table ip-plan-sizes\"><caption class=\"sr-only\">")
+                .Append("The larger self-hosted sizes, price a year</caption><tbody>");
+            foreach (var size in sizes.Skip(1))
+            {
+                html.Append("<tr><th scope=\"row\">").Append(Esc(Str(size, "name"))).Append(" · ")
+                    .Append(Esc(CompactYearly(size))).Append("</th><td>")
+                    .Append(Esc(Eur(size, "pricePerYearEur"))).Append("</td></tr>");
+            }
+
+            html.Append("</tbody></table>");
+        }
+
+        html.Append("</div>");
+    }
+
+    /// <summary>
+    /// The whole-euro amount a formatted catalogue price carries ("€1,995" is 1995), used to ORDER
+    /// the plans and never printed. A price with no digits sorts last rather than first, so a
+    /// malformed row can never be presented as the cheapest.
+    /// </summary>
+    private static decimal Amount(string price)
+    {
+        var digits = new string(price.Where(char.IsAsciiDigit).ToArray());
+        return digits.Length > 0 && decimal.TryParse(digits, NumberStyles.None, CultureInfo.InvariantCulture, out var n)
+            ? n
+            : decimal.MaxValue;
+    }
+
+    private static decimal YearlyAmount(JsonElement row) =>
+        row.TryGetProperty("pricePerYearEur", out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetDecimal(out var d)
+            ? d
+            : decimal.MaxValue;
+
+    /// <summary>
+    /// A yearly allowance abbreviated for a row inside a card ("1.8B a year"), exact or in full,
+    /// by the same rule as <see cref="CompactLines"/>. Null is unlimited, not missing.
+    /// </summary>
+    private static string CompactYearly(JsonElement row)
+    {
+        if (Number(row, "lineScansPerYear") is not { } n || n <= 0)
+        {
+            return "unlimited";
+        }
+
+        foreach (var (unit, suffix) in Units)
+        {
+            if (n < unit)
+            {
+                continue;
+            }
+
+            var scaled = (decimal)n / unit;
+            if (decimal.Round(scaled, 1) == scaled)
+            {
+                return scaled.ToString("0.#", CultureInfo.InvariantCulture) + suffix + " a year";
+            }
+        }
+
+        return n.ToString("#,##0", CultureInfo.InvariantCulture) + " a year";
     }
 
     /// <summary>A formatted price that is zero, whatever currency symbol it carries.</summary>

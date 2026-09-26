@@ -1390,6 +1390,22 @@
     ]
   },
   {
+    "tag": "wd-pricing-plans",
+    "name": "Pricing plans with on-prem (rendered here)",
+    "description": "Every package and the self-hosted sizes as one row of plan cards, cheapest first, with on-prem as the last card. Fetched as data from Watchdog and rendered in this site's own markup at publish time. Reads both bucket-priced and flat-priced packages, so the page follows the billing catalogue through a change of pricing model.",
+    "bundle": "",
+    "placeholder": "Pricing plans are published here.",
+    "prerender": "{base}/api/public/pricing",
+    "prerenderTemplate": "pricing-plans",
+    "fallbackHref": "{base}/embed/pricing",
+    "props": [
+      {
+        "name": "base",
+        "label": "Watchdog base URL"
+      }
+    ]
+  },
+  {
     "tag": "wd-surveys",
     "name": "Published surveys, four across (rendered here)",
     "description": "Four real published surveys as full cards — score, band, ladder, trend line, every lens with its own bar and what each run recorded. The same card the hero shows, four across.",
