@@ -355,6 +355,13 @@ public static class PricingTemplate
             html.Append("<p class=\"ip-plan-allowance\">").Append(Esc(allowance)).Append("</p>");
         }
 
+        // Each part is escaped on its own and joined with a literal separator: HtmlEncode would turn the middle
+        // dot into an entity, which reads the same but is not what the rest of this page writes.
+        if (Terms(plan) is { Count: > 0 } terms)
+        {
+            html.Append("<p class=\"ip-plan-terms\">").Append(string.Join(" · ", terms.Select(Esc))).Append("</p>");
+        }
+
         if (plan.TryGetProperty("modules", out var modules) && modules.ValueKind == JsonValueKind.Array)
         {
             var names = modules.EnumerateArray().Select(m => m.GetString() ?? "").Where(m => m.Length > 0).ToList();
@@ -405,7 +412,17 @@ public static class PricingTemplate
     {
         if (Number(plan, "includedLocScans") is { } included && included > 0)
         {
-            return "Up to " + included.ToString("#,##0", CultureInfo.InvariantCulture) + " line-scans a month";
+            var limit = included.ToString("#,##0", CultureInfo.InvariantCulture);
+
+            // ★ WHAT HAPPENS AT THE LIMIT, as the product enforces it: 100 % (or unstated by an older catalogue)
+            //   is a hard stop; above it, scans keep running to that share of the limit, then pause.
+            return Number(plan, "fairUseCeilingPercent") switch
+            {
+                null => "Up to " + limit + " line-scans a month",
+                <= 100 => "Up to " + limit + " line-scans a month, then scans pause until the monthly reset",
+                { } ceiling => "Fair use: " + limit + " line-scans a month — scans keep running to "
+                    + ceiling.ToString(CultureInfo.InvariantCulture) + "% of it, then pause until the monthly reset",
+            };
         }
 
         if (buckets.Count == 0 || Lines(buckets[0]) is not { Length: > 0 } first)
@@ -425,6 +442,30 @@ public static class PricingTemplate
     }
 
     /// <summary>
+    /// Who may log in and whether members contribute to the noise standard, as one line — or empty when the
+    /// catalogue does not state them (an older payload), because "unlimited logins" would then be a guess.
+    /// </summary>
+    private static List<string> Terms(JsonElement plan)
+    {
+        var parts = new List<string>();
+        if (plan.TryGetProperty("logins", out var logins))
+        {
+            parts.Add(logins.ValueKind == JsonValueKind.Number && logins.TryGetInt64(out var n)
+                ? n.ToString(CultureInfo.InvariantCulture) + (n == 1 ? " login" : " logins")
+                : "Unlimited logins");
+        }
+
+        if (plan.TryGetProperty("contributor", out var contributor))
+        {
+            parts.Add(contributor.ValueKind == JsonValueKind.True
+                ? "Members answer one noise question a day"
+                : "No contribution asked");
+        }
+
+        return parts;
+    }
+
+    /// <summary>
     /// ★ ONE CARD, NOT THREE. In the plans row, self-hosting is one choice beside the packages, and
     /// its sizes are how big that choice is, so they are listed inside it. Three cards would read as
     /// three more packages. The smallest size is the card's price, as a package's first row is.
@@ -433,7 +474,8 @@ public static class PricingTemplate
     {
         var entry = sizes[0];
         html.Append("<div class=\"ip-plan ip-plan-onprem\">");
-        html.Append("<h3>On-prem</h3>");
+        // The self-hosted licence is sold as Enterprise (four-package model).
+        html.Append("<h3>Enterprise</h3>");
         html.Append("<p class=\"ip-price\">").Append(Esc(Eur(entry, "pricePerYearEur")))
             .Append("<span class=\"ip-price-unit\">a year</span></p>");
         html.Append("<p class=\"ip-plan-allowance\">").Append(Esc(Str(entry, "name"))).Append(": ")

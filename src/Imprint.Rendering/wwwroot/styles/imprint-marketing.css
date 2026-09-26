@@ -1034,6 +1034,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-plan-for { margin: 0; font-size: var(--fs-sm); line-height: 1.5; color: var(--muted); }
 .ip-plan .ip-price { margin: 0.35rem 0 0; }
 .ip-plan-allowance { margin: 0; font-size: var(--fs-sm); line-height: 1.45; font-weight: 600; color: var(--ink); }
+.ip-plan-terms { margin: 0; font-size: var(--fs-sm); line-height: 1.45; color: var(--ink); }
 .ip-plan-label {
   margin: 0.5rem 0 0; font-family: var(--font-mono); font-size: var(--fs-2xs); font-weight: 600;
   letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted);

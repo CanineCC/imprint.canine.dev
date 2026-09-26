@@ -312,17 +312,20 @@ public sealed class PricingTemplateTests
     private const string NewModelCatalogue = """
         {
           "cohorts": [
-            { "key": "professional", "name": "Professional", "tagline": "For teams of any size.", "fromEur": "€1,995",
-              "isFlatPrice": true, "includedLocScans": 15000000, "modules": ["Core survey", "Enterprise SSO"], "buckets": [] },
-            { "key": "contributor", "name": "Contributor Unlimited", "tagline": "For one person.", "fromEur": "€95",
-              "isFlatPrice": true, "includedLocScans": 1000000, "modules": ["Core survey"], "buckets": [] },
-            { "key": "contributor-free", "name": "Contributor Free", "tagline": "For one person, free.", "fromEur": "€0",
-              "isFlatPrice": true, "includedLocScans": 250000, "modules": ["Core survey"], "buckets": [] }
+            { "key": "teams", "name": "Professional", "tagline": "For professional work.", "fromEur": "€2,995",
+              "isFlatPrice": true, "includedLocScans": 15000000, "logins": null, "contributor": false,
+              "fairUseCeilingPercent": 150, "modules": ["Core survey", "Enterprise SSO"], "buckets": [] },
+            { "key": "freelancer", "name": "Community unlimited", "tagline": "For community work.", "fromEur": "€199",
+              "isFlatPrice": true, "includedLocScans": 1000000, "logins": null, "contributor": true,
+              "fairUseCeilingPercent": 150, "modules": ["Core survey"], "buckets": [] },
+            { "key": "freeoss", "name": "Community free", "tagline": "For one person, free.", "fromEur": "€0",
+              "isFlatPrice": true, "includedLocScans": 250000, "logins": 1, "contributor": true,
+              "fairUseCeilingPercent": 100, "modules": ["Core survey"], "buckets": [] }
           ],
           "onPrem": [
-            { "key": "L", "name": "On-prem L", "lineScansPerYear": 600000000, "pricePerYearEur": 100000 },
-            { "key": "XL", "name": "On-prem XL", "lineScansPerYear": 1800000000, "pricePerYearEur": 200000 },
-            { "key": "XXL", "name": "On-prem XXL", "lineScansPerYear": null, "pricePerYearEur": 500000 }
+            { "key": "L", "name": "Enterprise L", "lineScansPerYear": 600000000, "pricePerYearEur": 100000 },
+            { "key": "XL", "name": "Enterprise XL", "lineScansPerYear": 1800000000, "pricePerYearEur": 200000 },
+            { "key": "XXL", "name": "Enterprise XXL", "lineScansPerYear": null, "pricePerYearEur": 500000 }
           ]
         }
         """;
@@ -334,7 +337,7 @@ public sealed class PricingTemplateTests
         var html = PricingTemplate.RenderPlans(TodayCatalogue)!;
 
         AssertInOrder(html, "<h3>Student</h3>", "<h3>Free OSS</h3>", "<h3>Freelancer</h3>",
-            "<h3>Engineering teams</h3>", "<h3>Enterprise</h3>", "<h3>On-prem</h3>");
+            "<h3>Engineering teams</h3>", "<h3>Enterprise</h3>", "<div class=\"ip-plan ip-plan-onprem\"><h3>Enterprise</h3>");
     }
 
     [Fact]
@@ -342,8 +345,8 @@ public sealed class PricingTemplateTests
     {
         var html = PricingTemplate.RenderPlans(NewModelCatalogue)!;
 
-        AssertInOrder(html, "<h3>Contributor Free</h3>", "<h3>Contributor Unlimited</h3>",
-            "<h3>Professional</h3>", "<h3>On-prem</h3>");
+        AssertInOrder(html, "<h3>Community free</h3>", "<h3>Community unlimited</h3>",
+            "<h3>Professional</h3>", "<h3>Enterprise</h3>");
     }
 
     [Fact]
@@ -387,10 +390,10 @@ public sealed class PricingTemplateTests
         var html = PricingTemplate.RenderPlans(NewModelCatalogue)!;
 
         Assert.Contains(
-            "<p class=\"ip-price\">€95<span class=\"ip-price-unit\">a month</span></p>"
-            + "<p class=\"ip-plan-allowance\">Up to 1,000,000 line-scans a month</p>",
+            "<p class=\"ip-price\">€199<span class=\"ip-price-unit\">a month</span></p>"
+            + "<p class=\"ip-plan-allowance\">Fair use: 1,000,000 line-scans a month — scans keep running to 150% of it, then pause until the monthly reset</p>",
             html, StringComparison.Ordinal);
-        Assert.Contains("<p class=\"ip-price\">€1,995<span class=\"ip-price-unit\">a month</span></p>",
+        Assert.Contains("<p class=\"ip-price\">€2,995<span class=\"ip-price-unit\">a month</span></p>",
             html, StringComparison.Ordinal);
         Assert.DoesNotContain("ip-price-lead", html, StringComparison.Ordinal);
         Assert.DoesNotContain("<details", html, StringComparison.Ordinal);
@@ -402,7 +405,7 @@ public sealed class PricingTemplateTests
         var html = PricingTemplate.RenderPlans(NewModelCatalogue)!;
 
         Assert.Contains(
-            "<p class=\"ip-price\">Free</p><p class=\"ip-plan-allowance\">Up to 250,000 line-scans a month</p>",
+            "<p class=\"ip-price\">Free</p><p class=\"ip-plan-allowance\">Up to 250,000 line-scans a month, then scans pause until the monthly reset</p>",
             html, StringComparison.Ordinal);
     }
 
@@ -422,13 +425,33 @@ public sealed class PricingTemplateTests
         var html = PricingTemplate.RenderPlans(TodayCatalogue)!;
 
         Assert.Contains(
-            "<div class=\"ip-plan ip-plan-onprem\"><h3>On-prem</h3>"
+            "<div class=\"ip-plan ip-plan-onprem\"><h3>Enterprise</h3>"
             + "<p class=\"ip-price\">€100,000<span class=\"ip-price-unit\">a year</span></p>"
             + "<p class=\"ip-plan-allowance\">On-prem L: 600,000,000 line-scans a year</p>",
             html, StringComparison.Ordinal);
         Assert.Contains("<th scope=\"row\">On-prem XL · 1.8B a year</th><td>€200,000</td>", html, StringComparison.Ordinal);
         Assert.Contains("<th scope=\"row\">On-prem XXL · unlimited</th><td>€500,000</td>", html, StringComparison.Ordinal);
         Assert.Equal(1, Occurrences(html, "ip-plan-onprem"));
+    }
+
+    [Fact]
+    public void A_plan_states_its_logins_and_whether_members_contribute()
+    {
+        // What the four packages differ on besides price and limit, read from the catalogue's own fields.
+        var html = PricingTemplate.RenderPlans(NewModelCatalogue)!;
+
+        Assert.Contains("<p class=\"ip-plan-terms\">1 login · Members answer one noise question a day</p>", html, StringComparison.Ordinal);
+        Assert.Contains("<p class=\"ip-plan-terms\">Unlimited logins · Members answer one noise question a day</p>", html, StringComparison.Ordinal);
+        Assert.Contains("<p class=\"ip-plan-terms\">Unlimited logins · No contribution asked</p>", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_catalogue_without_the_terms_fields_renders_no_terms_line()
+    {
+        // The older payload has no logins/contributor fields; saying "unlimited logins" for it would be a guess.
+        var html = PricingTemplate.RenderPlans(TodayCatalogue)!;
+
+        Assert.DoesNotContain("ip-plan-terms", html, StringComparison.Ordinal);
     }
 
     [Fact]
