@@ -391,7 +391,7 @@ public sealed class PricingTemplateTests
 
         Assert.Contains(
             "<p class=\"ip-price\">€199<span class=\"ip-price-unit\">a month</span></p>"
-            + "<p class=\"ip-plan-allowance\">Fair use: 1,000,000 line-scans a month",
+            + "<p class=\"ip-plan-allowance\">Fair use: 1,000,000 line-scans a <span class=\"ip-nowrap\">month",
             html, StringComparison.Ordinal);
         Assert.Contains("<p class=\"ip-price\">€2,995<span class=\"ip-price-unit\">a month</span></p>",
             html, StringComparison.Ordinal);
@@ -405,7 +405,7 @@ public sealed class PricingTemplateTests
         var html = PricingTemplate.RenderPlans(NewModelCatalogue)!;
 
         Assert.Contains(
-            "<p class=\"ip-price\">Free</p><p class=\"ip-plan-allowance\">Up to 250,000 line-scans a month",
+            "<p class=\"ip-price\">Free</p><p class=\"ip-plan-allowance\">Up to 250,000 line-scans a <span class=\"ip-nowrap\">month",
             html, StringComparison.Ordinal);
     }
 
@@ -416,9 +416,10 @@ public sealed class PricingTemplateTests
         var html = PricingTemplate.RenderPlans(NewModelCatalogue)!;
 
         Assert.Contains(
-            "<p class=\"ip-plan-allowance\">Fair use: 1,000,000 line-scans a month"
+            // The last word and the (i) never part: on a narrow card the button would otherwise wrap onto a line of its own.
+            "<p class=\"ip-plan-allowance\">Fair use: 1,000,000 line-scans a <span class=\"ip-nowrap\">month"
             + "<button type=\"button\" class=\"ip-info\" popovertarget=\"ip-fair-use-freelancer\" "
-            + "aria-label=\"Fair use on Community unlimited\">i</button></p>"
+            + "aria-label=\"Fair use on Community unlimited\">i</button></span></p>"
             + "<div id=\"ip-fair-use-freelancer\" class=\"ip-info-pop\" popover>"
             + "<p>Scans keep running to 150% of the 1,000,000 line-scans, with a notice at every step, then pause until the monthly reset.</p></div>",
             html, StringComparison.Ordinal);

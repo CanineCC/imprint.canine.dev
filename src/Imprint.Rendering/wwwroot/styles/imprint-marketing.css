@@ -1041,6 +1041,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
   vertical-align: text-bottom; border: 1px solid var(--border-strong); border-radius: var(--r-full);
   background: var(--surface); color: var(--ink); font: italic 700 0.75rem/1 Georgia, serif; cursor: pointer;
 }
+.ip-nowrap { white-space: nowrap; }
 .ip-info:hover { border-color: var(--accent); color: var(--accent); }
 .ip-info:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ip-info-pop {

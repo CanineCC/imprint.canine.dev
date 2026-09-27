@@ -356,12 +356,19 @@ public static class PricingTemplate
         var (allowance, detail) = Allowance(plan, buckets, free, flat);
         if (allowance.Length > 0)
         {
-            html.Append("<p class=\"ip-plan-allowance\">").Append(Esc(allowance));
+            html.Append("<p class=\"ip-plan-allowance\">");
             var popover = "ip-fair-use-" + Slug(Str(plan, "key") is { Length: > 0 } key ? key : name);
-            if (detail is not null)
+            if (detail is null)
             {
-                html.Append("<button type=\"button\" class=\"ip-info\" popovertarget=\"").Append(popover)
-                    .Append("\" aria-label=\"Fair use on ").Append(Esc(name)).Append("\">i</button>");
+                html.Append(Esc(allowance));
+            }
+            else
+            {
+                // The last word and the (i) never part: on a narrow card the button wrapped onto a line of its own.
+                var cut = allowance.LastIndexOf(' ') + 1;
+                html.Append(Esc(allowance[..cut])).Append("<span class=\"ip-nowrap\">").Append(Esc(allowance[cut..]))
+                    .Append("<button type=\"button\" class=\"ip-info\" popovertarget=\"").Append(popover)
+                    .Append("\" aria-label=\"Fair use on ").Append(Esc(name)).Append("\">i</button></span>");
             }
 
             html.Append("</p>");
