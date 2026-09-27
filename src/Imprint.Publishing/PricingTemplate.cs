@@ -451,9 +451,10 @@ public static class PricingTemplate
                 null => ("Up to " + limit + " line-scans a month", null),
                 <= 100 => ("Up to " + limit + " line-scans a month",
                     "At " + limit + " line-scans, scans pause until the monthly reset."),
-                { } ceiling => ("Fair use: " + limit + " line-scans a month",
-                    "Scans keep running to " + ceiling.ToString(CultureInfo.InvariantCulture) + "% of the " + limit
-                    + " line-scans, with a notice at every step, then pause until the monthly reset."),
+                // Owner, 2026-09-27: the card says only "Fair use (i)" — the limit and the rule are the popup's.
+                { } ceiling => ("Fair use",
+                    limit + " line-scans a month. Scans keep running to " + ceiling.ToString(CultureInfo.InvariantCulture)
+                    + "% of it, with a notice at every step, then pause until the monthly reset."),
             };
         }
 
