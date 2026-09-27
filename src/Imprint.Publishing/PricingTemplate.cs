@@ -350,16 +350,38 @@ public static class PricingTemplate
 
         html.Append("</p>");
 
-        if (Allowance(plan, buckets, free, flat) is { Length: > 0 } allowance)
+        // ★ THE CLAUSE BEHIND AN (i). Owner, 2026-09-27: what happens at the limit is detail, and on the card it
+        //   buried the allowance it qualifies. The allowance stays in the card; the clause opens in a native
+        //   popover — a real button, keyboard and Escape work, light-dismiss, and no script on a static page.
+        var (allowance, detail) = Allowance(plan, buckets, free, flat);
+        if (allowance.Length > 0)
         {
-            html.Append("<p class=\"ip-plan-allowance\">").Append(Esc(allowance)).Append("</p>");
+            html.Append("<p class=\"ip-plan-allowance\">").Append(Esc(allowance));
+            var popover = "ip-fair-use-" + Slug(Str(plan, "key") is { Length: > 0 } key ? key : name);
+            if (detail is not null)
+            {
+                html.Append("<button type=\"button\" class=\"ip-info\" popovertarget=\"").Append(popover)
+                    .Append("\" aria-label=\"Fair use on ").Append(Esc(name)).Append("\">i</button>");
+            }
+
+            html.Append("</p>");
+            if (detail is not null)
+            {
+                html.Append("<div id=\"").Append(popover).Append("\" class=\"ip-info-pop\" popover><p>")
+                    .Append(Esc(detail)).Append("</p></div>");
+            }
         }
 
-        // Each part is escaped on its own and joined with a literal separator: HtmlEncode would turn the middle
-        // dot into an entity, which reads the same but is not what the rest of this page writes.
+        // Two bullets, not one line joined by a dot: they are two separate facts about the package.
         if (Terms(plan) is { Count: > 0 } terms)
         {
-            html.Append("<p class=\"ip-plan-terms\">").Append(string.Join(" · ", terms.Select(Esc))).Append("</p>");
+            html.Append("<ul class=\"ip-plan-terms\">");
+            foreach (var term in terms)
+            {
+                html.Append("<li>").Append(Esc(term)).Append("</li>");
+            }
+
+            html.Append("</ul>");
         }
 
         if (plan.TryGetProperty("modules", out var modules) && modules.ValueKind == JsonValueKind.Array)
@@ -408,38 +430,45 @@ public static class PricingTemplate
     /// speaks: a free lane is free up to its first row and then priced from its first paid row, and a
     /// paid package's entry price is the price of its first row.
     /// </remarks>
-    private static string Allowance(JsonElement plan, List<JsonElement> buckets, bool free, bool flat)
+    private static (string Line, string? Detail) Allowance(JsonElement plan, List<JsonElement> buckets, bool free, bool flat)
     {
         if (Number(plan, "includedLocScans") is { } included && included > 0)
         {
             var limit = included.ToString("#,##0", CultureInfo.InvariantCulture);
 
             // ★ WHAT HAPPENS AT THE LIMIT, as the product enforces it: 100 % (or unstated by an older catalogue)
-            //   is a hard stop; above it, scans keep running to that share of the limit, then pause.
+            //   is a hard stop; above it, scans keep running to that share of the limit, then pause. The line
+            //   states the allowance; the detail is what the (i) opens.
             return Number(plan, "fairUseCeilingPercent") switch
             {
-                null => "Up to " + limit + " line-scans a month",
-                <= 100 => "Up to " + limit + " line-scans a month, then scans pause until the monthly reset",
-                { } ceiling => "Fair use: " + limit + " line-scans a month — scans keep running to "
-                    + ceiling.ToString(CultureInfo.InvariantCulture) + "% of it, then pause until the monthly reset",
+                null => ("Up to " + limit + " line-scans a month", null),
+                <= 100 => ("Up to " + limit + " line-scans a month",
+                    "At " + limit + " line-scans, scans pause until the monthly reset."),
+                { } ceiling => ("Fair use: " + limit + " line-scans a month",
+                    "Scans keep running to " + ceiling.ToString(CultureInfo.InvariantCulture) + "% of the " + limit
+                    + " line-scans, with a notice at every step, then pause until the monthly reset."),
             };
         }
 
         if (buckets.Count == 0 || Lines(buckets[0]) is not { Length: > 0 } first)
         {
-            return "";
+            return ("", null);
         }
 
         if (free)
         {
             var firstPaid = buckets.FirstOrDefault(x => !IsZero(Str(x, "baseEur")));
-            return firstPaid.ValueKind == JsonValueKind.Object
+            return (firstPaid.ValueKind == JsonValueKind.Object
                 ? "Up to " + first + " line-scans a month, then from " + Str(firstPaid, "baseEur")
-                : "Up to " + first + " line-scans a month";
+                : "Up to " + first + " line-scans a month", null);
         }
 
-        return flat ? "" : "For up to " + first + " line-scans a month";
+        return (flat ? "" : "For up to " + first + " line-scans a month", null);
     }
+
+    /// <summary>A lower-case id fragment: letters and digits kept, anything else a hyphen.</summary>
+    private static string Slug(string text) =>
+        new string([.. text.ToLowerInvariant().Select(c => char.IsAsciiLetterOrDigit(c) ? c : '-')]).Trim('-');
 
     /// <summary>
     /// Who may log in and whether members contribute to the noise standard, as one line — or empty when the
@@ -450,9 +479,10 @@ public static class PricingTemplate
         var parts = new List<string>();
         if (plan.TryGetProperty("logins", out var logins))
         {
+            // "Account", not "login": a login is something you do, an account something you have (owner, 2026-09-27).
             parts.Add(logins.ValueKind == JsonValueKind.Number && logins.TryGetInt64(out var n)
-                ? n.ToString(CultureInfo.InvariantCulture) + (n == 1 ? " login" : " logins")
-                : "Unlimited logins");
+                ? n.ToString(CultureInfo.InvariantCulture) + (n == 1 ? " account" : " accounts")
+                : "Unlimited accounts");
         }
 
         if (plan.TryGetProperty("contributor", out var contributor))
@@ -478,8 +508,8 @@ public static class PricingTemplate
         html.Append("<h3>Enterprise</h3>");
         html.Append("<p class=\"ip-price\">").Append(Esc(Eur(entry, "pricePerYearEur")))
             .Append("<span class=\"ip-price-unit\">a year</span></p>");
-        html.Append("<p class=\"ip-plan-allowance\">").Append(Esc(Str(entry, "name"))).Append(": ")
-            .Append(Esc(YearlyAllowance(entry))).Append("</p>");
+        // Owner, 2026-09-27: no size names — the allowance IS the size, and what is sold is a licence.
+        html.Append("<p class=\"ip-plan-allowance\">").Append(Esc(LicenceLine(entry))).Append("</p>");
         if (Str(entry, "blurb") is { Length: > 0 } blurb)
         {
             html.Append("<p class=\"ip-plan-for\">").Append(Esc(blurb)).Append("</p>");
@@ -488,11 +518,10 @@ public static class PricingTemplate
         if (sizes.Count > 1)
         {
             html.Append("<table class=\"ip-price-table ip-plan-sizes\"><caption class=\"sr-only\">")
-                .Append("The larger self-hosted sizes, price a year</caption><tbody>");
+                .Append("The larger licences, price a year</caption><tbody>");
             foreach (var size in sizes.Skip(1))
             {
-                html.Append("<tr><th scope=\"row\">").Append(Esc(Str(size, "name"))).Append(" · ")
-                    .Append(Esc(CompactYearly(size))).Append("</th><td>")
+                html.Append("<tr><th scope=\"row\">").Append(Esc(LicenceLine(size))).Append("</th><td>")
                     .Append(Esc(Eur(size, "pricePerYearEur"))).Append("</td></tr>");
             }
 
@@ -547,6 +576,12 @@ public static class PricingTemplate
 
         return n.ToString("#,##0", CultureInfo.InvariantCulture) + " a year";
     }
+
+    /// <summary>A licence named by its allowance: "600M LoC-scans a year licence", or the unlimited one.</summary>
+    private static string LicenceLine(JsonElement row) =>
+        CompactYearly(row) is "unlimited"
+            ? "Unlimited LoC-scans licence"
+            : CompactYearly(row).Replace(" a year", " LoC-scans a year licence", StringComparison.Ordinal);
 
     /// <summary>A formatted price that is zero, whatever currency symbol it carries.</summary>
     private static bool IsZero(string price) =>

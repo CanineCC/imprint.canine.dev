@@ -391,7 +391,7 @@ public sealed class PricingTemplateTests
 
         Assert.Contains(
             "<p class=\"ip-price\">€199<span class=\"ip-price-unit\">a month</span></p>"
-            + "<p class=\"ip-plan-allowance\">Fair use: 1,000,000 line-scans a month — scans keep running to 150% of it, then pause until the monthly reset</p>",
+            + "<p class=\"ip-plan-allowance\">Fair use: 1,000,000 line-scans a month",
             html, StringComparison.Ordinal);
         Assert.Contains("<p class=\"ip-price\">€2,995<span class=\"ip-price-unit\">a month</span></p>",
             html, StringComparison.Ordinal);
@@ -405,8 +405,30 @@ public sealed class PricingTemplateTests
         var html = PricingTemplate.RenderPlans(NewModelCatalogue)!;
 
         Assert.Contains(
-            "<p class=\"ip-price\">Free</p><p class=\"ip-plan-allowance\">Up to 250,000 line-scans a month, then scans pause until the monthly reset</p>",
+            "<p class=\"ip-price\">Free</p><p class=\"ip-plan-allowance\">Up to 250,000 line-scans a month",
             html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void What_happens_at_the_limit_sits_behind_an_info_button_not_in_the_card()
+    {
+        // Owner, 2026-09-27: the fair-use clause is detail — an (i) that opens it, one per card, each with its own id.
+        var html = PricingTemplate.RenderPlans(NewModelCatalogue)!;
+
+        Assert.Contains(
+            "<p class=\"ip-plan-allowance\">Fair use: 1,000,000 line-scans a month"
+            + "<button type=\"button\" class=\"ip-info\" popovertarget=\"ip-fair-use-freelancer\" "
+            + "aria-label=\"Fair use on Community unlimited\">i</button></p>"
+            + "<div id=\"ip-fair-use-freelancer\" class=\"ip-info-pop\" popover>"
+            + "<p>Scans keep running to 150% of the 1,000,000 line-scans, with a notice at every step, then pause until the monthly reset.</p></div>",
+            html, StringComparison.Ordinal);
+        Assert.Contains(
+            "<div id=\"ip-fair-use-freelancer\"", html, StringComparison.Ordinal);
+        Assert.Contains(
+            "<div id=\"ip-fair-use-freeoss\" class=\"ip-info-pop\" popover>"
+            + "<p>At 250,000 line-scans, scans pause until the monthly reset.</p></div>",
+            html, StringComparison.Ordinal);
+        Assert.DoesNotContain("then pause until the monthly reset</p><p class", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -427,10 +449,12 @@ public sealed class PricingTemplateTests
         Assert.Contains(
             "<div class=\"ip-plan ip-plan-onprem\"><h3>Enterprise</h3>"
             + "<p class=\"ip-price\">€100,000<span class=\"ip-price-unit\">a year</span></p>"
-            + "<p class=\"ip-plan-allowance\">On-prem L: 600,000,000 line-scans a year</p>",
+            + "<p class=\"ip-plan-allowance\">600M LoC-scans a year licence</p>",
             html, StringComparison.Ordinal);
-        Assert.Contains("<th scope=\"row\">On-prem XL · 1.8B a year</th><td>€200,000</td>", html, StringComparison.Ordinal);
-        Assert.Contains("<th scope=\"row\">On-prem XXL · unlimited</th><td>€500,000</td>", html, StringComparison.Ordinal);
+        // Owner, 2026-09-27: no size names in the card — the allowance IS the size, and the product is a licence.
+        Assert.Contains("<th scope=\"row\">1.8B LoC-scans a year licence</th><td>€200,000</td>", html, StringComparison.Ordinal);
+        Assert.Contains("<th scope=\"row\">Unlimited LoC-scans licence</th><td>€500,000</td>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("On-prem L", html, StringComparison.Ordinal);
         Assert.Equal(1, Occurrences(html, "ip-plan-onprem"));
     }
 
@@ -440,9 +464,11 @@ public sealed class PricingTemplateTests
         // What the four packages differ on besides price and limit, read from the catalogue's own fields.
         var html = PricingTemplate.RenderPlans(NewModelCatalogue)!;
 
-        Assert.Contains("<p class=\"ip-plan-terms\">1 login · Members answer one noise question a day</p>", html, StringComparison.Ordinal);
-        Assert.Contains("<p class=\"ip-plan-terms\">Unlimited logins · Members answer one noise question a day</p>", html, StringComparison.Ordinal);
-        Assert.Contains("<p class=\"ip-plan-terms\">Unlimited logins · No contribution asked</p>", html, StringComparison.Ordinal);
+        // Owner, 2026-09-27: two bullets, and "account" — a login is something you do, an account something you have.
+        Assert.Contains("<ul class=\"ip-plan-terms\"><li>1 account</li><li>Members answer one noise question a day</li></ul>", html, StringComparison.Ordinal);
+        Assert.Contains("<ul class=\"ip-plan-terms\"><li>Unlimited accounts</li><li>Members answer one noise question a day</li></ul>", html, StringComparison.Ordinal);
+        Assert.Contains("<ul class=\"ip-plan-terms\"><li>Unlimited accounts</li><li>No contribution asked</li></ul>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("login", html, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
