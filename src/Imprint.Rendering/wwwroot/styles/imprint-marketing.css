@@ -854,6 +854,42 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-ap-personas .ip-grid > .ip-stack > .ip-prose.ip-kicker:first-child > p > strong::before {
   content: none;
 }
+/* ── PERSONAS · A CARD WITH A BODY AND A FOOT ─────────────────────────────────
+   A customer-type card authored as two stacks: the BODY (who it is for, a heading in the
+   reader's own situation, the text) and the FOOT (the plan that fits, then the links).
+   Cards in a row share those two rows through subgrid, so every foot starts on the same
+   line across the row while each text still runs straight on from its own heading.
+   Scoped to the two-stack shape, so a flat persona card (heading, text, link) keeps its
+   look.
+   ★ The heading is what a reader scans for, so it is the largest line in the card: the
+   role above it is a small label, and the plan sits in the foot as a pill, beside the
+   links it leads to. */
+.ip-ap-personas .ip-grid > .ip-stack:has(> .ip-stack:first-child + .ip-stack:last-child) {
+  display: grid; grid-row: span 2; grid-template-rows: subgrid; row-gap: 0;
+}
+/* the card is not itself a link (its foot holds the links), so it does not light up on hover */
+.ip-ap-personas .ip-grid > .ip-stack:has(> .ip-stack:first-child + .ip-stack:last-child):hover {
+  border-color: var(--hairline); background: transparent;
+}
+.ip-ap-personas .ip-grid > .ip-stack > .ip-stack:first-child:not(:last-child) { gap: 0.55rem; }
+.ip-ap-personas .ip-grid > .ip-stack > .ip-stack:first-child:not(:last-child) > .ip-prose.ip-kicker:first-child > p > strong {
+  font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--accent-ink); font-weight: 600;
+}
+.ip-ap-personas .ip-grid > .ip-stack > .ip-stack:first-child:not(:last-child) > h3 {
+  font-size: 1.45rem; line-height: 1.22; letter-spacing: -0.015em; margin: 0.1rem 0;
+}
+.ip-ap-personas .ip-grid > .ip-stack > .ip-stack:last-child:not(:first-child) {
+  gap: 0.55rem; margin-top: 1.1rem; padding-top: 0.9rem; border-top: 1px solid var(--hairline);
+}
+.ip-ap-personas .ip-grid > .ip-stack > .ip-stack:last-child:not(:first-child) > .ip-prose.ip-kicker > p > strong {
+  display: inline-block; font-family: var(--font-ui); font-size: var(--fs-2xs); font-weight: 600;
+  color: var(--accent-ink); background: var(--accent-wash); padding: 2px 8px;
+  border-radius: var(--r-sm); text-transform: none; letter-spacing: 0;
+}
+.ip-ap-personas .ip-grid > .ip-stack > .ip-stack:last-child:not(:first-child) > .ip-stack {
+  flex-direction: column; align-items: flex-start; gap: 0.35rem;
+}
 /* footnote / note under the grid → centered small muted */
 .ip-ap-feature-grid > .ip-stack > :not(:is(h1, h2, h3, h4, .ip-prose)) + .ip-prose:last-child:not(.ip-kicker):not(.ip-prose-secondary),
 .ip-ap-personas > .ip-stack > :not(:is(h1, h2, h3, h4, .ip-prose)) + .ip-prose:last-child:not(.ip-kicker):not(.ip-prose-secondary),
