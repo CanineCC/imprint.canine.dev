@@ -325,11 +325,17 @@ public static class PricingTemplate
         var flat = plan.TryGetProperty("isFlatPrice", out var f) && f.ValueKind == JsonValueKind.True;
 
         html.Append("<div class=\"ip-plan\">");
+        // ★ A HEAD, THEN A BODY (owner, 2026-09-28). The name and its line are the head and the price opens
+        //   the body, so the stylesheet can give every head in a row the same height: the prices then line
+        //   up across the cards however long each card's line is.
+        html.Append("<div class=\"ip-plan-head\">");
         html.Append("<h3>").Append(Esc(name)).Append("</h3>");
         if (Str(plan, "tagline") is { Length: > 0 } tagline)
         {
             html.Append("<p class=\"ip-plan-for\">").Append(Esc(tagline)).Append("</p>");
         }
+
+        html.Append("</div><div class=\"ip-plan-body\">");
 
         // A flat package has one price, not a starting price: "from" would promise a ladder that
         // does not exist. A free package is "Free", never "€0 a month".
@@ -425,7 +431,7 @@ public static class PricingTemplate
             html.Append("</tbody></table></details>");
         }
 
-        html.Append("</div>");
+        html.Append("</div></div>");
     }
 
     /// <summary>
@@ -513,18 +519,25 @@ public static class PricingTemplate
         var entry = sizes[0];
         html.Append("<div class=\"ip-plan ip-plan-onprem\">");
         // The self-hosted licence is sold as Enterprise (four-package model).
-        html.Append("<h3>Enterprise</h3>");
-        html.Append("<p class=\"ip-price\">").Append(Esc(Eur(entry, "pricePerYearEur")))
-            .Append("<span class=\"ip-price-unit\">a year</span></p>");
-        // Owner, 2026-09-27: no size names — the allowance IS the size, and what is sold is a licence.
-        html.Append("<p class=\"ip-plan-allowance\">").Append(Esc(LicenceLine(entry))).Append("</p>");
+        html.Append("<div class=\"ip-plan-head\"><h3>Enterprise</h3>");
+        // Owner, 2026-09-28: the line sits above the price, as every other card's does, so the prices line
+        // up across the row. Below the price there are only prices: the larger licences.
         if (Str(entry, "blurb") is { Length: > 0 } blurb)
         {
             html.Append("<p class=\"ip-plan-for\">").Append(Esc(blurb)).Append("</p>");
         }
 
+        html.Append("</div><div class=\"ip-plan-body\">");
+        html.Append("<p class=\"ip-price\">").Append(Esc(Eur(entry, "pricePerYearEur")))
+            .Append("<span class=\"ip-price-unit\">a year</span></p>");
+        // Owner, 2026-09-27: no size names — the allowance IS the size, and what is sold is a licence.
+        html.Append("<p class=\"ip-plan-allowance\">").Append(Esc(LicenceLine(entry))).Append("</p>");
+
         if (sizes.Count > 1)
         {
+            // Owner, 2026-09-28: the larger sizes are price alternatives (more line-scans, a higher price),
+            // so they are labelled as such rather than left as a bare table under the price.
+            html.Append("<p class=\"ip-plan-label\">Larger licences</p>");
             html.Append("<table class=\"ip-price-table ip-plan-sizes\"><caption class=\"sr-only\">")
                 .Append("The larger licences, price a year</caption><tbody>");
             foreach (var size in sizes.Skip(1))
@@ -536,7 +549,7 @@ public static class PricingTemplate
             html.Append("</tbody></table>");
         }
 
-        html.Append("</div>");
+        html.Append("</div></div>");
     }
 
     /// <summary>

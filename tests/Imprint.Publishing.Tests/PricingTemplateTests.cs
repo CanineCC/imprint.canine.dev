@@ -337,7 +337,8 @@ public sealed class PricingTemplateTests
         var html = PricingTemplate.RenderPlans(TodayCatalogue)!;
 
         AssertInOrder(html, "<h3>Student</h3>", "<h3>Free OSS</h3>", "<h3>Freelancer</h3>",
-            "<h3>Engineering teams</h3>", "<h3>Enterprise</h3>", "<div class=\"ip-plan ip-plan-onprem\"><h3>Enterprise</h3>");
+            "<h3>Engineering teams</h3>", "<h3>Enterprise</h3>",
+            "<div class=\"ip-plan ip-plan-onprem\"><div class=\"ip-plan-head\"><h3>Enterprise</h3>");
     }
 
     [Fact]
@@ -448,8 +449,8 @@ public sealed class PricingTemplateTests
         var html = PricingTemplate.RenderPlans(TodayCatalogue)!;
 
         Assert.Contains(
-            "<div class=\"ip-plan ip-plan-onprem\"><h3>Enterprise</h3>"
-            + "<p class=\"ip-price\">€100,000<span class=\"ip-price-unit\">a year</span></p>"
+            "<div class=\"ip-plan ip-plan-onprem\"><div class=\"ip-plan-head\"><h3>Enterprise</h3></div>"
+            + "<div class=\"ip-plan-body\"><p class=\"ip-price\">€100,000<span class=\"ip-price-unit\">a year</span></p>"
             + "<p class=\"ip-plan-allowance\">600M LoC-scans a year licence</p>",
             html, StringComparison.Ordinal);
         // Owner, 2026-09-27: no size names in the card — the allowance IS the size, and the product is a licence.
@@ -457,6 +458,44 @@ public sealed class PricingTemplateTests
         Assert.Contains("<th scope=\"row\">Unlimited LoC-scans licence</th><td>€500,000</td>", html, StringComparison.Ordinal);
         Assert.DoesNotContain("On-prem L", html, StringComparison.Ordinal);
         Assert.Equal(1, Occurrences(html, "ip-plan-onprem"));
+    }
+
+    [Fact]
+    public void The_name_and_its_line_are_the_head_and_the_price_opens_the_body()
+    {
+        // Owner, 2026-09-28: the heads in a row share one height, so the prices line up across the cards.
+        var html = PricingTemplate.RenderPlans(NewModelCatalogue)!;
+
+        Assert.Contains(
+            "<div class=\"ip-plan\"><div class=\"ip-plan-head\"><h3>Community unlimited</h3>"
+            + "<p class=\"ip-plan-for\">For community work.</p></div>"
+            + "<div class=\"ip-plan-body\"><p class=\"ip-price\">€199<span class=\"ip-price-unit\">a month</span></p>",
+            html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_enterprise_line_sits_above_its_price_as_every_other_cards_does()
+    {
+        var html = PricingTemplate.RenderPlans(
+            NewModelCatalogue.Replace(
+                "\"name\": \"Enterprise L\",", "\"name\": \"Enterprise L\", \"blurb\": \"Runs on your own machines if required.\",",
+                StringComparison.Ordinal))!;
+
+        Assert.Contains(
+            "<div class=\"ip-plan-head\"><h3>Enterprise</h3><p class=\"ip-plan-for\">Runs on your own machines if required.</p></div>"
+            + "<div class=\"ip-plan-body\"><p class=\"ip-price\">€100,000<span class=\"ip-price-unit\">a year</span></p>",
+            html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_larger_licences_are_labelled_as_the_alternatives_they_are()
+    {
+        // Owner, 2026-09-28: more line-scans at a higher price, so they read as price alternatives, not a line of text.
+        var html = PricingTemplate.RenderPlans(NewModelCatalogue)!;
+
+        Assert.Contains(
+            "<p class=\"ip-plan-label\">Larger licences</p><table class=\"ip-price-table ip-plan-sizes\">",
+            html, StringComparison.Ordinal);
     }
 
     [Fact]

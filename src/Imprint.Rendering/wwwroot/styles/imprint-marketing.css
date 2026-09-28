@@ -1062,10 +1062,16 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 @container (max-width: 36rem) {
   .ip-plans, .ip-plans:has(> :nth-child(4):last-child), .ip-plans:has(> :nth-child(2):last-child) { grid-template-columns: 1fr; }
 }
+/* ★ THE PRICES LINE UP ACROSS THE ROW (owner, 2026-09-28). A card is a HEAD (the name and the line under
+   it) and a BODY (the price and everything under it). The cards in a row share those two rows through
+   subgrid, so every head is as tall as the tallest head in its row and every price starts on the same
+   line, however long each card's line is. */
 .ip-plan {
-  display: flex; flex-direction: column; gap: 0.45rem; min-width: 0;
+  display: grid; grid-row: span 2; grid-template-rows: subgrid; row-gap: 0.45rem; min-width: 0;
   border: 1px solid var(--hairline); border-radius: var(--r-lg); padding: 1.4rem 1.35rem 1.5rem; background: var(--bg);
 }
+.ip-plan-head,
+.ip-plan-body { display: flex; flex-direction: column; gap: 0.45rem; min-width: 0; }
 .ip-plan-onprem { background: var(--surface); }
 .ip-plan-for { margin: 0; font-size: var(--fs-sm); line-height: 1.5; color: var(--muted); }
 .ip-plan .ip-price { margin: 0.35rem 0 0; }
