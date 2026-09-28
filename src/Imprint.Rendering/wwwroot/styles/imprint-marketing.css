@@ -831,6 +831,12 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-ap-personas .ip-grid h3 { font-size: 1.1rem; font-weight: 700; margin: 0; }
 .ip-ap-feature-grid .ip-grid .ip-prose,
 .ip-ap-personas .ip-grid .ip-prose { color: var(--muted); font-size: var(--fs-sm); line-height: 1.55; }
+/* ★ THE TEXTS START ON ONE LINE ACROSS A ROW (owner, 2026-09-28). A card that is only a heading and a
+   text shares its two rows with its neighbours through subgrid, so every text in a row starts on the
+   same line however many lines each heading takes; a shorter heading keeps the space under it. */
+.ip-ap-feature-grid .ip-grid > .ip-stack:has(> h3:first-child + .ip-prose):not(:has(> :nth-child(3))) {
+  display: grid; grid-row: span 2; grid-template-rows: subgrid; row-gap: 0.35rem; align-content: start;
+}
 /* the per-card tag (bold-only prose) → mono accent eyebrow */
 .ip-ap-feature-grid .ip-grid .ip-prose.ip-kicker > p > strong {
   font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: 0.05em;
@@ -857,21 +863,24 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 /* ── PERSONAS · A CARD WITH A BODY AND A FOOT ─────────────────────────────────
    A customer-type card authored as two stacks: the BODY (who it is for, a heading in the
    reader's own situation, the text) and the FOOT (the plan that fits, then the links).
-   Cards in a row share those two rows through subgrid, so every foot starts on the same
-   line across the row while each text still runs straight on from its own heading.
+   Cards in a row share four rows through subgrid (the body's label, heading and text, then
+   the foot), so every text and every foot starts on the same line across the row however
+   many lines each heading takes (owner, 2026-09-28).
    Scoped to the two-stack shape, so a flat persona card (heading, text, link) keeps its
    look.
    ★ The heading is what a reader scans for, so it is the largest line in the card: the
    role above it is a small label, and the plan sits in the foot as a pill, beside the
    links it leads to. */
 .ip-ap-personas .ip-grid > .ip-stack:has(> .ip-stack:first-child + .ip-stack:last-child) {
-  display: grid; grid-row: span 2; grid-template-rows: subgrid; row-gap: 0;
+  display: grid; grid-row: span 4; grid-template-rows: subgrid; row-gap: 0;
 }
 /* the card is not itself a link (its foot holds the links), so it does not light up on hover */
 .ip-ap-personas .ip-grid > .ip-stack:has(> .ip-stack:first-child + .ip-stack:last-child):hover {
   border-color: var(--hairline); background: transparent;
 }
-.ip-ap-personas .ip-grid > .ip-stack > .ip-stack:first-child:not(:last-child) { gap: 0.55rem; }
+.ip-ap-personas .ip-grid > .ip-stack > .ip-stack:first-child:not(:last-child) {
+  display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: 0.55rem; align-content: start;
+}
 .ip-ap-personas .ip-grid > .ip-stack > .ip-stack:first-child:not(:last-child) > .ip-prose.ip-kicker:first-child > p > strong {
   font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: 0.05em;
   text-transform: uppercase; color: var(--accent-ink); font-weight: 600;
