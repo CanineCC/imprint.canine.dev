@@ -1,6 +1,6 @@
 # Watchdog — the independent surveyor
 
-> Watchdog is a continuous, deterministic code audit. It computes the Codebase Assurance Index (CAI) — one reproducible 0–100 score across code health, architecture, maturity, production-readiness and security — for a whole repository, on a schedule. The independent surveyor; the open measurement standard it uses is CAI, defined at https://cai.canine.dev. Built by Canine Development.
+> Watchdog is a continuous, deterministic code audit. It computes the Code Assurance Index (CAI) — one reproducible 0–100 score across code health, architecture, maturity, production-readiness and security — for a whole repository, on a schedule. The independent surveyor; the open measurement standard it uses is CAI, defined at https://cai.canine.dev. Built by Canine Development.
 
 The CAI is deterministic: the same code produces the same score every run — a measurement, not an opinion. This is the core difference from asking an LLM (a different answer every run) and from a per-PR linter (blind to what rots between commits: CVEs, bus-factor erosion, obsolescence).
 

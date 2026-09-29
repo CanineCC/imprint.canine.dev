@@ -269,7 +269,7 @@ public static class Sites
 
     private static readonly HeaderAct CaiCta = new("Verify a survey", "/verify");
     private static readonly HeaderAct? CaiQuiet = new("Produce a survey ↗", "https://watchdog.canine.dev");
-    private const string CaiCopy = "© 2025–2026 · The open standard for codebase assurance.";
+    private const string CaiCopy = "© 2025–2026 · The open standard for code assurance.";
 
     private static readonly IReadOnlyList<FooterCol> CaiFooter =
     [

@@ -49,7 +49,7 @@ SITES = {
     },
     "cai": {
         "name": "CAI",
-        "line": "The open standard for codebase assurance.",
+        "line": "The open standard for code assurance.",
         "sub": "One reproducible 0–100 number. The method is public — verify it yourself.",
         "bg": "#15191e", "primary": "#6fbfa4", "text": "#e4e9ed", "muted": "#8694a1",
     },

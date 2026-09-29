@@ -1,7 +1,7 @@
 // <cai-score-card api-base="…" owner="…" name="…" card='{…scoreCard…}'
 //                 caption="…" seal-text="…" href="…" brand="watchdog|assay|cai">
 //
-// The Codebase Assurance Index score card: name + band chip, band-inked score, the
+// The Code Assurance Index score card: name + band chip, band-inked score, the
 // fixed worst→best five-band ladder with the "you are here" diamond, the value-coloured
 // trend sparkline, the first→best arc, the lens bars and the detail rows. Port of
 // packages/ui/src/CaiScoreCard.tsx.

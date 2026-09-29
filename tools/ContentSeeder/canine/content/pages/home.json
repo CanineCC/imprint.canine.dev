@@ -71,7 +71,7 @@
           "tag": "Live · Born December 2025",
           "badge": "Live",
           "title": "Watchdog",
-          "body": "The independent surveyor for C#/.NET. A reproducible 0–100 Codebase Assurance Index across ten lenses, with commit-pinned reports in PDF + JSON. Get the software surveyed before you trust it with the business — you'd never buy a house on the seller's word.",
+          "body": "The independent surveyor for C#/.NET. A reproducible 0–100 Code Assurance Index across ten lenses, with commit-pinned reports in PDF + JSON. Get the software surveyed before you trust it with the business — you'd never buy a house on the seller's word.",
           "linkLabel": "watchdog.canine.dev →",
           "href": "https://watchdog.canine.dev"
         },
@@ -79,7 +79,7 @@
           "tag": "Open standard · Standard since June 2026",
           "badge": "Open standard",
           "title": "CAI",
-          "body": "The Codebase Assurance Index — the open, reproducible scoring standard we extracted from Watchdog and gave to everyone. 0–100, 124 public dimensions, ten versioned lenses. Same code in, same score out — verifiable by anyone, with no vendor lock-in.",
+          "body": "The Code Assurance Index — the open, reproducible scoring standard we extracted from Watchdog and gave to everyone. 0–100, 124 public dimensions, ten versioned lenses. Same code in, same score out — verifiable by anyone, with no vendor lock-in.",
           "linkLabel": "cai.canine.dev →",
           "href": "https://cai.canine.dev"
         },
@@ -87,7 +87,7 @@
           "tag": "Live · By the makers of Watchdog",
           "badge": "Live",
           "title": "Assay",
-          "body": "Independent software due diligence and appraisal for code you can't read. Assay turns a reproducible Codebase Assurance survey into a decision you can defend — to a board, a committee, or a court. Know what the software is worth before you sign.",
+          "body": "Independent software due diligence and appraisal for code you can't read. Assay turns a reproducible Code Assurance survey into a decision you can defend — to a board, a committee, or a court. Know what the software is worth before you sign.",
           "linkLabel": "assay.canine.dev →",
           "href": "https://assay.canine.dev/"
         }

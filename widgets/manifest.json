@@ -116,7 +116,7 @@
   {
     "tag": "cai-score-card",
     "name": "CAI score card",
-    "description": "The Codebase Assurance Index score card: band chip, band-inked score, the worst→best band ladder with a “you are here” marker, trend sparkline, lens bars and detail rows. Fetches the published gallery (/api/oss) when an API base is set and renders the HERO — the highest-scoring published repo; falls back to the labelled sample.",
+    "description": "The Code Assurance Index score card: band chip, band-inked score, the worst→best band ladder with a “you are here” marker, trend sparkline, lens bars and detail rows. Fetches the published gallery (/api/oss) when an API base is set and renders the HERO — the highest-scoring published repo; falls back to the labelled sample.",
     "bundle": "cai-score-card.js",
     "placeholder": "CAI score card",
     "props": [
