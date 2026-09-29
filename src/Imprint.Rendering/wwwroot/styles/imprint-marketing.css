@@ -837,6 +837,18 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-ap-feature-grid .ip-grid > .ip-stack:has(> h3:first-child + .ip-prose):not(:has(> :nth-child(3))) {
   display: grid; grid-row: span 2; grid-template-rows: subgrid; row-gap: 0.35rem; align-content: start;
 }
+/* ★ A ROW THAT MIXES PLAIN CARDS WITH LINKED CARDS (owner, 2026-09-29). A card that ends in a link
+   (a heading, a text and a button) does not take part in the two shared rows above, so it sat in the
+   heading row alone, stretched that row to its own full height, and pushed the texts of the plain
+   cards beside it to the bottom of their cards. In a grid that holds a linked card, every card of
+   either shape therefore shares THREE rows (heading, text, link): the texts start on one line, the
+   links line up, and a card without a link keeps an empty last row. */
+.ip-ap-feature-grid .ip-grid:has(> .ip-stack > h3:first-child + .ip-prose + .ip-btn:last-child)
+  > .ip-stack:has(> h3:first-child + .ip-prose):not(:has(> :nth-child(4))):not(:has(> :nth-child(3):not(.ip-btn))) {
+  display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: 0.35rem; align-content: start;
+}
+.ip-ap-feature-grid .ip-grid:has(> .ip-stack > h3:first-child + .ip-prose + .ip-btn:last-child)
+  > .ip-stack > .ip-btn { justify-self: start; }
 /* the per-card tag (bold-only prose) → mono accent eyebrow */
 .ip-ap-feature-grid .ip-grid .ip-prose.ip-kicker > p > strong {
   font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: 0.05em;
