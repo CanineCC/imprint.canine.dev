@@ -704,6 +704,12 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    head and a grid of cards, so a head did not read as a group. A single extra step is enough;
    more starts to break the section apart. */
 [class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > :is(.ip-grid, .ip-columns, .ip-widget) { margin-block-start: var(--ip-space-2); }
+/* ★ Space between the paragraphs of one text (owner, 2026-09-29). imprint-base.css gives every block
+   in a text after the first a step of space (.ip-prose > * + *), but its own margin reset for the
+   page (.ip-page :is(h1, … p …), one class and one element) outranks that rule (one class), so the
+   paragraphs of a text ran together as one block. The same rule at the reset's rank gives the space
+   back. It lives here because the base sheet is held to its 8 KB budget. */
+.ip-page .ip-prose > * + * { margin-block-start: var(--ip-space-3); }
 
 /* ── HERO ─────────────────────────────────────────────────────────────────── */
 .ip-ap-hero { padding-block: clamp(3rem, 1.5rem + 5vw, 5.5rem) var(--mk-section); }
