@@ -58,7 +58,7 @@
 @media print {
   .ip-nav, .ip-nav-panel, .ip-nav-burger, .ip-nav-trigger, .ip-nav-group, .ip-nav-card, .ip-nav-cta-item,
   .ip-header-actions, .ip-header-cta, .ip-btn, .ip-btn-primary, .ip-btn-secondary, .ip-btn-ghost,
-  .ip-footer-cols, .ip-footer-group, .ip-footer-h, .ip-footer-brand, .ip-footer-byline {
+  .ip-footer-cols, .ip-footer-group, .ip-footer-h, .ip-footer-brand, .ip-footer-byline, .ip-svg-zoom {
     display: none !important;
   }
 

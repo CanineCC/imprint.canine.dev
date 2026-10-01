@@ -103,6 +103,13 @@ public sealed record StaticPageChrome
     /// </summary>
     public bool IncludeIslandLoader { get; init; }
 
+    /// <summary>
+    /// True when the page inlines at least one SVG figure — the only markup the diagram
+    /// enlarger acts on. Whether a given figure is actually shrunk depends on the visitor's
+    /// screen, so the script decides that; the page only decides whether to ship it.
+    /// </summary>
+    public bool IncludeSvgZoom { get; init; }
+
     public sealed record Alternate(string Hreflang, string Href);
 
     /// <summary>

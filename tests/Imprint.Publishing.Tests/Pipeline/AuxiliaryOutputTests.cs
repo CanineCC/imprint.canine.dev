@@ -242,6 +242,10 @@ public sealed class AuxiliaryOutputTests
         // to 12 KB and the sources keep their documentation.
         Assert.True(cssBrotli <= 12 * 1024, $"stylesheet is {cssBrotli} B brotli (budget 12 KB)");
         Assert.True(inlineJsBrotli <= 1536, $"inline JS is {inlineJsBrotli} B brotli (budget 1.5 KB)");
+
+        // The diagram enlarger rides only on pages with an inlined SVG, so it gets a ceiling of its own.
+        var svgZoomBrotli = BrotliSize(Encoding.UTF8.GetBytes(PublisherScripts.SvgZoom));
+        Assert.True(svgZoomBrotli <= 2048, $"diagram enlarger is {svgZoomBrotli} B brotli (budget 2 KB)");
     }
 
     private static int BrotliSize(byte[] content)

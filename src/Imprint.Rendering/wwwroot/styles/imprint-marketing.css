@@ -452,13 +452,46 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 }
 .ip-widget:not(:defined):not(.ip-widget-baked) .ip-widget-fallback-link { color: var(--accent-ink); }
 
-/* Wide diagrams on a phone: shrinking a 700px figure to 390 makes its labels
-   unreadable. Figures authored wider than the screen keep a readable minimum and
-   scroll inside their own box; small marks (--ip-svg-w below the floor) just shrink. */
+/* Wide diagrams on a phone: a figure drawn wider than the screen shrinks to fit the column,
+   like a photo. Scrolling it sideways inside its own box (the previous rule, a 560px floor)
+   still left a 1000px figure's 12px labels at ~7px, and few visitors found the scroll.
+   svg-zoom.js marks a shrunk figure "Tap to enlarge" and opens it full-screen at its drawn
+   size; without the script the figure simply stays shrunk. */
 @media (max-width: 700px) {
-  .ip-svg { overflow-x: auto; min-width: 0; max-width: 100%; }
-  .ip-svg svg { min-width: min(var(--ip-svg-w, 0px), 560px); }
+  .ip-svg { min-width: 0; max-width: 100%; }
 }
+
+/* The enlargeable figure. svg-zoom.js creates the frame only while the figure is shrunk, so
+   none of this exists on a wide screen. width: 100% because a shrunk figure already fills its
+   column, and a centred stack would otherwise collapse the frame around a percentage-wide svg. */
+.ip-svg-frame { position: relative; width: 100%; min-width: 0; cursor: zoom-in; }
+.ip-svg-zoom {
+  position: absolute; right: 0.5rem; bottom: 0.5rem;
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0.45rem 0.7rem; border: 1px solid var(--hairline); border-radius: var(--r-sm);
+  background: var(--bg); color: var(--heading);
+  font: 600 var(--fs-2xs) / 1.2 var(--font-ui); cursor: inherit;
+}
+
+/* The full-screen view: the figure at its drawn width (--ip-zoom-w, set by the script),
+   panned inside the body; pinch-zoom is the browser's own. The page behind stops scrolling. */
+.ip-svg-lightbox {
+  width: 100%; height: 100%; max-width: none; max-height: none;
+  margin: 0; padding: 0; border: 0;
+  background: var(--bg); color: var(--ink);
+}
+.ip-svg-lightbox[open] { display: flex; flex-direction: column; }
+.ip-svg-lightbox::backdrop { background: var(--bg); }
+.ip-svg-lightbox-close {
+  flex: none; align-self: flex-end; margin: 0.6rem 0.75rem;
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.5rem 0.85rem; border: 1px solid var(--hairline); border-radius: var(--r-sm);
+  background: var(--surface-2); color: var(--heading);
+  font: 600 var(--fs-sm) / 1.2 var(--font-ui); cursor: pointer;
+}
+.ip-svg-lightbox-body { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 0 1rem 1rem; }
+.ip-svg-lightbox-body > .ip-svg { width: var(--ip-zoom-w); max-width: none; margin-inline: auto; }
+:root:has(.ip-svg-lightbox[open]) { overflow: hidden; }
 
 /* Tables: hairline grid, mono-quiet header; wide tables scroll inside the wrapper. */
 .ip-table-wrap { overflow-x: auto; max-width: 100%; min-width: 0; }

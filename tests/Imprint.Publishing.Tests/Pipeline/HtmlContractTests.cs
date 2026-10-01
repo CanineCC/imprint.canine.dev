@@ -39,13 +39,15 @@ public sealed class HtmlContractTests
         // Inline scripts: exactly the four sanctioned ones, byte-identical to the frozen assets. The
         // theme toggle and the language preference both sit in <head> BEFORE the stylesheet, because both
         // decide something the visitor would otherwise see flash past - the wrong theme, or the wrong
-        // language; the nav toggle and island loader sit at the end of <body>. The count is pinned so a
-        // fifth inline script is a deliberate contract change.
+        // language; the nav toggle and island loader sit at the end of <body>. The count is pinned so
+        // another inline script is a deliberate contract change. This page inlines no SVG, so the
+        // diagram enlarger (the fifth sanctioned script) is absent.
         Assert.Equal(4, Regex.Matches(html, "<script>").Count);
         Assert.Contains(PublisherScripts.ThemeToggle, html);
         Assert.Contains(PublisherScripts.LanguagePreference, html);
         Assert.Contains(PublisherScripts.NavToggle, html);
         Assert.Contains(PublisherScripts.IslandLoader, html);
+        Assert.DoesNotContain(PublisherScripts.SvgZoom, html);
         foreach (var head in new[] { PublisherScripts.ThemeToggle, PublisherScripts.LanguagePreference })
         {
             Assert.True(
@@ -186,6 +188,24 @@ public sealed class HtmlContractTests
 
         // Inline only: no .svg file lands in assets/.
         Assert.Empty(host.FilesMatching("assets/", ".svg"));
+
+        // An inlined figure brings the diagram enlarger, at the end of <body> after the figure it
+        // acts on — the nav toggle and two <head> scripts plus this one; no widgets, no loader.
+        Assert.Contains(PublisherScripts.SvgZoom, html);
+        Assert.True(
+            html.IndexOf("<svg viewBox", StringComparison.Ordinal) <
+            html.IndexOf(PublisherScripts.SvgZoom, StringComparison.Ordinal));
+        Assert.Equal(4, Regex.Matches(html, "<script>").Count);
+    }
+
+    [Fact]
+    public void The_diagram_enlarger_is_a_frozen_asset_with_the_agreed_wording()
+    {
+        // The button text the product owner chose; the script is inlined verbatim, never rewritten.
+        Assert.Contains("Tap to enlarge", PublisherScripts.SvgZoom, StringComparison.Ordinal);
+        Assert.Contains("showModal", PublisherScripts.SvgZoom, StringComparison.Ordinal);
+        // It must never close the <script> element it is inlined into.
+        Assert.DoesNotContain("</script", PublisherScripts.SvgZoom, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

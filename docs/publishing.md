@@ -34,11 +34,19 @@ Every published page:
   `hreflang` alternates for every locale the page has content in (plus
   `x-default` → default locale).
 - One stylesheet link (`css/site.{hash}.css`, immutable-cacheable).
-- **Inline scripts only, and only two, both tiny and optional**:
+- **Inline scripts only, and only these five, all tiny and optional**
+  (`PublisherScripts`, pinned by `HtmlContractTests`):
   1. Theme toggle (~15 lines): reads `localStorage.imprintTheme`, sets
      `data-theme` on `<html>` before first paint (placed in `<head>`, blocking by
      design to avoid flash), wires the toggle button if the page has one.
-  2. Island loader (~1 KB, only when the page contains widgets): finds
+  2. Language preference (~20 lines, `<head>`): picks the visitor's language from
+     the page's own hreflang alternates before first paint.
+  3. Nav toggle (~45 lines, every page): the mobile menu sheet and its accordions.
+  4. Diagram enlarger (~120 lines, only when the page inlines an SVG): on a phone, a
+     diagram drawn wider than the screen shrinks to fit and gets a "Tap to enlarge"
+     button that opens it full-screen at its drawn size (a `<dialog>`; the back
+     gesture closes it). Without it the diagram simply stays shrunk.
+  5. Island loader (~1 KB, only when the page contains widgets): finds
      `[data-island]`, `IntersectionObserver` with 200px rootMargin, injects
      `<script type="module" src>` once per bundle. `data-island-eager` skips the
      observer.
@@ -57,7 +65,8 @@ Every published page:
 - Videos: `<video>` WebM source; Ambient mode = `autoplay muted loop playsinline`
   (+`disableremoteplayback`), Player mode = `controls preload="metadata"`.
 - SVGs: inlined (sanitized at ingest, re-checked at publish), `role="img"` +
-  `aria-label` from alt, or `aria-hidden="true"` when alt empty.
+  `aria-label` from alt, or `aria-hidden="true"` when alt empty. On a phone they
+  shrink to the column; the diagram enlarger (script 4) offers the full-size view.
 - Navigation: `<nav>` with `aria-current="page"`; skip-link; exactly one `<h1>` per
   page is the editor's job (the inspector warns), landmarks: `header/main/footer`.
 

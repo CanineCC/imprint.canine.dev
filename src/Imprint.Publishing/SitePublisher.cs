@@ -773,6 +773,7 @@ public sealed class SitePublisher(
                 // the tag has a descriptor AND ResolveWidgetBundle returns a URL —
                 // the same condition, so no second render pass is needed.
                 IncludeIslandLoader = _pageWidgetTags[page.Id].Any(_widgetFiles.ContainsKey),
+                IncludeSvgZoom = HasInlineSvg(page),
             };
 
             return await RenderDocument(renderer, chrome, context, page.Tree.Roots, content: null, ct);
@@ -1244,6 +1245,16 @@ public sealed class SitePublisher(
                 }
             }
         }
+
+        // The condition SvgView and ImageView inline on: an SVG or image node whose asset
+        // resolves to sanitized markup. A button linking to an .svg file downloads it instead.
+        private bool HasInlineSvg(PublishedPage page) =>
+            NodesOf(page).Any(node => node switch
+            {
+                SvgNode { AssetId: { } svg } => _assets.Resolve(svg)?.InlineSvg is not null,
+                ImageNode { AssetId: { } image } => _assets.Resolve(image)?.InlineSvg is not null,
+                _ => false,
+            });
 
         // Every asset a node makes the published page depend on. Media nodes carry theirs as
         // a prop; a button or a prose anchor carries it as an asset LINK — and collecting

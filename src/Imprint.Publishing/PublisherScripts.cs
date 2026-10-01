@@ -34,6 +34,15 @@ public static class PublisherScripts
     public static string NavToggle { get; } = Load("nav-toggle.js");
 
     /// <summary>
+    /// Diagram enlarger (~120 lines), inlined at the end of &lt;body&gt; only on pages that
+    /// inline an SVG figure. On a phone, a diagram drawn wider than the screen shrinks to fit
+    /// and its labels shrink with it; this offers "Tap to enlarge", which opens the diagram
+    /// full-screen at its drawn size. Without it the diagram simply stays shrunk — CSS alone
+    /// cannot open a full-screen view of markup that is already on the page.
+    /// </summary>
+    public static string SvgZoom { get; } = Load("svg-zoom.js");
+
+    /// <summary>
     /// Island loader (~1 KB), inlined at the end of &lt;body&gt; — it queries
     /// <c>[data-island]</c> synchronously, so it must run after the islands exist in
     /// the DOM. Only emitted on pages that actually contain islands.

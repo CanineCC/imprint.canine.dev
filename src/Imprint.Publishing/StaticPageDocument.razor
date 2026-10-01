@@ -1,8 +1,9 @@
 @namespace Imprint.Publishing
 @* The published document shell — the HTML contract (docs/publishing.md) in one
-   template: one stylesheet link, the two sanctioned inline scripts (theme toggle in
-   <head> before the stylesheet so an explicit choice applies at first paint; island
-   loader at the end of <body> so it can see the islands), landmarks, skip link, nav
+   template: one stylesheet link, the sanctioned inline scripts (theme toggle and language
+   preference in <head> before the stylesheet so a choice applies at first paint; nav
+   toggle, diagram enlarger and island loader at the end of <body> so they can see the
+   markup they act on), landmarks, skip link, nav
    with aria-current. The header/footer reproduce the marketing chrome (brand mark,
    grouped dropdown nav, quiet link + CTA, footer link columns + fine print) using
    imprint's own ip-* class names, which the marketing theme styles against. Every href
@@ -219,6 +220,10 @@
     </div>
   </footer>
   <script>@((MarkupString)PublisherScripts.NavToggle)</script>
+  @if (Chrome.IncludeSvgZoom)
+  {
+    <script>@((MarkupString)PublisherScripts.SvgZoom)</script>
+  }
   @if (Chrome.IncludeIslandLoader)
   {
     <script>@((MarkupString)PublisherScripts.IslandLoader)</script>
