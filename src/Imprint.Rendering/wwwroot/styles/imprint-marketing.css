@@ -1574,6 +1574,15 @@ a.ip-linkcard:hover .ip-linkcard-label { color: var(--accent-ink); }
 .ip-band-strong.ip-band-fair { color: var(--band-fair-text); }
 .ip-band-strong.ip-band-poor { color: var(--band-poor-text); }
 .ip-band-strong.ip-band-critical { color: var(--band-critical-text); }
+/* ★ A LANGUAGE'S BAND IS NOT A SCORE, so it may not wear the score colours. It used them, and
+   JavaScript's LOW printed in the colour of a poor code score. One hue in shades instead: the
+   order still shows, the good-to-bad reading does not. The dotted underline says the word has
+   a mouseover that glosses it. */
+.ip-langband-full, .ip-langband-very-high { color: var(--accent); }
+.ip-langband-high { color: color-mix(in srgb, var(--accent) 80%, var(--muted)); }
+.ip-langband-medium { color: color-mix(in srgb, var(--accent) 60%, var(--muted)); }
+.ip-langband-low { color: color-mix(in srgb, var(--accent) 40%, var(--muted)); }
+.ip-langrow-head [title], .ip-langrow .ip-lens[title] { cursor: help; text-decoration: underline dotted; text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
 /* One row per language: a 250-word summary simply makes its row taller, where in a grid
    it made every card in that row taller and gave the short ones an empty box to match.
    ★★ THE ROW IS `.ip-langrow`, NOT `.ip-lang`. It was `.ip-lang`, which is ALSO the header's

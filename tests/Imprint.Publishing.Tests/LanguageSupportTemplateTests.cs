@@ -44,30 +44,63 @@ public sealed class LanguageSupportTemplateTests
         //   anything to a buyer is that it says where a language stops.
         var html = LanguageSupportTemplate.Render(Payload)!;
 
-        Assert.Contains("Not applicable", html, StringComparison.Ordinal);
+        Assert.Contains("Not read", html, StringComparison.Ordinal);
         var javascript = html[html.IndexOf("JavaScript", StringComparison.Ordinal)..];
         Assert.Contains("ip-lens-list-off", javascript, StringComparison.Ordinal);
         Assert.Contains(">DDD</span>", javascript, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void The_note_that_FIT_is_not_a_quality_judgement_is_rendered_not_paraphrased()
+    public void Each_band_word_and_kind_carries_its_meaning_as_a_mouseover()
     {
         // ★ A band called LOW beside a language's name reads as a judgement on the LANGUAGE unless
-        //   something says otherwise, and that misreading costs a customer. The sentence is the
-        //   product's, printed verbatim.
+        //   something says otherwise. The page glosses the words; the mouseover glosses them where
+        //   the reader is looking.
         var html = LanguageSupportTemplate.Render(Payload)!;
 
-        Assert.Contains("NOT a measure of language or code quality", html, StringComparison.Ordinal);
+        Assert.Contains("title=\"Every design grade that applies is read in full.\">FULL</span>", html, StringComparison.Ordinal);
+        Assert.Contains("title=\"How the code is put together is read, but not the design built on it.\">LOW</span>", html, StringComparison.Ordinal);
+        Assert.Contains("title=\"Watchdog reads the language&#39;s types and the design built on them.\">Deep</span>", html, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void The_band_hue_is_this_sites_but_the_band_WORD_is_the_payloads()
+    public void Covered_lenses_show_as_the_grades_a_reader_can_find_each_once_with_a_mouseover()
+    {
+        var html = LanguageSupportTemplate.Render(Payload
+            .Replace("\"coveredLenses\": [\"DDD\", \"Event sourcing\"]",
+                "\"coveredLenses\": [\"DDD\", \"Event sourcing\", \"Vertical slice\", \"Correctness\", \"Structural\", \"Brand new lens\"]",
+                StringComparison.Ordinal))!;
+        var csharp = html[..html.IndexOf("JavaScript", StringComparison.Ordinal)];
+
+        Assert.Contains(">Read for</span>", csharp, StringComparison.Ordinal);
+        Assert.Contains("title=\"How the business data and its rules are modelled in the code.\">Domain Modelling</span>", csharp, StringComparison.Ordinal);
+        Assert.Contains(">Event Sourcing</span>", csharp, StringComparison.Ordinal);
+        Assert.Contains(">Code-level traps</span>", csharp, StringComparison.Ordinal);
+        // "Structural" and "Vertical slice" fold into one Architecture chip.
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(csharp, ">Architecture</span>"));
+        Assert.DoesNotContain(">DDD</span>", csharp, StringComparison.Ordinal);
+        Assert.DoesNotContain(">Vertical slice</span>", csharp, StringComparison.Ordinal);
+        // A lens nobody has named yet stays visible under its own name.
+        Assert.Contains("<span class=\"ip-lens\">Brand new lens</span>", csharp, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_payload_note_is_not_rendered_because_the_page_glosses_the_words()
     {
         var html = LanguageSupportTemplate.Render(Payload)!;
 
-        Assert.Contains("ip-band-exemplary", html, StringComparison.Ordinal);
-        Assert.Contains("ip-band-poor", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("FIT is survey clarity", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_band_hue_follows_the_band_word_never_the_score_colours()
+    {
+        var html = LanguageSupportTemplate.Render(Payload)!;
+
+        Assert.Contains("ip-langband-full", html, StringComparison.Ordinal);
+        Assert.Contains("ip-langband-low", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("ip-band-exemplary", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("ip-band-poor", html, StringComparison.Ordinal);
     }
 
     [Theory]
