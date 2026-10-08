@@ -99,6 +99,9 @@ public sealed class OneCardOneDrawingTests
         var html = PrerenderTemplates.Render(SurveyDetailTemplate.StripName, Verdicts, Origin + "/api/public/verdicts")!;
 
         Assert.Contains("Showing 2 of <strong>3,149</strong> published surveys", html, StringComparison.Ordinal);
+
+        // And no "readable in full": the public version of a survey blanks its security details.
+        Assert.DoesNotContain("in full", html, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

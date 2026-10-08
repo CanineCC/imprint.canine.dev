@@ -105,7 +105,7 @@ public static class ScoreCardTemplate
 
             if (language.Length > 0)
             {
-                facts.Add(language);
+                facts.Add(LanguageName(language));
             }
 
             if (facts.Count > 0)
@@ -139,12 +139,15 @@ public static class ScoreCardTemplate
         //   sentence about the widget rather than about the product, and the hero's own copy has
         //   already said what the reader is looking at. The line exists to stop a STRIP reading as
         //   "four surveys exist"; a single card never reads that way.
+        // ★ AND IT DOES NOT SAY "READABLE IN FULL". It did, and the public version of every survey
+        //   blanks its security details, so the sentence promised more than the link behind each card
+        //   opens.
         if (reports.Count > 1 && Number(root, "matched") is { } matched && matched > reports.Count)
         {
             html.Append("<div class=\"ip-prose\"><p>Showing ")
                 .Append(Esc(Group(reports.Count))).Append(" of <strong>")
                 .Append(Esc(Group(matched)))
-                .Append("</strong> published surveys — every one of them readable in full.</p></div>");
+                .Append("</strong> published surveys.</p></div>");
         }
 
         return html.ToString();
@@ -163,5 +166,51 @@ public static class ScoreCardTemplate
         "Weak" => "poor",
         "Critical" => "critical",
         _ => null,
+    };
+
+    /// <summary>
+    /// The name a reader knows a language by. The feed sends the product's key ("csharp", "cpp",
+    /// "objectivec"), and a card that prints the key reads like a log line. A key this site has not
+    /// been taught, or a name the feed already spelled out, passes through unchanged.
+    /// </summary>
+    private static string LanguageName(string language) =>
+        LanguageNames.TryGetValue(language, out var name) ? name : language;
+
+    private static readonly Dictionary<string, string> LanguageNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["c"] = "C",
+        ["clojure"] = "Clojure",
+        ["cpp"] = "C++",
+        ["crystal"] = "Crystal",
+        ["csharp"] = "C#",
+        ["dart"] = "Dart",
+        ["elixir"] = "Elixir",
+        ["erlang"] = "Erlang",
+        ["fsharp"] = "F#",
+        ["go"] = "Go",
+        ["groovy"] = "Groovy",
+        ["haskell"] = "Haskell",
+        ["java"] = "Java",
+        ["javascript"] = "JavaScript",
+        ["kotlin"] = "Kotlin",
+        ["lua"] = "Lua",
+        ["objectivec"] = "Objective-C",
+        ["ocaml"] = "OCaml",
+        ["perl"] = "Perl",
+        ["php"] = "PHP",
+        ["python"] = "Python",
+        ["r"] = "R",
+        ["ruby"] = "Ruby",
+        ["rust"] = "Rust",
+        ["scala"] = "Scala",
+        ["solidity"] = "Solidity",
+        ["swift"] = "Swift",
+        ["typescript"] = "TypeScript",
+        ["vba"] = "VBA",
+        ["vbnet"] = "VB.NET",
+        ["vbscript"] = "VBScript",
+        ["verilog"] = "Verilog",
+        ["vhdl"] = "VHDL",
+        ["zig"] = "Zig",
     };
 }

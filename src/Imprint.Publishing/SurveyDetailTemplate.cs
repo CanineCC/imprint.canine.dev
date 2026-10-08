@@ -105,7 +105,8 @@ public static class SurveyDetailTemplate
 
         // ★ THE DENOMINATOR TOO. This feed publishes `total`; the reports feed calls the same fact
         //   `matched`. Either is the honest frame around a strip of four — without one, four cards
-        //   read as "four surveys exist".
+        //   read as "four surveys exist". It no longer adds "every one of them readable in full": the
+        //   public version of a survey blanks its security details (see ScoreCardTemplate).
         var total = Number(root, "total")
             ?? (ctx is { } c ? Number(c, "matched") : null);
         if (total is { } shown && shown > items.Count)
@@ -113,7 +114,7 @@ public static class SurveyDetailTemplate
             html.Append("<div class=\"ip-prose\"><p>Showing ")
                 .Append(Esc(Group(items.Count))).Append(" of <strong>")
                 .Append(Esc(Group(shown)))
-                .Append("</strong> published surveys — every one of them readable in full.</p></div>");
+                .Append("</strong> published surveys.</p></div>");
         }
 
         return html.ToString();

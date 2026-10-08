@@ -150,6 +150,34 @@ public sealed class ShowcaseTemplateTests
     }
 
     [Fact]
+    public void The_frame_line_promises_no_more_than_a_public_report_opens()
+    {
+        // ★ It said "every one of them readable in full", and the public version of every survey
+        //   blanks its security details.
+        var html = ScoreCardTemplate.RenderFull(Reports, Origin)!;
+
+        Assert.Contains("3,112</strong> published surveys.</p>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("in full", html, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void A_card_names_its_language_the_way_a_reader_does()
+    {
+        // The feed sends the product's key; "csharp" on a card reads like a log line.
+        var html = ScoreCardTemplate.Render(
+            Reports.Replace("\"C#\"", "\"csharp\"", StringComparison.Ordinal), Origin)!;
+
+        Assert.Contains("2 lenses measured · C#", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("csharp", html, StringComparison.Ordinal);
+
+        // A key this site has not been taught passes through as the feed sent it.
+        var unknown = ScoreCardTemplate.Render(
+            Reports.Replace("\"C#\"", "\"brainfuck\"", StringComparison.Ordinal), Origin)!;
+
+        Assert.Contains("2 lenses measured · brainfuck", unknown, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void The_list_makes_no_claim_about_the_order_it_is_given()
     {
         // ★ It said "best first" until the live rendering was looked at. The feed runs 98, 86, 83 …
