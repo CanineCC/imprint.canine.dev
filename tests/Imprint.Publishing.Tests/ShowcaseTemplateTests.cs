@@ -218,10 +218,21 @@ public sealed class ShowcaseTemplateTests
     {
         var html = FindingsTemplate.Render(Findings, Origin)!;
 
-        Assert.Contains("Event-Driven · ED4", html, StringComparison.Ordinal);
+        Assert.Contains("<span class=\"ip-finding-lens\">Event-Driven</span>", html, StringComparison.Ordinal);
         Assert.Contains("Dual write (no outbox)", html, StringComparison.Ordinal);
         Assert.Contains("src/Users/Create.cs:9", html, StringComparison.Ordinal);
         Assert.Contains("2 of 78 findings", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_finding_is_labelled_with_its_area_and_never_with_the_checks_code()
+    {
+        // The payload carries the catalogue code; a reader of the page has nothing to read it with.
+        var html = FindingsTemplate.Render(Findings, Origin)!;
+
+        Assert.Contains("<span class=\"ip-finding-lens\">Domain Modelling</span>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("ED4", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("DM1", html, StringComparison.Ordinal);
     }
 
     [Fact]

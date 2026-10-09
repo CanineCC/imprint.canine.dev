@@ -64,20 +64,17 @@ public static class FindingsTemplate
             foreach (var finding in Array(repo, "findings").Take(PerRepository))
             {
                 var lens = Str(finding, "lensLabel");
-                var dim = Str(finding, "dim");
                 var title = Str(finding, "title");
                 if (title.Length == 0)
                 {
                     continue;
                 }
 
+                // ★ The area, not the code. The payload also carries the check's catalogue code ("ED4",
+                //   "DM1"), and the label printed it after the area; nothing on a marketing page explains
+                //   a code, so it told a reader nothing. The report behind the link still shows it.
                 html.Append("<li><span class=\"ip-finding-lens\">");
                 html.Append(Esc(lens.Length > 0 ? lens : "Finding"));
-                if (dim.Length > 0)
-                {
-                    html.Append(" · ").Append(Esc(dim));
-                }
-
                 html.Append("</span><span class=\"ip-finding-title\">").Append(Esc(title)).Append("</span>");
 
                 // file:line is the part that makes a finding checkable rather than a claim. It is also
