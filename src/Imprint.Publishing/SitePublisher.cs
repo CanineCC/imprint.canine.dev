@@ -154,6 +154,8 @@ public sealed class SitePublisher(
         private string? _faviconUrl;
         private string? _logoUrl;
         private string? _logoSvg;
+        private string? _logoSvgDark;
+        private string? _faviconSvgFile;
         private string? _socialImageUrl;
         private string? _llmsPreamble;
         private IReadOnlyList<string> _llmsExcludedPaths = [];
@@ -412,8 +414,11 @@ public sealed class SitePublisher(
 
             // Now the catalog exists, resolve the brand imagery to its PUBLISHED /assets URL.
             _faviconUrl = BrandPublishedUrl(_faviconAssetId, preferSmallest: true);
+            _faviconSvgFile = await WriteFaviconSvg(_faviconAssetId, ct);
+            _faviconUrl ??= _faviconSvgFile is null ? null : "/" + _faviconSvgFile;
             _logoUrl = BrandPublishedUrl(_headerLogoAssetId, preferSmallest: false);
             _logoSvg = BrandInlineSvg(_headerLogoAssetId);
+            _logoSvgDark = _logoSvg is null ? null : BrandInlineDarkSvg(_headerLogoAssetId);
             _socialImageUrl = SocialImagePublishedUrl(_socialImageAssetId);
             await LoadWidgetBundles(ct);
 
@@ -769,6 +774,8 @@ public sealed class SitePublisher(
                 FaviconUrl = _faviconUrl,
                 LogoUrl = _logoUrl,
                 LogoSvg = _logoSvg,
+                LogoSvgDark = _logoSvgDark,
+                FaviconType = _faviconSvgFile is null ? null : "image/svg+xml",
                 // Exact by construction: WidgetView emits data-island precisely when
                 // the tag has a descriptor AND ResolveWidgetBundle returns a URL —
                 // the same condition, so no second render pass is needed.
@@ -805,6 +812,8 @@ public sealed class SitePublisher(
                 FaviconUrl = _faviconUrl,
                 LogoUrl = _logoUrl,
                 LogoSvg = _logoSvg,
+                LogoSvgDark = _logoSvgDark,
+                FaviconType = _faviconSvgFile is null ? null : "image/svg+xml",
                 IncludeIslandLoader = false,
             };
 
@@ -860,11 +869,9 @@ public sealed class SitePublisher(
         /// null, so the caller emits no favicon / falls back to the brand dot.
         /// </summary>
         /// <remarks>
-        /// Raster (PNG/WebP) is fully supported. Vector brand images are NOT yet: the catalog
-        /// only ever INLINES SVGs (no standalone <c>assets/</c> file), so there is no file URL
-        /// to reference from <c>&lt;link rel="icon"&gt;</c> / the header <c>&lt;img&gt;</c>.
-        /// A vector favicon/logo therefore resolves to null (graceful brand-dot fallback) —
-        /// emitting an SVG file variant for brand vectors is a tracked follow-up.
+        /// Raster only: the catalog INLINES SVGs and writes no standalone <c>assets/</c> file for them, so a vector
+        /// resolves to null here. A vector logo is inlined instead (<see cref="BrandInlineSvg"/>, with its dark
+        /// rendition), and a vector favicon is written as its own file (<see cref="WriteFaviconSvg"/>).
         /// </remarks>
         private string? BrandPublishedUrl(AssetId? assetId, bool preferSmallest)
         {
@@ -898,6 +905,35 @@ public sealed class SitePublisher(
             assetId is { } id && _assets.Resolve(id) is { Kind: AssetKind.Vector, InlineSvg: { Length: > 0 } svg }
                 ? svg
                 : null;
+
+        /// <summary>
+        /// The header logo's dark rendition as sanitized inline SVG, when it has one. A one-colour mark follows the theme
+        /// through currentColor; a mark with a second colour cannot, so it ships both renditions and the published CSS
+        /// reveals one (<c>.ip-img-light</c> / <c>.ip-img-dark</c>), exactly as a page image does.
+        /// </summary>
+        private string? BrandInlineDarkSvg(AssetId? assetId) =>
+            assetId is { } id && _assets.Resolve(id) is { Kind: AssetKind.Vector, DarkInlineSvg: { Length: > 0 } svg }
+                ? svg
+                : null;
+
+        /// <summary>
+        /// A vector favicon has no raster variant, so <see cref="BrandPublishedUrl"/> finds no file for it and the site had
+        /// no icon at all. Browsers take an SVG icon, so the sanitized markup is written as its own file under
+        /// <c>assets/</c>, named by its content so a changed icon is a new URL. Null when the favicon is not a vector.
+        /// </summary>
+        private async Task<string?> WriteFaviconSvg(AssetId? assetId, CancellationToken ct)
+        {
+            if (BrandInlineSvg(assetId) is not { } svg)
+            {
+                return null;
+            }
+
+            var bytes = Encoding.UTF8.GetBytes(svg);
+            var hash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes))[..12];
+            var relative = $"assets/{assetId!.Value.Compact}-favicon.{hash}.svg";
+            await WriteIfChanged(relative, bytes, ct);
+            return relative;
+        }
 
         /// <summary>
         /// The share card image, resolved to its LARGEST published variant — the opposite
@@ -2159,6 +2195,11 @@ public sealed class SitePublisher(
             }
 
             Keep("llms-full.txt");
+            if (_faviconSvgFile is not null)
+            {
+                Keep(_faviconSvgFile);
+            }
+
             foreach (var plan in plans)
             {
                 if (plan.SlugPath is null || _failed.Contains(plan.Page.Id))

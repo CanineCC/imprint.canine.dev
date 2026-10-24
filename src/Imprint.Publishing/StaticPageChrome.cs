@@ -97,6 +97,15 @@ public sealed record StaticPageChrome
     public string? LogoSvg { get; init; }
 
     /// <summary>
+    /// The header logo's dark rendition as sanitized inline SVG, or null. When set, both renditions are inlined and the
+    /// published CSS reveals the one for the page's colour scheme (the theme toggle included).
+    /// </summary>
+    public string? LogoSvgDark { get; init; }
+
+    /// <summary>The favicon's media type when the browser cannot infer it (<c>image/svg+xml</c>), or null.</summary>
+    public string? FaviconType { get; init; }
+
+    /// <summary>
     /// True only when the rendered content carries <c>data-island</c> markup — decided
     /// from the page tree (a widget renders an island exactly when its manifest entry
     /// and bundle resolve), so no second render pass is needed.

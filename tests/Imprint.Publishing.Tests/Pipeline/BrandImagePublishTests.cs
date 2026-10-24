@@ -78,4 +78,61 @@ public sealed class BrandImagePublishTests
         Assert.DoesNotContain("<img class=\"ip-brand-logo\"", html);
         Assert.DoesNotContain("ip-brand-dot", html);
     }
+
+    [Fact]
+    public async Task An_SVG_logo_with_a_dark_rendition_ships_both_and_the_theme_reveals_one()
+    {
+        await using var host = new PublishingTestHost();
+        var siteId = await host.CreateSite("Acme Studio", "en");
+        var homeId = await host.CreatePage(siteId, "home", "Home");
+        await host.SetNavigation(siteId, homeId);
+        await host.Publish(homeId);
+
+        // A two-colour mark cannot follow the theme through currentColor alone: its second colour needs its own
+        // dark rendition, exactly like a page image's. Dropping it put the light mark on a dark header.
+        var svgId = await host.CreateSvgAsset("<svg viewBox=\"0 0 10 10\"><circle cx=\"5\" cy=\"5\" r=\"4\" fill=\"#2f5d85\"/></svg>");
+        await host.AddDarkSvgVariant(svgId, "<svg viewBox=\"0 0 10 10\"><circle cx=\"5\" cy=\"5\" r=\"4\" fill=\"#9bbedb\"/></svg>");
+        await host.SetHeaderLogo(siteId, svgId);
+
+        await host.Publisher.Synchronize();
+
+        var html = host.ReadText("index.html");
+        var header = html[html.IndexOf("<header", StringComparison.Ordinal)..html.IndexOf("</header>", StringComparison.Ordinal)];
+        Assert.Contains("<span class=\"ip-brand-logo ip-img-light\" aria-hidden=\"true\"><svg", header);
+        Assert.Contains("<span class=\"ip-brand-logo ip-img-dark\" aria-hidden=\"true\"><svg", header);
+        Assert.Contains("#2f5d85", header);
+        Assert.Contains("#9bbedb", header);
+        var footer = html[html.IndexOf("ip-footer-brand", StringComparison.Ordinal)..];
+        Assert.Contains("ip-brand-logo ip-img-dark", footer);
+    }
+
+    [Fact]
+    public async Task An_SVG_favicon_publishes_as_a_file_and_the_page_links_it()
+    {
+        await using var host = new PublishingTestHost();
+        var siteId = await host.CreateSite("Acme Studio", "en");
+        var homeId = await host.CreatePage(siteId, "home", "Home");
+        await host.SetNavigation(siteId, homeId);
+        await host.Publish(homeId);
+
+        // A browser tab takes an SVG icon; a vector favicon used to resolve to no URL at all, so the site had none.
+        const string svg = "<svg viewBox=\"0 0 10 10\"><path d=\"M0 0h10v10z\" fill=\"#0b7a5e\"/></svg>";
+        var svgId = await host.CreateSvgAsset(svg);
+        await host.SetFavicon(siteId, svgId);
+
+        await host.Publisher.Synchronize();
+
+        var html = host.ReadText("index.html");
+        // The renderer writes the + of the media type as &#x2B;; a browser decodes the attribute, so the test does too.
+        var favicon = Regex.Match(System.Net.WebUtility.HtmlDecode(html), "<link rel=\"icon\" href=\"(/assets/[^\"]+\\.svg)\" type=\"image/svg\\+xml\"");
+        Assert.True(favicon.Success, "an SVG favicon should be linked as image/svg+xml from /assets, got: "
+            + Regex.Match(html, "<link rel=\"icon\"[^>]*>").Value);
+        var relative = favicon.Groups[1].Value.TrimStart('/');
+        Assert.True(host.FileExists(relative), $"the favicon file {relative} should exist on disk");
+        Assert.Equal(svg, host.ReadText(relative));
+
+        // A later publish keeps it: the sweep must not delete the file the page links.
+        await host.Publisher.Synchronize();
+        Assert.True(host.FileExists(relative), "the sweep removed the favicon the page still links");
+    }
 }
