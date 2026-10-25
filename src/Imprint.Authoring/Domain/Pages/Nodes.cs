@@ -288,17 +288,39 @@ public sealed record CodeNode : Node
 }
 
 /// <summary>
-/// A data table: an optional header row and body rows of plain-text cells. Cells are
-/// localized like every other text prop (a glossary translates; a number column doesn't
-/// have to). Deliberately cells-of-text rather than cells-of-nodes: a table that needs
-/// markup inside a cell is a layout, and layouts already have Columns/Grid.
+/// A data table: an optional header row and body rows of cells. Cells are localized like
+/// every other text prop (a glossary translates; a number column doesn't have to).
+/// Deliberately cells-of-text rather than cells-of-nodes: a table that needs BLOCKS inside a
+/// cell is a layout, and layouts already have Columns/Grid.
+///
+/// <para>What a cell's text IS is said once per table by <see cref="CellMarkup"/>. A table
+/// written through the props API holds plain text (the default, and what every table stored
+/// before inline cells existed reads back as); a table converted from markdown holds the
+/// canonical INLINE subset — strong, em, links, br — because a GitHub table's cells carry
+/// inline formatting and silently flattening it would lose what the author wrote. One flag per
+/// table rather than a guess per cell: "a &lt; b" is ordinary text in one and an entity
+/// error in the other, so the renderer must never have to infer which it was given.</para>
 /// </summary>
 public sealed record TableNode : Node
 {
     public IReadOnlyList<LocalizedText> Head { get; init; } = [];
     public IReadOnlyList<IReadOnlyList<LocalizedText>> Rows { get; init; } = [];
+    public TableCellMarkup CellMarkup { get; init; } = TableCellMarkup.Text;
     public override string DisplayName => "Table";
+
+    /// <summary>Every cell, header first, in reading order.</summary>
+    public IEnumerable<LocalizedText> AllCells => Head.Concat(Rows.SelectMany(row => row));
+
+    /// <summary>The cells whose values are canonical inline html — empty for a plain-text table,
+    /// so a caller collecting links or asset references cannot mistake escaped text for markup.</summary>
+    public IEnumerable<LocalizedText> InlineHtmlCells =>
+        CellMarkup == TableCellMarkup.Inline ? AllCells : [];
 }
+
+/// <summary>What a <see cref="TableNode"/>'s cell values are. <see cref="Text"/> is rendered
+/// escaped; <see cref="Inline"/> is the canonical inline subset (<see cref="CanonicalHtml.TryValidateInline"/>),
+/// validated on write and rendered as markup.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))] public enum TableCellMarkup { Text, Inline }
 
 public sealed record DividerNode : Node
 {

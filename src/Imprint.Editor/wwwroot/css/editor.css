@@ -873,6 +873,16 @@ button { font: inherit; color: inherit; }
 .ed-canvas[data-theme="dark"]  .ip-img-light { display: none; }
 .ed-canvas[data-theme="dark"]  .ip-img-dark  { display: revert; }
 
+/* Tables in the canvas and the post preview. The published look lives in imprint-marketing.css,
+   which the editor does not load, and imprint-base.css is at its 8 KB budget — so without these a
+   table previews as a bare grid of words under centred headers, nothing like the page it will
+   publish as. Structure only, in the site's own tokens: the overflow wrapper, rules between rows,
+   start-aligned headers. */
+.ed-canvas .ip-table-wrap { overflow-x: auto; max-width: 100%; min-width: 0; }
+.ed-canvas .ip-table { border-collapse: collapse; width: 100%; font-size: .9375em; line-height: 1.5; }
+.ed-canvas .ip-table :is(th, td) { padding: .5em .85em; border-bottom: 1px solid var(--ip-border); text-align: start; vertical-align: top; }
+.ed-canvas .ip-table th { font-weight: 600; border-bottom-color: var(--ip-text); }
+
 /* ── posts ─────────────────────────────────────────────────────────────────────────
    Editor chrome only (ed-*/dash-*); the preview pane's INSIDE is published markup and
    styles itself from the site stylesheet, which is the point of rendering it through
@@ -1001,3 +1011,4 @@ button { font: inherit; color: inherit; }
 .post-sendback { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; padding: .5rem 1rem; border-bottom: 1px solid var(--ed-border); background: var(--ed-surface-alt); }
 .post-sendback label { font-size: .78rem; color: var(--ed-text-muted); }
 .post-sendback textarea { flex: 1 1 18rem; font-size: .85rem; }
+

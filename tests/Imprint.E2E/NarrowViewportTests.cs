@@ -73,6 +73,45 @@ public sealed class NarrowViewportTests(NarrowViewportFixture fixture)
     }
 
     [Fact]
+    public async Task A_markdown_table_with_inline_cells_is_readable_on_a_phone()
+    {
+        // A table written in markdown, four columns of prose-ish cells: the PAGE must not scroll
+        // sideways, and every column's header must be a real column header.
+        var width = await fixture.Measure("/method/");
+        Assert.True(width.Overflow <= 0, $"the page scrolls sideways — {width}.");
+
+        var facts = await fixture.OnNarrowPage("/method/", async page =>
+        {
+            if (Environment.GetEnvironmentVariable("IMPRINT_E2E_SHOTS") is { Length: > 0 } shots)
+            {
+                Directory.CreateDirectory(shots);
+                await page.ScreenshotAsync(new PageScreenshotOptions
+                {
+                    Path = Path.Combine(shots, "published-table-400px.png"),
+                    FullPage = true,
+                });
+            }
+
+            return await page.EvaluateAsync<int[]>(
+                """
+                () => {
+                    const table = document.querySelector('main table.ip-table');
+                    const wrap = table.closest('.ip-table-wrap');
+                    return [
+                        table.querySelectorAll('thead th[scope="col"]').length,
+                        table.querySelectorAll('tbody strong, tbody em, tbody a').length,
+                        wrap.getBoundingClientRect().right <= document.documentElement.clientWidth ? 1 : 0,
+                    ];
+                }
+                """);
+        });
+
+        Assert.Equal(4, facts[0]);
+        Assert.Equal(6, facts[1]);   // 1 strong, 3 em, 2 links: the formatting survived conversion
+        Assert.Equal(1, facts[2]);
+    }
+
+    [Fact]
     public async Task A_bare_url_in_body_copy_does_not_scroll_the_page_sideways()
     {
         var width = await fixture.Measure("/prose/");

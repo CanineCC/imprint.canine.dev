@@ -38,6 +38,23 @@ public static class NodeContentRules
 
                 break;
 
+            case TableNode { CellMarkup: TableCellMarkup.Inline } table:
+                // The renderer emits these cells as markup, so they are the same stored-XSS
+                // surface rich text is and get the same validator — the inline production, so a
+                // cell cannot smuggle a paragraph or a list in either.
+                foreach (var cell in table.AllCells)
+                {
+                    foreach (var (_, html) in cell.Values)
+                    {
+                        if (!CanonicalHtml.TryValidateInline(html, out var error))
+                        {
+                            throw new DomainException($"Table cell: {error}");
+                        }
+                    }
+                }
+
+                break;
+
             case ButtonNode button:
                 EnsurePlainText(button.Label);
                 break;

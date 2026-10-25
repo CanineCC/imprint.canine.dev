@@ -78,6 +78,42 @@ public sealed class CrossAggregateStalenessTests
         Assert.DoesNotContain("href=\"/target/\"", host.ReadText("linker/index.html"));
     }
 
+    [Fact]
+    public async Task A_page_link_in_a_table_cell_re_renders_the_linking_page_on_a_slug_change()
+    {
+        // A table cell is the one other place a page: href lives; without it in the
+        // dependency tokens, a docs table keeps linking to the old slug until something
+        // unrelated re-renders the page. The table page links the target ONLY from the cell,
+        // and the target is not in the navigation (a nav entry would re-render every page on
+        // its slug change and make this pass for the wrong reason).
+        await using var host = new PublishingTestHost();
+        var siteId = await host.CreateSite("Links", "en");
+        var home = await host.CreatePage(siteId, "home", "Home");
+        await host.AddSection(home, Section(new HeadingNode { Id = NodeId.New(), Level = 1, Text = LocalizedText.Of(En, "Home") }));
+        var target = await host.CreatePage(siteId, "target", "Target");
+        await host.AddSection(target, Section(new HeadingNode { Id = NodeId.New(), Level = 1, Text = LocalizedText.Of(En, "Target") }));
+        await host.SetNavigation(siteId, home);
+        await host.Publish(home);
+        await host.Publish(target);
+        var tablePage = await host.CreatePage(siteId, "docs", "Docs");
+        await host.AddSection(tablePage, Section(new TableNode
+        {
+            Id = NodeId.New(),
+            CellMarkup = TableCellMarkup.Inline,
+            Head = [LocalizedText.Of(En, "See")],
+            Rows = [[LocalizedText.Of(En, $"<a href=\"page:{target.Value}\">the target</a>")]],
+        }));
+        await host.Publish(tablePage);
+        await host.Publisher.Synchronize();
+        Assert.Contains("<a href=\"/target/\">the target</a>", host.ReadText("docs/index.html"));
+
+        await host.ChangeSlug(target, "renamed");
+        await host.Publish(target);
+        await host.Publisher.Synchronize();
+
+        Assert.Contains("<a href=\"/renamed/\">the target</a>", host.ReadText("docs/index.html"));
+    }
+
     /// <summary>home (nav-first, at "/"), a linkable target at /target/, and a linker at /linker/ whose button points at target.</summary>
     private static async Task<(PageId Target, PageId Linker)> BuildLinkingSite(PublishingTestHost host)
     {
