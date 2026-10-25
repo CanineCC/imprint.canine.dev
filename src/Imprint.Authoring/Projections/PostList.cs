@@ -53,7 +53,8 @@ public sealed record PostSummary(
     PostReview Review = PostReview.None,
     DateTimeOffset? PublishAt = null,
     string? ReviewNote = null,
-    PostSignature? Signature = null)
+    PostSignature? Signature = null,
+    string? Hold = null)
 {
     /// <summary>
     /// One word for where the post stands. Live beats everything — a published post that is
@@ -87,6 +88,7 @@ public sealed record PostSummary(
         !IsLive
         && PublishAt is { } at
         && at <= now
+        && Hold is null
         && (!siteRequiresReview || Review is PostReview.Approved);
 }
 
@@ -108,7 +110,8 @@ public sealed class PostList : ReadModel
         PostReview Review = PostReview.None,
         DateTimeOffset? PublishAt = null,
         string? ReviewNote = null,
-        PostSignature? Signature = null);
+        PostSignature? Signature = null,
+        string? Hold = null);
 
     private readonly Dictionary<PostId, Entry> _posts = [];
 
@@ -206,6 +209,7 @@ public sealed class PostList : ReadModel
                 Signature = null,
             },
             PostApprovalLapsed => entry with { Review = PostReview.None, Signature = null },
+            PostHoldSet held => entry with { Hold = held.Reason },
             _ => entry,
         };
 
@@ -224,5 +228,5 @@ public sealed class PostList : ReadModel
 
     private static PostSummary Summarize(PostId id, Entry entry) =>
         new(id, entry.SiteId, entry.Slug, entry.Title, entry.PublishedAt, entry.Version, entry.PublishedVersion,
-            entry.UpdatedAt, entry.Review, entry.PublishAt, entry.ReviewNote, entry.Signature);
+            entry.UpdatedAt, entry.Review, entry.PublishAt, entry.ReviewNote, entry.Signature, entry.Hold);
 }

@@ -59,5 +59,11 @@ public sealed record PostChangesRequested(string Reason);
 [EventType("post.approval-lapsed")]
 public sealed record PostApprovalLapsed;
 
+/// <summary>A publish hold: a reason the post must not go live yet (figures awaiting a measurement, a
+/// claim awaiting its source), or null to lift it. While held, nothing publishes the post, the
+/// schedule included. It is the blocker field the resource-center review asked for.</summary>
+[EventType("post.hold-set")]
+public sealed record PostHoldSet(string? Reason);
+
 [EventType("post.deleted")]
 public sealed record PostDeleted;

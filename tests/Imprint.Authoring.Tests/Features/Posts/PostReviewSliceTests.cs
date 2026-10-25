@@ -4,6 +4,7 @@ using Imprint.Authoring.Features.Pages;
 using Imprint.Authoring.Features.Posts.ApprovePostReview;
 using Imprint.Authoring.Features.Posts.ChangePostBody;
 using Imprint.Authoring.Features.Posts.CreatePost;
+using Imprint.Authoring.Features.Posts.HoldPost;
 using Imprint.Authoring.Features.Posts.PublishPost;
 using Imprint.Authoring.Features.Posts.RequestPostChanges;
 using Imprint.Authoring.Features.Posts.SchedulePost;
@@ -138,6 +139,27 @@ public sealed class PostReviewSliceTests
         await host.Ok(new ChangePostBody(id, En, "# Hello\n\nWords nobody signed.\n"));
         await host.CatchUp();
         Assert.Null(host.Get<PostList>().Get(id)!.Signature);
+    }
+
+    // The scheduler must not even try a held post: a due date passing while it is held is not a
+    // failed publish to retry and log every tick, it is a decision to wait.
+    [Fact]
+    public async Task A_held_post_is_never_due_and_is_due_again_once_lifted()
+    {
+        await using var host = NewHost();
+        var (_, id) = await NewPost(host);
+        await host.Ok(new SchedulePost(id, September));
+        await host.Ok(new HoldPost(id, "Figures wait for WP-40."));
+        await host.CatchUp();
+
+        var held = host.Get<PostList>().Get(id)!;
+        Assert.Equal("Figures wait for WP-40.", held.Hold);
+        Assert.False(held.IsDueAt(September.AddDays(1), siteRequiresReview: false));
+        Assert.Contains("Figures wait for WP-40.", await host.Fails(new PublishPost(id, En)), StringComparison.Ordinal);
+
+        await host.Ok(new HoldPost(id, null));
+        await host.CatchUp();
+        Assert.True(host.Get<PostList>().Get(id)!.IsDueAt(September.AddDays(1), siteRequiresReview: false));
     }
 
     [Fact]

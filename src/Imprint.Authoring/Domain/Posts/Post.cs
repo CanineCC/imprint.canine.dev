@@ -67,6 +67,9 @@ public sealed class Post : AggregateRoot
     /// <summary>Whether a reviewer's sign-off is on the CURRENT words (an edit lapses it).</summary>
     public bool IsApproved => Review is PostReview.Approved;
 
+    /// <summary>Why the post must not go live yet; null when nothing holds it. See <see cref="SetHold"/>.</summary>
+    public string? Hold { get; private set; }
+
     /// <summary>How many times the body has been changed: the revision a sign-off names.</summary>
     public int BodyRevision { get; private set; }
 
@@ -236,6 +239,11 @@ public sealed class Post : AggregateRoot
             throw new DomainException("This post is with the reviewer — it cannot be published until they have answered.");
         }
 
+        if (Hold is { } held)
+        {
+            throw new DomainException($"This post is on hold ({held}). Lift the hold before it can go live.");
+        }
+
         EnsureRenderable(locale);
 
         // Raised on EVERY publish, including a re-publish after an edit — the event is what
@@ -247,6 +255,27 @@ public sealed class Post : AggregateRoot
         // polling worker happened to wake up: the agreed instant is what everyone was told, and
         // "09:00" reading as 09:00:23 in the feed is a small lie with no upside.
         Raise(new PostPublished(PublishAt is { } planned && planned <= at ? planned : at));
+    }
+
+    /// <summary>
+    /// Holds the post with a reason, or lifts the hold with null. A hold says nothing about the words,
+    /// so it neither needs nor lapses an approval: it only stops the post going live until it is lifted.
+    /// </summary>
+    public void SetHold(string? reason)
+    {
+        EnsureNotDeleted();
+        var normalized = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
+        if (normalized?.Length > MaxMetaLength)
+        {
+            throw new DomainException($"A hold reason cannot be longer than {MaxMetaLength} characters.");
+        }
+
+        if (normalized == Hold)
+        {
+            return;
+        }
+
+        Raise(new PostHoldSet(normalized));
     }
 
     public void Unpublish()
@@ -325,6 +354,9 @@ public sealed class Post : AggregateRoot
                 Review = PostReview.None;
                 ApprovedRevision = null;
                 ApprovedSha256 = null;
+                break;
+            case PostHoldSet e:
+                Hold = e.Reason;
                 break;
             case PostDeleted:
                 IsDeleted = true;

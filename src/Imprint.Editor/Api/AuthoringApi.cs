@@ -48,6 +48,7 @@ using CreatePostCmd = Imprint.Authoring.Features.Posts.CreatePost.CreatePost;
 using PublishPostCmd = Imprint.Authoring.Features.Posts.PublishPost.PublishPost;
 using RequestPostChangesCmd = Imprint.Authoring.Features.Posts.RequestPostChanges.RequestPostChanges;
 using SchedulePostCmd = Imprint.Authoring.Features.Posts.SchedulePost.SchedulePost;
+using HoldPostCmd = Imprint.Authoring.Features.Posts.HoldPost.HoldPost;
 using SetSiteReviewerCmd = Imprint.Authoring.Features.Sites.SetSiteReviewer.SetSiteReviewer;
 using SubmitPostForReviewCmd = Imprint.Authoring.Features.Posts.SubmitPostForReview.SubmitPostForReview;
 using TagAssetCmd = Imprint.Authoring.Features.Assets.TagAsset.TagAsset;
@@ -992,6 +993,18 @@ public static class AuthoringApi
                 : Results.BadRequest(new { error = "schedule failed", details = result.Errors });
         });
 
+        // A hold is safe to set from a script: it can only stop a post going live, never send one.
+        // A null or empty reason lifts it.
+        api.MapPut("/posts/{postId}/hold", async (
+            string postId, PostHoldRequest? body, ICommandDispatcher dispatcher, CancellationToken ct) =>
+        {
+            if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
+            var result = await DispatchAs(dispatcher, actor, new HoldPostCmd(pid, body?.Reason), ct);
+            return result.Succeeded
+                ? Results.Ok(new { postId = pid.Compact, hold = string.IsNullOrWhiteSpace(body?.Reason) ? null : body.Reason.Trim() })
+                : Results.BadRequest(new { error = "hold failed", details = result.Errors });
+        });
+
         api.MapPost("/posts/{postId}/submit-review", async (
             string postId, PostSubmitRequest? body, ICommandDispatcher dispatcher, PostList posts, SiteOverview sites, CancellationToken ct) =>
         {
@@ -1247,6 +1260,7 @@ public static class AuthoringApi
         ["signature"] = post.Signature is { } signed
             ? new { signedBy = signed.SignedBy, signedAt = signed.SignedAt, revision = signed.Revision, sha256 = signed.Sha256 }
             : null,
+        ["hold"] = post.Hold,
         ["publishAt"] = post.PublishAt,
         ["publishedAt"] = post.PublishedAt,
         ["updatedAt"] = post.UpdatedAt,
@@ -1363,7 +1377,8 @@ public static class AuthoringApi
                 : (object)new { locale = e.Locale.Value, length = e.Markdown.Length }),
             PostPublishDateSet e => Entry("scheduled", new { publishAt = e.PublishAt }),
             PostSubmittedForReview e => Entry("submitted", new { proposedPublishAt = e.ProposedPublishAt, note = e.Note }),
-            PostReviewApproved e => Entry("approved", new { publishAt = e.PublishAt }),
+            PostReviewApproved e => Entry("approved", new { publishAt = e.PublishAt, revision = e.Revision, sha256 = e.Sha256 }),
+            PostHoldSet e => Entry("hold", new { reason = e.Reason }),
             PostChangesRequested e => Entry("changes-requested", new { reason = e.Reason }),
             PostApprovalLapsed => Entry("approval-lapsed"),
             PostPublished e => Entry("published", new { publishedAt = e.PublishedAt }),
@@ -1862,6 +1877,7 @@ public static class AuthoringApi
 
     /// <summary>The go-live instant, or null for "to be decided".</summary>
     public sealed record PostScheduleRequest(DateTimeOffset? PublishAt);
+    public sealed record PostHoldRequest(string? Reason);
 
     /// <summary>Hand a post to the site's reviewer, with a date they may overrule.</summary>
     public sealed record PostSubmitRequest(string? Locale, DateTimeOffset? ProposedPublishAt, string? Note);

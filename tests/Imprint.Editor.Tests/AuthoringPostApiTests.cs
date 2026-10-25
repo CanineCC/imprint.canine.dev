@@ -161,6 +161,20 @@ public sealed class AuthoringPostApiTests(AuthoringPostApiHost host) : IClassFix
         Assert.Equal("InReview", await StatusOf(post));
     }
 
+    // A script may hold a post (it can only stop one going live), and the hold reads back.
+    [Fact]
+    public async Task The_api_can_hold_a_post_and_lift_the_hold()
+    {
+        var post = await APost(GoLive);
+
+        var held = await Send(HttpMethod.Put, $"/api/authoring/posts/{post}/hold", new { Reason = "Waits for E7." });
+        Assert.Equal("Waits for E7.", held.GetProperty("hold").GetString());
+        Assert.Equal("Waits for E7.", (await Send(HttpMethod.Get, $"/api/authoring/posts/{post}")).GetProperty("hold").GetString());
+
+        await Send(HttpMethod.Put, $"/api/authoring/posts/{post}/hold", new { Reason = (string?)null });
+        Assert.Equal(JsonValueKind.Null, (await Send(HttpMethod.Get, $"/api/authoring/posts/{post}")).GetProperty("hold").ValueKind);
+    }
+
     // The history endpoint that made the blanked-post recovery possible.
     [Fact]
     public async Task History_carries_every_body_revision_and_its_markdown_on_request()

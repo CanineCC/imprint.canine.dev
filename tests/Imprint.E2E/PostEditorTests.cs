@@ -255,6 +255,40 @@ public sealed class PostEditorTests(EditorFixture fixture)
     }
 
     [Fact]
+    public async Task A_held_post_offers_no_publish_until_the_hold_is_lifted()
+    {
+        var page = await OpenPosts(fixture);
+        var title = $"Hold {Guid.NewGuid():N}"[..11];
+        await page.FillAsync("[data-testid='new-post-title']", title);
+        await page.ClickAsync("[data-testid='new-post-create']");
+        await page.WaitForURLAsync("**/posts/**");
+        await page.WaitForInteractive();
+        await page.FillAsync("[data-testid='post-body']", $"# {title}\n\nFigures still to come.\n");
+        await page.Locator("[data-testid='post-preview'] h1").WaitForAsync();
+        await Expect(page.Locator("[data-testid='post-publish']")).ToBeVisibleAsync();
+
+        await page.ClickAsync("[data-testid='post-hold']");
+        await page.FillAsync("[data-testid='post-hold-reason']", "Figures wait for a measurement.");
+        await page.ClickAsync("[data-testid='post-hold-set']");
+
+        await Expect(page.Locator("[data-testid='post-hold-line']")).ToContainTextAsync("On hold: Figures wait for a measurement.");
+        await Expect(page.Locator("[data-testid='post-publish']")).ToHaveCountAsync(0);
+        if (Environment.GetEnvironmentVariable("IMPRINT_E2E_SHOTS") is { Length: > 0 } shots)
+        {
+            await page.ScreenshotAsync(new() { Path = Path.Combine(shots, "post-hold.png") });
+        }
+
+        // It survives a reload: the hold is in the log, not in the page.
+        await page.ReloadAsync();
+        await page.WaitForInteractive();
+        await Expect(page.Locator("[data-testid='post-hold-line']")).ToContainTextAsync("Figures wait for a measurement.");
+
+        await page.ClickAsync("[data-testid='post-hold-lift']");
+        await Expect(page.Locator("[data-testid='post-hold-line']")).ToHaveCountAsync(0);
+        await Expect(page.Locator("[data-testid='post-publish']")).ToBeVisibleAsync();
+    }
+
+    [Fact]
     public async Task An_unpublished_post_can_be_opened_as_a_real_page_and_the_trail_leads_back()
     {
         // Two complaints, one journey: there was no way to see a post as a PAGE before deciding

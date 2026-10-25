@@ -246,4 +246,41 @@ public sealed class PostReviewTests
         Assert.Null(outcome.Aggregate.PublishAt);
         Assert.False(outcome.Aggregate.IsScheduled(September.AddDays(-1)));
     }
+
+    // ------------------------------------------------------------------- hold
+
+    [Fact]
+    public void A_held_post_cannot_be_published_and_says_why() =>
+        AggregateSpec.For<Post>()
+            .Given(Created(), Body(), new PostHoldSet("Figures wait for a measurement."))
+            .When(post => post.Publish(En, September))
+            .ThenFails("Figures wait for a measurement.");
+
+    [Fact]
+    public void Lifting_the_hold_lets_it_publish()
+    {
+        var outcome = AggregateSpec.For<Post>()
+            .Given(Created(), Body(), new PostHoldSet("Figures wait."), new PostHoldSet(null))
+            .When(post => post.Publish(En, September));
+
+        Assert.True(outcome.Aggregate.IsPublished);
+    }
+
+    [Fact]
+    public void A_hold_neither_needs_nor_lapses_an_approval()
+    {
+        var outcome = AggregateSpec.For<Post>()
+            .Given(Created(), Body(), new PostSubmittedForReview(September, null), new PostReviewApproved(September, 1, BodySha))
+            .When(post => post.SetHold("  Waits for E7.  "));
+
+        outcome.ThenRaised(new PostHoldSet("Waits for E7."));
+        Assert.True(outcome.Aggregate.IsApproved);
+    }
+
+    [Fact]
+    public void Holding_again_for_the_same_reason_records_nothing() =>
+        AggregateSpec.For<Post>()
+            .Given(Created(), Body(), new PostHoldSet("Waits."))
+            .When(post => post.SetHold("Waits."))
+            .ThenNothing();
 }
