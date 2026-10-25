@@ -29,6 +29,9 @@ public static class ProductPricingTemplate
     /// <summary>CCA: the free lines, pay as you go, and the monthly tiers.</summary>
     public const string CcaName = "cca-pricing";
 
+    /// <summary>Assay: a yearly fee per repository from its rebuild cost, or a single report at a share of it.</summary>
+    public const string AssayName = "assay-pricing";
+
     /// <summary>Assert's plans as cards, or null when none is on sale.</summary>
     public static string? RenderAssert(string? json)
     {
@@ -135,6 +138,32 @@ public static class ProductPricingTemplate
         }
 
         html.Append("</tbody></table>");
+        return html.ToString();
+    }
+
+    /// <summary>Assay's base prices per repository, or null when the payload names no flat fee.</summary>
+    public static string? RenderAssay(string? json)
+    {
+        if (Parse(json) is not { } root || Str(root, "flatFee") is not { Length: > 0 } flat || Str(root, "ratePercent") is not { Length: > 0 } rate)
+        {
+            return null;
+        }
+
+        var share = Long(root, "perReportDivisor") switch
+        {
+            2 => "half of the yearly fee",
+            3 => "a third of the yearly fee",
+            4 => "a quarter of the yearly fee",
+            { } n and > 1 => $"1/{n.ToString(CultureInfo.InvariantCulture)} of the yearly fee",
+            _ => "the yearly fee",
+        };
+        var html = new StringBuilder("<div class=\"ip-grid ip-grid-3up\">");
+        html.Append("<div class=\"ip-stack\"><h3>A year for a repository</h3><p class=\"ip-price\">").Append(Esc(flat))
+            .Append("<span class=\"ip-price-unit\">plus ").Append(Esc(rate)).Append(" of the repository's estimated rebuild cost, a year</span>")
+            .Append("<span class=\"ip-price-allowance\">As many reports on that repository as you like that year</span></p></div>");
+        html.Append("<div class=\"ip-stack\"><h3>One report</h3><p class=\"ip-price\">").Append(Esc(share))
+            .Append("<span class=\"ip-price-allowance\">For a single decision report on a repository</span></p></div>");
+        html.Append("</div>");
         return html.ToString();
     }
 

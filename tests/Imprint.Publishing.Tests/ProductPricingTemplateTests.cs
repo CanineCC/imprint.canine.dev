@@ -26,6 +26,24 @@ public sealed class ProductPricingTemplateTests
           {"key":"cca-25m","name":"CCA 25M","monthlyPriceEur":500,"price":"€500","linesPerMonth":25000000,"requestsPerMinute":120}]}
         """;
 
+    private const string AssayJson = """
+        {"product":"assay","currency":"EUR","vatIncluded":false,"flatFeeEur":1000,"flatFee":"€1,000","rateOfRebuildCost":0.0025,
+         "ratePercent":"0.25 %","perReportDivisor":3}
+        """;
+
+    [Fact]
+    public void Assay_renders_the_yearly_fee_per_repository_and_the_single_report_share()
+    {
+        var html = ProductPricingTemplate.RenderAssay(AssayJson);
+        Assert.NotNull(html);
+        Assert.Contains("€1,000", html);
+        Assert.Contains("0.25 %", html);
+        Assert.Contains("a third of the yearly fee", html);
+        Assert.Contains("As many reports on that repository as you like that year", html);
+        Assert.Null(ProductPricingTemplate.RenderAssay("""{"flatFee":null}"""));
+        Assert.NotNull(PrerenderTemplates.Render("assay-pricing", AssayJson));
+    }
+
     [Fact]
     public void Assert_renders_each_plan_per_author_with_its_fair_use_and_features()
     {

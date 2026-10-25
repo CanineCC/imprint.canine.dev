@@ -28,6 +28,7 @@ public static class PrerenderTemplates
         ProductPricingTemplate.AssertName => ProductPricingTemplate.RenderAssert(body),
         ProductPricingTemplate.AssureName => ProductPricingTemplate.RenderAssure(body),
         ProductPricingTemplate.CcaName => ProductPricingTemplate.RenderCca(body),
+        ProductPricingTemplate.AssayName => ProductPricingTemplate.RenderAssay(body),
         PricingTemplate.PlansName => PricingTemplate.RenderPlans(body),
         ScoreCardTemplate.Name => ScoreCardTemplate.Render(body, OriginOf(url)),
         ScoreCardTemplate.FullName => ScoreCardTemplate.RenderFull(body, OriginOf(url)),
