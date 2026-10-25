@@ -25,6 +25,9 @@ public static class PrerenderTemplates
     {
         PricingTemplate.Name => PricingTemplate.Render(body),
         PricingTemplate.OnPremName => PricingTemplate.RenderOnPrem(body),
+        ProductPricingTemplate.AssertName => ProductPricingTemplate.RenderAssert(body),
+        ProductPricingTemplate.AssureName => ProductPricingTemplate.RenderAssure(body),
+        ProductPricingTemplate.CcaName => ProductPricingTemplate.RenderCca(body),
         PricingTemplate.PlansName => PricingTemplate.RenderPlans(body),
         ScoreCardTemplate.Name => ScoreCardTemplate.Render(body, OriginOf(url)),
         ScoreCardTemplate.FullName => ScoreCardTemplate.RenderFull(body, OriginOf(url)),

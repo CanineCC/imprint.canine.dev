@@ -1390,6 +1390,51 @@
     ]
   },
   {
+    "tag": "assert-pricing",
+    "name": "Assert pricing (rendered here)",
+    "description": "The Assert prices, fetched as data from the product and rendered in this site's own markup at publish time. A price edit in the product's console re-renders the page; nothing is typed here.",
+    "bundle": "",
+    "placeholder": "Prices are published here.",
+    "prerender": "{base}/api/public/pricing/assert",
+    "prerenderTemplate": "assert-pricing",
+    "props": [
+      {
+        "name": "base",
+        "label": "Product base URL (the host that serves /api/public)"
+      }
+    ]
+  },
+  {
+    "tag": "assure-pricing",
+    "name": "Assure pricing (rendered here)",
+    "description": "The Assure prices, fetched as data from the product and rendered in this site's own markup at publish time. A price edit in the product's console re-renders the page; nothing is typed here.",
+    "bundle": "",
+    "placeholder": "Prices are published here.",
+    "prerender": "{base}/api/public/pricing/assure",
+    "prerenderTemplate": "assure-pricing",
+    "props": [
+      {
+        "name": "base",
+        "label": "Product base URL (the host that serves /api/public)"
+      }
+    ]
+  },
+  {
+    "tag": "cca-pricing",
+    "name": "CCA pricing (rendered here)",
+    "description": "The CCA prices, fetched as data from the product and rendered in this site's own markup at publish time. A price edit in the product's console re-renders the page; nothing is typed here.",
+    "bundle": "",
+    "placeholder": "Prices are published here.",
+    "prerender": "{base}/api/public/pricing/cca",
+    "prerenderTemplate": "cca-pricing",
+    "props": [
+      {
+        "name": "base",
+        "label": "Product base URL (the host that serves /api/public)"
+      }
+    ]
+  },
+  {
     "tag": "wd-pricing-plans",
     "name": "Pricing plans with on-prem (rendered here)",
     "description": "Every package and the self-hosted sizes as one row of plan cards, cheapest first, with on-prem as the last card. Fetched as data from Watchdog and rendered in this site's own markup at publish time. Reads both bucket-priced and flat-priced packages, so the page follows the billing catalogue through a change of pricing model.",
