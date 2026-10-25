@@ -1285,6 +1285,19 @@ public sealed class SitePublisher(
                     }
 
                     break;
+                case TableNode table:
+                    foreach (var cell in table.InlineHtmlCells)
+                    {
+                        foreach (var (_, html) in cell.Values)
+                        {
+                            foreach (var id in RichTextHtml.AssetReferences(html))
+                            {
+                                yield return id;
+                            }
+                        }
+                    }
+
+                    break;
             }
         }
 
@@ -1359,6 +1372,21 @@ public sealed class SitePublisher(
                             foreach (var linkedId in PageRefsIn(html))
                             {
                                 tokens.Add(PageLinkToken(linkedId));
+                            }
+                        }
+
+                        break;
+
+                    // An inline table cell is prose-grammar html too, with the same page: hrefs.
+                    case TableNode table:
+                        foreach (var cell in table.InlineHtmlCells)
+                        {
+                            foreach (var (_, html) in cell.Values)
+                            {
+                                foreach (var linkedId in PageRefsIn(html))
+                                {
+                                    tokens.Add(PageLinkToken(linkedId));
+                                }
                             }
                         }
 

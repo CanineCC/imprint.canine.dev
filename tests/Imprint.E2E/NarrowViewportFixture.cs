@@ -282,6 +282,14 @@ public sealed class NarrowViewportFixture : IAsyncLifetime
             Heading(1, "Artifacts"),
             Table(("Digest", "Size"), (Digest, "12 MB")));
 
+        // A documentation table as an author WRITES it — GitHub markdown through the post
+        // converter — with inline formatting in the cells, so the phone check covers the inline
+        // table, not only the plain-text one the props API builds.
+        var converted = Imprint.Authoring.Markdown.MarkdownToNodes.Convert(MarkdownTable, En);
+        Assert.True(converted.Ok, string.Join("; ", converted.Problems.Select(p => p.Message)));
+        await AuthorPage(siteId, "method", "Method",
+            [Heading(1, "Method"), .. converted.Nodes]);
+
         var site = await store.Load<Site>(siteId.Stream);
         site.SetNavigation(
             [NavigationItem.Page(homeId), NavigationItem.Page(proseId),
@@ -297,6 +305,15 @@ public sealed class NarrowViewportFixture : IAsyncLifetime
         var report = await services.GetRequiredService<SitePublisher>().Synchronize();
         Assert.Empty(report.Errors);
     }
+
+    /// <summary>A four-column method table of the kind the resource center carries.</summary>
+    public const string MarkdownTable = """
+        | Claim | Measured on | Kind | Where to check |
+        |---|---|:--:|---|
+        | **Noise share** | 268 repositories, cycle 1 | *Measured* | [the replay](https://example.test/replay) |
+        | Scored vs advisory | every finding | *Defined* | METHOD.md \| section 2.0 |
+        | Repositories hit | per dimension and kind | *Measured* | [the census](https://example.test/census) |
+        """;
 
     private static SectionNode Section(params Node[] children) =>
         new() { Id = NodeId.New(), Children = NodeList.Of(children) };

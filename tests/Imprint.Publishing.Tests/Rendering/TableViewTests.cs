@@ -29,7 +29,8 @@ public sealed class TableViewTests
 
         Assert.Contains("<div class=\"ip-table-wrap\"", html);
         Assert.Contains("<table class=\"ip-table\">", html);
-        Assert.Contains("<th>Term</th><th>Meaning</th>", html);
+        // scope="col": each header cell names its column to a screen reader.
+        Assert.Contains("<th scope=\"col\">Term</th><th scope=\"col\">Meaning</th>", html);
         Assert.Contains("<td>Producer</td>", html);
     }
 
@@ -53,6 +54,54 @@ public sealed class TableViewTests
 
         Assert.DoesNotContain("<script>", html);
         Assert.Contains("&lt;script&gt;", html);
+    }
+
+    [Fact]
+    public async Task Inline_cells_render_their_formatting_as_markup()
+    {
+        var node = new TableNode
+        {
+            Id = NodeId.New(),
+            CellMarkup = TableCellMarkup.Inline,
+            Head = [En("<strong>Kind</strong>")],
+            Rows = [[En("<em>essay</em> &amp; <a href=\"https://example.test/\">guide</a>")]],
+        };
+
+        var html = await RenderHarness.RenderNode(Static, node);
+
+        Assert.Contains("<th scope=\"col\"><strong>Kind</strong></th>", html);
+        // Through the prose link resolver, so an external link gets the same rel="noopener".
+        Assert.Contains("<td><em>essay</em> &amp; <a href=\"https://example.test/\" rel=\"noopener\">guide</a></td>", html);
+    }
+
+    [Fact]
+    public async Task A_page_link_in_an_inline_cell_resolves_like_one_in_prose()
+    {
+        var target = PageId.New();
+        var node = new TableNode
+        {
+            Id = NodeId.New(),
+            CellMarkup = TableCellMarkup.Inline,
+            Rows = [[En($"<a href=\"page:{target.Value}\">the method</a>")]],
+        };
+        var ctx = Static with { ResolvePagePath = id => id == target ? "/method/" : null };
+
+        var html = await RenderHarness.RenderNode(ctx, node);
+
+        Assert.Contains("<a href=\"/method/\">the method</a>", html);
+        Assert.DoesNotContain("page:", html);
+    }
+
+    [Fact]
+    public async Task A_plain_text_table_never_renders_its_cells_as_markup()
+    {
+        // The flag is the only thing that turns markup on: a pre-existing table holding the same
+        // characters stays text.
+        var node = new TableNode { Id = NodeId.New(), Rows = [[En("<strong>not bold</strong>")]] };
+
+        var html = await RenderHarness.RenderNode(Static, node);
+
+        Assert.Contains("<td>&lt;strong&gt;not bold&lt;/strong&gt;</td>", html);
     }
 
     [Fact]

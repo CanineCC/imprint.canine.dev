@@ -85,6 +85,69 @@ public sealed class PostEditorTests(EditorFixture fixture)
         Assert.Contains($"blog/{slug}/", feed, StringComparison.Ordinal);
     }
 
+    private const string TableBody = """
+        # Tables in a post
+
+        | Kind | Where it lives | Status |
+        |:---|:--:|---:|
+        | **Essay** | [the guide](https://example.test/guide) | *draft* |
+        | Whitepaper | a \| b | signed |
+        """;
+
+    [Fact]
+    public async Task A_markdown_table_previews_as_a_real_table_and_publishes_as_one()
+    {
+        var page = await OpenPosts(fixture);
+        var title = $"Table {Guid.NewGuid():N}"[..12];
+        await page.FillAsync("[data-testid='new-post-title']", title);
+        await page.ClickAsync("[data-testid='new-post-create']");
+        await page.WaitForURLAsync("**/posts/**");
+        await page.WaitForInteractive();
+
+        await page.FillAsync("[data-testid='post-body']", TableBody);
+
+        var preview = page.Locator("[data-testid='post-preview']");
+        var table = preview.Locator("table.ip-table");
+        await table.WaitForAsync();
+        await Expect(page.Locator("[data-testid='post-problems']")).ToHaveCountAsync(0);
+
+        // Header cells are real column headers a screen reader can announce with each cell.
+        await Expect(table.Locator("thead th[scope='col']")).ToHaveCountAsync(3);
+        await Expect(table.Locator("tbody tr")).ToHaveCountAsync(2);
+        // The cells kept their inline formatting, and the escaped pipe is a character.
+        await Expect(table.Locator("tbody strong")).ToHaveTextAsync("Essay");
+        await Expect(table.Locator("tbody em")).ToHaveTextAsync("draft");
+        await Expect(table.Locator("tbody a[href='https://example.test/guide']")).ToHaveTextAsync("the guide");
+        await Expect(table.Locator("tbody tr").Nth(1).Locator("td").Nth(1)).ToHaveTextAsync("a | b");
+
+        if (Environment.GetEnvironmentVariable("IMPRINT_E2E_SHOTS") is { Length: > 0 } shots)
+        {
+            Directory.CreateDirectory(shots);
+            await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(shots, "post-editor-table-preview.png") });
+        }
+
+        // ---- a table ROUGH enough to refuse: a ragged row is named at its line
+        await page.FillAsync("[data-testid='post-body']", "Intro.\n\n| a | b |\n|---|---|\n| 1 |\n");
+        var problems = page.Locator("[data-testid='post-problems']");
+        await problems.WaitForAsync();
+        Assert.Contains("Line 5", await problems.InnerTextAsync(), StringComparison.OrdinalIgnoreCase);
+
+        // ---- and the good one publishes as a table, through the same renderer
+        await page.FillAsync("[data-testid='post-body']", TableBody);
+        await Expect(page.Locator("[data-testid='post-problems']")).ToHaveCountAsync(0);
+        await table.WaitForAsync();
+        await page.ClickAsync("[data-testid='post-publish']");
+        await page.WaitForSelectorAsync("[data-testid='post-status']:has-text('Published')");
+
+        var postPath = Path.Combine(fixture.PublishDirectory, "blog", SlugOf(title), "index.html");
+        await WaitForFile(postPath + ".br");
+        var html = await File.ReadAllTextAsync(postPath);
+        Assert.Contains("<table class=\"ip-table\">", html, StringComparison.Ordinal);
+        Assert.Contains("<th scope=\"col\">Kind</th>", html, StringComparison.Ordinal);
+        Assert.Contains("<td><strong>Essay</strong></td>", html, StringComparison.Ordinal);
+        Assert.Contains("<td>a | b</td>", html, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task A_body_that_cannot_convert_is_reported_and_blocks_publishing()
     {

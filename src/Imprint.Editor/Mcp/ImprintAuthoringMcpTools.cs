@@ -325,7 +325,7 @@ public sealed class ImprintAuthoringMcpTools
     }
 
     [McpServerTool(Name = "add_node")]
-    [Description("Add a node — and its whole subtree in one call — to a page. The node spec is a JSON object: {\"type\":\"section|stack|columns|grid|heading|richtext|code|table|button|image|video|svg|divider|spacer|widget\", ...props, \"children\":[...]}. Text props (text/html/label/alt) take a plain string (default locale) or a {\"en\":\"…\"} object; rich-text html must be the canonical inline subset (<p>, <ul>/<ol>/<li>, <strong>, <em>, <a href>, <br>). A table takes {\"head\":[\"…\"],\"rows\":[[\"…\"]]} (cells: string or locale object); code takes {\"text\":…,\"language\":…}. parentId omitted ⇒ the page root, which accepts sections only. Ids are minted server-side.")]
+    [Description("Add a node — and its whole subtree in one call — to a page. The node spec is a JSON object: {\"type\":\"section|stack|columns|grid|heading|richtext|code|table|button|image|video|svg|divider|spacer|widget\", ...props, \"children\":[...]}. Text props (text/html/label/alt) take a plain string (default locale) or a {\"en\":\"…\"} object; rich-text html must be the canonical inline subset (<p>, <ul>/<ol>/<li>, <strong>, <em>, <a href>, <br>). A table takes {\"head\":[\"…\"],\"rows\":[[\"…\"]]} (cells: string or locale object) and an optional \"cellMarkup\": \"Text\" (default; cells are plain text) or \"Inline\" (cells are the canonical inline subset: <strong>, <em>, <a href>, <br>, no <p>); code takes {\"text\":…,\"language\":…}. parentId omitted ⇒ the page root, which accepts sections only. Ids are minted server-side.")]
     public static async Task<object> AddNode(
         [Description("The page id.")] string pageId,
         [Description("The node spec as JSON, e.g. {\"type\":\"heading\",\"level\":2,\"text\":\"The loop\"}.")] string nodeJson,
@@ -940,7 +940,7 @@ public sealed class ImprintAuthoringMcpTools
     }
 
     [McpServerTool(Name = "set_post_body")]
-    [Description("Replace a post's markdown body for one locale. Markdown is the authored truth — the node tree is rebuilt from it at publish, so a later converter fix reaches posts already written. Images are referenced as ![alt](media:{assetId}) and must stand alone in their paragraph.")]
+    [Description("Replace a post's markdown body for one locale. Markdown is the authored truth — the node tree is rebuilt from it at publish, so a later converter fix reaches posts already written. Images are referenced as ![alt](media:{assetId}) and must stand alone in their paragraph. GitHub pipe tables convert (a header row, a |---| delimiter row, then exactly one cell per column in every row; \\| for a pipe inside a cell; bold, italic and links work in cells; column alignment is ignored); a ragged row or a missing delimiter row is refused at its line.")]
     public static async Task<object> SetPostBody(
         [Description("The post id.")] string postId,
         [Description("The markdown body.")] string markdown,

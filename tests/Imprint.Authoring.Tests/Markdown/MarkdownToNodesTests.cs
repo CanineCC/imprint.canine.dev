@@ -221,7 +221,7 @@ public sealed class MarkdownToNodesTests
 
     [Theory]
     [InlineData("> quoted", "Blockquotes")]
-    [InlineData("| a | b |", "Tables")]
+    [InlineData("| a | b |", "delimiter row")]
     [InlineData("Some `inline code` here", "Inline code")]
     [InlineData("A <span>tag</span>", "Raw HTML")]
     [InlineData("    indented code", "Indented code")]

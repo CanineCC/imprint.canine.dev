@@ -97,6 +97,9 @@ public static class AuthoringNodeJson
             case TableNode table:
                 props["head"] = table.Head.Select(Localized).ToList();
                 props["rows"] = table.Rows.Select(row => row.Select(Localized).ToList()).ToList();
+                // Always stated: Text cells are escaped on render, Inline cells are canonical
+                // inline html — a reader that guessed would write tags back as visible text.
+                props["cellMarkup"] = table.CellMarkup.ToString();
                 break;
 
             case SpacerNode spacer:
@@ -253,6 +256,7 @@ public static class AuthoringNodeJson
                 Id = id,
                 Head = LocalizedListOf(spec, "head", locale),
                 Rows = LocalizedRowsOf(spec, "rows", locale),
+                CellMarkup = Enum(spec, "cellMarkup", TableCellMarkup.Text),
             },
             "divider" => new DividerNode { Id = id },
             "spacer" => new SpacerNode { Id = id, Size = Enum(spec, "size", SpacerSize.Medium) },
@@ -465,6 +469,7 @@ public static class AuthoringNodeJson
             {
                 Head = Has(patch, "head") ? LocalizedListOf(patch, "head", locale) : table.Head,
                 Rows = Has(patch, "rows") ? LocalizedRowsOf(patch, "rows", locale) : table.Rows,
+                CellMarkup = Enum(patch, "cellMarkup", table.CellMarkup),
             },
             CodeNode code => code with
             {
