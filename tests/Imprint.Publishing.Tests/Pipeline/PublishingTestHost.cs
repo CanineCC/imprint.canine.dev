@@ -34,7 +34,7 @@ internal sealed class PublishingTestHost : IAsyncDisposable
     /// not wire by default — the widget catalog, for instance, which is deliberately not
     /// registered by AddImprintAuthoring so every host has to choose one.</param>
     public PublishingTestHost(
-        string? baseUrl = null, bool sandboxDeploys = false, Action<IServiceCollection>? configure = null)
+        string? baseUrl = null, bool sandboxDeploys = false, Action<IServiceCollection>? configure = null, int refreshMilliseconds = 0)
     {
         _root = Directory.CreateTempSubdirectory("imprint-publish-");
         OutputPath = Path.Combine(_root.FullName, "output");
@@ -55,6 +55,7 @@ internal sealed class PublishingTestHost : IAsyncDisposable
             WidgetsDirectory = WidgetsDirectory,
             BaseUrl = baseUrl,
             DebounceMilliseconds = 50,
+            RefreshMilliseconds = refreshMilliseconds,
         });
         configure?.Invoke(services);
         Services = services.BuildServiceProvider();
