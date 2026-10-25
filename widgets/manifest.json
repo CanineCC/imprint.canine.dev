@@ -1599,20 +1599,20 @@
   {
     "tag": "assure-progress-card",
     "name": "Assure example result",
-    "description": "An Assure result as a card, always tagged as an example inside the card itself: the app's name, how many things its AI can improve, how many are done since a date with a progress bar, the items as chips (struck through when done) and the score with its change. DATA ONLY: everything comes from the props, nothing is fetched.",
+    "description": "An Assure result as a card, told as what the builder gains and always tagged as an example inside the card itself: the app's name, the quality score as a large plain number with how far it rose, how many improvements their AI made with a progress bar, the wins in plain words (a filled dot when done, a ring when still with their AI) and when Assure scans again. DATA ONLY: everything comes from the props, nothing is fetched.",
     "bundle": "assure-progress-card.js",
     "placeholder": "Example result",
     "props": [
       { "name": "app", "label": "App name, shown as its repository", "type": "text", "default": "your-app" },
       { "name": "example-label", "label": "The example tag", "type": "text", "default": "Example" },
-      { "name": "count", "label": "Things the AI can improve", "type": "number", "default": "312" },
-      { "name": "count-text", "label": "Words under the number", "type": "text", "default": "things your AI can improve" },
-      { "name": "done", "label": "How many are done", "type": "number", "default": "280" },
-      { "name": "done-label", "label": "Word after the done count", "type": "text", "default": "done" },
-      { "name": "since", "label": "Since when", "type": "text", "default": "since 9 October" },
-      { "name": "items", "label": "Items (JSON array of {text, done}); done items are struck through", "type": "text", "default": "[]" },
-      { "name": "score", "label": "Score (0 to 100, a plain number)", "type": "text", "default": "" },
-      { "name": "score-change", "label": "Score change", "type": "text", "default": "" }
+      { "name": "score", "label": "Score (0 to 100, a plain number), shown large", "type": "text", "default": "80" },
+      { "name": "score-text", "label": "Words under the score", "type": "text", "default": "Quality score up 6 in two weeks" },
+      { "name": "done", "label": "How many improvements are made", "type": "number", "default": "280" },
+      { "name": "total", "label": "How many there were in all", "type": "number", "default": "312" },
+      { "name": "done-text", "label": "Words after the improvement count", "type": "text", "default": "improvements made by your AI" },
+      { "name": "done-note", "label": "Line under the improvement count", "type": "text", "default": "while you kept building" },
+      { "name": "items", "label": "Items (JSON array of {text, done}); done items get a filled dot, the rest a ring", "type": "text", "default": "[]" },
+      { "name": "next", "label": "Line at the foot of the card", "type": "text", "default": "" }
     ]
   }
 ]
