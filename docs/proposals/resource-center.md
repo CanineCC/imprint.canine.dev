@@ -150,3 +150,11 @@ A blind review (no conversation context) gave BUILD / DEFER / CUT per item, from
 **Added by the review:** a **publish hold** (a blocker field that refuses publish while set: B4 in imprint is past its go-live and "held on figures"; B22/B23/B25 wait on WP-40); **inline code** in the node vocabulary (~274 spans in the manuscripts); a defined path for **SVG figures**; settle **which bar applies** (EDITORIAL-BAR is deliberately a different contract from PUBLICATION-BAR, against decision 1's "same bar"); update **CHARTER §6** ("guides stay on the product site").
 
 **Revised order:** 0) the 19 InReview posts need the reviewer, not code (untouched since 2026-08-17, four past their date); 1) B2 gap fix + publish hold; 2) A1, A5, B1, B3 notes; 3) C1, C2, inline code, SVG path; 4) D1, D2, D4 on preprod; 5) E in batches with the converter.
+
+## Owner answers, 2026-10-25
+
+- **One bar for every kind.** The publication bar and the blog's editorial bar are merged into
+  `kennel.canine.dev/docs/marketing/ARTICLE-BAR.md`. The template still varies its header by kind; the bar does not vary.
+- **Anyone may sign, including the author.** The signature documents who approved which exact text and when; it is not
+  a separation-of-duties control. So B2 needs no "author may not sign" rule: the signed-in actor, the version, the sha256
+  of the rendered text and the time are recorded, and an edit after signing needs a new signature.
