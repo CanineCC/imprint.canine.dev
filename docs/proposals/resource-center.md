@@ -119,3 +119,34 @@ files that a published article links to.
 2. Does a correction to a signed article need a new signature (a new version), or may a typo fix ride on the old one?
    Proposal: every change is a new version; a version can be marked "editorial only".
 3. Danish: in scope now, or after launch?
+
+---
+
+## Gatekeeping review, 2026-10-25, and what changes
+
+A blind review (no conversation context) gave BUILD / DEFER / CUT per item, from the repos. Accepted unless noted.
+
+| Item | Verdict | What changes |
+|---|---|---|
+| A1 Kind | BUILD | One required field, set at creation |
+| A2 Product | DEFER → **BUILD minimal** *(disagree)* | The owner asked for product identity inside one site identity and approved the design with it (2026-10-25). Minimal: an OPTIONAL tag that allows several products (the charter: company material serves several at once); accent only, no product-only pages |
+| A3 Related | DEFER | Prose links stay. Instead a publish check: a guide or whitepaper may not link to an essay (CHARTER §1) |
+| A4 Kind fields | CUT, docs order DEFER | **No paper codes** (owner decision 2026-08-07: published papers carry no series numbers; the design's "W7" goes). Steps stay a numbered list |
+| A5 Rename | BUILD, labels only | Event names, API routes and MCP tools keep `post`; add aliases |
+| B1 Versions | BUILD, reduced | Version n, sha256 of the rendered text, date and signer on the publish event. Shown as "version n · date". **No public old versions or change lines** (PUBLICATION-BAR §1); essays keep appended, dated corrections (EDITORIAL-BAR §4) |
+| B2 Signature | BUILD, much cheaper | **First fix a gap that exists today:** the authoring API approves as `service:authoring-api` and the approve handler checks no reviewer (`AuthoringApi.cs` ~l.1027, `ApprovePostReviewHandler.cs`; verified). So: refuse approval from the API; the handler checks the signed-in actor is the site reviewer; add sha256 to the existing approval event. Edit-cancels-approval already exists |
+| B3 Publication control | BUILD, reduced | A private, never-published control-notes field per article (today's PUBLICATION-CONTROL.md / appendix bN.md pasted in); its hash goes into the signature. Structured register deferred until one whitepaper has been signed with notes alone |
+| B4 Tombstone | DEFER | Plain unpublish |
+| C1 Tables | BUILD | Header row + inline-only cells; 45 tables across 9 manuscripts |
+| C2 Callouts | BUILD, reduced | Plain blockquote, optional NOTE / WARNING label; no `[!CLAIM]` |
+| C3 Method card widget | CUT | It is a two-column table under the title (C1) |
+| D1 Site | BUILD | Ink and paper tokens; product accents via A2 |
+| D2 Templates | BUILD, reduced | One article template whose header depends on kind; one index grouped by kind, with kind tabs (the owner's brief asked for them; client-side, cheap). Bento: after the move |
+| D3 Search | DEFER | Until the corpus outgrows the grouped index; `llms.txt` exists |
+| D4 Redirects | BUILD | Per-site table, per URL; sitemaps already exist |
+| D5 Animation, D6 Step ticks | CUT | |
+| E Move | BUILD, corrected | Needs a **page-to-markdown converter** and a render-equivalence check. Pre-registrations (WP-40) stay in git as evidence; the paper itself becomes an article when signed. *(Review claimed B21–B27 are not drafts: wrong, it read a stale local checkout; five are on origin/main, B23/B25 to come.)* |
+
+**Added by the review:** a **publish hold** (a blocker field that refuses publish while set: B4 in imprint is past its go-live and "held on figures"; B22/B23/B25 wait on WP-40); **inline code** in the node vocabulary (~274 spans in the manuscripts); a defined path for **SVG figures**; settle **which bar applies** (EDITORIAL-BAR is deliberately a different contract from PUBLICATION-BAR, against decision 1's "same bar"); update **CHARTER §6** ("guides stay on the product site").
+
+**Revised order:** 0) the 19 InReview posts need the reviewer, not code (untouched since 2026-08-17, four past their date); 1) B2 gap fix + publish hold; 2) A1, A5, B1, B3 notes; 3) C1, C2, inline code, SVG path; 4) D1, D2, D4 on preprod; 5) E in batches with the converter.
