@@ -30,6 +30,13 @@ public enum PostStatus
     Modified,
 }
 
+/// <summary>
+/// Who approved which words: the login on the approval event, when, and the body revision and sha256
+/// it covers. <paramref name="Revision"/> and <paramref name="Sha256"/> are null on approvals recorded
+/// before approvals were signed (2026-10-25); the signer and the time are known for every approval.
+/// </summary>
+public sealed record PostSignature(string SignedBy, DateTimeOffset SignedAt, int? Revision, string? Sha256);
+
 /// <summary>One post as the editor index and the published blog index both see it.</summary>
 /// <param name="PublishedAt">When it first went live; null while it is a draft. This is the
 /// instant the listing sorts by and a reader cites — deliberately not <paramref name="UpdatedAt"/>,
@@ -45,7 +52,9 @@ public sealed record PostSummary(
     DateTimeOffset UpdatedAt,
     PostReview Review = PostReview.None,
     DateTimeOffset? PublishAt = null,
-    string? ReviewNote = null)
+    string? ReviewNote = null,
+    PostSignature? Signature = null,
+    string? Hold = null)
 {
     /// <summary>
     /// One word for where the post stands. Live beats everything — a published post that is
@@ -79,6 +88,7 @@ public sealed record PostSummary(
         !IsLive
         && PublishAt is { } at
         && at <= now
+        && Hold is null
         && (!siteRequiresReview || Review is PostReview.Approved);
 }
 
@@ -99,7 +109,9 @@ public sealed class PostList : ReadModel
         DateTimeOffset UpdatedAt,
         PostReview Review = PostReview.None,
         DateTimeOffset? PublishAt = null,
-        string? ReviewNote = null);
+        string? ReviewNote = null,
+        PostSignature? Signature = null,
+        string? Hold = null);
 
     private readonly Dictionary<PostId, Entry> _posts = [];
 
@@ -179,19 +191,25 @@ public sealed class PostList : ReadModel
                 Review = PostReview.Pending,
                 PublishAt = submitted.ProposedPublishAt,
                 ReviewNote = submitted.Note,
+                Signature = null,
             },
+            // The signer is the event's actor: the projection, not the aggregate, sees metadata.
             PostReviewApproved approved => entry with
             {
                 Review = PostReview.Approved,
                 PublishAt = approved.PublishAt,
                 ReviewNote = null,
+                Signature = new PostSignature(
+                    @event.Metadata.Actor, @event.Metadata.TimestampUtc, approved.Revision, approved.Sha256),
             },
             PostChangesRequested sentBack => entry with
             {
                 Review = PostReview.ChangesRequested,
                 ReviewNote = sentBack.Reason,
+                Signature = null,
             },
-            PostApprovalLapsed => entry with { Review = PostReview.None },
+            PostApprovalLapsed => entry with { Review = PostReview.None, Signature = null },
+            PostHoldSet held => entry with { Hold = held.Reason },
             _ => entry,
         };
 
@@ -210,5 +228,5 @@ public sealed class PostList : ReadModel
 
     private static PostSummary Summarize(PostId id, Entry entry) =>
         new(id, entry.SiteId, entry.Slug, entry.Title, entry.PublishedAt, entry.Version, entry.PublishedVersion,
-            entry.UpdatedAt, entry.Review, entry.PublishAt, entry.ReviewNote);
+            entry.UpdatedAt, entry.Review, entry.PublishAt, entry.ReviewNote, entry.Signature, entry.Hold);
 }

@@ -229,10 +229,21 @@ public sealed class PostEditorTests(EditorFixture fixture)
         await Expect(page.Locator("[data-testid='post-status']")).ToHaveTextAsync("Scheduled");
         await Expect(page.Locator("[data-testid='post-review-line']")).ToContainTextAsync("15 Apr 2027, 08:30");
 
+        // The approval is a signature: who, and which exact words (revision and hash).
+        var signature = page.Locator("[data-testid='post-signature-line']");
+        await Expect(signature).ToContainTextAsync("Signed by ");
+        await Expect(signature).ToContainTextAsync(new Regex(@"revision \d+, sha256 [0-9a-f]{12}\."));
+        await Expect(signature).ToHaveAttributeAsync("title", new Regex("^sha256 [0-9a-f]{64}$"));
+        if (Environment.GetEnvironmentVariable("IMPRINT_E2E_SHOTS") is { Length: > 0 } shots)
+        {
+            await page.ScreenshotAsync(new() { Path = Path.Combine(shots, "post-signature.png") });
+        }
+
         // ---- and only now is publishing on offer at all
         await Expect(page.Locator("[data-testid='post-publish']")).ToHaveTextAsync("Publish now");
         await page.ClickAsync("[data-testid='post-publish']");
         await Expect(page.Locator("[data-testid='post-status']")).ToHaveTextAsync("Published");
+        await Expect(signature).ToContainTextAsync("Signed by ");
 
         // Leave the fixture's shared site as it was for every other test in the collection.
         await page.GotoAsync($"/sites/{siteId}/settings");
@@ -241,6 +252,40 @@ public sealed class PostEditorTests(EditorFixture fixture)
         await page.FillAsync("[data-testid='site-reviewer-name']", "");
         await page.ClickAsync("[data-testid='site-reviewer-save']");
         await Expect(page.Locator(".ed-toast").First).ToContainTextAsync("publish directly");
+    }
+
+    [Fact]
+    public async Task A_held_post_offers_no_publish_until_the_hold_is_lifted()
+    {
+        var page = await OpenPosts(fixture);
+        var title = $"Hold {Guid.NewGuid():N}"[..11];
+        await page.FillAsync("[data-testid='new-post-title']", title);
+        await page.ClickAsync("[data-testid='new-post-create']");
+        await page.WaitForURLAsync("**/posts/**");
+        await page.WaitForInteractive();
+        await page.FillAsync("[data-testid='post-body']", $"# {title}\n\nFigures still to come.\n");
+        await page.Locator("[data-testid='post-preview'] h1").WaitForAsync();
+        await Expect(page.Locator("[data-testid='post-publish']")).ToBeVisibleAsync();
+
+        await page.ClickAsync("[data-testid='post-hold']");
+        await page.FillAsync("[data-testid='post-hold-reason']", "Figures wait for a measurement.");
+        await page.ClickAsync("[data-testid='post-hold-set']");
+
+        await Expect(page.Locator("[data-testid='post-hold-line']")).ToContainTextAsync("On hold: Figures wait for a measurement.");
+        await Expect(page.Locator("[data-testid='post-publish']")).ToHaveCountAsync(0);
+        if (Environment.GetEnvironmentVariable("IMPRINT_E2E_SHOTS") is { Length: > 0 } shots)
+        {
+            await page.ScreenshotAsync(new() { Path = Path.Combine(shots, "post-hold.png") });
+        }
+
+        // It survives a reload: the hold is in the log, not in the page.
+        await page.ReloadAsync();
+        await page.WaitForInteractive();
+        await Expect(page.Locator("[data-testid='post-hold-line']")).ToContainTextAsync("Figures wait for a measurement.");
+
+        await page.ClickAsync("[data-testid='post-hold-lift']");
+        await Expect(page.Locator("[data-testid='post-hold-line']")).ToHaveCountAsync(0);
+        await Expect(page.Locator("[data-testid='post-publish']")).ToBeVisibleAsync();
     }
 
     [Fact]

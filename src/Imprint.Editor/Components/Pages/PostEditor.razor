@@ -4,6 +4,7 @@
 @using Imprint.Authoring.Domain.Posts
 @using Imprint.Authoring.Domain.Sites
 @using Imprint.Authoring.Features.Posts.ApprovePostReview
+@using Imprint.Authoring.Features.Posts.HoldPost
 @using Imprint.Authoring.Features.Posts.ChangePostBody
 @using Imprint.Authoring.Features.Posts.RequestPostChanges
 @using Imprint.Authoring.Features.Posts.SchedulePost
@@ -104,11 +105,20 @@ else
                             title="@($"Send to {reviewer} for public relations review")"
                             @onclick="SubmitForReview">Send for review</button>
                 }
-                else
+                else if (_hold is null)
                 {
                     <button type="button" class="ed-btn ed-btn-primary" data-testid="post-publish"
                             title="@(IsFuture ? "Publish now, ignoring the scheduled date" : "Publish this post")"
                             @onclick="Publish">@(IsFuture ? "Publish now" : "Publish")</button>
+                }
+
+                @* A hold stops the post going live, the schedule included, until it is lifted. It is
+                   offered to anyone who can edit, at any stage before publication. *@
+                @if (CanEdit && _hold is null && _status != PostStatus.Published)
+                {
+                    <button type="button" class="ed-btn ed-btn-ghost" data-testid="post-hold"
+                            title="Stop this post going live until the hold is lifted"
+                            @onclick="() => _askingHold = !_askingHold">Hold…</button>
                 }
             </span>
         </header>
@@ -116,6 +126,39 @@ else
         @if (StatusLine is { Length: > 0 } line)
         {
             <p class="post-review-line" data-testid="post-review-line">@line</p>
+        }
+
+        @* The signature: who approved which exact words. It is what makes an approval evidence
+           rather than a status, so it is shown wherever the approval still stands. *@
+        @if (SignatureLine is { Length: > 0 } signed)
+        {
+            <p class="post-review-line post-signature-line" data-testid="post-signature-line"
+               title="@(_signature?.Sha256 is { } sha ? $"sha256 {sha}" : null)">@signed</p>
+        }
+
+        @if (_hold is { } held)
+        {
+            <p class="post-review-line post-hold-line" data-testid="post-hold-line">
+                On hold: @Sentence(held) Nothing publishes it, the schedule included, until the hold is lifted.
+                @if (CanEdit)
+                {
+                    <button type="button" class="ed-btn ed-btn-ghost" data-testid="post-hold-lift"
+                            @onclick="() => SetHold(null)">Lift hold</button>
+                }
+            </p>
+        }
+
+        @if (_askingHold)
+        {
+            <div class="post-sendback" data-testid="post-hold-form">
+                <label for="post-hold-reason">Why is it held?</label>
+                <textarea id="post-hold-reason" class="ed-input" rows="1" data-testid="post-hold-reason"
+                          @bind="_holdReason" @bind:event="oninput"
+                          placeholder="For example: figures wait for a measurement."></textarea>
+                <button type="button" class="ed-btn ed-btn-primary" data-testid="post-hold-set"
+                        disabled="@(_holdReason.Trim().Length == 0)" @onclick="() => SetHold(_holdReason)">Hold</button>
+                <button type="button" class="ed-btn ed-btn-ghost" @onclick="() => _askingHold = false">Cancel</button>
+            </div>
         }
 
         @if (_askingChanges)
@@ -309,6 +352,23 @@ else
         _ => null,
     };
 
+    private PostSignature? _signature;
+    private string? _hold;
+
+    /// <summary>The reason as a sentence: authors end theirs with a full stop or they do not.</summary>
+    private static string Sentence(string text) => text.EndsWith('.') || text.EndsWith('!') || text.EndsWith('?') ? text : text + ".";
+    private bool _askingHold;
+    private string _holdReason = "";
+
+    private string? SignatureLine => _signature is { } signed
+        && _status is PostStatus.Approved or PostStatus.Scheduled or PostStatus.Published or PostStatus.Modified
+        ? $"Signed by {signed.SignedBy}, {EditorialTime.ForAuthor(signed.SignedAt)} ({EditorialTime.Zone.Id})"
+          + (signed.Revision is { } revision && signed.Sha256 is { } sha
+              ? $": revision {revision}, sha256 {sha[..12]}"
+              : ": signed before revisions were recorded")
+          + (_status == PostStatus.Modified ? ". The changes since are not signed." : ".")
+        : null;
+
     private string Scheduled(string prefix = " on ") =>
         _publishAt is { } at ? $"{prefix}{EditorialTime.ForAuthor(at)} ({EditorialTime.Zone.Id})" : "";
 
@@ -358,6 +418,16 @@ else
             Toasts.Show(_publishAt is { } at
                 ? $"Approved — it goes live {EditorialTime.ForAuthor(at)}."
                 : "Approved. It waits until a date is set.");
+            ApplyPost(await Store.LoadOrDefault<Post>(_id.Stream) ?? _post!);
+        }
+    }
+
+    private async Task SetHold(string? reason)
+    {
+        if (await Commands.Run(new HoldPost(_id, reason)))
+        {
+            _askingHold = false;
+            _holdReason = "";
             ApplyPost(await Store.LoadOrDefault<Post>(_id.Stream) ?? _post!);
         }
     }
@@ -743,8 +813,13 @@ else
         Refresh();
     }
 
-    private void Refresh() =>
-        _status = Posts.Get(_id)?.StatusAt(DateTimeOffset.UtcNow, Reviewer is not null) ?? PostStatus.Draft;
+    private void Refresh()
+    {
+        var summary = Posts.Get(_id);
+        _status = summary?.StatusAt(DateTimeOffset.UtcNow, Reviewer is not null) ?? PostStatus.Draft;
+        _signature = summary?.Signature;
+        _hold = summary?.Hold;
+    }
 
     private void OnChanged() => _ = InvokeAsync(() =>
     {

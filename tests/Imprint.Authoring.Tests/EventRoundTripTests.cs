@@ -49,4 +49,18 @@ public sealed class EventRoundTripTests
                 $"{sample.GetType().Name} did not round-trip.\nOriginal: {sample}\nRound-tripped: {back}\nJson: {json}");
         }
     }
+
+    // An approval recorded before the signature existed (2026-10-25) carries only its date. It
+    // must still read, with no revision and no hash: the log is append-only and is never rewritten.
+    [Fact]
+    public void An_approval_stored_before_the_signature_still_reads()
+    {
+        var stableId = Registry.StableIdOf(new Imprint.Authoring.Domain.Posts.Events.PostReviewApproved(null));
+        var back = (Imprint.Authoring.Domain.Posts.Events.PostReviewApproved)Registry.Deserialize(
+            stableId, """{"PublishAt":"2026-09-02T06:00:00+02:00"}""");
+
+        Assert.Equal(new DateTimeOffset(2026, 9, 2, 6, 0, 0, TimeSpan.FromHours(2)), back.PublishAt);
+        Assert.Null(back.Revision);
+        Assert.Null(back.Sha256);
+    }
 }
