@@ -44,9 +44,12 @@ public sealed record PostPublishDateSet(DateTimeOffset? PublishAt);
 public sealed record PostSubmittedForReview(DateTimeOffset? ProposedPublishAt, string? Note);
 
 /// <summary>Sign-off. Carries the date the reviewer settled on, which may be neither the proposed
-/// one nor any date at all.</summary>
+/// one nor any date at all, and the signature: <paramref name="Revision"/> is the body revision the
+/// approval covers (how many body edits the post had) and <paramref name="Sha256"/> the hash of
+/// exactly those words (<see cref="Post.BodySha256"/>). The event's actor is WHO approved; these two
+/// say WHICH text. Both are null on approvals recorded before 2026-10-25.</summary>
 [EventType("post.review-approved")]
-public sealed record PostReviewApproved(DateTimeOffset? PublishAt);
+public sealed record PostReviewApproved(DateTimeOffset? PublishAt, int? Revision = null, string? Sha256 = null);
 
 [EventType("post.changes-requested")]
 public sealed record PostChangesRequested(string Reason);

@@ -11,6 +11,7 @@ using Imprint.Authoring.Features.Posts.SubmitPostForReview;
 using Imprint.Authoring.Features.Sites.SetSiteReviewer;
 using Imprint.Authoring.Projections;
 using Imprint.Authoring.Tests.Features.Pages;
+using Imprint.EventSourcing;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Imprint.Authoring.Tests.Features.Posts;
@@ -73,6 +74,70 @@ public sealed class PostReviewSliceTests
         await host.Ok(new PublishPost(id, En));
         await host.CatchUp();
         Assert.Equal(PostStatus.Published, host.Get<PostList>().Get(id)!.Status);
+    }
+
+    // Approval is a person's signature: the event's actor is the login that cleared the words.
+    // Anything holding a service identity (the authoring API key, the MCP server, an agent) can
+    // prepare and submit a post, but cannot approve it, or the signature would document nothing.
+    [Theory]
+    [InlineData("service:authoring-api")]
+    [InlineData("service:authoring-mcp")]
+    public async Task A_service_identity_cannot_approve(string service)
+    {
+        await using var host = NewHost();
+        var (site, id) = await NewPost(host);
+        await host.Ok(new SetSiteReviewer(site, "Lasse", "lasse@example.com"));
+        await host.Ok(new SubmitPostForReview(id, En, September, null));
+
+        var metadata = host.Get<EventMetadataProvider>();
+        var person = metadata.ActorSource;
+        metadata.ActorSource = () => service;
+        string error;
+        try
+        {
+            error = await host.Fails(new ApprovePostReview(id, September));
+        }
+        finally
+        {
+            metadata.ActorSource = person;
+        }
+
+        await host.CatchUp();
+        Assert.Contains("signed in", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(PostStatus.InReview, host.Get<PostList>().Get(id)!.Status);
+    }
+
+    // The signature is the point of approving: the login that approved, and a revision and hash
+    // anyone can recompute from the log. An edit withdraws it with the approval.
+    [Fact]
+    public async Task Approving_signs_the_post_with_the_person_and_the_hash_of_its_words()
+    {
+        await using var host = NewHost();
+        var (site, id) = await NewPost(host);
+        await host.Ok(new SetSiteReviewer(site, "Lasse", "lasse@example.com"));
+        await host.Ok(new SubmitPostForReview(id, En, September, null));
+
+        var metadata = host.Get<EventMetadataProvider>();
+        var person = metadata.ActorSource;
+        metadata.ActorSource = () => "lasse@example.com";
+        try
+        {
+            await host.Ok(new ApprovePostReview(id, September));
+        }
+        finally
+        {
+            metadata.ActorSource = person;
+        }
+
+        await host.CatchUp();
+        var signed = host.Get<PostList>().Get(id)!.Signature!;
+        Assert.Equal("lasse@example.com", signed.SignedBy);
+        Assert.Equal(1, signed.Revision);
+        Assert.Equal(Post.BodySha256(Imprint.Authoring.Domain.LocalizedText.Of(new Locale(En), Body)), signed.Sha256);
+
+        await host.Ok(new ChangePostBody(id, En, "# Hello\n\nWords nobody signed.\n"));
+        await host.CatchUp();
+        Assert.Null(host.Get<PostList>().Get(id)!.Signature);
     }
 
     [Fact]

@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Imprint.Authoring.Domain.Pages;
 using Imprint.Authoring.Domain.Posts.Events;
 using Imprint.Authoring.Markdown;
@@ -64,6 +66,16 @@ public sealed class Post : AggregateRoot
 
     /// <summary>Whether a reviewer's sign-off is on the CURRENT words (an edit lapses it).</summary>
     public bool IsApproved => Review is PostReview.Approved;
+
+    /// <summary>How many times the body has been changed: the revision a sign-off names.</summary>
+    public int BodyRevision { get; private set; }
+
+    /// <summary>The body revision the standing approval covers; null when nothing is approved, or
+    /// when the approval was recorded before approvals were signed.</summary>
+    public int? ApprovedRevision { get; private set; }
+
+    /// <summary>The sha256 of the words the standing approval covers (see <see cref="BodySha256"/>).</summary>
+    public string? ApprovedSha256 { get; private set; }
 
     public override string StreamId => Id.Stream;
 
@@ -188,7 +200,7 @@ public sealed class Post : AggregateRoot
             throw new DomainException("Only a post that is waiting for review can be approved.");
         }
 
-        Raise(new PostReviewApproved(publishAt));
+        Raise(new PostReviewApproved(publishAt, BodyRevision, BodySha256(Body)));
     }
 
     /// <summary>Sends it back. The reason is required — a rejection nobody can act on is not a review.</summary>
@@ -278,6 +290,7 @@ public sealed class Post : AggregateRoot
                 break;
             case PostBodyChanged e:
                 Body = Body.With(e.Locale, e.Markdown);
+                BodyRevision++;
                 break;
             case PostPublished e:
                 // First date wins. A reader sorts and cites by this, so it must not move because
@@ -301,6 +314,8 @@ public sealed class Post : AggregateRoot
                 Review = PostReview.Approved;
                 PublishAt = e.PublishAt;
                 ReviewNote = null;
+                ApprovedRevision = e.Revision;
+                ApprovedSha256 = e.Sha256;
                 break;
             case PostChangesRequested e:
                 Review = PostReview.ChangesRequested;
@@ -308,6 +323,8 @@ public sealed class Post : AggregateRoot
                 break;
             case PostApprovalLapsed:
                 Review = PostReview.None;
+                ApprovedRevision = null;
+                ApprovedSha256 = null;
                 break;
             case PostDeleted:
                 IsDeleted = true;
@@ -318,6 +335,23 @@ public sealed class Post : AggregateRoot
     }
 
     // ---------------------------------------------------------------------- helpers
+
+    /// <summary>
+    /// The hash a sign-off records, in a form anyone can recompute from the log: SHA-256 over the
+    /// UTF-8 of each locale's body in locale order, each written as <c>{locale}\n{markdown}\0</c>,
+    /// as lowercase hex. A single-locale post is therefore <c>sha256("en\n" + markdown + "\0")</c>.
+    /// Changing this form makes every recorded approval unverifiable, so it is pinned by a test.
+    /// </summary>
+    public static string BodySha256(LocalizedText body)
+    {
+        var canonical = new StringBuilder();
+        foreach (var (locale, markdown) in body.Values)
+        {
+            canonical.Append(locale.Value).Append('\n').Append(markdown).Append('\0');
+        }
+
+        return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical.ToString())));
+    }
 
     /// <summary>
     /// The body must exist and must convert. Shared by publish and submit-for-review because

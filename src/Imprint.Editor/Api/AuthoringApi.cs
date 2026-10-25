@@ -1012,23 +1012,10 @@ public static class AuthoringApi
                 : Results.BadRequest(new { error = "submit failed", details = result.Errors });
         });
 
-        api.MapPost("/posts/{postId}/approve", async (
-            string postId, PostApproveRequest? body, ICommandDispatcher dispatcher, PostList posts,
-            CancellationToken ct) =>
-        {
-            if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
-            if (posts.Get(pid) is not { } post) return Results.NotFound(new { error = "unknown post" });
-
-            // An omitted date means "approve it as it stands", never "unschedule it" — the same
-            // rule submit-review follows above, and for the same reason. Approving used to pass
-            // the request's null straight through, so saying yes silently dropped a go-live the
-            // author had already set.
-            var publishAt = body?.PublishAt ?? post.PublishAt;
-            var result = await DispatchAs(dispatcher, actor, new ApprovePostReviewCmd(pid, publishAt), ct);
-            return result.Succeeded
-                ? Results.Ok(new { postId = pid.Compact, publishAt })
-                : Results.BadRequest(new { error = "approve failed", details = result.Errors });
-        });
+        // There is no approve route, on purpose. Approving is a signature (the approval event's actor
+        // is the login that cleared the words), so it happens in the editor, signed in. Everything
+        // reaching this API holds the API key, and an approval a key can produce documents nothing.
+        // ApprovePostReviewHandler refuses a service identity as well, for any surface added later.
 
         api.MapPost("/posts/{postId}/request-changes", async (
             string postId, PostChangesRequest? body, ICommandDispatcher dispatcher, CancellationToken ct) =>
@@ -1256,6 +1243,10 @@ public static class AuthoringApi
         ["status"] = post.StatusAt(DateTimeOffset.UtcNow, site?.HasReviewer ?? false).ToString(),
         ["review"] = post.Review.ToString(),
         ["reviewNote"] = post.ReviewNote,
+        // Who approved which words. Read-only here: the API can show a signature, never make one.
+        ["signature"] = post.Signature is { } signed
+            ? new { signedBy = signed.SignedBy, signedAt = signed.SignedAt, revision = signed.Revision, sha256 = signed.Sha256 }
+            : null,
         ["publishAt"] = post.PublishAt,
         ["publishedAt"] = post.PublishedAt,
         ["updatedAt"] = post.UpdatedAt,
@@ -1876,7 +1867,6 @@ public static class AuthoringApi
     public sealed record PostSubmitRequest(string? Locale, DateTimeOffset? ProposedPublishAt, string? Note);
 
     /// <summary>The reviewer's sign-off, carrying the date they settled on (null = still to be decided).</summary>
-    public sealed record PostApproveRequest(DateTimeOffset? PublishAt);
 
     /// <summary>Send a post back with a reason the author can act on.</summary>
     public sealed record PostChangesRequest(string Reason);

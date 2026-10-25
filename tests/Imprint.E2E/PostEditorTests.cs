@@ -229,10 +229,21 @@ public sealed class PostEditorTests(EditorFixture fixture)
         await Expect(page.Locator("[data-testid='post-status']")).ToHaveTextAsync("Scheduled");
         await Expect(page.Locator("[data-testid='post-review-line']")).ToContainTextAsync("15 Apr 2027, 08:30");
 
+        // The approval is a signature: who, and which exact words (revision and hash).
+        var signature = page.Locator("[data-testid='post-signature-line']");
+        await Expect(signature).ToContainTextAsync("Signed by ");
+        await Expect(signature).ToContainTextAsync(new Regex(@"revision \d+, sha256 [0-9a-f]{12}\."));
+        await Expect(signature).ToHaveAttributeAsync("title", new Regex("^sha256 [0-9a-f]{64}$"));
+        if (Environment.GetEnvironmentVariable("IMPRINT_E2E_SHOTS") is { Length: > 0 } shots)
+        {
+            await page.ScreenshotAsync(new() { Path = Path.Combine(shots, "post-signature.png") });
+        }
+
         // ---- and only now is publishing on offer at all
         await Expect(page.Locator("[data-testid='post-publish']")).ToHaveTextAsync("Publish now");
         await page.ClickAsync("[data-testid='post-publish']");
         await Expect(page.Locator("[data-testid='post-status']")).ToHaveTextAsync("Published");
+        await Expect(signature).ToContainTextAsync("Signed by ");
 
         // Leave the fixture's shared site as it was for every other test in the collection.
         await page.GotoAsync($"/sites/{siteId}/settings");

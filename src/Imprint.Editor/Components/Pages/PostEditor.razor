@@ -118,6 +118,14 @@ else
             <p class="post-review-line" data-testid="post-review-line">@line</p>
         }
 
+        @* The signature: who approved which exact words. It is what makes an approval evidence
+           rather than a status, so it is shown wherever the approval still stands. *@
+        @if (SignatureLine is { Length: > 0 } signed)
+        {
+            <p class="post-review-line post-signature-line" data-testid="post-signature-line"
+               title="@(_signature?.Sha256 is { } sha ? $"sha256 {sha}" : null)">@signed</p>
+        }
+
         @if (_askingChanges)
         {
             <div class="post-sendback" data-testid="post-sendback">
@@ -308,6 +316,17 @@ else
             $"Live{Scheduled(" since ")}.",
         _ => null,
     };
+
+    private PostSignature? _signature;
+
+    private string? SignatureLine => _signature is { } signed
+        && _status is PostStatus.Approved or PostStatus.Scheduled or PostStatus.Published or PostStatus.Modified
+        ? $"Signed by {signed.SignedBy}, {EditorialTime.ForAuthor(signed.SignedAt)} ({EditorialTime.Zone.Id})"
+          + (signed.Revision is { } revision && signed.Sha256 is { } sha
+              ? $": revision {revision}, sha256 {sha[..12]}"
+              : ": signed before revisions were recorded")
+          + (_status == PostStatus.Modified ? ". The changes since are not signed." : ".")
+        : null;
 
     private string Scheduled(string prefix = " on ") =>
         _publishAt is { } at ? $"{prefix}{EditorialTime.ForAuthor(at)} ({EditorialTime.Zone.Id})" : "";
@@ -743,8 +762,12 @@ else
         Refresh();
     }
 
-    private void Refresh() =>
-        _status = Posts.Get(_id)?.StatusAt(DateTimeOffset.UtcNow, Reviewer is not null) ?? PostStatus.Draft;
+    private void Refresh()
+    {
+        var summary = Posts.Get(_id);
+        _status = summary?.StatusAt(DateTimeOffset.UtcNow, Reviewer is not null) ?? PostStatus.Draft;
+        _signature = summary?.Signature;
+    }
 
     private void OnChanged() => _ = InvokeAsync(() =>
     {

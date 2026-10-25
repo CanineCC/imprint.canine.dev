@@ -119,6 +119,9 @@ public sealed class AuthoringPostApiTests(AuthoringPostApiHost host) : IClassFix
             : view.GetProperty("publishAt").GetDateTimeOffset();
     }
 
+    private async Task<string> StatusOf(string post) =>
+        (await Send(HttpMethod.Get, $"/api/authoring/posts/{post}")).GetProperty("status").GetString()!;
+
     // The same defect one step earlier: post.submitted-for-review also carries the resulting date,
     // so submitting with no proposal unscheduled the post before the reviewer ever saw it.
     [Fact]
@@ -143,59 +146,19 @@ public sealed class AuthoringPostApiTests(AuthoringPostApiHost host) : IClassFix
         Assert.Equal(GoLive, await PublishAtOf(post));
     }
 
-    // The bug: approve passed the request's null straight through, raising post.review-approved
-    // with no date — so saying yes silently unscheduled a post the author had already dated.
+    // Approving is a signature by a signed-in person, so the API (which only ever holds the key)
+    // has no approve route. A caller that tries is told nothing happened, and the post stays with
+    // the reviewer.
     [Fact]
-    public async Task Approving_without_a_date_keeps_the_one_the_post_already_had()
+    public async Task The_api_cannot_approve_a_post()
     {
         var post = await ASubmittedPost(GoLive);
 
-        await Send(HttpMethod.Post, $"/api/authoring/posts/{post}/approve", new { });
-
-        Assert.Equal(GoLive, await PublishAtOf(post));
-    }
-
-    [Fact]
-    public async Task Approving_with_no_body_at_all_also_keeps_the_date()
-    {
-        var post = await ASubmittedPost(GoLive);
-
-        await Send(HttpMethod.Post, $"/api/authoring/posts/{post}/approve");
-
-        Assert.Equal(GoLive, await PublishAtOf(post));
-    }
-
-    [Fact]
-    public async Task The_reviewer_can_still_overrule_the_date_while_approving()
-    {
-        var post = await ASubmittedPost(GoLive);
-        var moved = GoLive.AddDays(14);
-
-        var result = await Send(HttpMethod.Post, $"/api/authoring/posts/{post}/approve", new { PublishAt = moved });
-
-        Assert.Equal(moved, result.GetProperty("publishAt").GetDateTimeOffset());
-        Assert.Equal(moved, await PublishAtOf(post));
-    }
-
-    // "Approving without a date keeps it waiting until someone sets one" — the mail's promise, and
-    // the case that must NOT be mistaken for "keep the date" when there is no date to keep.
-    [Fact]
-    public async Task A_post_with_no_date_is_approved_and_stays_undated()
-    {
-        var post = await ASubmittedPost(null);
-
-        await Send(HttpMethod.Post, $"/api/authoring/posts/{post}/approve", new { });
-
-        Assert.Null(await PublishAtOf(post));
-    }
-
-    [Fact]
-    public async Task Approving_an_unknown_post_is_a_not_found_rather_than_a_dispatch()
-    {
         using var response = await host.Client.PostAsync(
-            $"/api/authoring/posts/{Guid.NewGuid():N}/approve", JsonContent.Create(new { }));
+            $"/api/authoring/posts/{post}/approve", JsonContent.Create(new { }));
 
-        Assert.Equal(System.Net.HttpStatusCode.NotFound, response.StatusCode);
+        Assert.False(response.IsSuccessStatusCode);
+        Assert.Equal("InReview", await StatusOf(post));
     }
 
     // The history endpoint that made the blanked-post recovery possible.
