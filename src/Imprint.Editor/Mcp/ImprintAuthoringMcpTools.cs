@@ -49,6 +49,7 @@ using ChangePostMetaCmd = Imprint.Authoring.Features.Posts.ChangePostMeta.Change
 using CreatePostCmd = Imprint.Authoring.Features.Posts.CreatePost.CreatePost;
 using SetSiteReviewerCmd = Imprint.Authoring.Features.Sites.SetSiteReviewer.SetSiteReviewer;
 using SubmitPostForReviewCmd = Imprint.Authoring.Features.Posts.SubmitPostForReview.SubmitPostForReview;
+using RequestPostChangesCmd = Imprint.Authoring.Features.Posts.RequestPostChanges.RequestPostChanges;
 using DeleteAssetCmd = Imprint.Authoring.Features.Assets.DeleteAsset.DeleteAsset;
 using TagAssetCmd = Imprint.Authoring.Features.Assets.TagAsset.TagAsset;
 using UntagAssetCmd = Imprint.Authoring.Features.Assets.UntagAsset.UntagAsset;
@@ -983,6 +984,23 @@ public sealed class ImprintAuthoringMcpTools
         var tag = sites.Get(post.SiteId)?.DefaultLocale.Value ?? "en";
         return await Dispatch(dispatcher, config, new SubmitPostForReviewCmd(pid, tag, at, note), ct,
             () => new { ok = true, postId = pid.Compact, status = "InReview", proposedPublishAt = at });
+    }
+
+    // Sending back is the half of a review a service may do: it can only STOP a post going live, so the
+    // reason the owner's tooling can act on its own instruction ("reject the merged stubs") is safe here.
+    // Approving is not offered over MCP and never will be: that is a person's signature.
+    [McpServerTool(Name = "send_post_back")]
+    [Description("Send a post that is waiting for review back to its author, with the reason (required). The post leaves review as 'Changes requested' and cannot be published until it is submitted and approved again. Use it to reject a post, e.g. a merged-away duplicate. There is no approve tool: approving is done by a person in the editor.")]
+    public static async Task<object> SendPostBack(
+        [Description("The post id.")] string postId,
+        [Description("What needs changing, or why it is rejected. Required: the author has to be able to act on it.")] string reason,
+        ICommandDispatcher dispatcher, IConfiguration config, PostList posts, CancellationToken ct = default)
+    {
+        if (!AuthoringApi.TryPostIdPublic(postId, out var pid)) return Fail("invalid postId");
+        if (posts.Get(pid) is null) return Fail("unknown post");
+        if (string.IsNullOrWhiteSpace(reason)) return Fail("a reason is required");
+        return await Dispatch(dispatcher, config, new RequestPostChangesCmd(pid, reason), ct,
+            () => new { ok = true, postId = pid.Compact, status = "ChangesRequested", reason = reason.Trim() });
     }
 
     [McpServerTool(Name = "set_site_reviewer")]
