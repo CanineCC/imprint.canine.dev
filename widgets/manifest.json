@@ -1595,5 +1595,24 @@
       }
     ],
     "prerenderContext": "{base}/api/public/reports"
+  },
+  {
+    "tag": "assure-progress-card",
+    "name": "Assure example result",
+    "description": "An Assure result as a card, always tagged as an example inside the card itself: the app's name, how many things its AI can improve, how many are done since a date with a progress bar, the items as chips (struck through when done) and the score with its change. DATA ONLY: everything comes from the props, nothing is fetched.",
+    "bundle": "assure-progress-card.js",
+    "placeholder": "Example result",
+    "props": [
+      { "name": "app", "label": "App name, shown as its repository", "type": "text", "default": "your-app" },
+      { "name": "example-label", "label": "The example tag", "type": "text", "default": "Example" },
+      { "name": "count", "label": "Things the AI can improve", "type": "number", "default": "312" },
+      { "name": "count-text", "label": "Words under the number", "type": "text", "default": "things your AI can improve" },
+      { "name": "done", "label": "How many are done", "type": "number", "default": "280" },
+      { "name": "done-label", "label": "Word after the done count", "type": "text", "default": "done" },
+      { "name": "since", "label": "Since when", "type": "text", "default": "since 9 October" },
+      { "name": "items", "label": "Items (JSON array of {text, done}); done items are struck through", "type": "text", "default": "[]" },
+      { "name": "score", "label": "Score (0 to 100, a plain number)", "type": "text", "default": "" },
+      { "name": "score-change", "label": "Score change", "type": "text", "default": "" }
+    ]
   }
 ]
