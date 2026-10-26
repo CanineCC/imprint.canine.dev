@@ -28,6 +28,11 @@
          serve the editor canvas. -->
     <EmbeddedResource Include="wwwroot/fonts/schibsted-var.woff2" LogicalName="Imprint.Rendering.fonts.schibsted-var.woff2" />
     <EmbeddedResource Include="wwwroot/fonts/jetbrains-var.woff2" LogicalName="Imprint.Rendering.fonts.jetbrains-var.woff2" />
+    <!-- Assure's own faces (Bricolage Grotesque for headings and numbers, Inter for text), read
+         only under .ip-site-assure. Shipped to every site like the others; a face no rule uses is
+         never downloaded. -->
+    <EmbeddedResource Include="wwwroot/fonts/bricolage-var.woff2" LogicalName="Imprint.Rendering.fonts.bricolage-var.woff2" />
+    <EmbeddedResource Include="wwwroot/fonts/inter-var.woff2" LogicalName="Imprint.Rendering.fonts.inter-var.woff2" />
     <EmbeddedResource Include="wwwroot/brand/canine-badge.svg" LogicalName="Imprint.Rendering.brand.canine-badge.svg" />
     <EmbeddedResource Include="wwwroot/brand/cai-mark.svg" LogicalName="Imprint.Rendering.brand.cai-mark.svg" />
   </ItemGroup>

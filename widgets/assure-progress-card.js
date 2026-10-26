@@ -4,41 +4,65 @@
 // sentence, the score of each area, then what is Assure's own: how much the builder's AI has fixed,
 // the recent fixes, and the facts of the last and next scan.
 // Rendered into the element's LIGHT DOM with the site's own survey-card classes (.ip-survey,
-// .ip-cai-ladder, .ip-lens-table …), so it reads exactly like the Watchdog card. The bands are
-// redrawn in Assure's accent by setting the --band-* tokens on this element only; the band is said
-// in words by the chip, so no state rests on colour alone. Every prop is set as text, never as markup.
+// .ip-cai-ladder, .ip-lens-table …), so it reads like the Watchdog card, dressed as Assure's kit
+// card (v0.3): silver, the score large in the display face, the scale in five greys from light to
+// dark with the orange metal marker, numbers in the text face. The --band-* tokens are set on this
+// element only; the band is said in words by the chip, so no state rests on colour alone. The metal
+// comes from the site's --metal-fill and falls back to the flat accent. Every prop is set as text,
+// never as markup.
 
 const STYLE_ID = 'assure-progress-card-style';
 const STYLE = `
   assure-progress-card {
     display: block;
-    --band-critical: light-dark(#f9dcea, #4a1a33);
-    --band-poor: light-dark(#f2b7d3, #7a2a55);
-    --band-fair: light-dark(#e88bb9, #b0457e);
-    --band-healthy: light-dark(#dc4f97, #e868a8);
-    --band-exemplary: light-dark(#b8106a, #ff4fa3);
-    --band-critical-text: light-dark(#b8106a, #ff4fa3);
-    --band-poor-text: light-dark(#b8106a, #ff4fa3);
-    --band-fair-text: light-dark(#b8106a, #ff4fa3);
-    --band-healthy-text: light-dark(#b8106a, #ff4fa3);
-    --band-exemplary-text: light-dark(#b8106a, #ff4fa3);
+    --band-critical: light-dark(#e6e8ed, #2c2f37);
+    --band-poor: light-dark(#cfd2da, #3b3f49);
+    --band-fair: light-dark(#b1b5c0, #555a66);
+    --band-healthy: light-dark(#8a8f9c, #7c8291);
+    --band-exemplary: light-dark(#4b4f5a, #b4b9c4);
+    --band-critical-text: light-dark(#c2410c, #fb923c);
+    --band-poor-text: light-dark(#c2410c, #fb923c);
+    --band-fair-text: light-dark(#c2410c, #fb923c);
+    --band-healthy-text: light-dark(#c2410c, #fb923c);
+    --band-exemplary-text: light-dark(#c2410c, #fb923c);
+    --pin: var(--metal-fill, var(--accent));
+  }
+  assure-progress-card .ip-survey {
+    background: linear-gradient(180deg, light-dark(#ffffff, #23252c) 0%, light-dark(#f4f5f8, #1a1b21) 100%);
+    border-color: light-dark(#c9ccd4, #3a3d46); border-radius: 28px; padding: 1.5rem 1.65rem;
+    box-shadow: 0 1px 2px light-dark(rgb(18 19 24 / 0.06), transparent), 0 12px 32px light-dark(rgb(18 19 24 / 0.08), transparent);
   }
   assure-progress-card .ip-survey-detail { max-width: none; gap: 0.55rem; }
+  assure-progress-card .ip-chip {
+    font-size: 14px; padding: 0.3rem 0.8rem;
+    background: linear-gradient(180deg, light-dark(#f6f7f9, #3a3d46), light-dark(#d9dce3, #2a2c33));
+    border: 1px solid light-dark(#c9ccd4, #4a4e59); color: var(--heading);
+  }
+  assure-progress-card .ip-cai-score {
+    font-family: var(--font-display); font-weight: 800; font-size: 56px; line-height: 0.9; letter-spacing: -0.04em;
+  }
+  assure-progress-card .ip-cai-unit { font-size: 17px; }
+  assure-progress-card .ip-trend-note { font-size: 14px; }
+  assure-progress-card .ip-price-table td { font-family: var(--font-ui); }
+  assure-progress-card .ip-lens-table { font-size: 15px; }
+  assure-progress-card .ip-lens-table .ip-lens-value { color: var(--heading); font-weight: 600; }
+  assure-progress-card .ip-lens-bar .ip-lens-fill { background: var(--metal-fill, var(--accent)); }
+  assure-progress-card .ip-fact-table { font-size: 14px; }
   assure-progress-card .assure-tag {
     display: inline-block; margin-top: 0.2rem; font-family: var(--font-mono); font-size: var(--fs-2xs);
     font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
     border: 1px solid var(--hairline); border-radius: var(--r-full); padding: 0.05rem 0.5rem;
   }
   assure-progress-card .assure-block { margin: 0.5rem 0 0; padding-top: 0.75rem; border-top: 1px solid var(--hairline); }
-  assure-progress-card .assure-work-head { margin: 0 0 0.4rem; font-size: var(--fs-sm); color: var(--muted); }
+  assure-progress-card .assure-work-head { margin: 0 0 0.4rem; font-size: 15px; color: var(--muted); }
   assure-progress-card .assure-work-head strong { color: var(--heading); font-variant-numeric: tabular-nums; }
-  assure-progress-card .assure-wins { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; font-size: var(--fs-sm); }
+  assure-progress-card .assure-wins { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; font-size: 15px; }
   assure-progress-card .assure-win { display: flex; align-items: flex-start; gap: 0.55rem; color: var(--heading); line-height: 1.4; }
   assure-progress-card .assure-win::before {
     content: ""; flex: none; width: 0.7rem; height: 0.7rem; margin-top: 0.25rem; border-radius: 50%;
     border: 2px solid var(--heading); box-sizing: border-box;
   }
-  assure-progress-card .assure-win.done::before { background: var(--accent); border-color: var(--accent); }
+  assure-progress-card .assure-win.done::before { background: var(--metal-fill, var(--accent)); border-color: transparent; }
   assure-progress-card .assure-win.open { color: var(--muted); }
 `;
 

@@ -1599,7 +1599,7 @@
   {
     "tag": "assure-progress-card",
     "name": "Assure example result",
-    "description": "An Assure result in the shape of Watchdog's published-survey card, always tagged as an example inside the card itself: the project and its band, the CAI score out of 100 on the banded ladder (bands drawn in Assure's accent), the trend as a line and a sentence, the score of each area, how much the builder's AI has fixed with the recent fixes, and the facts of the last and next scan. DATA ONLY: everything comes from the props, nothing is fetched.",
+    "description": "An Assure result in the shape of Watchdog's published-survey card, always tagged as an example inside the card itself: the project and its band, the CAI score out of 100 on the banded ladder (five greys with Assure's orange marker), the trend as a line and a sentence, the score of each area, how much the builder's AI has fixed with the recent fixes, and the facts of the last and next scan. DATA ONLY: everything comes from the props, nothing is fetched.",
     "bundle": "assure-progress-card.js",
     "placeholder": "Example result",
     "props": [
