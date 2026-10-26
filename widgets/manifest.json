@@ -1599,20 +1599,24 @@
   {
     "tag": "assure-progress-card",
     "name": "Assure example result",
-    "description": "An Assure result as a card, told as what the builder gains and always tagged as an example inside the card itself: the app's name, the quality score as a large plain number with how far it rose, how many improvements their AI made with a progress bar, the wins in plain words (a filled dot when done, a ring when still with their AI) and when Assure scans again. DATA ONLY: everything comes from the props, nothing is fetched.",
+    "description": "An Assure result in the shape of Watchdog's published-survey card, always tagged as an example inside the card itself: the project and its band, the CAI score out of 100 on the banded ladder (bands drawn in Assure's accent), the trend as a line and a sentence, the score of each area, how much the builder's AI has fixed with the recent fixes, and the facts of the last and next scan. DATA ONLY: everything comes from the props, nothing is fetched.",
     "bundle": "assure-progress-card.js",
     "placeholder": "Example result",
     "props": [
-      { "name": "app", "label": "App name, shown as its repository", "type": "text", "default": "your-app" },
+      { "name": "app", "label": "Project name, shown as its repository", "type": "text", "default": "your-project" },
       { "name": "example-label", "label": "The example tag", "type": "text", "default": "Example" },
-      { "name": "score", "label": "Score (0 to 100, a plain number), shown large", "type": "text", "default": "80" },
-      { "name": "score-text", "label": "Words under the score", "type": "text", "default": "Quality score up 6 in two weeks" },
-      { "name": "done", "label": "How many improvements are made", "type": "number", "default": "280" },
-      { "name": "total", "label": "How many there were in all", "type": "number", "default": "312" },
-      { "name": "done-text", "label": "Words after the improvement count", "type": "text", "default": "improvements made by your AI" },
-      { "name": "done-note", "label": "Line under the improvement count", "type": "text", "default": "while you kept building" },
-      { "name": "items", "label": "Items (JSON array of {text, done}); done items get a filled dot, the rest a ring", "type": "text", "default": "[]" },
-      { "name": "next", "label": "Line at the foot of the card", "type": "text", "default": "" }
+      { "name": "band", "label": "Band word on the chip (Critical, Weak, Adequate, Strong, Exemplary)", "type": "text", "default": "Strong" },
+      { "name": "band-key", "label": "Band key (critical, poor, fair, healthy, exemplary)", "type": "text", "default": "healthy" },
+      { "name": "score", "label": "CAI score (0 to 100)", "type": "text", "default": "80" },
+      { "name": "floors", "label": "Band floors, lowest first (from the CAI rubric)", "type": "text", "default": "0,25,50,70,90" },
+      { "name": "series", "label": "Score at each scan, oldest first, comma separated", "type": "text", "default": "61,64,66,70,73,77,80" },
+      { "name": "trend-note", "label": "Sentence beside the trend", "type": "text", "default": "up 19 over 7 scans" },
+      { "name": "lenses", "label": "Areas (JSON array of {label, value, band?})", "type": "text", "default": "[]" },
+      { "name": "done", "label": "How many items the AI has fixed", "type": "number", "default": "280" },
+      { "name": "total", "label": "How many items there were in all", "type": "number", "default": "312" },
+      { "name": "done-text", "label": "Words after the fixed count", "type": "text", "default": "fixed by your AI" },
+      { "name": "items", "label": "Recent fixes (JSON array of {text, done}); done items get a filled dot, the rest a ring", "type": "text", "default": "[]" },
+      { "name": "facts", "label": "Facts (JSON array of {label, value})", "type": "text", "default": "[]" }
     ]
   }
 ]
