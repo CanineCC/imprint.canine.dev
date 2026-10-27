@@ -2099,13 +2099,14 @@ a.ip-linkcard:hover .ip-linkcard-label { color: var(--accent-ink); }
   font-size: var(--mk-h2); line-height: 1.12; letter-spacing: -0.02em;
 }
 
-/* Tables: column labels at the kit's 12px label size. On a phone the cells take less side padding
-   and break only between words, never inside one ("list_finding s", "reposito ries"). A table of
-   three or more columns keeps a readable width and slides sideways inside its own frame. */
+/* Tables: column labels at the kit's 12px label size. On a phone a table keeps a readable width and
+   slides sideways inside its own frame (.ip-table-wrap), so its cells have room for whole words and
+   the shared fold rule never has to split a tool name or a label ("list_finding s",
+   "reposito ries"). The page itself never widens. */
 .ip-site-assure .ip-table th { font-size: 12px; }
 @media (max-width: 640px) {
-  .ip-site-assure .ip-table { font-size: 14px; }
+  .ip-site-assure .ip-table { font-size: 14px; min-width: 34rem; }
   .ip-site-assure .ip-table :is(th, td) { padding-inline: 0.5rem; }
-  .ip-site-assure .ip-table td { overflow-wrap: break-word; }
-  .ip-site-assure .ip-table:has(th:nth-child(3)) { min-width: 34rem; }
+  /* Room for the longest tool name, "set_cause_disposition", on one line. */
+  .ip-site-assure .ip-table td:first-child { min-width: 11.5rem; }
 }
