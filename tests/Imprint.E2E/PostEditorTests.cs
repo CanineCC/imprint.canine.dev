@@ -351,6 +351,37 @@ public sealed class PostEditorTests(EditorFixture fixture)
         await Expect(page.Locator("[data-testid='post-publish']")).ToBeVisibleAsync();
     }
 
+    // The Details view: what kind of article it is, what it is about, and the private control notes.
+    [Fact]
+    public async Task Kind_products_and_control_notes_are_set_in_the_details_view_and_survive_a_reload()
+    {
+        var page = await OpenPosts(fixture);
+        var title = $"Kind {Guid.NewGuid():N}"[..11];
+        await page.FillAsync("[data-testid='new-post-title']", title);
+        await page.ClickAsync("[data-testid='new-post-create']");
+        await page.WaitForURLAsync("**/posts/**");
+        await page.WaitForInteractive();
+
+        await page.ClickAsync("[data-testid='post-view-details']");
+        await page.SelectOptionAsync("[data-testid='post-kind']", "guide");
+        await page.CheckAsync("[data-testid='post-product-assert']");
+        await page.ClickAsync("[data-testid='post-classify']");
+        await page.FillAsync("[data-testid='post-control-notes']", "Figure 1: CYCLE-1-FINDINGS.md §4a.");
+        await page.ClickAsync("[data-testid='post-control-notes-save']");
+        await Expect(page.Locator("[data-testid='post-control-notes-save']")).ToBeDisabledAsync();
+        if (Environment.GetEnvironmentVariable("IMPRINT_E2E_SHOTS") is { Length: > 0 } shots)
+        {
+            await page.ScreenshotAsync(new() { Path = Path.Combine(shots, "post-details.png") });
+        }
+
+        await page.ReloadAsync();
+        await page.WaitForInteractive();
+        await page.ClickAsync("[data-testid='post-view-details']");
+        await Expect(page.Locator("[data-testid='post-kind']")).ToHaveValueAsync("guide");
+        await Expect(page.Locator("[data-testid='post-product-assert']")).ToBeCheckedAsync();
+        await Expect(page.Locator("[data-testid='post-control-notes']")).ToHaveValueAsync("Figure 1: CYCLE-1-FINDINGS.md §4a.");
+    }
+
     [Fact]
     public async Task An_unpublished_post_can_be_opened_as_a_real_page_and_the_trail_leads_back()
     {

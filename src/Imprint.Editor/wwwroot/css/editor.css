@@ -1012,6 +1012,13 @@ button { font: inherit; color: inherit; }
 .post-when-input { font-size: .8rem; padding: .2rem .35rem; }
 .post-when-clear { font-size: .7rem; padding: .1rem .35rem; }
 .post-review-line { margin: 0; padding: .4rem 1rem; border-bottom: 1px solid var(--ed-border); background: var(--ed-surface-alt); font-size: .82rem; color: var(--ed-text-muted); }
+.post-details { display: grid; gap: 1rem; padding: 1rem; max-width: 36rem; }
+.post-details-group { border: 0; padding: 0; margin: 0; display: grid; gap: .4rem; }
+.post-details-group legend { font-weight: 600; margin-bottom: .35rem; }
+.post-details-check { display: inline-flex; align-items: center; gap: .45rem; margin-right: 1rem; }
+.post-details-notes { min-height: 10rem; font-family: var(--ed-font-mono, ui-monospace, monospace); font-size: .875rem; }
+.post-details > .ed-btn { justify-self: start; }
+.post-new-kind { display: inline-flex; align-items: center; gap: .45rem; flex-wrap: wrap; }
 .post-sendback { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; padding: .5rem 1rem; border-bottom: 1px solid var(--ed-border); background: var(--ed-surface-alt); }
 .post-sendback label { font-size: .78rem; color: var(--ed-text-muted); }
 .post-sendback textarea { flex: 1 1 18rem; font-size: .85rem; }

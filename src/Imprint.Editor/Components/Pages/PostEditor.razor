@@ -11,6 +11,8 @@
 @using Imprint.Authoring.Features.Posts.SubmitPostForReview
 @using Imprint.Authoring.Features.Posts.PublishPost
 @using Imprint.Authoring.Features.Posts.UnpublishPost
+@using Imprint.Authoring.Features.Posts.ClassifyPost
+@using Imprint.Authoring.Features.Posts.SetPostControlNotes
 @using Imprint.Authoring.Markdown
 @using Imprint.Authoring.Projections
 @using Imprint.Editor.Auth
@@ -188,7 +190,7 @@ else
             <section class="post-pane post-pane-source" aria-label="Markdown" @ref="_sourcePane">
                 <textarea class="post-source" data-testid="post-body" spellcheck="true" @ref="_sourceBox"
                           @bind="Body" @bind:event="oninput" readonly="@(!CanEdit)"
-                          placeholder="# Your post&#10;&#10;Write in markdown."></textarea>
+                          placeholder="@SourcePlaceholder"></textarea>
 
                 @* file-drop.js hands a drop to the first file input inside the element it was
                    wired to, and the shelf's input now lives in the other pane — so dropping on
@@ -223,6 +225,10 @@ else
                                 aria-selected="@(_view == SideView.Media ? "true" : "false")"
                                 data-testid="post-view-media"
                                 @onclick="() => _view = SideView.Media">Media</button>
+                        <button type="button" role="tab" class="post-view @(_view == SideView.Details ? "is-on" : null)"
+                                aria-selected="@(_view == SideView.Details ? "true" : "false")"
+                                data-testid="post-view-details"
+                                @onclick="() => _view = SideView.Details">Details</button>
                     </div>
 
                     @* The pane's own drop input, outside the view switch: dropping a file while the
@@ -254,6 +260,48 @@ else
                         <CascadingValue Value="PreviewContext">
                             <PageView Roots="_preview" />
                         </CascadingValue>
+                    </div>
+                }
+                else if (_view == SideView.Details)
+                {
+                    @* What kind of article this is and what it is about (the resource center's
+                       template and index follow the kind), and the private control notes the
+                       signer signs with the words. Changing either on an approved post withdraws
+                       the approval, as an edit to the words does. *@
+                    <div class="post-details" data-testid="post-details">
+                        <fieldset class="post-details-group">
+                            <legend>Kind</legend>
+                            <select class="ed-input" data-testid="post-kind" @bind="_kind">
+                                <option value="">Not classified</option>
+                                @foreach (var kind in ArticleClassification.Kinds)
+                                {
+                                    <option value="@kind">@KindLabel(kind)</option>
+                                }
+                            </select>
+                        </fieldset>
+                        <fieldset class="post-details-group">
+                            <legend>Products it is about</legend>
+                            @foreach (var product in ArticleClassification.Products)
+                            {
+                                <label class="post-details-check">
+                                    <input type="checkbox" data-testid="post-product-@product"
+                                           checked="@_products.Contains(product)"
+                                           @onchange="e => ToggleProduct(product, e.Value is true)" />
+                                    @ProductLabel(product)
+                                </label>
+                            }
+                        </fieldset>
+                        <button type="button" class="ed-btn ed-btn-primary" data-testid="post-classify"
+                                disabled="@(_kind.Length == 0 || !ClassificationChanged)" @onclick="Classify">Save kind and products</button>
+
+                        <fieldset class="post-details-group">
+                            <legend>Control notes (private, never published)</legend>
+                            <textarea class="ed-input post-details-notes" rows="8" data-testid="post-control-notes"
+                                      @bind="_notes" @bind:event="oninput"
+                                      placeholder="Where each figure comes from, what was checked, and by whom."></textarea>
+                        </fieldset>
+                        <button type="button" class="ed-btn" data-testid="post-control-notes-save"
+                                disabled="@(_notes.Trim() == (_post?.ControlNotes ?? ""))" @onclick="SaveNotes">Save notes</button>
                     </div>
                 }
                 else
@@ -472,7 +520,65 @@ else
 
     private const long MaxUploadBytes = 500L * 1024 * 1024;
 
-    private enum SideView { Preview, Media }
+    private enum SideView { Preview, Media, Details }
+
+    // A C# string, not attribute text: Blazor writes attribute literals as-is, so "&#10;" reached the
+    // browser as the five characters and the placeholder read "# Your post&#10;&#10;Write in markdown."
+    private const string SourcePlaceholder = "# Your post\n\nWrite in markdown.";
+
+    private string _kind = "";
+    private HashSet<string> _products = [];
+    private string _notes = "";
+
+    private bool ClassificationChanged =>
+        _kind != (_post?.Kind ?? "") || !_products.SetEquals(_post?.Products ?? []);
+
+    private static string KindLabel(string kind) => kind switch
+    {
+        "essay" => "Essay (thought leadership)",
+        "guide" => "Guide",
+        "whitepaper" => "Whitepaper",
+        "documentation" => "Documentation",
+        _ => kind,
+    };
+
+    private static string ProductLabel(string product) => product switch
+    {
+        "canine" => "Canine Development",
+        "cca" => "Canine Code Analyzer",
+        "cai" => "Code Assurance Index",
+        _ => char.ToUpperInvariant(product[0]) + product[1..],
+    };
+
+    private void ToggleProduct(string product, bool on)
+    {
+        if (on)
+        {
+            _products.Add(product);
+        }
+        else
+        {
+            _products.Remove(product);
+        }
+    }
+
+    private async Task Classify()
+    {
+        if (await Commands.Run(new ClassifyPost(_id, _kind, [.. _products])))
+        {
+            ApplyPost(await Store.LoadOrDefault<Post>(_id.Stream) ?? _post!);
+            Toasts.Show("Kind and products saved.");
+        }
+    }
+
+    private async Task SaveNotes()
+    {
+        if (await Commands.Run(new SetPostControlNotes(_id, _notes)))
+        {
+            ApplyPost(await Store.LoadOrDefault<Post>(_id.Stream) ?? _post!);
+            Toasts.Show("Control notes saved.");
+        }
+    }
 
     private SideView _view = SideView.Preview;
 
@@ -728,6 +834,9 @@ else
         _review = post.Review;
         _reviewNote = post.ReviewNote;
         _publishAt = post.PublishAt;
+        _kind = post.Kind ?? "";
+        _products = [.. post.Products];
+        _notes = post.ControlNotes ?? "";
         _publishAtLocal = post.PublishAt is { } at
             ? EditorialTime.ToLocal(at).ToString("yyyy-MM-dd'T'HH:mm", System.Globalization.CultureInfo.InvariantCulture)
             : "";
