@@ -48,6 +48,7 @@ using ChangePostBodyCmd = Imprint.Authoring.Features.Posts.ChangePostBody.Change
 using ChangePostMetaCmd = Imprint.Authoring.Features.Posts.ChangePostMeta.ChangePostMeta;
 using CreatePostCmd = Imprint.Authoring.Features.Posts.CreatePost.CreatePost;
 using ClassifyPostCmd = Imprint.Authoring.Features.Posts.ClassifyPost.ClassifyPost;
+using SetPostControlNotesCmd = Imprint.Authoring.Features.Posts.SetPostControlNotes.SetPostControlNotes;
 using SetSiteReviewerCmd = Imprint.Authoring.Features.Sites.SetSiteReviewer.SetSiteReviewer;
 using SubmitPostForReviewCmd = Imprint.Authoring.Features.Posts.SubmitPostForReview.SubmitPostForReview;
 using RequestPostChangesCmd = Imprint.Authoring.Features.Posts.RequestPostChanges.RequestPostChanges;
@@ -941,6 +942,19 @@ public sealed class ImprintAuthoringMcpTools
         var address = slug is { Length: > 0 } chosen ? chosen : Slug.Suggest(title);
         return await Dispatch(dispatcher, config, new CreatePostCmd(postId, sid, title, address, tag, kind, products), ct,
             () => new { ok = true, postId = postId.Compact, slug = address, locale = tag });
+    }
+
+    [McpServerTool(Name = "set_post_control_notes")]
+    [Description("Set (or clear, with blank) a post's private publication-control notes: where each figure comes from, what was checked and by whom. Never published. The reviewer signs them with the words (their sha256 is in the approval), so changing them on an approved post withdraws the approval. Read them back with get_post (controlNotes).")]
+    public static async Task<object> SetPostControlNotes(
+        [Description("The post id.")] string postId,
+        [Description("The notes, markdown or plain text; blank to clear.")] string? notes,
+        ICommandDispatcher dispatcher, IConfiguration config, PostList posts, CancellationToken ct = default)
+    {
+        if (!AuthoringApi.TryPostIdPublic(postId, out var pid)) return Fail("invalid postId");
+        if (posts.Get(pid) is null) return Fail("unknown post");
+        return await Dispatch(dispatcher, config, new SetPostControlNotesCmd(pid, notes), ct,
+            () => new { ok = true, postId = pid.Compact, length = notes?.Trim().Length ?? 0 });
     }
 
     [McpServerTool(Name = "classify_post")]

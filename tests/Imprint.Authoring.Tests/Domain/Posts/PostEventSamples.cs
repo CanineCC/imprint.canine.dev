@@ -51,6 +51,10 @@ public sealed class PostEventSamples : IEventSampleProvider
 
             yield return new PostClassified("whitepaper", ["canine", "assay"]);
             yield return new PostClassified("essay", []);
+            yield return new PostControlNotesChanged("Figure 1: CYCLE-1-FINDINGS.md §4a.\nChecked by J.B. 2026-10-25.");
+            yield return new PostControlNotesChanged(null);
+            yield return new PostReviewApproved(null, 4, "e32ca9e3653bb5adc50c1901415438988ba26fea4ba1e410120aa731991fadca",
+                "0c9ab8bdbf6bd4b3a3ff1c4e1e4b3cbe57f7d25b6a8a33f3d3b8e5c3f1a2b4c6");
 
             yield return new PostDeleted();
         }

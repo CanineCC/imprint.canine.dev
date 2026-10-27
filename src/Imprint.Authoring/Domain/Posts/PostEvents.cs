@@ -52,9 +52,17 @@ public sealed record PostSubmittedForReview(DateTimeOffset? ProposedPublishAt, s
 /// one nor any date at all, and the signature: <paramref name="Revision"/> is the body revision the
 /// approval covers (how many body edits the post had) and <paramref name="Sha256"/> the hash of
 /// exactly those words (<see cref="Post.BodySha256"/>). The event's actor is WHO approved; these two
-/// say WHICH text. Both are null on approvals recorded before 2026-10-25.</summary>
+/// say WHICH text. Both are null on approvals recorded before 2026-10-25.
+/// <paramref name="ControlNotesSha256"/> is the sha256 of the private control notes the signer signed
+/// with the words (null when the post has none, and on approvals before 2026-10-27).</summary>
 [EventType("post.review-approved")]
-public sealed record PostReviewApproved(DateTimeOffset? PublishAt, int? Revision = null, string? Sha256 = null);
+public sealed record PostReviewApproved(
+    DateTimeOffset? PublishAt, int? Revision = null, string? Sha256 = null, string? ControlNotesSha256 = null);
+
+/// <summary>The private publication-control notes (sources, checks, who checked), or null to clear
+/// them. Never published; signed with the words (see <see cref="PostReviewApproved"/>).</summary>
+[EventType("post.control-notes-changed")]
+public sealed record PostControlNotesChanged(string? Notes);
 
 [EventType("post.changes-requested")]
 public sealed record PostChangesRequested(string Reason);

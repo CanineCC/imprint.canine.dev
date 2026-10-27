@@ -89,6 +89,9 @@ public sealed class Post : AggregateRoot
     /// versions were recorded.</summary>
     public string? PublishedSha256 { get; private set; }
 
+    /// <summary>The private publication-control notes; null when there are none. Never published.</summary>
+    public string? ControlNotes { get; private set; }
+
     /// <summary>What kind of article this is (see <see cref="ArticleClassification.Kinds"/>); null on a
     /// post nobody has classified, which is every post written before articles had kinds.</summary>
     public string? Kind { get; private set; }
@@ -219,7 +222,7 @@ public sealed class Post : AggregateRoot
             throw new DomainException("Only a post that is waiting for review can be approved.");
         }
 
-        Raise(new PostReviewApproved(publishAt, BodyRevision, BodySha256(Body)));
+        Raise(new PostReviewApproved(publishAt, BodyRevision, BodySha256(Body), ControlNotesSha256(ControlNotes)));
     }
 
     /// <summary>Sends it back. The reason is required — a rejection nobody can act on is not a review.</summary>
@@ -320,6 +323,32 @@ public sealed class Post : AggregateRoot
         }
     }
 
+    /// <summary>
+    /// Sets (or clears, with blank) the private publication-control notes: where each figure comes
+    /// from, what was checked, by whom. They are never published, but the signer signs them with the
+    /// words, so changing them after approval withdraws the approval.
+    /// </summary>
+    public void SetControlNotes(string? notes)
+    {
+        EnsureNotDeleted();
+        var normalized = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
+        if (normalized?.Length > MaxBodyLength)
+        {
+            throw new DomainException($"Control notes cannot be longer than {MaxBodyLength:N0} characters.");
+        }
+
+        if (normalized == ControlNotes)
+        {
+            return;
+        }
+
+        Raise(new PostControlNotesChanged(normalized));
+        if (Review is PostReview.Approved && !IsPublished)
+        {
+            Raise(new PostApprovalLapsed());
+        }
+    }
+
     public void Unpublish()
     {
         EnsureNotDeleted();
@@ -404,6 +433,9 @@ public sealed class Post : AggregateRoot
             case PostHoldSet e:
                 Hold = e.Reason;
                 break;
+            case PostControlNotesChanged e:
+                ControlNotes = e.Notes;
+                break;
             case PostClassified e:
                 Kind = e.Kind;
                 Products = e.Products;
@@ -434,6 +466,10 @@ public sealed class Post : AggregateRoot
 
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical.ToString())));
     }
+
+    /// <summary>The sha256 of the control notes as UTF-8, lowercase hex; null when there are none.</summary>
+    public static string? ControlNotesSha256(string? notes) =>
+        notes is null ? null : Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(notes)));
 
     /// <summary>
     /// The body must exist and must convert. Shared by publish and submit-for-review because

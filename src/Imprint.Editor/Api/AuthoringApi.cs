@@ -50,6 +50,7 @@ using RequestPostChangesCmd = Imprint.Authoring.Features.Posts.RequestPostChange
 using SchedulePostCmd = Imprint.Authoring.Features.Posts.SchedulePost.SchedulePost;
 using HoldPostCmd = Imprint.Authoring.Features.Posts.HoldPost.HoldPost;
 using ClassifyPostCmd = Imprint.Authoring.Features.Posts.ClassifyPost.ClassifyPost;
+using SetPostControlNotesCmd = Imprint.Authoring.Features.Posts.SetPostControlNotes.SetPostControlNotes;
 using SetSiteReviewerCmd = Imprint.Authoring.Features.Sites.SetSiteReviewer.SetSiteReviewer;
 using SubmitPostForReviewCmd = Imprint.Authoring.Features.Posts.SubmitPostForReview.SubmitPostForReview;
 using TagAssetCmd = Imprint.Authoring.Features.Assets.TagAsset.TagAsset;
@@ -1007,6 +1008,17 @@ public static class AuthoringApi
                 : Results.BadRequest(new { error = "hold failed", details = result.Errors });
         });
 
+        // The private publication-control notes: signed with the words, never published.
+        api.MapPut("/posts/{postId}/control-notes", async (
+            string postId, PostControlNotesRequest? body, ICommandDispatcher dispatcher, CancellationToken ct) =>
+        {
+            if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
+            var result = await DispatchAs(dispatcher, actor, new SetPostControlNotesCmd(pid, body?.Notes), ct);
+            return result.Succeeded
+                ? Results.Ok(new { postId = pid.Compact, length = body?.Notes?.Trim().Length ?? 0 })
+                : Results.BadRequest(new { error = "control notes failed", details = result.Errors });
+        });
+
         // An article's kind (essay, guide, whitepaper, documentation) and the products it is about.
         api.MapPut("/posts/{postId}/classification", async (
             string postId, PostClassificationRequest? body, ICommandDispatcher dispatcher, PostList posts, CancellationToken ct) =>
@@ -1272,7 +1284,11 @@ public static class AuthoringApi
         ["reviewNote"] = post.ReviewNote,
         // Who approved which words. Read-only here: the API can show a signature, never make one.
         ["signature"] = post.Signature is { } signed
-            ? new { signedBy = signed.SignedBy, signedAt = signed.SignedAt, revision = signed.Revision, sha256 = signed.Sha256 }
+            ? new
+            {
+                signedBy = signed.SignedBy, signedAt = signed.SignedAt, revision = signed.Revision, sha256 = signed.Sha256,
+                controlNotesSha256 = signed.ControlNotesSha256,
+            }
             : null,
         ["hold"] = post.Hold,
         ["kind"] = post.Kind,
@@ -1293,6 +1309,8 @@ public static class AuthoringApi
         view["body"] = Localized(post.Body);
         view["metaTitle"] = Localized(post.MetaTitle);
         view["metaDescription"] = Localized(post.MetaDescription);
+        // Private: the authoring API is behind the key, and nothing published ever reads this field.
+        view["controlNotes"] = post.ControlNotes;
         return view;
     }
 
@@ -1396,6 +1414,7 @@ public static class AuthoringApi
             PostReviewApproved e => Entry("approved", new { publishAt = e.PublishAt, revision = e.Revision, sha256 = e.Sha256 }),
             PostHoldSet e => Entry("hold", new { reason = e.Reason }),
             PostClassified e => Entry("classification", new { kind = e.Kind, products = e.Products }),
+            PostControlNotesChanged e => Entry("control-notes", new { length = e.Notes?.Length ?? 0 }),
             PostChangesRequested e => Entry("changes-requested", new { reason = e.Reason }),
             PostApprovalLapsed => Entry("approval-lapsed"),
             PostPublished e => Entry("published", new { publishedAt = e.PublishedAt, version = e.Version, sha256 = e.Sha256 }),
@@ -1898,6 +1917,8 @@ public static class AuthoringApi
     public sealed record PostHoldRequest(string? Reason);
 
     public sealed record PostClassificationRequest(string? Kind, IReadOnlyList<string>? Products);
+
+    public sealed record PostControlNotesRequest(string? Notes);
 
     /// <summary>Hand a post to the site's reviewer, with a date they may overrule.</summary>
     public sealed record PostSubmitRequest(string? Locale, DateTimeOffset? ProposedPublishAt, string? Note);

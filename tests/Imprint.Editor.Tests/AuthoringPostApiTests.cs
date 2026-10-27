@@ -195,6 +195,18 @@ public sealed class AuthoringPostApiTests(AuthoringPostApiHost host) : IClassFix
         Assert.Equal(["canine", "assay"], read.GetProperty("products").EnumerateArray().Select(p => p.GetString()));
     }
 
+    // Control notes are private: readable on the authoring API's post detail, absent from the list view.
+    [Fact]
+    public async Task The_api_sets_control_notes_and_reads_them_back_on_the_detail_only()
+    {
+        var post = await APost(GoLive);
+
+        await Send(HttpMethod.Put, $"/api/authoring/posts/{post}/control-notes", new { Notes = "  Figure 1: §4a.  " });
+
+        var detail = await Send(HttpMethod.Get, $"/api/authoring/posts/{post}");
+        Assert.Equal("Figure 1: §4a.", detail.GetProperty("controlNotes").GetString());
+    }
+
     [Fact]
     public async Task The_api_refuses_an_unknown_kind_with_the_kinds_named()
     {

@@ -35,7 +35,8 @@ public enum PostStatus
 /// it covers. <paramref name="Revision"/> and <paramref name="Sha256"/> are null on approvals recorded
 /// before approvals were signed (2026-10-25); the signer and the time are known for every approval.
 /// </summary>
-public sealed record PostSignature(string SignedBy, DateTimeOffset SignedAt, int? Revision, string? Sha256);
+public sealed record PostSignature(
+    string SignedBy, DateTimeOffset SignedAt, int? Revision, string? Sha256, string? ControlNotesSha256 = null);
 
 /// <summary>One post as the editor index and the published blog index both see it.</summary>
 /// <param name="PublishedAt">When it first went live; null while it is a draft. This is the
@@ -207,7 +208,8 @@ public sealed class PostList : ReadModel
                 PublishAt = approved.PublishAt,
                 ReviewNote = null,
                 Signature = new PostSignature(
-                    @event.Metadata.Actor, @event.Metadata.TimestampUtc, approved.Revision, approved.Sha256),
+                    @event.Metadata.Actor, @event.Metadata.TimestampUtc, approved.Revision, approved.Sha256,
+                    approved.ControlNotesSha256),
             },
             PostChangesRequested sentBack => entry with
             {
