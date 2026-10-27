@@ -78,6 +78,11 @@ Status: [ ] open, [~] in progress, [x] done, [!] blocked (reason in the log).
 
 ## Questions for the owner (collected)
 
+5. LinkedIn (needed before anything can post, whatever P0 decides about the build): a LinkedIn developer app tied to
+   the Canine company page with the Community Management API product approved (LinkedIn reviews it; the company must be
+   verified), and a person with an admin or content-admin role on the Canine page and on each product page to authorize
+   it once. Then the organization ids of the Canine page and the product pages. Details in RC-LINKEDIN-NOTES.md.
+
 3. wrx1 needs the resource center's port: a host nginx server block listening on 8156 with root /home/jimmy/imprint-data/publish-sites/resourcecenter, the same shape as the blog's 8155 block (copy it, change the port and the folder), then `sudo nginx -t && sudo systemctl reload nginx`, and the firewall must let dgx1 (192.168.1.159) reach 8156 as it reaches 8155. Either do it, or allow `ssh canine-wrx1` for this session (a permission rule) and I will.
 4. The resource center's reviewer is set to Jimmy Borch with the account's email. If your imprint login is a different address, the record will say 'a named person' instead of your name; tell me the login and I will change it.
 
