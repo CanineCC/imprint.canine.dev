@@ -221,7 +221,6 @@ public sealed class MarkdownToNodesTests
 
     [Theory]
     [InlineData("| a | b |", "delimiter row")]
-    [InlineData("Some `inline code` here", "Inline code")]
     [InlineData("A <span>tag</span>", "Raw HTML")]
     [InlineData("    indented code", "Indented code")]
     [InlineData("- one\n  - nested", "Nested lists")]

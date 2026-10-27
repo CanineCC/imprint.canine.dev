@@ -203,7 +203,6 @@ public sealed class MarkdownTableTests
     }
 
     [Theory]
-    [InlineData("| `code` |", "Inline code")]
     [InlineData("| [x](/relative) |", "not a link this site can resolve")]
     [InlineData("| *open |", "Unmatched emphasis")]
     [InlineData("| a <span>b</span> |", "Raw HTML")]
@@ -219,7 +218,7 @@ public sealed class MarkdownTableTests
     [Fact]
     public void A_header_cell_problem_carries_the_header_line()
     {
-        var result = Convert("Intro.\n\n| `h` |\n|---|\n| 1 |");
+        var result = Convert("Intro.\n\n| *h |\n|---|\n| 1 |");
 
         Assert.Equal(3, Assert.Single(result.Problems).Line);
     }

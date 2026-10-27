@@ -16,6 +16,7 @@ namespace Imprint.Authoring.Domain.Pages;
 ///   item     := &lt;li&gt; inline* &lt;/li&gt;
 ///   inline   := text | entity | &lt;br&gt; | &lt;strong&gt; inline* &lt;/strong&gt;
 ///             | &lt;em&gt; inline* &lt;/em&gt; | &lt;a href="url"&gt; inline-no-a* &lt;/a&gt;
+///             | &lt;code&gt; (text | entity)* &lt;/code&gt;
 ///   entity   := &amp;amp; | &amp;lt; | &amp;gt; | &amp;quot; | &amp;#39;
 ///   text     := any chars except '&lt;' and '&amp;'
 /// Anchors: no nesting; href scheme ∈ { https, http, mailto, page:{guid} }.
@@ -152,6 +153,42 @@ public static partial class CanonicalHtml
                     if (nested is not null)
                     {
                         return nested;
+                    }
+
+                    continue;
+                }
+
+                // Code holds TEXT: no tag inside it, so it can never carry a link or markup.
+                if (Consume(html, ref pos, "<code>"))
+                {
+                    while (true)
+                    {
+                        if (pos >= html.Length)
+                        {
+                            return "Missing </code>.";
+                        }
+
+                        if (Consume(html, ref pos, "</code>"))
+                        {
+                            break;
+                        }
+
+                        if (html[pos] == '<')
+                        {
+                            return "Code holds text only.";
+                        }
+
+                        if (html[pos] == '&')
+                        {
+                            if (!ConsumeAnyEntity(html, ref pos, out _))
+                            {
+                                return $"Disallowed entity at position {pos} (only &amp; &lt; &gt; &quot; &#39;).";
+                            }
+
+                            continue;
+                        }
+
+                        pos++;
                     }
 
                     continue;

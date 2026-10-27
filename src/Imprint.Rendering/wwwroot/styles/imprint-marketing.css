@@ -535,6 +535,10 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
   letter-spacing: 0.06em; text-transform: uppercase; color: var(--heading);
 }
 
+/* Inline code in prose and table cells: mono on a quiet chip. */
+:is(.ip-prose, .ip-table) code { font-family: var(--font-mono); font-size: .88em; background: var(--surface-2);
+  border: 1px solid var(--hairline); border-radius: 4px; padding: .05em .3em; overflow-wrap: anywhere; }
+
 /* Code blocks: verbatim mono on a quiet surface; wide samples scroll inside the block. */
 .ip-code {
   background: var(--surface-2); border: 1px solid var(--hairline); border-radius: var(--r-md);

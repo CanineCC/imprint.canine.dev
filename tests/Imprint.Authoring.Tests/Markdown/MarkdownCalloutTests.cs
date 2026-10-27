@@ -79,10 +79,10 @@ public sealed class MarkdownCalloutTests
     public void A_problem_inside_a_callout_names_its_line_in_the_source()
     {
         // A paragraph's problems are reported at the paragraph's first line, so the faulty line is its own paragraph.
-        var problem = Assert.Single(Convert("Intro.\n\n> [!NOTE]\n> Fine.\n>\n> Some `code` here.").Problems);
+        var problem = Assert.Single(Convert("Intro.\n\n> [!NOTE]\n> Fine.\n>\n> Some <span>raw</span> here.").Problems);
 
         Assert.Equal(6, problem.Line);
-        Assert.Contains("Inline code", problem.Message, StringComparison.Ordinal);
+        Assert.Contains("Raw HTML", problem.Message, StringComparison.Ordinal);
     }
 
     [Fact]

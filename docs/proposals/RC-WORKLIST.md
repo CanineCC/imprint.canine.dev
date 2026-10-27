@@ -64,7 +64,7 @@ Status: [ ] open, [~] in progress, [x] done, [!] blocked (reason in the log).
       fine until articles are signed); checked in a browser, screenshot looked at.
 
 ### Content (copied, rewritten for the resource center; drafts in review)
-- [ ] **C0. Inventory**: every system documentation page, guide, blog post and whitepaper, with its source, kind,
+- [x] **C0. Inventory**: every system documentation page, guide, blog post and whitepaper, with its source, kind,
       product and target slug, in `RC-CONTENT.md` beside this file.
 - [ ] **C1. Documentation** rewritten as `documentation` articles.
 - [ ] **C2. Guides** rewritten as `guide` articles.
@@ -98,3 +98,5 @@ Status: [ ] open, [~] in progress, [x] done, [!] blocked (reason in the log).
 - 2026-10-27 S1 done: site 'Resource Center' 707963ae892b40f99c5bbb3bbee9dcda (kind ResourceCenter) created on production imprint via MCP create_blog, Production environment /home/jimmy/imprint-data/publish-sites/resourcecenter, BaseUrl https://resourcecenter.canine.dev; reviewer Jimmy Borch <owner's account email>; theme tokens set to the design's ink and paper (background, surface, surface-alt, text, text-muted, primary ramp, border, on-primary).
 - 2026-10-27 S2 done: dgx1 /etc/nginx/sites-available/resourcecenter.canine.dev (80: acme + 301; 443: proxy to 192.168.1.10:8156, the blog vhost's headers and snippets), its own Let's Encrypt certificate (webroot; renewal reloads nginx via the deploy hook), nginx -t before each reload. TLS verifies; http 301s to https.
 - 2026-10-27 S3 BLOCKED on wrx1: https://resourcecenter.canine.dev/ answers 504 because nothing serves port 8156 on wrx1 yet. ssh canine-wrx1 is refused to this session by the permission layer (production). See Questions.
+- 2026-10-27 C0 done: RC-CONTENT.md lists 16 documentation pages (Watchdog 9, Assay 7), 10 guides, 10 whitepapers (repo manuscripts W1 to W10; the CAI site's own papers stay there, CAI decision 0002) and 20 essays (merged-away posts left out), each with kind, product and slug; no slug collides.
+- 2026-10-27 Inline code (found by the new MarkdownFolderLintTests over the 20 essay copies): imprint refused `code`, so B5, B6 and B15, IN REVIEW on the blog, and B22, B23, B28 could not have been published as written. Built per the proposal's order (C1/C2/inline code): CommonMark backtick spans to <code> (text only, escaped; an unmatched backtick is literal), the canonical grammar admits <code> with text and entities only, the editor's rich-text normalizer keeps code as text, a mono chip style. Four tests that used code as their refused example moved to raw HTML / emphasis. Authoring 1053, Publishing 549, Editor 201, E2E 46 (SiteChromeSettingsTests.Navigation_entries_round_trip failed once in the full run, passes 2/2 alone: a load flake, detail not captured; watch it at the next full run).
