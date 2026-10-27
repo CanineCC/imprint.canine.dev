@@ -290,6 +290,32 @@ public sealed class ImprintAuthoringMcpTools
             ct, () => new { ok = true, siteId = siteId.Compact, kind = siteKind.Value.ToString() });
     }
 
+    [McpServerTool(Name = "set_site_redirects")]
+    [Description("Replace a site's redirect table: old addresses on this site and where each now lives. 'redirects' is a JSON array of {from, to}: from = a path on this site (stored as /a/b/, never the root), to = an https URL or a path on this site. The publisher writes a small redirect page (immediate refresh, canonical, noindex) at each old address where NO published page lives, so a redirect retires an unpublished page and can never hide a live one. An empty array clears the table. Returns the normalized table.")]
+    public static async Task<object> SetSiteRedirects(
+        [Description("The site id.")] string siteId,
+        [Description("JSON array of {\"from\": \"/old/\", \"to\": \"https://…\" or \"/new/\"}.")] string redirects,
+        ICommandDispatcher dispatcher, IConfiguration config, SiteOverview sites, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        if (sites.Get(sid) is null) return Fail("unknown site");
+        List<Imprint.Authoring.Domain.Sites.SiteRedirect> table;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(string.IsNullOrWhiteSpace(redirects) ? "[]" : redirects);
+            table = [.. doc.RootElement.EnumerateArray().Select(e => new Imprint.Authoring.Domain.Sites.SiteRedirect(
+                e.TryGetProperty("from", out var f) ? f.GetString() ?? "" : "",
+                e.TryGetProperty("to", out var t) ? t.GetString() ?? "" : ""))];
+        }
+        catch (Exception ex) when (ex is System.Text.Json.JsonException or InvalidOperationException)
+        {
+            return Fail("redirects must be a JSON array of {from, to}");
+        }
+
+        return await Dispatch(dispatcher, config, new Imprint.Authoring.Features.Sites.SetSiteRedirects.SetSiteRedirects(sid, table), ct,
+            () => new { ok = true, siteId = sid.Compact, redirects = sites.Get(sid)?.Redirects.Select(r => new { from = r.From, to = r.To }).ToList() });
+    }
+
     [McpServerTool(Name = "create_page")]
     [Description("Create a page on a site and return its id. Slug defaults to a slugified title; locale defaults to 'en'.")]
     public static Task<object> CreatePage(

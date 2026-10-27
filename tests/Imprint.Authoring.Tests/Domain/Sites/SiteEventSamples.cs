@@ -89,6 +89,8 @@ public sealed class SiteEventSamples : IEventSampleProvider
             yield return new SiteSocialImageChanged(null);
             yield return new SiteLlmsPreambleChanged("# Acme\n\n> What we are.");
             yield return new SiteLlmsPreambleChanged(null);
+            yield return new SiteRedirectsChanged([new SiteRedirect("/guide-x/", "https://resourcecenter.canine.dev/x/"), new SiteRedirect("/a/", "/b/")]);
+            yield return new SiteRedirectsChanged([]);
             yield return new SiteLlmsExcludedPathsChanged(["surveys/github", "surveys/gitlab"]);
             yield return new SiteLlmsExcludedPathsChanged([]);
 

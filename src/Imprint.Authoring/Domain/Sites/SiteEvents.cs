@@ -160,6 +160,24 @@ public sealed record SiteLlmsExcludedPathsChanged(IReadOnlyList<string> Paths)
     }
 }
 
+[EventType("site.redirects-changed", 1)]
+public sealed record SiteRedirectsChanged(IReadOnlyList<SiteRedirect> Redirects)
+{
+    // Same list-equality reasoning as SiteNavigationChanged: the table is the value.
+    public bool Equals(SiteRedirectsChanged? other) => other is not null && Redirects.SequenceEqual(other.Redirects);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        foreach (var redirect in Redirects)
+        {
+            hash.Add(redirect);
+        }
+
+        return hash.ToHashCode();
+    }
+}
+
 // ── Access: who may open and edit the site besides its owner ──
 // The email is the same identity the auth layer stamps as the envelope actor, so a
 // collaborator's access check and their attribution in history use one value.

@@ -94,6 +94,11 @@ public sealed class Site : AggregateRoot
     // nothing about how a page was produced says whether it is worth reading.
     public IReadOnlyList<string> LlmsExcludedPaths { get; private set; } = [];
 
+    /// <summary>Old addresses on this site and where each now lives (see <see cref="SetRedirects"/>).</summary>
+    public IReadOnlyList<SiteRedirect> Redirects { get; private set; } = [];
+
+    public const int MaxRedirects = 500;
+
     // Emails of the people who may edit this site besides its owner, in the order they
     // were added. The owner is not in this list — it lives on the site.created envelope
     // actor (see SiteOverview), so the two never drift.
@@ -522,6 +527,69 @@ public sealed class Site : AggregateRoot
     /// keep listing the ones nobody remembered to add.
     /// </para>
     /// </summary>
+    /// <summary>
+    /// Replaces the redirect table: each old address (a site path, stored as <c>/a/b/</c>) and where it
+    /// now lives (an https URL, or a site path). The publisher writes a redirect page at an old address
+    /// only where no published page occupies it, so a redirect can never hide live content; adding
+    /// one is how a page is retired AFTER it has been unpublished. Refused: the root, anything that is
+    /// not a plain path (<c>..</c>, <c>?</c>, <c>#</c>, <c>//</c>), a target that is neither https nor a
+    /// site path (a redirect target is a script sink: <c>javascript:</c> in one runs on load), a source
+    /// listed twice, and a redirect to itself.
+    /// </summary>
+    public void SetRedirects(IReadOnlyList<SiteRedirect>? redirects)
+    {
+        var table = new List<SiteRedirect>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var redirect in redirects ?? [])
+        {
+            var from = RedirectSource(redirect.From);
+            var to = (redirect.To ?? "").Trim();
+            var siteRelative = to.StartsWith('/') && !to.StartsWith("//", StringComparison.Ordinal);
+            var https = Uri.TryCreate(to, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps;
+            if (!siteRelative && !https)
+            {
+                throw new DomainException($"'{to}' is not a redirect target: give an https URL or a path on this site (/new/).");
+            }
+
+            if (!seen.Add(from))
+            {
+                throw new DomainException($"'{from}' is listed twice: one old address can only lead to one place.");
+            }
+
+            if (siteRelative && RedirectSource(to) == from)
+            {
+                throw new DomainException($"'{from}' redirects to itself.");
+            }
+
+            table.Add(new SiteRedirect(from, to));
+        }
+
+        if (table.Count > MaxRedirects)
+        {
+            throw new DomainException($"A site can carry at most {MaxRedirects} redirects.");
+        }
+
+        if (table.SequenceEqual(Redirects))
+        {
+            return;
+        }
+
+        Raise(new SiteRedirectsChanged(table));
+    }
+
+    private static string RedirectSource(string? path)
+    {
+        var trimmed = (path ?? "").Trim();
+        var segments = trimmed.Trim('/').Split('/');
+        if (trimmed.StartsWith("//", StringComparison.Ordinal) || trimmed.Trim('/').Length == 0
+            || trimmed.IndexOfAny(['?', '#', '\\', ' ']) >= 0 || segments.Any(s => s is "" or "." or ".."))
+        {
+            throw new DomainException($"'{path}' is not an old address: give a path on this site such as /guide-read-only-by-design/ (not the root).");
+        }
+
+        return "/" + string.Join('/', segments) + "/";
+    }
+
     public void SetLlmsExcludedPaths(IReadOnlyList<string>? paths)
     {
         var cleaned = new List<string>();
@@ -852,6 +920,9 @@ public sealed class Site : AggregateRoot
                 break;
             case SiteLlmsExcludedPathsChanged e:
                 LlmsExcludedPaths = [.. e.Paths];
+                break;
+            case SiteRedirectsChanged e:
+                Redirects = [.. e.Redirects];
                 break;
             case SiteEnvironmentsChanged e:
                 _environments = [.. e.Environments];

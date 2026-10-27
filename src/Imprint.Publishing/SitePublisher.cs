@@ -132,6 +132,9 @@ public sealed class SitePublisher(
 
         private readonly HashSet<PageId> _failed = [];
         private readonly HashSet<string> _written = new(StringComparer.Ordinal);
+
+        // The redirect pages this pass wrote, so the sweep keeps them (and only them).
+        private readonly List<string> _redirectFiles = [];
         private int _filesWritten;
         private long _bytesWritten;
 
@@ -438,6 +441,7 @@ public sealed class SitePublisher(
                 // reader's aggregator would keep polling.
                 await WriteIfChanged("feed.xml", Encoding.UTF8.GetBytes(BuildFeed()), ct);
             }
+            await WriteRedirects(plans, ct);
             await WriteIfChanged("llms.txt", Encoding.UTF8.GetBytes(BuildLlmsTxt(plans)), ct);
             await WriteIfChanged("llms-full.txt", Encoding.UTF8.GetBytes(BuildLlmsFullTxt(plans)), ct);
             await CopyFonts(ct);
@@ -1224,6 +1228,42 @@ public sealed class SitePublisher(
         }
 
         private string Absolute(string path) => _baseUrl is null ? path : _baseUrl + path;
+
+        /// <summary>
+        /// A small page at each old address in the site's redirect table (<see cref="Site.Redirects"/>):
+        /// an immediate refresh to the new address, the new address as canonical, and noindex, so a
+        /// reader lands where the content now lives and a search engine moves its record there. Written
+        /// only where no page of this pass occupies the path: a redirect can retire a page that has been
+        /// unpublished, never hide one that is live. The pages are not in the sitemap or llms.txt,
+        /// because they are not pages.
+        /// </summary>
+        private async Task WriteRedirects(List<PagePlan> plans, CancellationToken ct)
+        {
+            _redirectFiles.Clear();
+            var occupied = plans
+                .Where(plan => plan.SlugPath is not null)
+                .Select(plan => plan.SlugPath!.Trim('/'))
+                .ToHashSet(StringComparer.Ordinal);
+
+            foreach (var redirect in site.Redirects)
+            {
+                var path = redirect.From.Trim('/');
+                if (occupied.Contains(path))
+                {
+                    continue;
+                }
+
+                var target = redirect.To.StartsWith('/') ? Absolute(redirect.To) : redirect.To;
+                var href = HtmlText.Encode(target);
+                var html = "<!doctype html>\n<html lang=\"" + HtmlText.Encode(_defaultLocale.Value) + "\"><head><meta charset=\"utf-8\">"
+                    + "<title>Moved</title><meta name=\"robots\" content=\"noindex\">"
+                    + $"<meta http-equiv=\"refresh\" content=\"0; url={href}\"><link rel=\"canonical\" href=\"{href}\">"
+                    + $"</head><body><p>This page has moved to <a href=\"{href}\">{href}</a>.</p></body></html>\n";
+                var file = IndexFileOf(path);
+                await WriteIfChanged(file, Encoding.UTF8.GetBytes(html), ct);
+                _redirectFiles.Add(file);
+            }
+        }
 
         private string FullPath(string relative) => Path.Combine(_outputRoot, relative);
 
@@ -2377,6 +2417,11 @@ public sealed class SitePublisher(
             }
 
             Keep("llms-full.txt");
+            foreach (var redirect in _redirectFiles)
+            {
+                Keep(redirect);
+            }
+
             foreach (var plan in plans)
             {
                 if (plan.SlugPath is null || _failed.Contains(plan.Page.Id))
