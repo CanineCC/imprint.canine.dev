@@ -52,15 +52,15 @@ Status: [ ] open, [~] in progress, [x] done, [!] blocked (reason in the log).
       unremembered filters, as in the mock v2.
 - [x] **P10. Redirects table per site** (D4): per-URL 301s, prepared for the old guide/blog URLs; NOT activated until
       the owner says the resource center takes over.
-- [ ] **P11. Merge to imprint main** with every test project green + E2E + screenshots looked at; deploy watched.
+- [x] **P11. Merge to imprint main** with every test project green + E2E + screenshots looked at; deploy watched.
 
 ### Site and edge
-- [ ] **S1. Create the site "Resource Center"** in imprint production; Production environment →
+- [x] **S1. Create the site "Resource Center"** in imprint production; Production environment →
       `/home/jimmy/imprint-data/publish-sites/resourcecenter`, BaseUrl `https://resourcecenter.canine.dev`, a free
       wrx1 port in the host nginx (next after 8155, checked free).
-- [ ] **S2. dgx1 vhost** `resourcecenter.canine.dev` → wrx1 port; its own certificate via certbot (webroot), renewal
+- [x] **S2. dgx1 vhost** `resourcecenter.canine.dev` → wrx1 port; its own certificate via certbot (webroot), renewal
       hook already reloads nginx; `nginx -t` first.
-- [ ] **S3. The index answers** at https://resourcecenter.canine.dev with a valid certificate (empty grouped index is
+- [!] **S3. The index answers** at https://resourcecenter.canine.dev with a valid certificate (empty grouped index is
       fine until articles are signed); checked in a browser, screenshot looked at.
 
 ### Content (copied, rewritten for the resource center; drafts in review)
@@ -78,6 +78,9 @@ Status: [ ] open, [~] in progress, [x] done, [!] blocked (reason in the log).
 
 ## Questions for the owner (collected)
 
+3. wrx1 needs the resource center's port: a host nginx server block listening on 8156 with root /home/jimmy/imprint-data/publish-sites/resourcecenter, the same shape as the blog's 8155 block (copy it, change the port and the folder), then `sudo nginx -t && sudo systemctl reload nginx`, and the firewall must let dgx1 (192.168.1.159) reach 8156 as it reaches 8155. Either do it, or allow `ssh canine-wrx1` for this session (a permission rule) and I will.
+4. The resource center's reviewer is set to Jimmy Borch with the account's email. If your imprint login is a different address, the record will say 'a named person' instead of your name; tell me the login and I will change it.
+
 1. The design has a search palette (⌘K), a 'Go deeper' related panel, a bento of featured cards, guide step ticks, view-transition animation and a version-history list. The gatekept plan you approved on 2026-10-25 deferred or cut these (public old versions are against ARTICLE-BAR §1). Build any of them now?
 2. The reading serif in the design is Source Serif 4, which imprint does not ship; a Georgia-like fallback is used. Add the font (OFL, about 60 KB woff2)?
 
@@ -91,3 +94,7 @@ Status: [ ] open, [~] in progress, [x] done, [!] blocked (reason in the log).
 - 2026-10-27 P9 done: `SiteKind.ResourceCenter` (post stream: articles at the root, index always rendered, refuses an article without a kind; `CreateBlog(Kind)`, MCP `create_blog`). The publisher renders the index as `rc-hub` (server-side prop template: hero, tabs + product chips, groups Thought leadership / Whitepapers / Guides / Documentation, cards per kind incl. the whitepaper sheet with sha256 and the documentation path) plus `rc-filter` (bundle-only island: tabs and product filter over the rendered cards, never remembered; a widget is template XOR bundle, so the filter is its own element). An article is one `Article` section: `rc-toc` (h2 contents with HeadingView's exact ids) | `rc-article-head` (kind, products, status, title, dek, version · date, Signed by NAME) + body (leading # title dropped) | `rc-record` (version, published, signed by, signed with a login · date, sha256). The signer is the site reviewer's NAME when the approving login is the reviewer's email, else 'A named person'; a login never reaches the HTML (tested). PublishedPost carries SignedBy/SignedAt from the approval's metadata. Styles in their own sheet imprint-resource-center.css, appended only on resource-center sites (the shared sheet stays under its 12 KB brotli budget). Verified: 4 publishing tests (incl. a 6-article center), screenshots light/dark/390 px looked at (~/Hentet/kennel/resourcecenter/shots/rc-*.png), axe wcag2a/aa/21aa clean on index + 3 kinds in both themes, no horizontal scroll, filter 6 -> 1 on Assert. Not built (gatekept/deferred, see Questions): search palette, Go-deeper panel, bento, step ticks, view transitions, version history list, Source Serif 4 font (serif fallback used).
 - 2026-10-27 P3 done: the posts page on a resource center reads Articles / New article and its create needs a kind (select), the list shows each article's kind; the post editor's right pane gets a Details view (kind select, product checkboxes, Save kind and products; private control notes textarea, Save notes). E2E Kind_products_and_control_notes... green, survives a reload; screenshot post-details.png looked at. Boyscout: the markdown placeholder rendered '&#10;' literally (Blazor writes attribute text as-is); now a C# string.
 - 2026-10-27 P10 done: `site.redirects-changed` (SiteRedirect From/To); `Site.SetRedirects` normalizes the source to /a/b/ and refuses the root, non-plain paths, non-https/non-site-path targets (script sink), duplicates and self-redirects (max 500). The publisher writes a redirect page (meta refresh 0, canonical, noindex, a plain link) at each old address where NO published page lives, keeps it in the sweep, and removes it when the entry goes; not in sitemap or llms. MCP `set_site_redirects`. Nothing is activated: the table is empty until the owner says the resource center takes over. Authoring 1044, Publishing 549, Editor green.
+- 2026-10-27 P11 done (first landing, without P8): all seven test projects green (Authoring 1044, Publishing 549, Editor 201, Media 98+3 skipped, EventSourcing 7, E2E 46 after the refused-body example moved to indented code); fast-forwarded imprint main to 3f4828c; deploy run 40571262428 green incl. blue-green cutover. P8 will land separately.
+- 2026-10-27 S1 done: site 'Resource Center' 707963ae892b40f99c5bbb3bbee9dcda (kind ResourceCenter) created on production imprint via MCP create_blog, Production environment /home/jimmy/imprint-data/publish-sites/resourcecenter, BaseUrl https://resourcecenter.canine.dev; reviewer Jimmy Borch <owner's account email>; theme tokens set to the design's ink and paper (background, surface, surface-alt, text, text-muted, primary ramp, border, on-primary).
+- 2026-10-27 S2 done: dgx1 /etc/nginx/sites-available/resourcecenter.canine.dev (80: acme + 301; 443: proxy to 192.168.1.10:8156, the blog vhost's headers and snippets), its own Let's Encrypt certificate (webroot; renewal reloads nginx via the deploy hook), nginx -t before each reload. TLS verifies; http 301s to https.
+- 2026-10-27 S3 BLOCKED on wrx1: https://resourcecenter.canine.dev/ answers 504 because nothing serves port 8156 on wrx1 yet. ssh canine-wrx1 is refused to this session by the permission layer (production). See Questions.
