@@ -36,7 +36,7 @@ Status: [ ] open, [~] in progress, [x] done, [!] blocked (reason in the log).
 - [x] **P1. Article kind** (A1): essay | guide | whitepaper | documentation, required at creation; API, MCP, editor.
 - [x] **P2. Product tags** (A2 minimal): optional, several allowed (canine, assert, assure, assay, cca, cai); accent only.
 - [ ] **P3. "Article" labels + editor classification UI** (A5): UI labels only (events, routes and MCP tools keep `post`); the editor's kind select and product toggles on the new-post box and the post editor; a resource-center site refuses a post without a kind (with P9).
-- [ ] **P4. Version and sha on publish** (B1): version n, sha256 of the rendered text, date, signer on the publish event;
+- [x] **P4. Version and sha on publish** (B1): version n, sha256 of the rendered text, date, signer on the publish event;
       shown as "version n · date". No public old versions.
 - [ ] **P5. Private control notes** (B3): never published; its hash goes into the signature.
 - [ ] **P6. Callouts** (C2): blockquote with optional NOTE / WARNING label; converter tests extended.
@@ -81,3 +81,4 @@ Status: [ ] open, [~] in progress, [x] done, [!] blocked (reason in the log).
 ## Log
 - 2026-10-27 P0 waits: the box is busy (9 heavy runs), and a blind review needs a fresh agent; it gates only P8.
 - 2026-10-27 P1+P2 done (domain, slice, list, API, MCP): `post.classified(Kind, Products)`; `ArticleClassification` holds the closed lists (essay, guide, whitepaper, documentation; canine, assert, assure, assay, cca, cai), normalizes case, de-duplicates and orders products canonically; reclassifying an approved post lapses the approval; CreatePost takes an optional kind (refused kind leaves no post); `PUT /posts/{id}/classification`, `kind`/`products` on the post view and history; MCP `create_post` kind/products + `classify_post`. Tests red first; Authoring 989/989, Editor 199/199. Editor UI moved into P3.
+- 2026-10-27 P4 done: `post.published` carries Version (1 for the first text, +1 only when the words change; kept across unpublish; a pre-version publish counts as 1) and Sha256 = Post.BodySha256, the hash a sign-off records; the event actor is the publisher. PublishedPost snapshots Version, Sha256, Kind and Products as published; history shows version and sha. Four publish expectations updated on purpose. Authoring 995, Publishing 539, Editor 199 green. Rendering 'version n · date' comes with the P9 template.

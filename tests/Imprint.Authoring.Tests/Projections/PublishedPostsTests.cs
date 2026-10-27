@@ -71,6 +71,26 @@ public sealed class PublishedPostsTests
     }
 
     [Fact]
+    public void A_snapshot_carries_the_version_the_hash_and_the_classification_it_was_published_with()
+    {
+        var id = PostId.New();
+
+        var model = Fold(
+            (Stream(id), new PostCreated(id, Site, "hello", En, "Hello")),
+            (Stream(id), new PostBodyChanged(En, "Prose.")),
+            (Stream(id), new PostClassified("guide", ["assert"])),
+            (Stream(id), new PostPublished(Day1, 2, "abc")),
+            // Reclassified after the publish: the live post keeps what was published until the next one.
+            (Stream(id), new PostClassified("essay", [])));
+
+        var post = Assert.Single(model.AllForSite(Site));
+        Assert.Equal(2, post.Version);
+        Assert.Equal("abc", post.Sha256);
+        Assert.Equal("guide", post.Kind);
+        Assert.Equal(["assert"], post.Products);
+    }
+
+    [Fact]
     public void An_unpublished_edit_does_not_reach_the_live_post()
     {
         // The whole reason this projection snapshots instead of reading the draft.

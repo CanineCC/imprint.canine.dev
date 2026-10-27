@@ -1398,7 +1398,7 @@ public static class AuthoringApi
             PostClassified e => Entry("classification", new { kind = e.Kind, products = e.Products }),
             PostChangesRequested e => Entry("changes-requested", new { reason = e.Reason }),
             PostApprovalLapsed => Entry("approval-lapsed"),
-            PostPublished e => Entry("published", new { publishedAt = e.PublishedAt }),
+            PostPublished e => Entry("published", new { publishedAt = e.PublishedAt, version = e.Version, sha256 = e.Sha256 }),
             PostUnpublished => Entry("unpublished"),
             PostDeleted => Entry("deleted"),
             _ => Entry(stored.StableId),

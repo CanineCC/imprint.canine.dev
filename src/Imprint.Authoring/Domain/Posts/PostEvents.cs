@@ -24,8 +24,13 @@ public sealed record PostBodyChanged(Locale Locale, string Markdown);
 
 // The instant a reader sorts and cites by. Raised once: re-publishing after an edit is an
 // update, not a new post, so the date does not move because a typo was fixed.
+/// <summary>A publish, and WHICH text it published: <paramref name="Version"/> moves only when the
+/// words do (1 for the first text, +1 for each changed text published), and <paramref name="Sha256"/>
+/// is <see cref="Post.BodySha256"/> of those words, the same hash a sign-off records, so the published
+/// text can be checked against the approved one. The event's actor is who published. Both are null on
+/// publishes recorded before 2026-10-27.</summary>
 [EventType("post.published")]
-public sealed record PostPublished(DateTimeOffset PublishedAt);
+public sealed record PostPublished(DateTimeOffset PublishedAt, int? Version = null, string? Sha256 = null);
 
 [EventType("post.unpublished")]
 public sealed record PostUnpublished;

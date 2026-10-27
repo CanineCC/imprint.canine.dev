@@ -25,8 +25,15 @@ public sealed record PublishedPost(
     LocalizedText MetaDescription,
     IReadOnlyDictionary<Locale, NodeList> RootsByLocale,
     DateTimeOffset PublishedAt,
-    DateTimeOffset UpdatedAt)
+    DateTimeOffset UpdatedAt,
+    int? Version = null,
+    string? Sha256 = null,
+    string? Kind = null,
+    IReadOnlyList<string>? Products = null)
 {
+    /// <summary>The products as published, in canonical order; empty, never null.</summary>
+    public IReadOnlyList<string> Products { get; init; } = Products ?? [];
+
     /// <summary>The tree to render for a locale, falling back to the site default the way every
     /// other text does — a post translated into one language still serves its other pages.</summary>
     public NodeList RootsFor(Locale locale, Locale defaultLocale) =>
@@ -157,7 +164,7 @@ public sealed class PublishedPosts : ReadModel
 
         return new PublishedPost(
             post.Id, post.SiteId, post.Slug, post.Title, post.MetaTitle, post.MetaDescription,
-            roots, post.PublishedAt ?? at, at);
+            roots, post.PublishedAt ?? at, at, post.PublishedVersion, post.PublishedSha256, post.Kind, post.Products);
     }
 
     private static PublishedPost Snapshot(Post post, DateTimeOffset at)
@@ -176,6 +183,6 @@ public sealed class PublishedPosts : ReadModel
 
         return new PublishedPost(
             post.Id, post.SiteId, post.Slug, post.Title, post.MetaTitle, post.MetaDescription,
-            roots, post.PublishedAt ?? at, at);
+            roots, post.PublishedAt ?? at, at, post.PublishedVersion, post.PublishedSha256, post.Kind, post.Products);
     }
 }

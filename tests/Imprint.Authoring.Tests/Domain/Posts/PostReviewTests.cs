@@ -210,7 +210,7 @@ public sealed class PostReviewTests
         AggregateSpec.For<Post>()
             .Given(Created(), Body(), new PostPublishDateSet(September))
             .When(post => post.Publish(En, wokeUpLate))
-            .ThenRaised(new PostPublished(September));
+            .ThenRaised(new PostPublished(September, 1, BodySha));
     }
 
     [Fact]
@@ -223,7 +223,7 @@ public sealed class PostReviewTests
         AggregateSpec.For<Post>()
             .Given(Created(), Body(), new PostPublishDateSet(October))
             .When(post => post.Publish(En, now))
-            .ThenRaised(new PostPublished(now));
+            .ThenRaised(new PostPublished(now, 1, BodySha));
     }
 
     // -------------------------------------------------------------------- date

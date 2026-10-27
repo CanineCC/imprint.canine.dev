@@ -80,6 +80,15 @@ public sealed class Post : AggregateRoot
     /// <summary>The sha256 of the words the standing approval covers (see <see cref="BodySha256"/>).</summary>
     public string? ApprovedSha256 { get; private set; }
 
+    /// <summary>The version the last publish recorded: 1 for the first text, +1 for each changed text
+    /// published since. Null on a post never published. Kept across an unpublish, so a republish of the
+    /// same words is the same version.</summary>
+    public int? PublishedVersion { get; private set; }
+
+    /// <summary>The sha256 (<see cref="BodySha256"/>) of the words the last publish covered; null before
+    /// versions were recorded.</summary>
+    public string? PublishedSha256 { get; private set; }
+
     /// <summary>What kind of article this is (see <see cref="ArticleClassification.Kinds"/>); null on a
     /// post nobody has classified, which is every post written before articles had kinds.</summary>
     public string? Kind { get; private set; }
@@ -261,7 +270,11 @@ public sealed class Post : AggregateRoot
         // A post that went out on a schedule is dated by the schedule, not by the moment a
         // polling worker happened to wake up: the agreed instant is what everyone was told, and
         // "09:00" reading as 09:00:23 in the feed is a small lie with no upside.
-        Raise(new PostPublished(PublishAt is { } planned && planned <= at ? planned : at));
+        var sha = BodySha256(Body);
+        var version = PublishedVersion is not { } last ? 1
+            : sha == PublishedSha256 ? last
+            : last + 1;
+        Raise(new PostPublished(PublishAt is { } planned && planned <= at ? planned : at, version, sha));
     }
 
     /// <summary>
@@ -354,6 +367,10 @@ public sealed class Post : AggregateRoot
                 // First date wins. A reader sorts and cites by this, so it must not move because
                 // somebody fixed a typo and pressed Publish again.
                 PublishedAt ??= e.PublishedAt;
+                // A publish from before versions were recorded was version one of words nobody can
+                // recompute; with no hash, the next publish of any text is the next version.
+                PublishedVersion = e.Version ?? PublishedVersion ?? 1;
+                PublishedSha256 = e.Sha256;
                 break;
             case PostUnpublished:
                 PublishedAt = null;

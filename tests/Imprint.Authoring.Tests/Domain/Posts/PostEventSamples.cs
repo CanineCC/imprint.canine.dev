@@ -28,6 +28,9 @@ public sealed class PostEventSamples : IEventSampleProvider
             yield return new PostBodyChanged(Da, "");
 
             yield return new PostPublished(new DateTimeOffset(2026, 8, 14, 12, 0, 0, TimeSpan.Zero));
+            yield return new PostPublished(
+                new DateTimeOffset(2026, 10, 27, 9, 0, 0, TimeSpan.Zero), 3,
+                "e32ca9e3653bb5adc50c1901415438988ba26fea4ba1e410120aa731991fadca");
             yield return new PostUnpublished();
 
             // Review and scheduling. Both shapes of every optional date, because "no date" is a
