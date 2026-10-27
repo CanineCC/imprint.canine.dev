@@ -66,12 +66,12 @@ Status: [ ] open, [~] in progress, [x] done, [!] blocked (reason in the log).
 ### Content (copied, rewritten for the resource center; drafts in review)
 - [x] **C0. Inventory**: every system documentation page, guide, blog post and whitepaper, with its source, kind,
       product and target slug, in `RC-CONTENT.md` beside this file.
-- [ ] **C1. Documentation** rewritten as `documentation` articles.
-- [ ] **C2. Guides** rewritten as `guide` articles.
-- [ ] **C3. Whitepapers** rewritten as `whitepaper` articles.
-- [ ] **C4. Blog posts** copied as `essay` articles (the lifted text; their review state is the owner's).
-- [ ] **C5. LinkedIn text** drafted for each article (sender chosen by product), stored with the article, unapproved.
-- [ ] **C6. A proposed schedule**: date + time per article, in `RC-CONTENT.md`, nothing scheduled until signed.
+- [x] **C1. Documentation** rewritten as `documentation` articles.
+- [x] **C2. Guides** rewritten as `guide` articles.
+- [x] **C3. Whitepapers** rewritten as `whitepaper` articles.
+- [x] **C4. Blog posts** copied as `essay` articles (the lifted text; their review state is the owner's).
+- [!] **C5. LinkedIn text** drafted for each article (sender chosen by product), stored with the article, unapproved.
+- [x] **C6. A proposed schedule**: date + time per article, in `RC-CONTENT.md`, nothing scheduled until signed.
 
 ### Last
 - [ ] **Q. Questions for the owner**, collected here as they come up, asked once at the end.
@@ -100,3 +100,6 @@ Status: [ ] open, [~] in progress, [x] done, [!] blocked (reason in the log).
 - 2026-10-27 S3 BLOCKED on wrx1: https://resourcecenter.canine.dev/ answers 504 because nothing serves port 8156 on wrx1 yet. ssh canine-wrx1 is refused to this session by the permission layer (production). See Questions.
 - 2026-10-27 C0 done: RC-CONTENT.md lists 16 documentation pages (Watchdog 9, Assay 7), 10 guides, 10 whitepapers (repo manuscripts W1 to W10; the CAI site's own papers stay there, CAI decision 0002) and 20 essays (merged-away posts left out), each with kind, product and slug; no slug collides.
 - 2026-10-27 Inline code (found by the new MarkdownFolderLintTests over the 20 essay copies): imprint refused `code`, so B5, B6 and B15, IN REVIEW on the blog, and B22, B23, B28 could not have been published as written. Built per the proposal's order (C1/C2/inline code): CommonMark backtick spans to <code> (text only, escaped; an unmatched backtick is literal), the canonical grammar admits <code> with text and entities only, the editor's rich-text normalizer keeps code as text, a mono chip style. Four tests that used code as their refused example moved to raw HTML / emphasis. Authoring 1053, Publishing 549, Editor 201, E2E 46 (SiteChromeSettingsTests.Navigation_entries_round_trip failed once in the full run, passes 2/2 alone: a load flake, detail not captured; watch it at the next full run).
+- 2026-10-27 C1-C4 done: 56 drafts on the resource center (16 documentation, 10 guides, 10 whitepapers, 20 essays), all Draft, none submitted; rewrites and verification in RC-CONTENT.md 'Copy log'. Real-content render checked locally (The_real_articles_publish_and_can_be_previewed with RC_CONTENT_JSON): 56 cards, one h1, contents lists populated, no console errors, no horizontal scroll; screenshots real-*.png looked at.
+- 2026-10-27 C5 BLOCKED on P8 (the LinkedIn field does not exist yet; P8 waits on P0's blind review, which needs a fresh agent and the box has been too busy all day).
+- 2026-10-27 C6 done: a proposed schedule in RC-CONTENT.md (launch 3 Nov 09:00 docs + guides; essays weekly Tuesdays from 10 Nov; whitepapers fortnightly Thursdays from 12 Nov once each control closes). Nothing scheduled.

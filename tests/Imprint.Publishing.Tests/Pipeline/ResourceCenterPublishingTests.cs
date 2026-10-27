@@ -27,8 +27,22 @@ public sealed class ResourceCenterPublishingTests
     private const string Login = "jimmy@example.com";
     private const string Body = "# Read-only by design\n\nIntro.\n\n## What it reads\n\nCode.\n\n## What it never does\n\nWrite.\n";
 
-    private static PublishingTestHost NewHost()
+    private static PublishingTestHost NewHost(bool everyWidget = false)
     {
+        if (everyWidget)
+        {
+            // The whole shipped manifest and every bundle, so real articles that place a widget publish
+            // exactly as they will in production.
+            var manifestPath = RepoFile("widgets/manifest.json");
+            var full = new PublishingTestHost(Base, configure: s => s.AddSingleton<IWidgetCatalog>(new ManifestCatalog(manifestPath)));
+            foreach (var file in Directory.EnumerateFiles(Path.GetDirectoryName(manifestPath)!))
+            {
+                File.Copy(file, Path.Combine(full.WidgetsDirectory, Path.GetFileName(file)), overwrite: true);
+            }
+
+            return full;
+        }
+
         var host = new PublishingTestHost(Base, configure: s => s.AddSingleton<IWidgetCatalog>(new EmptyWidgetCatalog()));
         // The resource center's widgets, exactly as the repository's manifest declares them.
         var manifest = JsonSerializer.Deserialize<JsonElement[]>(File.ReadAllText(RepoFile("widgets/manifest.json")))!;
@@ -170,6 +184,41 @@ public sealed class ResourceCenterPublishingTests
         }
     }
 
+    // The real center, for a person to look at: with RC_CONTENT_JSON naming a file of {slug, title, kind,
+    // products, dek, body} and RC_PREVIEW_DIR a folder, every article is published signed and copied there.
+    [Fact]
+    public async Task The_real_articles_publish_and_can_be_previewed()
+    {
+        if (Environment.GetEnvironmentVariable("RC_CONTENT_JSON") is not { Length: > 0 } content
+            || Environment.GetEnvironmentVariable("RC_PREVIEW_DIR") is not { Length: > 0 } preview)
+        {
+            return;
+        }
+
+        await using var host = NewHost(everyWidget: true);
+        var site = await host.CreateSite("Resource Center", kind: SiteKind.ResourceCenter);
+        await host.Ok(new SetSiteReviewer(site, "Jimmy Borch", Login));
+        foreach (var article in JsonDocument.Parse(File.ReadAllText(content)).RootElement.EnumerateArray())
+        {
+            await Article(host, site, article.GetProperty("slug").GetString()!, article.GetProperty("title").GetString()!,
+                article.GetProperty("kind").GetString()!, [.. article.GetProperty("products").EnumerateArray().Select(p => p.GetString()!)],
+                article.GetProperty("body").GetString()!, article.GetProperty("dek").GetString()!, signed: true);
+        }
+
+        await host.Publisher.Synchronize();
+        if (Directory.Exists(preview))
+        {
+            Directory.Delete(preview, recursive: true);
+        }
+
+        foreach (var relative in host.AllFiles())
+        {
+            var target = Path.Combine(preview, relative);
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            File.Copy(host.FullPath(relative), target);
+        }
+    }
+
     private static async Task Article(
         PublishingTestHost host, SiteId site, string slug, string title, string kind, string[] products,
         string body, string dek, bool signed)
@@ -208,4 +257,15 @@ public sealed class ResourceCenterPublishingTests
         Assert.DoesNotContain(Login, index, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("someone-else@example.com", article, StringComparison.OrdinalIgnoreCase);
     }
+}
+
+/// <summary>The shipped widget manifest as a catalog: a tag exists when the manifest declares it.</summary>
+internal sealed class ManifestCatalog(string manifestPath) : IWidgetCatalog
+{
+    private readonly IReadOnlyList<Imprint.Rendering.WidgetDescriptor> _widgets = Imprint.Rendering.WidgetManifest.Load(manifestPath);
+
+    public bool Exists(string tag) => _widgets.Any(w => w.Tag == tag);
+
+    public IReadOnlySet<string> PropNames(string tag) =>
+        _widgets.FirstOrDefault(w => w.Tag == tag)?.Props.Select(p => p.Name).ToHashSet() ?? [];
 }
