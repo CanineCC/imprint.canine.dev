@@ -157,7 +157,7 @@ public sealed class PostEditorTests(EditorFixture fixture)
         await page.WaitForURLAsync("**/posts/**");
         await page.WaitForInteractive();
 
-        await page.FillAsync("[data-testid='post-body']", "Fine paragraph.\n\n> a blockquote\n");
+        await page.FillAsync("[data-testid='post-body']", "Fine paragraph.\n\n    indented code\n");
 
         // The author is told at the line, while typing — not at the moment they wanted to finish.
         var problems = page.Locator("[data-testid='post-problems']");
