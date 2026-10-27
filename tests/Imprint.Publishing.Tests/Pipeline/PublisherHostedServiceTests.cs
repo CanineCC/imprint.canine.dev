@@ -53,12 +53,13 @@ public sealed class PublisherHostedServiceTests
         try
         {
             var index = Path.Combine(envFolder, "index.html");
-            await WaitFor(() => File.Exists(index), "auto-sync publish of the environment");
+            var robots = Path.Combine(envFolder, "robots.txt");
+            // Wait for BOTH files read below: the publisher writes the pages first and robots.txt
+            // after them, so on a loaded machine index.html can exist while robots.txt does not yet.
+            await WaitFor(() => File.Exists(index) && File.Exists(robots), "auto-sync publish of the environment");
 
             Assert.Contains("<link rel=\"canonical\" href=\"https://acme.example/\" />", await File.ReadAllTextAsync(index));
-            Assert.Contains(
-                "Sitemap: https://acme.example/sitemap.xml",
-                await File.ReadAllTextAsync(Path.Combine(envFolder, "robots.txt")));
+            Assert.Contains("Sitemap: https://acme.example/sitemap.xml", await File.ReadAllTextAsync(robots));
         }
         finally
         {

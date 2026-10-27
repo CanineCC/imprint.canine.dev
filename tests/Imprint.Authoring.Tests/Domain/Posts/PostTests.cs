@@ -124,11 +124,11 @@ public sealed class PostTests
         // The whole point of the aggregate: a post that cannot be rendered must not be
         // publishable, and the author must be told which line is the problem.
         var outcome = AggregateSpec.For<Post>()
-            .Given(Created(), new PostBodyChanged(En, "Fine.\n\n> a blockquote"))
+            .Given(Created(), new PostBodyChanged(En, "Fine.\n\n    indented code"))
             .When(p => p.Publish(En, Noon));
 
         outcome.ThenFails("line 3");
-        outcome.ThenFails("blockquote");
+        outcome.ThenFails("Indented code");
     }
 
     [Fact]

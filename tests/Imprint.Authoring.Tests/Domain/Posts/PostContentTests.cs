@@ -53,7 +53,7 @@ public sealed class PostContentTests
     [Fact]
     public void Problems_travel_with_the_partial_render()
     {
-        var (roots, problems) = PostContent.Render("Fine.\n\n> quoted", En);
+        var (roots, problems) = PostContent.Render("Fine.\n\n    indented code", En);
 
         // What converted is still rendered — the preview shows the good paragraph and the
         // author is told about line 3, rather than being shown a blank pane.

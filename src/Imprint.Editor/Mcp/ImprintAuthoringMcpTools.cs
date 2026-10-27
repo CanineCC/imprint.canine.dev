@@ -973,7 +973,7 @@ public sealed class ImprintAuthoringMcpTools
     }
 
     [McpServerTool(Name = "set_post_body")]
-    [Description("Replace a post's markdown body for one locale. Markdown is the authored truth — the node tree is rebuilt from it at publish, so a later converter fix reaches posts already written. Images are referenced as ![alt](media:{assetId}) and must stand alone in their paragraph. GitHub pipe tables convert (a header row, a |---| delimiter row, then exactly one cell per column in every row; \\| for a pipe inside a cell; bold, italic and links work in cells; column alignment is ignored); a ragged row or a missing delimiter row is refused at its line.")]
+    [Description("Replace a post's markdown body for one locale. Markdown is the authored truth — the node tree is rebuilt from it at publish, so a later converter fix reaches posts already written. Images are referenced as ![alt](media:{assetId}) and must stand alone in their paragraph. GitHub pipe tables convert (a header row, a |---| delimiter row, then exactly one cell per column in every row; \\| for a pipe inside a cell; bold, italic and links work in cells; column alignment is ignored); a ragged row or a missing delimiter row is refused at its line. A blockquote (lines starting '> ') is a callout; a first line '> [!NOTE]' or '> [!WARNING]' labels it; no callout inside a callout.")]
     public static async Task<object> SetPostBody(
         [Description("The post id.")] string postId,
         [Description("The markdown body.")] string markdown,

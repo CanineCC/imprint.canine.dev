@@ -53,7 +53,7 @@ public sealed class PostReviewTests
     [Fact]
     public void SubmitForReview_refuses_prose_that_cannot_be_rendered() =>
         AggregateSpec.For<Post>()
-            .Given(Created(), Body("Fine.\n\n> a blockquote\n"))
+            .Given(Created(), Body("Fine.\n\n    indented code\n"))
             .When(post => post.SubmitForReview(En, null))
             .ThenFails("line 3");
 

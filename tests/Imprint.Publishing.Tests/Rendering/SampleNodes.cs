@@ -107,6 +107,16 @@ internal static class SampleNodes
             Head = [LocalizedText.Of(RenderHarness.En, "Term")],
             Rows = [[LocalizedText.Of(RenderHarness.En, "Producer")]],
         },
+        new CalloutNode
+        {
+            Id = NodeId.New(),
+            Tone = CalloutTone.Note,
+            Children = NodeList.Of(new RichTextNode
+            {
+                Id = NodeId.New(),
+                Html = LocalizedText.Of(RenderHarness.En, "<p>Set apart.</p>"),
+            }),
+        },
         new DividerNode { Id = NodeId.New() },
         new SpacerNode { Id = NodeId.New(), Size = SpacerSize.Large },
         Widget(new KeyValuePair<string, string>("until", "2027-01-01")),

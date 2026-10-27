@@ -878,6 +878,9 @@ button { font: inherit; color: inherit; }
    table previews as a bare grid of words under centred headers, nothing like the page it will
    publish as. Structure only, in the site's own tokens: the overflow wrapper, rules between rows,
    start-aligned headers. */
+.ed-canvas .ip-callout { margin: 0; padding: .85rem 1.1rem; border-inline-start: 3px solid var(--ip-border); background: var(--ip-surface-alt); display: flex; flex-direction: column; gap: .5rem; }
+.ed-canvas .ip-callout-note { border-inline-start-color: var(--ip-primary); }
+.ed-canvas .ip-callout-label { margin: 0; font-size: .75em; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
 .ed-canvas .ip-table-wrap { overflow-x: auto; max-width: 100%; min-width: 0; }
 .ed-canvas .ip-table { border-collapse: collapse; width: 100%; font-size: .9375em; line-height: 1.5; }
 .ed-canvas .ip-table :is(th, td) { padding: .5em .85em; border-bottom: 1px solid var(--ip-border); text-align: start; vertical-align: top; }

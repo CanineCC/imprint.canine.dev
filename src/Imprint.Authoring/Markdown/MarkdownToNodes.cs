@@ -50,7 +50,15 @@ public static class MarkdownToNodes
     public static MarkdownConversion Convert(string markdown, Locale locale, Func<NodeId>? newId = null)
     {
         ArgumentNullException.ThrowIfNull(markdown);
-        var id = newId ?? NodeId.New;
+        return ConvertBlocks(markdown, locale, newId ?? NodeId.New, lineOffset: 0, insideCallout: false);
+    }
+
+    /// <summary>The block loop. A callout's inside comes back through here with its quote markers
+    /// stripped, so it obeys exactly the same grammar; <paramref name="lineOffset"/> maps its lines back
+    /// to the source, so a problem names the line the author sees.</summary>
+    private static MarkdownConversion ConvertBlocks(
+        string markdown, Locale locale, Func<NodeId> id, int lineOffset, bool insideCallout)
+    {
         var problems = new List<MarkdownProblem>();
         var nodes = new List<Node>();
         var lines = markdown.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
@@ -116,6 +124,19 @@ public static class MarkdownToNodes
                 continue;
             }
 
+            if (line.TrimStart().StartsWith('>'))
+            {
+                if (insideCallout)
+                {
+                    problems.Add(new MarkdownProblem(i + 1, "A callout cannot hold another callout inside a callout: use one level of '>'."));
+                    i = SkipWhile(lines, i, l => l.TrimStart().StartsWith('>'));
+                    continue;
+                }
+
+                i = ReadCallout(lines, i, locale, id, nodes, problems);
+                continue;
+            }
+
             if (RejectedBlockPrefix(line) is { } rejection)
             {
                 problems.Add(new MarkdownProblem(i + 1, rejection));
@@ -132,10 +153,63 @@ public static class MarkdownToNodes
             i = ReadParagraph(lines, i, locale, id, nodes, problems);
         }
 
-        return new MarkdownConversion(NodeList.Of(nodes), problems);
+        return new MarkdownConversion(
+            NodeList.Of(nodes),
+            lineOffset == 0 ? problems : [.. problems.Select(p => p with { Line = p.Line + lineOffset })]);
     }
 
     // ------------------------------------------------------------------ block readers
+
+    /// <summary>
+    /// <c>&gt; [!NOTE]</c> / <c>&gt; [!WARNING]</c> (GitHub's alert line, optional) and then quoted
+    /// prose, up to the first line without a <c>&gt;</c>. One marker and one optional space are
+    /// stripped from each line and the rest is converted by the same rules as the post itself.
+    /// </summary>
+    private static int ReadCallout(
+        string[] lines, int start, Locale locale, Func<NodeId> id, List<Node> nodes, List<MarkdownProblem> problems)
+    {
+        var end = SkipWhile(lines, start, l => l.TrimStart().StartsWith('>'));
+        var inner = lines[start..end].Select(StripQuoteMarker).ToList();
+
+        var tone = CalloutTone.Plain;
+        var first = inner[0].Trim();
+        var bodyStart = 0;
+        if (first.StartsWith("[!", StringComparison.Ordinal) && first.EndsWith(']'))
+        {
+            var label = first[2..^1].ToUpperInvariant();
+            if (label is not ("NOTE" or "WARNING"))
+            {
+                problems.Add(new MarkdownProblem(start + 1, $"'{first}' is not a callout label: a callout is labelled NOTE or WARNING ([!NOTE], [!WARNING]), or not at all."));
+                return end;
+            }
+
+            tone = label == "NOTE" ? CalloutTone.Note : CalloutTone.Warning;
+            bodyStart = 1;
+        }
+
+        var body = string.Join("\n", inner.Skip(bodyStart));
+        if (body.Trim().Length == 0)
+        {
+            problems.Add(new MarkdownProblem(start + 1, "This callout is empty: put the text it sets apart on the lines after '>'."));
+            return end;
+        }
+
+        // The inside's first line is source line start + bodyStart + 1.
+        var converted = ConvertBlocks(body, locale, id, lineOffset: start + bodyStart, insideCallout: true);
+        problems.AddRange(converted.Problems);
+        if (converted.Ok)
+        {
+            nodes.Add(new CalloutNode { Id = id(), Tone = tone, Children = converted.Nodes });
+        }
+
+        return end;
+    }
+
+    private static string StripQuoteMarker(string line)
+    {
+        var rest = line.TrimStart()[1..];
+        return rest.StartsWith(' ') ? rest[1..] : rest;
+    }
 
     /// <summary>
     /// <c>::: widget cai-score-card repo=acme/api :::</c> — the escape hatch from prose into an
@@ -328,8 +402,9 @@ public static class MarkdownToNodes
             // A table may start directly under a paragraph line, as on GitHub — only when the next
             // line really is a delimiter row, so a paragraph that merely contains a '|' (or a line
             // starting with one) reads exactly as it always did.
+            // A '>' line opens a callout even straight under a paragraph line, as in CommonMark.
             if (line.Trim().Length == 0 || IsThematicBreak(line) || IsListItem(line, out _) ||
-                TryHeading(line, out _, out _) || TryFence(line, out _, out _) ||
+                TryHeading(line, out _, out _) || TryFence(line, out _, out _) || line.TrimStart().StartsWith('>') ||
                 (i > start && IsDelimitedHeader(lines, i)))
             {
                 break;

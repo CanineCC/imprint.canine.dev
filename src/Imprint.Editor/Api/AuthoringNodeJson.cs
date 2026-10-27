@@ -44,6 +44,11 @@ public static class AuthoringNodeJson
                 props["align"] = stack.Align.ToString();
                 break;
 
+            // Read-only here: a callout comes from a post's markdown, not from the page node API.
+            case CalloutNode callout:
+                props["tone"] = callout.Tone.ToString();
+                break;
+
             case ColumnsNode columns:
                 props["ratios"] = columns.Ratios.ToArray();
                 props["collapseBelow"] = (int)columns.CollapseBelow;

@@ -22,6 +22,7 @@ namespace Imprint.Authoring.Domain.Pages;
 [JsonDerivedType(typeof(SvgNode), "svg")]
 [JsonDerivedType(typeof(CodeNode), "code")]
 [JsonDerivedType(typeof(TableNode), "table")]
+[JsonDerivedType(typeof(CalloutNode), "callout")]
 [JsonDerivedType(typeof(DividerNode), "divider")]
 [JsonDerivedType(typeof(SpacerNode), "spacer")]
 [JsonDerivedType(typeof(WidgetNode), "widget")]
@@ -301,6 +302,27 @@ public sealed record CodeNode : Node
 /// table rather than a guess per cell: "a &lt; b" is ordinary text in one and an entity
 /// error in the other, so the renderer must never have to infer which it was given.</para>
 /// </summary>
+/// <summary>How a <see cref="CalloutNode"/> is labelled: no label, NOTE or WARNING.</summary>
+public enum CalloutTone
+{
+    Plain,
+    Note,
+    Warning,
+}
+
+/// <summary>
+/// A set-apart passage: a markdown blockquote, labelled NOTE or WARNING by GitHub's alert line or
+/// not at all. A container of ordinary prose nodes (paragraphs, lists, tables, code), never of a
+/// section or of another callout.
+/// </summary>
+public sealed record CalloutNode : Node, IContainerNode
+{
+    public CalloutTone Tone { get; init; } = CalloutTone.Plain;
+    public NodeList Children { get; init; } = NodeList.Empty;
+    public override string DisplayName => Tone is CalloutTone.Plain ? "Callout" : $"Callout ({Tone})";
+    public Node WithChildren(NodeList children) => this with { Children = children };
+}
+
 public sealed record TableNode : Node
 {
     public IReadOnlyList<LocalizedText> Head { get; init; } = [];

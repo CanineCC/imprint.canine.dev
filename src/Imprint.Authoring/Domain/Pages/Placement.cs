@@ -24,6 +24,9 @@ public static class Placement
         // Other containers hold anything except sections.
         SectionNode or StackNode or GridNode => child is not SectionNode,
 
+        // A callout holds prose: no sections, no layout containers, no callout inside a callout.
+        CalloutNode => child is not (SectionNode or StackNode or ColumnsNode or GridNode or CalloutNode),
+
         // Content nodes are leaves.
         _ => false,
     };

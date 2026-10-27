@@ -225,9 +225,9 @@ public sealed class MarkdownTableTests
     }
 
     [Theory]
-    [InlineData("> quoted\n> more", "Blockquotes", 1)]
+    [InlineData("    indented code", "Indented code", 1)]
     [InlineData("Fine.\n\n- one\n  - nested", "Nested lists", 4)]
-    public void Blockquotes_and_nested_lists_are_still_refused(string markdown, string expected, int line)
+    public void Indented_code_and_nested_lists_are_still_refused(string markdown, string expected, int line)
     {
         var result = Convert(markdown);
 

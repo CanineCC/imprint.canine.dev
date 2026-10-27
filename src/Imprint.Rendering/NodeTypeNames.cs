@@ -24,6 +24,7 @@ public static class NodeTypeNames
         SvgNode => "svg",
         CodeNode => "code",
         TableNode => "table",
+        CalloutNode => "callout",
         DividerNode => "divider",
         SpacerNode => "spacer",
         WidgetNode => "widget",

@@ -220,7 +220,6 @@ public sealed class MarkdownToNodesTests
     // --------------------------------------------------------------------- what it refuses
 
     [Theory]
-    [InlineData("> quoted", "Blockquotes")]
     [InlineData("| a | b |", "delimiter row")]
     [InlineData("Some `inline code` here", "Inline code")]
     [InlineData("A <span>tag</span>", "Raw HTML")]
@@ -239,7 +238,7 @@ public sealed class MarkdownToNodesTests
     [Fact]
     public void A_problem_carries_the_line_it_is_on()
     {
-        var result = Convert("fine\n\nalso fine\n\n> quoted");
+        var result = Convert("fine\n\nalso fine\n\n    indented code");
 
         Assert.Equal(5, Assert.Single(result.Problems).Line);
     }
@@ -300,7 +299,7 @@ public sealed class MarkdownToNodesTests
     {
         // An editor showing "everything or nothing" would make one stray backtick look like a
         // catastrophe; the preview should render what it can and point at the rest.
-        var result = Convert("# Heading\n\n> quoted\n\nA good paragraph.");
+        var result = Convert("# Heading\n\n    indented code\n\nA good paragraph.");
 
         Assert.False(result.Ok);
         Assert.IsType<HeadingNode>(result.Nodes[0]);

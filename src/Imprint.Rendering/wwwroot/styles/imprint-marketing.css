@@ -518,6 +518,23 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 .ip-table td { padding: 0.55rem 0.85rem; border-bottom: 1px solid var(--hairline); color: var(--ink); vertical-align: top; }
 .ip-table td:first-child { color: var(--heading); font-weight: 600; }
 
+/* Callouts: a set-apart passage with a rule at the start edge; NOTE takes the accent, WARNING a
+   stronger ink. The label is mono-quiet like a table header, and real text for a screen reader. */
+.ip-callout {
+  margin: 0; padding: 0.85rem 1.1rem; max-width: 100%; min-width: 0;
+  border-inline-start: 3px solid var(--border-strong); border-radius: 0 var(--r-md) var(--r-md) 0;
+  background: var(--surface-2); color: var(--ink);
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+.ip-callout > :first-child { margin-top: 0; }
+.ip-callout > :last-child { margin-bottom: 0; }
+.ip-callout-note { border-inline-start-color: var(--accent); background: var(--accent-wash); }
+.ip-callout-warning { border-inline-start-color: var(--heading); }
+.ip-callout-label {
+  margin: 0; font-family: var(--font-mono); font-size: var(--fs-2xs); font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--heading);
+}
+
 /* Code blocks: verbatim mono on a quiet surface; wide samples scroll inside the block. */
 .ip-code {
   background: var(--surface-2); border: 1px solid var(--hairline); border-radius: var(--r-md);
