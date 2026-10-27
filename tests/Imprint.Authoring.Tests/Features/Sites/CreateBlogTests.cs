@@ -31,6 +31,31 @@ public sealed class CreateBlogTests
     }
 
     [Fact]
+    public async Task A_resource_center_is_a_post_stream_with_its_own_kind()
+    {
+        await using var host = new AuthoringTestHost();
+        var id = SiteId.New();
+
+        await host.Ok(new CreateBlog(id, "Resource Center", "en", Kind: SiteKind.ResourceCenter));
+
+        var site = host.Get<SiteOverview>().Get(id)!;
+        Assert.Equal(SiteKind.ResourceCenter, site.Kind);
+        Assert.True(site.Kind.IsPostStream());
+        Assert.True(SiteKind.Blog.IsPostStream());
+        Assert.False(SiteKind.Site.IsPostStream());
+    }
+
+    [Fact]
+    public async Task CreateBlog_refuses_a_page_tree_kind()
+    {
+        await using var host = new AuthoringTestHost();
+
+        var error = await host.Fails(new CreateBlog(SiteId.New(), "Marketing", "en", Kind: SiteKind.Site));
+
+        Assert.Contains("blog or a resource center", error, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task CreateSite_still_makes_a_site()
     {
         // The kinds must not blur: the existing creation path is what every site in the

@@ -24,13 +24,13 @@ public static class BlogPaths
     /// would only repeat the hostname back at the reader: <c>blog.canine.dev/blog/a-post</c>.
     /// A blog SECTION of an ordinary site still needs it, for the namespace reason above.
     /// </summary>
-    public static string PostPrefix(SiteKind kind) => kind == SiteKind.Blog ? "" : Prefix + "/";
+    public static string PostPrefix(SiteKind kind) => kind.IsPostStream() ? "" : Prefix + "/";
 
     /// <summary>The index's own public path: the root of a blog site, <c>blog</c> inside a site.</summary>
-    public static string IndexPath(SiteKind kind) => kind == SiteKind.Blog ? "" : Prefix;
+    public static string IndexPath(SiteKind kind) => kind.IsPostStream() ? "" : Prefix;
 
     /// <summary>The index's href, for the feed and the entries that point back at it.</summary>
-    public static string IndexHref(SiteKind kind) => kind == SiteKind.Blog ? "/" : $"/{Prefix}/";
+    public static string IndexHref(SiteKind kind) => kind.IsPostStream() ? "/" : $"/{Prefix}/";
 
     /// <summary>One post's public path, with its trailing slash — what a link to it must say.</summary>
     public static string PostPath(SiteKind kind, string slug) => $"/{PostPrefix(kind)}{slug}/";

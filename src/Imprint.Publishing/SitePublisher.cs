@@ -1627,7 +1627,7 @@ public sealed class SitePublisher(
             // A blog site ALWAYS has an index, empty or not: it is the site's root, and a root that
             // 404s is not an empty blog, it is a broken domain. Inside an ordinary site the old rule
             // still holds — see ListingPage.
-            if (_posts.Count > 0 || _siteKind == SiteKind.Blog)
+            if (_posts.Count > 0 || _siteKind.IsPostStream())
             {
                 var listing = ListingPage();
                 // The index is derived from every post, so its version is all of theirs: adding,
@@ -1656,7 +1656,7 @@ public sealed class SitePublisher(
         {
             // On a blog site the masthead IS the site's name — a heading reading "Blog" on
             // blog.canine.dev tells the reader something they knew before they arrived.
-            var isBlogSite = _siteKind == SiteKind.Blog;
+            var isBlogSite = _siteKind.IsPostStream();
             var heading = new HeadingNode
             {
                 Id = ListingNodeId(PostId.From(Guid.Empty)),

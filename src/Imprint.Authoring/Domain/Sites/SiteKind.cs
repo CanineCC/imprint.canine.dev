@@ -25,4 +25,17 @@ public enum SiteKind
 
     /// <summary>A dated stream of posts, published with an index and a feed.</summary>
     Blog = 1,
+
+    /// <summary>
+    /// A stream of ARTICLES (essays, guides, whitepapers, documentation), published like a blog
+    /// (posts at the root, an index that is always there, a feed) but with the resource center's
+    /// grouped index and an article template whose header follows each article's kind.
+    /// </summary>
+    ResourceCenter = 2,
+}
+
+public static class SiteKinds
+{
+    /// <summary>Whether the site's content is a stream of posts (a blog or a resource center) rather than a page tree.</summary>
+    public static bool IsPostStream(this SiteKind kind) => kind is SiteKind.Blog or SiteKind.ResourceCenter;
 }

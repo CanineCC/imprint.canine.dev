@@ -20,6 +20,13 @@ public sealed class CreatePostHandler(IAggregateStore store, SiteOverview sites,
             return Result.Fail("The site no longer exists.");
         }
 
+        // A resource center's index and template are driven by the kind, so an article without one
+        // would have nowhere to be listed and no header to be shown with.
+        if (site.Kind is Domain.Sites.SiteKind.ResourceCenter && cmd.Kind is null)
+        {
+            return Result.Fail("An article on a resource center needs a kind: essay, guide, whitepaper or documentation.");
+        }
+
         if (!site.Locales.Contains(locale))
         {
             return Result.Fail($"'{locale}' is not one of this site's locales.");

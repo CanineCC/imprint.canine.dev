@@ -265,6 +265,31 @@ public sealed class ImprintAuthoringMcpTools
             () => new { ok = true, siteId = siteId.Compact });
     }
 
+    [McpServerTool(Name = "create_blog")]
+    [Description("Create a post-stream site and return its id: a blog (kind 'blog', the default) or a resource center (kind 'resource-center': articles with a kind, the grouped index and the article template). Optionally give the publish folder and the public URL of its Production environment (a URL needs a folder). Posts sit at the site's root.")]
+    public static Task<object> CreateBlog(
+        [Description("The site name (1–100 chars).")] string name,
+        [Description("Default locale tag, e.g. 'en'. Defaults to 'en'.")] string? defaultLocale,
+        [Description("'blog' (default) or 'resource-center'.")] string? kind,
+        [Description("Optional publish folder of the Production environment.")] string? publishFolder,
+        [Description("Optional public URL of the Production environment, e.g. https://resourcecenter.canine.dev.")] string? publicUrl,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return Task.FromResult(Fail("name is required"));
+        var siteKind = (kind ?? "blog").Trim().ToLowerInvariant() switch
+        {
+            "blog" or "" => (Imprint.Authoring.Domain.Sites.SiteKind?)Imprint.Authoring.Domain.Sites.SiteKind.Blog,
+            "resource-center" or "resourcecenter" => Imprint.Authoring.Domain.Sites.SiteKind.ResourceCenter,
+            _ => null,
+        };
+        if (siteKind is null) return Task.FromResult(Fail("kind must be 'blog' or 'resource-center'"));
+        var siteId = SiteId.New();
+        return Dispatch(dispatcher, config,
+            new Imprint.Authoring.Features.Sites.CreateBlog.CreateBlog(
+                siteId, name, string.IsNullOrWhiteSpace(defaultLocale) ? "en" : defaultLocale, publishFolder, publicUrl, siteKind.Value),
+            ct, () => new { ok = true, siteId = siteId.Compact, kind = siteKind.Value.ToString() });
+    }
+
     [McpServerTool(Name = "create_page")]
     [Description("Create a page on a site and return its id. Slug defaults to a slugified title; locale defaults to 'en'.")]
     public static Task<object> CreatePage(

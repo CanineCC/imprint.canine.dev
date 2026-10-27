@@ -11,7 +11,7 @@ public sealed class CreateBlogHandler(IAggregateStore store) : ICommandHandler<C
 
     public async Task<Result> Handle(CreateBlog cmd, CancellationToken ct)
     {
-        var blog = Site.Create(cmd.SiteId, cmd.Name, new Locale(cmd.DefaultLocale), SiteKind.Blog);
+        var blog = Site.Create(cmd.SiteId, cmd.Name, new Locale(cmd.DefaultLocale), cmd.Kind);
 
         // Both changes are raised on ONE aggregate and saved once, so a rejected origin
         // (the aggregate validates its shape) takes the whole creation down with it. A

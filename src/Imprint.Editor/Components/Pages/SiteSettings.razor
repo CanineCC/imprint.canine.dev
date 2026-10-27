@@ -49,7 +49,7 @@
         <div class="settings-title">
             <h1>@site.Name</h1>
             <a class="ed-btn" href="@OpenHref(site.Id)" data-testid="settings-open">
-                @(site.Kind == SiteKind.Blog ? "Open posts →" : "Open editor →")
+                @(site.Kind.IsPostStream() ? "Open posts →" : "Open editor →")
             </a>
         </div>
 
@@ -633,7 +633,7 @@
         // A blog's content is its posts, so that is where "open" goes. Without this it fell
         // through to the page lookup, found nothing, and returned the settings page the
         // reader is already looking at — a button that goes nowhere.
-        if (_site?.Kind == SiteKind.Blog)
+        if (_site?.Kind.IsPostStream() == true)
         {
             return $"/site/{id.Compact}/posts";
         }

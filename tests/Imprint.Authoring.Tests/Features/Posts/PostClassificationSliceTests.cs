@@ -58,6 +58,19 @@ public sealed class PostClassificationSliceTests
     }
 
     [Fact]
+    public async Task A_resource_center_refuses_a_post_without_a_kind()
+    {
+        await using var host = NewHost();
+        var center = SiteId.New();
+        await host.Ok(new Imprint.Authoring.Features.Sites.CreateBlog.CreateBlog(
+            center, "Resource Center", En, Kind: Imprint.Authoring.Domain.Sites.SiteKind.ResourceCenter));
+
+        var error = await host.Fails(new CreatePost(PostId.New(), center, "Untyped", "untyped", En));
+
+        Assert.Contains("needs a kind", error, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Classify_changes_what_the_list_shows()
     {
         await using var host = NewHost();
