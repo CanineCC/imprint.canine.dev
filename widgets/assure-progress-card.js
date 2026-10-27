@@ -49,7 +49,7 @@ const STYLE = `
   assure-progress-card .ip-lens-bar .ip-lens-fill { background: var(--metal-fill, var(--accent)); }
   assure-progress-card .ip-fact-table { font-size: 14px; }
   assure-progress-card .assure-tag {
-    display: inline-block; margin-top: 0.2rem; font-family: var(--font-mono); font-size: var(--fs-2xs);
+    display: inline-block; margin-top: 0.2rem; font-family: var(--font-mono); font-size: 12px;
     font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
     border: 1px solid var(--hairline); border-radius: var(--r-full); padding: 0.05rem 0.5rem;
   }

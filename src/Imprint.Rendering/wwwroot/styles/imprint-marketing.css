@@ -2050,3 +2050,34 @@ a.ip-linkcard:hover .ip-linkcard-label { color: var(--accent-ink); }
   font-size: 1.375rem; font-weight: 800; letter-spacing: -0.01em; line-height: 1.25;
 }
 .ip-site-assure .ip-ap-feature-grid .ip-columns > .ip-stack > .ip-stack > .ip-prose { font-size: 1.0625rem; }
+
+/* Touch targets: brand document 5.5 and the kit ask 44px for every control. The shared header
+   draws the theme switch and the menu button at 34px and the header button at 35px, and the
+   main buttons land at 43px. */
+.ip-site-assure .ip-header-actions [data-theme-toggle],
+.ip-site-assure .ip-nav-burger { width: 44px; height: 44px; }
+.ip-site-assure .ip-header-cta { min-height: 44px; }
+.ip-site-assure .ip-btn { min-height: 46px; }
+
+/* Small text at the kit's sizes: "small" 15px for the menu, the footer links and the hero's closing
+   line, which carries the strongest reasons to click (free, shown in full, no card, read only).
+   Same selector as the shared demotion rule, so only that one line moves. */
+.ip-site-assure .ip-nav a,
+.ip-site-assure .ip-footer-group a,
+.ip-site-assure .ip-table { font-size: 15px; }
+.ip-site-assure .ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker) ~ .ip-prose:last-of-type:not(.ip-prose-secondary) {
+  font-size: 15px; line-height: 1.5;
+}
+/* On a phone a solo hero centres its heading and button, so its paragraphs centre with them. */
+@media (max-width: 640px) {
+  .ip-site-assure .ip-ap-hero > .ip-stack:not(:has(> .ip-widget:not(contact-form))) > .ip-prose:not(.ip-kicker) { text-align: center; }
+}
+
+/* The last call: paragraphs after the button row are signposts for other readers, not a second
+   message, so they sit quietly under a line at the kit's small size. */
+.ip-site-assure .ip-ap-cta > .ip-stack > .ip-stack ~ .ip-prose {
+  border-top: 1px solid var(--hairline); padding-top: 1.25rem; margin-top: 0.75rem;
+}
+.ip-site-assure .ip-ap-cta > .ip-stack > .ip-stack ~ .ip-prose,
+.ip-site-assure .ip-ap-cta > .ip-stack > .ip-stack ~ .ip-prose p { font-size: 15px; line-height: 1.6; color: var(--muted); }
+.ip-site-assure .ip-ap-cta > .ip-stack > .ip-stack ~ .ip-prose strong { font-weight: 600; color: var(--heading); }
