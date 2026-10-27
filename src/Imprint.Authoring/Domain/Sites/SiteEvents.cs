@@ -160,6 +160,24 @@ public sealed record SiteLlmsExcludedPathsChanged(IReadOnlyList<string> Paths)
     }
 }
 
+[EventType("site.linkedin-senders-changed", 1)]
+public sealed record SiteLinkedInSendersChanged(IReadOnlyList<LinkedInSender> Senders)
+{
+    // Same list-equality reasoning as SiteNavigationChanged.
+    public bool Equals(SiteLinkedInSendersChanged? other) => other is not null && Senders.SequenceEqual(other.Senders);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        foreach (var sender in Senders)
+        {
+            hash.Add(sender);
+        }
+
+        return hash.ToHashCode();
+    }
+}
+
 [EventType("site.redirects-changed", 1)]
 public sealed record SiteRedirectsChanged(IReadOnlyList<SiteRedirect> Redirects)
 {

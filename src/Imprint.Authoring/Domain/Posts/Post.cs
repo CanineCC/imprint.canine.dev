@@ -89,6 +89,15 @@ public sealed class Post : AggregateRoot
     /// versions were recorded.</summary>
     public string? PublishedSha256 { get; private set; }
 
+    /// <summary>LinkedIn's limit on a post's text.</summary>
+    public const int MaxLinkedInLength = 3_000;
+
+    /// <summary>The LinkedIn post's text; null when the article posts nothing.</summary>
+    public string? LinkedInText { get; private set; }
+
+    /// <summary>The key of the site's LinkedIn sender that posts it; null with no text.</summary>
+    public string? LinkedInSender { get; private set; }
+
     /// <summary>The private publication-control notes; null when there are none. Never published.</summary>
     public string? ControlNotes { get; private set; }
 
@@ -222,7 +231,8 @@ public sealed class Post : AggregateRoot
             throw new DomainException("Only a post that is waiting for review can be approved.");
         }
 
-        Raise(new PostReviewApproved(publishAt, BodyRevision, BodySha256(Body), ControlNotesSha256(ControlNotes)));
+        Raise(new PostReviewApproved(
+            publishAt, BodyRevision, BodySha256(Body), ControlNotesSha256(ControlNotes), LinkedInSha256(LinkedInSender, LinkedInText)));
     }
 
     /// <summary>Sends it back. The reason is required — a rejection nobody can act on is not a review.</summary>
@@ -349,6 +359,38 @@ public sealed class Post : AggregateRoot
         }
     }
 
+    /// <summary>
+    /// Sets the LinkedIn post that goes out with the article, or clears it with blank text. The text is public
+    /// under the sender's name, so it is signed with the words, and changing it (or the sender) after approval
+    /// withdraws the approval. Whether the sender exists on the site is the slice's question.
+    /// </summary>
+    public void SetLinkedIn(string? text, string? sender)
+    {
+        EnsureNotDeleted();
+        var normalized = string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+        var who = normalized is null || string.IsNullOrWhiteSpace(sender) ? null : sender.Trim().ToLowerInvariant();
+        if (normalized is not null && who is null)
+        {
+            throw new DomainException("A LinkedIn post needs a sender: the company page or a product page set up on the site.");
+        }
+
+        if (normalized?.Length > MaxLinkedInLength)
+        {
+            throw new DomainException($"A LinkedIn post can be at most {MaxLinkedInLength:N0} characters.");
+        }
+
+        if (normalized == LinkedInText && who == LinkedInSender)
+        {
+            return;
+        }
+
+        Raise(new PostLinkedInChanged(normalized, who));
+        if (Review is PostReview.Approved && !IsPublished)
+        {
+            Raise(new PostApprovalLapsed());
+        }
+    }
+
     public void Unpublish()
     {
         EnsureNotDeleted();
@@ -433,6 +475,10 @@ public sealed class Post : AggregateRoot
             case PostHoldSet e:
                 Hold = e.Reason;
                 break;
+            case PostLinkedInChanged e:
+                LinkedInText = e.Text;
+                LinkedInSender = e.Sender;
+                break;
             case PostControlNotesChanged e:
                 ControlNotes = e.Notes;
                 break;
@@ -466,6 +512,10 @@ public sealed class Post : AggregateRoot
 
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(canonical.ToString())));
     }
+
+    /// <summary>The sha256 of <c>{sender}\n{text}</c> as UTF-8, lowercase hex; null when the article posts nothing.</summary>
+    public static string? LinkedInSha256(string? sender, string? text) =>
+        text is null ? null : Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes($"{sender}\n{text}")));
 
     /// <summary>The sha256 of the control notes as UTF-8, lowercase hex; null when there are none.</summary>
     public static string? ControlNotesSha256(string? notes) =>

@@ -91,6 +91,7 @@ public sealed class SiteEventSamples : IEventSampleProvider
             yield return new SiteLlmsPreambleChanged(null);
             yield return new SiteRedirectsChanged([new SiteRedirect("/guide-x/", "https://resourcecenter.canine.dev/x/"), new SiteRedirect("/a/", "/b/")]);
             yield return new SiteRedirectsChanged([]);
+            yield return new SiteLinkedInSendersChanged([new LinkedInSender("canine", "Canine Development", "urn:li:organization:12345")]);
             yield return new SiteLlmsExcludedPathsChanged(["surveys/github", "surveys/gitlab"]);
             yield return new SiteLlmsExcludedPathsChanged([]);
 

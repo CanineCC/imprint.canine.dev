@@ -99,6 +99,54 @@ public sealed class Site : AggregateRoot
 
     public const int MaxRedirects = 500;
 
+    /// <summary>The LinkedIn senders the site's articles may post as (see <see cref="SetLinkedInSenders"/>).</summary>
+    public IReadOnlyList<LinkedInSender> LinkedInSenders { get; private set; } = [];
+
+    /// <summary>
+    /// Replaces the LinkedIn senders: each a key an article names (lower-cased), a display name, and the LinkedIn
+    /// organization URN that posts. Refused: a URN that is not <c>urn:li:organization:{digits}</c>, a key listed
+    /// twice, and a sender with no name.
+    /// </summary>
+    public void SetLinkedInSenders(IReadOnlyList<LinkedInSender>? senders)
+    {
+        var list = new List<LinkedInSender>();
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var sender in senders ?? [])
+        {
+            var key = (sender.Key ?? "").Trim().ToLowerInvariant();
+            var name = (sender.Name ?? "").Trim();
+            var urn = (sender.OrganizationUrn ?? "").Trim();
+            if (key.Length == 0 || !key.All(c => char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c) || c == '-'))
+            {
+                throw new DomainException($"'{sender.Key}' is not a sender key: lower-case letters, digits and hyphens.");
+            }
+
+            if (name.Length == 0)
+            {
+                throw new DomainException($"Sender '{key}' needs a name, shown to the author choosing it.");
+            }
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(urn, @"^urn:li:organization:\d+$"))
+            {
+                throw new DomainException($"'{urn}' is not a LinkedIn organization: give it as urn:li:organization:{{id}}.");
+            }
+
+            if (!keys.Add(key))
+            {
+                throw new DomainException($"Sender '{key}' is listed twice.");
+            }
+
+            list.Add(new LinkedInSender(key, name, urn));
+        }
+
+        if (list.SequenceEqual(LinkedInSenders))
+        {
+            return;
+        }
+
+        Raise(new SiteLinkedInSendersChanged(list));
+    }
+
     // Emails of the people who may edit this site besides its owner, in the order they
     // were added. The owner is not in this list — it lives on the site.created envelope
     // actor (see SiteOverview), so the two never drift.
@@ -920,6 +968,9 @@ public sealed class Site : AggregateRoot
                 break;
             case SiteLlmsExcludedPathsChanged e:
                 LlmsExcludedPaths = [.. e.Paths];
+                break;
+            case SiteLinkedInSendersChanged e:
+                LinkedInSenders = [.. e.Senders];
                 break;
             case SiteRedirectsChanged e:
                 Redirects = [.. e.Redirects];

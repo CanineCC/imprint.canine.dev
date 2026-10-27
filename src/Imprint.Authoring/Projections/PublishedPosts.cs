@@ -31,7 +31,9 @@ public sealed record PublishedPost(
     string? Kind = null,
     IReadOnlyList<string>? Products = null,
     string? SignedBy = null,
-    DateTimeOffset? SignedAt = null)
+    DateTimeOffset? SignedAt = null,
+    string? LinkedInText = null,
+    string? LinkedInSender = null)
 {
     /// <summary>The products as published, in canonical order; empty, never null.</summary>
     public IReadOnlyList<string> Products { get; init; } = Products ?? [];
@@ -202,6 +204,7 @@ public sealed class PublishedPosts : ReadModel
 
         return new PublishedPost(
             post.Id, post.SiteId, post.Slug, post.Title, post.MetaTitle, post.MetaDescription,
-            roots, post.PublishedAt ?? at, at, post.PublishedVersion, post.PublishedSha256, post.Kind, post.Products);
+            roots, post.PublishedAt ?? at, at, post.PublishedVersion, post.PublishedSha256, post.Kind, post.Products,
+            LinkedInText: post.LinkedInText, LinkedInSender: post.LinkedInSender);
     }
 }

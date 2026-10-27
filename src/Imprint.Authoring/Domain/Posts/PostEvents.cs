@@ -57,7 +57,14 @@ public sealed record PostSubmittedForReview(DateTimeOffset? ProposedPublishAt, s
 /// with the words (null when the post has none, and on approvals before 2026-10-27).</summary>
 [EventType("post.review-approved")]
 public sealed record PostReviewApproved(
-    DateTimeOffset? PublishAt, int? Revision = null, string? Sha256 = null, string? ControlNotesSha256 = null);
+    DateTimeOffset? PublishAt, int? Revision = null, string? Sha256 = null, string? ControlNotesSha256 = null,
+    string? LinkedInSha256 = null);
+
+/// <summary>The LinkedIn post that goes out with the article: its text and the key of the site's sender that posts
+/// it (see <c>Site.LinkedInSenders</c>), or both null for no post. Signed with the words
+/// (<see cref="PostReviewApproved.LinkedInSha256"/>).</summary>
+[EventType("post.linkedin-changed")]
+public sealed record PostLinkedInChanged(string? Text, string? Sender);
 
 /// <summary>The private publication-control notes (sources, checks, who checked), or null to clear
 /// them. Never published; signed with the words (see <see cref="PostReviewApproved"/>).</summary>
