@@ -604,6 +604,7 @@ button { font: inherit; color: inherit; }
 .ed-picker-empty { padding: 12px 8px; color: var(--ed-text-muted); }
 
 .ed-publish { display: flex; align-items: center; gap: 8px; }
+.ed-publish-when .ed-input { width: auto; min-width: 12rem; }
 
 .ed-history { display: inline-flex; align-items: center; gap: 2px; }
 .ed-history .ed-btn { font-size: 16px; line-height: 1; }

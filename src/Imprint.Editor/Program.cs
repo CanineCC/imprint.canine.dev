@@ -53,6 +53,7 @@ builder.Services.AddImprintAssetProcessing();
 // (gate included); the mailer tells a site's reviewer that something is waiting. Both are
 // background workers because both must happen with nobody at a keyboard.
 builder.Services.AddHostedService<DuePostPublisher>();
+builder.Services.AddHostedService<Imprint.Authoring.Features.Schedules.DuePagePublisher>();
 builder.Services.AddSingleton<SmtpRelay>();
 builder.Services.AddHostedService<ReviewMailer>();
 builder.Services.AddImprintPublishing(new PublishingOptions

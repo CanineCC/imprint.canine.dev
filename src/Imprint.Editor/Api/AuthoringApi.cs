@@ -553,6 +553,24 @@ public static class AuthoringApi
                 : Results.BadRequest(new { error = "publish failed", details = result.Errors });
         });
 
+        // Schedule ONE page to go live at a date and time (ISO 8601 with offset); null cancels. The
+        // scheduler publishes it through the same command as the route above, then records the outcome.
+        api.MapPut("/pages/{pageId}/schedule", async (
+            string pageId, PageScheduleRequest? body, ICommandDispatcher dispatcher, ScheduledPages schedules, CancellationToken ct) =>
+        {
+            if (!TryPageId(pageId, out var pid)) return Results.BadRequest(new { error = "invalid pageId" });
+            var result = await DispatchAs(dispatcher, actor,
+                new Imprint.Authoring.Features.Schedules.SchedulePagePublish(pid, body?.PublishAt), ct);
+            return result.Succeeded
+                ? Results.Ok(PageScheduleView(pid, schedules.Get(pid)))
+                : Results.BadRequest(new { error = "schedule failed", details = result.Errors });
+        });
+
+        api.MapGet("/pages/{pageId}/schedule", (string pageId, ScheduledPages schedules) =>
+            TryPageId(pageId, out var pid)
+                ? Results.Ok(PageScheduleView(pid, schedules.Get(pid)))
+                : Results.BadRequest(new { error = "invalid pageId" }));
+
         // ── site chrome ─────────────────────────────────────────────────────────────────────────
         // Navigation travels as the whole list (mirroring the command and the editor's reorder-as-a-
         // unit shape), so GET /sites/{id} first, change the order, PUT it back.
@@ -1919,6 +1937,18 @@ public static class AuthoringApi
     public sealed record PostClassificationRequest(string? Kind, IReadOnlyList<string>? Products);
 
     public sealed record PostControlNotesRequest(string? Notes);
+
+    public sealed record PageScheduleRequest(DateTimeOffset? PublishAt);
+
+    /// <summary>A page's schedule as the API and MCP report it; state "None" when it was never scheduled.</summary>
+    internal static object PageScheduleView(PageId page, ScheduledPage? schedule) => new
+    {
+        pageId = page.Compact,
+        state = schedule?.State.ToString() ?? "None",
+        publishAt = schedule?.At,
+        publishedAt = schedule?.PublishedAt,
+        failureReason = schedule?.FailureReason,
+    };
 
     /// <summary>Hand a post to the site's reviewer, with a date they may overrule.</summary>
     public sealed record PostSubmitRequest(string? Locale, DateTimeOffset? ProposedPublishAt, string? Note);

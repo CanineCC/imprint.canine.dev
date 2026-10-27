@@ -83,6 +83,9 @@ public sealed class PageList : ReadModel
     public PageSummary? Get(PageId id) =>
         _pages.TryGetValue(id, out var entry) ? Summarize(id, entry) : null;
 
+    /// <summary>The site a page belongs to; null for a page this list does not know (or deleted).</summary>
+    public SiteId? SiteOf(PageId id) => _pages.TryGetValue(id, out var entry) ? entry.SiteId : null;
+
     /// <summary>
     /// Whether a slug is already used <em>within the given site</em>. Slugs are unique per
     /// site, not globally — two different sites may each have a 'home' or 'about' page.

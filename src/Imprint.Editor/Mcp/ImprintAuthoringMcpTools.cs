@@ -1209,6 +1209,19 @@ public sealed class ImprintAuthoringMcpTools
         return await Dispatch(dispatcher, config, new PublishPageCmd(pid), ct, () => new { ok = true, pageId = pid.Compact, published = true });
     }
 
+    [McpServerTool(Name = "schedule_page_publish")]
+    [Description("Schedule ONE page to go live at a date and time (ISO 8601 with offset, e.g. 2026-11-02T09:00:00+01:00), move an existing schedule, or cancel it by omitting the time. The scheduler publishes the page AS IT STANDS at that moment through the same command as publish_page, and records the outcome: state Published, or Failed with the reason (e.g. no changes to publish). Returns the schedule.")]
+    public static async Task<object> SchedulePagePublish(
+        [Description("The page id.")] string pageId,
+        [Description("When to publish, ISO 8601 with offset; omit to cancel the schedule.")] string? publishAt,
+        ICommandDispatcher dispatcher, IConfiguration config, ScheduledPages schedules, CancellationToken ct = default)
+    {
+        if (!TryPageId(pageId, out var pid)) return Fail("invalid pageId");
+        if (!TryInstant(publishAt, out var at)) return Fail($"'{publishAt}' is not an ISO 8601 instant");
+        return await Dispatch(dispatcher, config, new Imprint.Authoring.Features.Schedules.SchedulePagePublish(pid, at), ct,
+            () => new { ok = true, schedule = AuthoringApi.PageScheduleView(pid, schedules.Get(pid)) });
+    }
+
     [McpServerTool(Name = "unpublish_page")]
     [Description("Unpublish ONE page: it leaves the site's output (its files sweep away, the sitemap and llms.txt drop it) while the DRAFT is kept, so it can be edited and published again later. Use for content that went live before it was ready.")]
     public static async Task<object> UnpublishPage(
