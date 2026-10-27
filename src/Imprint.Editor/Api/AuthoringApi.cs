@@ -57,6 +57,8 @@ using TagAssetCmd = Imprint.Authoring.Features.Assets.TagAsset.TagAsset;
 using UntagAssetCmd = Imprint.Authoring.Features.Assets.UntagAsset.UntagAsset;
 using UploadAssetCmd = Imprint.Authoring.Features.Assets.UploadAsset.UploadAsset;
 using UploadAssetDarkVariantCmd = Imprint.Authoring.Features.Assets.UploadAssetDarkVariant.UploadAssetDarkVariant;
+using SetPostLinkedInCmd = Imprint.Authoring.Features.Posts.SetPostLinkedIn.SetPostLinkedIn;
+using SetSiteLinkedInSendersCmd = Imprint.Authoring.Features.Sites.SetSiteLinkedInSenders.SetSiteLinkedInSenders;
 
 namespace Imprint.Editor.Api;
 
@@ -221,6 +223,10 @@ public static class AuthoringApi
                 reviewer = site.ReviewerEmail is { Length: > 0 }
                     ? (object)new { name = site.ReviewerName, email = site.ReviewerEmail }
                     : null,
+                // Who the site's articles may post to LinkedIn as (a LinkedIn organization page each).
+                linkedInSenders = site.LinkedInSenders
+                    .Select(sender => (object)new { key = sender.Key, name = sender.Name, organizationUrn = sender.OrganizationUrn })
+                    .ToList(),
                 // The read a caller needs before PUTting /environments back, and the one place the
                 // site's canonical origin is visible to a machine.
                 environments = site.Environments.Select(environment => (object)new
@@ -1037,6 +1043,18 @@ public static class AuthoringApi
                 : Results.BadRequest(new { error = "control notes failed", details = result.Errors });
         });
 
+        // The LinkedIn post that goes out with the article once it is published and signed. Setting it on an
+        // approved post withdraws the approval: the reviewer signs the text with the words.
+        api.MapPut("/posts/{postId}/linkedin", async (
+            string postId, PostLinkedInRequest? body, ICommandDispatcher dispatcher, PostList posts, CancellationToken ct) =>
+        {
+            if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
+            var result = await DispatchAs(dispatcher, actor, new SetPostLinkedInCmd(pid, body?.Text, body?.Sender), ct);
+            return result.Succeeded && posts.Get(pid) is { } post
+                ? Results.Ok(new { postId = pid.Compact, text = post.LinkedInText, sender = post.LinkedInSender })
+                : Results.BadRequest(new { error = "linkedin failed", details = result.Errors });
+        });
+
         // An article's kind (essay, guide, whitepaper, documentation) and the products it is about.
         api.MapPut("/posts/{postId}/classification", async (
             string postId, PostClassificationRequest? body, ICommandDispatcher dispatcher, PostList posts, CancellationToken ct) =>
@@ -1098,6 +1116,21 @@ public static class AuthoringApi
         // Naming the reviewer is what turns publishing on this site into a two-person job, so it
         // is reachable here too — a script that prepares posts for review should be able to say
         // who they are for.
+        // The LinkedIn organization pages the site's articles may post as: a key the article names, a display
+        // name, and the page's urn:li:organization:{id}. Replaces the whole list.
+        api.MapPut("/sites/{siteId}/linkedin-senders", async (
+            string siteId, SiteLinkedInSendersRequest? body, ICommandDispatcher dispatcher, CancellationToken ct) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            var senders = (body?.Senders ?? [])
+                .Select(sender => new LinkedInSender(sender.Key ?? "", sender.Name ?? "", sender.OrganizationUrn ?? ""))
+                .ToList();
+            var result = await DispatchAs(dispatcher, actor, new SetSiteLinkedInSendersCmd(sid, senders), ct);
+            return result.Succeeded
+                ? Results.Ok(new { siteId = sid.Compact, senders = senders.Count })
+                : Results.BadRequest(new { error = "linkedin senders failed", details = result.Errors });
+        });
+
         api.MapPut("/sites/{siteId}/reviewer", async (
             string siteId, SiteReviewerRequest? body, ICommandDispatcher dispatcher, CancellationToken ct) =>
         {
@@ -1311,6 +1344,7 @@ public static class AuthoringApi
         ["hold"] = post.Hold,
         ["kind"] = post.Kind,
         ["products"] = post.Products,
+        ["linkedIn"] = post.LinkedInText is { Length: > 0 } ? new { text = post.LinkedInText, sender = post.LinkedInSender } : null,
         ["publishAt"] = post.PublishAt,
         ["publishedAt"] = post.PublishedAt,
         ["updatedAt"] = post.UpdatedAt,
@@ -1433,6 +1467,7 @@ public static class AuthoringApi
             PostHoldSet e => Entry("hold", new { reason = e.Reason }),
             PostClassified e => Entry("classification", new { kind = e.Kind, products = e.Products }),
             PostControlNotesChanged e => Entry("control-notes", new { length = e.Notes?.Length ?? 0 }),
+            PostLinkedInChanged e => Entry("linkedin", new { sender = e.Sender, length = e.Text?.Length ?? 0 }),
             PostChangesRequested e => Entry("changes-requested", new { reason = e.Reason }),
             PostApprovalLapsed => Entry("approval-lapsed"),
             PostPublished e => Entry("published", new { publishedAt = e.PublishedAt, version = e.Version, sha256 = e.Sha256 }),
@@ -1937,6 +1972,12 @@ public static class AuthoringApi
     public sealed record PostClassificationRequest(string? Kind, IReadOnlyList<string>? Products);
 
     public sealed record PostControlNotesRequest(string? Notes);
+
+    public sealed record PostLinkedInRequest(string? Text, string? Sender);
+
+    public sealed record SiteLinkedInSenderRequest(string? Key, string? Name, string? OrganizationUrn);
+
+    public sealed record SiteLinkedInSendersRequest(IReadOnlyList<SiteLinkedInSenderRequest>? Senders);
 
     public sealed record PageScheduleRequest(DateTimeOffset? PublishAt);
 

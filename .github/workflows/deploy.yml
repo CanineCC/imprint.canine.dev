@@ -66,11 +66,20 @@ jobs:
       # published artifact so the /api/authoring + /mcp surface mounts (fail-closed — empty secret ⇒
       # not mapped). Lets the token be managed from CI instead of an on-box/LAN edit. Program.cs loads
       # appsettings.Authoring.json as an optional last overlay.
-      - name: Inject authoring token (from CI secret)
+      # The LinkedIn app's client id and secret ride the same overlay: empty secrets leave LinkedIn off (nothing is
+      # posted). The member's tokens are NOT here: the editor keeps them in its data directory after Connect.
+      # Written by json.dumps so a quote in a secret cannot break the file.
+      - name: Inject authoring token and LinkedIn app (from CI secrets)
         env:
           IMPRINT_AUTHORING_TOKEN: ${{ secrets.IMPRINT_AUTHORING_TOKEN }}
+          IMPRINT_LINKEDIN_CLIENT_ID: ${{ secrets.IMPRINT_LINKEDIN_CLIENT_ID }}
+          IMPRINT_LINKEDIN_CLIENT_SECRET: ${{ secrets.IMPRINT_LINKEDIN_CLIENT_SECRET }}
         run: |
-          printf '{ "Imprint": { "Authoring": { "Token": "%s" } } }\n' "$IMPRINT_AUTHORING_TOKEN" \
+          python3 -c 'import json, os; print(json.dumps({"Imprint": {
+              "Authoring": {"Token": os.environ["IMPRINT_AUTHORING_TOKEN"]},
+              "LinkedIn": {"ClientId": os.environ.get("IMPRINT_LINKEDIN_CLIENT_ID", ""),
+                           "ClientSecret": os.environ.get("IMPRINT_LINKEDIN_CLIENT_SECRET", ""),
+                           "PublicOrigin": "https://app.imprint.canine.dev"}}}))' \
             > /home/jimmy/apps/imprint/app.new/appsettings.Authoring.json
 
       - name: Shut down build servers

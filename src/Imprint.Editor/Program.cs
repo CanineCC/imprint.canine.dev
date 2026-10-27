@@ -9,6 +9,8 @@ using Imprint.Editor.Api;
 using Imprint.Editor.Auth;
 using Imprint.Editor.Components;
 using Imprint.Editor.Contact;
+using Imprint.Editor.LinkedIn;
+using Imprint.Authoring.Features.LinkedIn;
 using Imprint.Editor.Mcp;
 using Imprint.Editor.Notifications;
 using Imprint.Editor.Services;
@@ -55,6 +57,21 @@ builder.Services.AddImprintAssetProcessing();
 builder.Services.AddHostedService<DuePostPublisher>();
 builder.Services.AddHostedService<Imprint.Authoring.Features.Schedules.DuePagePublisher>();
 builder.Services.AddSingleton<SmtpRelay>();
+
+// LinkedIn: a signed article's LinkedIn text goes out once when it is published. Off (nothing sent, nothing
+// recorded) until Imprint:LinkedIn has a client id and secret AND someone has connected the pages; the tokens
+// live in a secret file under the data directory, never in the event stream.
+builder.Services.AddSingleton(builder.Configuration.GetSection("Imprint:LinkedIn").Get<LinkedInOptions>() ?? new LinkedInOptions());
+builder.Services.AddSingleton(new LinkedInTokenStore(dataDirectory));
+builder.Services.AddSingleton(new LinkedInPostingOptions());
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddHttpClient("linkedin", client => client.Timeout = TimeSpan.FromSeconds(30));
+builder.Services.AddSingleton<ILinkedInPoster>(provider => new LinkedInClient(
+    provider.GetRequiredService<IHttpClientFactory>().CreateClient("linkedin"),
+    provider.GetRequiredService<LinkedInOptions>(),
+    provider.GetRequiredService<LinkedInTokenStore>(),
+    provider.GetRequiredService<ILogger<LinkedInClient>>()));
+builder.Services.AddHostedService<DueLinkedInPoster>();
 builder.Services.AddHostedService<ReviewMailer>();
 builder.Services.AddImprintPublishing(new PublishingOptions
 {
@@ -309,6 +326,9 @@ app.MapGet("/preview/{site}", (string site, SitePreview preview, HttpContext htt
 
 app.MapGet("/preview/{site}/{**path}", (string site, string? path, SitePreview preview, HttpContext http) =>
     ServePreview(site, path ?? "", preview, http)).AllowAnonymous();
+
+// Connecting LinkedIn (OAuth): an editor login is required whenever the editor itself requires one.
+app.MapLinkedInConnect(authOptions.Enabled);
 
 // Headless, token-authenticated authoring API (off-network content authoring via the same command
 // path as the editor). Fail-closed: mapped ONLY when Imprint:Authoring:Token is configured.

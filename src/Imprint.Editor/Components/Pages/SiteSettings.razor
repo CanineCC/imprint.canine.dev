@@ -10,6 +10,8 @@
 @using Imprint.Authoring.Features.Sites.ClaimSite
 @using Imprint.Authoring.Features.Sites.RemoveCollaborator
 @using Imprint.Authoring.Features.Sites.SetSiteReviewer
+@using Imprint.Authoring.Features.Sites.SetSiteLinkedInSenders
+@using Imprint.Editor.LinkedIn
 @using Imprint.Authoring.Features.Sites.SetCopyLine
 @using Imprint.Authoring.Features.Sites.SetFavicon
 @using Imprint.Authoring.Features.Sites.SetFooter
@@ -30,6 +32,8 @@
 @inject SiteDeployService Deploy
 @inject ToastService Toasts
 @inject NavigationManager Navigation
+@inject LinkedInOptions LinkedInApp
+@inject LinkedInTokenStore LinkedInTokens
 
 <PageTitle>@(_site?.Name ?? "Site") · Settings</PageTitle>
 
@@ -414,6 +418,77 @@
             </div>
         </section>
 
+        @* ---- LinkedIn: who articles post as, and whether this install can post at all ---- *@
+        <section class="settings-card" aria-labelledby="set-linkedin">
+            <h2 id="set-linkedin">LinkedIn</h2>
+            <p class="settings-hint">
+                An article with a LinkedIn text is posted once, as the sender it names, when it is published with a
+                signed approval. Each sender is a LinkedIn page (the company page or a product's showcase page):
+                a short key the article names, a display name, and the page's organization URN
+                (<code>urn:li:organization:</code> and the page id).
+            </p>
+            <p class="settings-hint" data-testid="linkedin-connection">
+                @if (!LinkedInApp.HasApp)
+                {
+                    <text>LinkedIn is not set up on this install: nothing is posted.</text>
+                }
+                else if (LinkedInTokens.Read() is { } connected)
+                {
+                    <text>
+                        Connected @connected.ConnectedAt.ToString("d MMM yyyy"). Authorization renews itself until
+                        @((connected.RefreshExpiresAt ?? connected.AccessExpiresAt).ToString("d MMM yyyy")); connect again before then.
+                    </text>
+                }
+                else
+                {
+                    <text>Not connected: nothing is posted until someone with a role on the pages connects it.</text>
+                }
+            </p>
+            @if (LinkedInApp.HasApp)
+            {
+                <div class="settings-row">
+                    <a class="ed-btn" data-testid="linkedin-connect" data-enhance-nav="false"
+                       href="@($"/linkedin/connect?site={site.Id.Compact}")">@(LinkedInTokens.Read() is null ? "Connect LinkedIn" : "Connect again")</a>
+                </div>
+            }
+
+            @if (_senders.Count == 0)
+            {
+                <p class="panel-empty">No senders yet. Add one below.</p>
+            }
+            else
+            {
+                <ol class="env-list">
+                    @for (var i = 0; i < _senders.Count; i++)
+                    {
+                        var idx = i;
+                        <li class="env-row" @key="_senders[idx]">
+                            <input class="ed-input env-name" placeholder="canine" aria-label="Sender key"
+                                   data-testid="linkedin-sender-key"
+                                   disabled="@(!_interactive)" @bind="_senders[idx].Key" @bind:event="oninput" />
+                            <input class="ed-input sender-name" placeholder="Canine Development" aria-label="Sender name"
+                                   disabled="@(!_interactive)" @bind="_senders[idx].Name" @bind:event="oninput" />
+                            <input class="ed-input env-baseurl" placeholder="urn:li:organization:123456" aria-label="Organization URN"
+                                   disabled="@(!_interactive)" @bind="_senders[idx].Urn" @bind:event="oninput" />
+                            <button type="button" class="ed-btn ed-btn-ghost ed-btn-danger" title="Remove" aria-label="Remove sender"
+                                    disabled="@(!_interactive)" @onclick="() => _senders.RemoveAt(idx)">✕</button>
+                        </li>
+                    }
+                </ol>
+            }
+
+            <div class="settings-row">
+                <button type="button" class="ed-btn" data-testid="linkedin-sender-add"
+                        disabled="@(!_interactive)" @onclick="() => _senders.Add(new SenderRow())">＋ Add sender</button>
+                <button type="button" class="ed-btn ed-btn-primary" data-testid="linkedin-senders-save"
+                        disabled="@(!_interactive || _busy || !SendersDirty)" @onclick="() => SaveSenders(site)">Save senders</button>
+                @if (SendersDirty)
+                {
+                    <span class="settings-dirty">Unsaved changes</span>
+                }
+            </div>
+        </section>
+
         @* ---- Publish & promote ---- *@
         <section class="settings-card" aria-labelledby="set-deploy">
             <h2 id="set-deploy">Publish &amp; promote</h2>
@@ -475,6 +550,31 @@
         public string Name { get; set; } = "";
         public string Path { get; set; } = "";
         public string BaseUrl { get; set; } = "";
+    }
+
+    private sealed class SenderRow
+    {
+        public string Key { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string Urn { get; set; } = "";
+    }
+
+    private List<SenderRow> _senders = [];
+
+    private bool SendersDirty => _site is { } current
+        && !current.LinkedInSenders.Select(s => (s.Key, s.Name, s.OrganizationUrn))
+            .SequenceEqual(_senders.Select(r => (r.Key.Trim(), r.Name.Trim(), r.Urn.Trim())));
+
+    private void SeedSenders() =>
+        _senders = [.. (_site?.LinkedInSenders ?? []).Select(s => new SenderRow { Key = s.Key, Name = s.Name, Urn = s.OrganizationUrn })];
+
+    private async Task SaveSenders(Site site)
+    {
+        var senders = _senders.Select(r => new LinkedInSender(r.Key.Trim(), r.Name.Trim(), r.Urn.Trim())).ToList();
+        if (await Commands.Run(new SetSiteLinkedInSenders(site.Id, senders)))
+        {
+            Toasts.Show(senders.Count == 0 ? "LinkedIn senders removed." : $"{senders.Count} LinkedIn sender(s) saved.");
+        }
     }
 
     private sealed class NavChildEdit
@@ -609,6 +709,7 @@
         _reviewerName = _site?.ReviewerName ?? "";
         _reviewerEmail = _site?.ReviewerEmail ?? "";
         SeedEnvs();
+        SeedSenders();
         SeedChrome();
     }
 

@@ -214,11 +214,12 @@ public sealed class PostEditorTests(EditorFixture fixture)
 
         foreach (var (number, word) in new[] { (10, "ten"), (2, "two"), (1, "one") })
         {
-            await page.FillAsync("[data-testid='new-post-title']", $"({number}) {run} {word}");
+            await page.FillUntilEnabled("[data-testid='new-post-title']", $"({number}) {run} {word}", "[data-testid='new-post-create']");
             await page.ClickAsync("[data-testid='new-post-create']");
             await page.WaitForURLAsync("**/posts/**");
             await page.WaitForInteractive();
             await page.GoBackAsync();
+            await page.WaitForURLAsync("**/posts");
             await page.WaitForInteractive();
         }
 

@@ -68,6 +68,31 @@ public static class EditorDriver
         page.WaitForSelectorAsync("[data-interactive]",
             new PageWaitForSelectorOptions { State = WaitForSelectorState.Attached });
 
+    /// <summary>
+    /// Fills a field and waits until the button it enables is enabled, filling again if the first fill was lost.
+    /// <para>After a history navigation (GoBack) the layout's <c>[data-interactive]</c> marker is already there, so
+    /// <see cref="WaitForInteractive"/> returns before the page's own handlers are wired again; a fill in that window
+    /// reaches the DOM but not the component, and the button stays disabled. Measured: 1 run in 6 on the posts
+    /// index. Waiting for the consequence (the button enabled) is a wait no earlier state can satisfy.</para>
+    /// </summary>
+    public static async Task FillUntilEnabled(this IPage page, string field, string value, string button)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            await page.FillAsync(field, "");
+            await page.FillAsync(field, value);
+            try
+            {
+                await Microsoft.Playwright.Assertions.Expect(page.Locator(button))
+                    .ToBeEnabledAsync(new LocatorAssertionsToBeEnabledOptions { Timeout = 5_000 });
+                return;
+            }
+            catch (PlaywrightException) when (attempt < 4)
+            {
+            }
+        }
+    }
+
     public static ILocator Node(this IPage page, string type, int nth = 0) =>
         page.Locator($".ed-canvas [data-node-type='{type}']").Nth(nth);
 

@@ -13,6 +13,9 @@
 @using Imprint.Authoring.Features.Posts.UnpublishPost
 @using Imprint.Authoring.Features.Posts.ClassifyPost
 @using Imprint.Authoring.Features.Posts.SetPostControlNotes
+@using Imprint.Authoring.Features.Posts.SetPostLinkedIn
+@using Imprint.Authoring.Features.LinkedIn
+@using Imprint.Authoring.Domain.LinkedIn
 @using Imprint.Authoring.Markdown
 @using Imprint.Authoring.Projections
 @using Imprint.Editor.Auth
@@ -26,6 +29,7 @@
 @inject IAggregateStore Store
 @inject PostList Posts
 @inject SiteOverview Sites
+@inject LinkedInPosts LinkedInOutcomes
 @inject SiteAccess Access
 @inject CommandRunner Commands
 @inject EditorRenderContextFactory ContextFactory
@@ -302,6 +306,58 @@ else
                         </fieldset>
                         <button type="button" class="ed-btn" data-testid="post-control-notes-save"
                                 disabled="@(_notes.Trim() == (_post?.ControlNotes ?? ""))" @onclick="SaveNotes">Save notes</button>
+
+                        @* The LinkedIn post that goes out once, automatically, when the article is published
+                           with a signed approval. The reviewer signs it with the words. *@
+                        <fieldset class="post-details-group" data-testid="post-linkedin">
+                            <legend>LinkedIn post</legend>
+                            @if (LinkedInSenders.Count == 0)
+                            {
+                                <p class="post-details-hint">This site has no LinkedIn senders yet: add them in the site's settings.</p>
+                            }
+                            else
+                            {
+                                <select class="ed-input" data-testid="post-linkedin-sender" aria-label="Post as" @bind="_linkedInSender">
+                                    <option value="">Post as…</option>
+                                    @foreach (var sender in LinkedInSenders)
+                                    {
+                                        <option value="@sender.Key">@sender.Name</option>
+                                    }
+                                </select>
+                                <textarea class="ed-input post-details-linkedin" rows="6" data-testid="post-linkedin-text"
+                                          aria-label="LinkedIn text" maxlength="@Post.MaxLinkedInLength"
+                                          @bind="_linkedInText" @bind:event="oninput"
+                                          placeholder="What the post says. A card linking to the article is added."></textarea>
+                                <p class="post-details-hint">
+                                    @_linkedInText.Trim().Length / @Post.MaxLinkedInLength.ToString("N0") characters.
+                                    Posted once, when the article is published with a signed approval.
+                                </p>
+                            }
+                            @if (LinkedInOutcomes.Get(_id) is { } outcome)
+                            {
+                                <p class="post-details-hint" data-testid="post-linkedin-outcome">
+                                    @LinkedInOutcomeText(outcome)
+                                </p>
+                                @if (outcome.State is LinkedInPostState.Unknown or LinkedInPostState.Attempting)
+                                {
+                                    <input class="ed-input" data-testid="post-linkedin-urn" aria-label="The post's URN, if it is on LinkedIn"
+                                           placeholder="urn:li:share:… (if it is on the page)" @bind="_linkedInUrn" @bind:event="oninput" />
+                                    <div class="settings-row">
+                                        <button type="button" class="ed-btn" data-testid="post-linkedin-found"
+                                                disabled="@(_linkedInUrn.Trim().Length == 0)" @onclick="() => ResolveLinkedIn(_linkedInUrn)">It is on LinkedIn</button>
+                                        <button type="button" class="ed-btn" data-testid="post-linkedin-missing"
+                                                @onclick="() => ResolveLinkedIn(null)">It is not: send it again</button>
+                                    </div>
+                                }
+                            }
+                        </fieldset>
+                        @if (LinkedInSenders.Count > 0)
+                        {
+                            <button type="button" class="ed-btn" data-testid="post-linkedin-save"
+                                    disabled="@(!LinkedInChanged)" @onclick="SaveLinkedIn">
+                                @(_linkedInText.Trim().Length == 0 ? "Clear LinkedIn post" : "Save LinkedIn post")
+                            </button>
+                        }
                     </div>
                 }
                 else
@@ -529,6 +585,45 @@ else
     private string _kind = "";
     private HashSet<string> _products = [];
     private string _notes = "";
+    private string _linkedInText = "";
+    private string _linkedInSender = "";
+    private string _linkedInUrn = "";
+
+    private IReadOnlyList<Imprint.Authoring.Domain.Sites.LinkedInSender> LinkedInSenders =>
+        _post is { } current && Sites.Get(current.SiteId) is { } site ? site.LinkedInSenders : [];
+
+    private bool LinkedInChanged =>
+        _linkedInText.Trim() != (_post?.LinkedInText ?? "")
+        || (_linkedInText.Trim().Length > 0 && _linkedInSender != (_post?.LinkedInSender ?? ""));
+
+    private static string LinkedInOutcomeText(LinkedInPostRow row) => row.State switch
+    {
+        LinkedInPostState.Posted => $"Posted to LinkedIn ({row.Urn}).",
+        LinkedInPostState.Failed when row.Retryable => $"LinkedIn asked us to wait ({row.Reason}); it is sent again after {row.RetryAfter:g} UTC.",
+        LinkedInPostState.Failed => $"LinkedIn refused the post: {row.Reason}",
+        LinkedInPostState.Unknown or LinkedInPostState.Attempting =>
+            $"Not known whether it posted ({row.Reason ?? "the attempt did not finish"}). Look at the page, then say which.",
+        _ => "Not posted yet.",
+    };
+
+    private async Task SaveLinkedIn()
+    {
+        var text = _linkedInText.Trim();
+        if (await Commands.Run(new SetPostLinkedIn(_id, text, text.Length == 0 ? null : _linkedInSender)))
+        {
+            ApplyPost(await Store.LoadOrDefault<Post>(_id.Stream) ?? _post!);
+            Toasts.Show(text.Length == 0 ? "LinkedIn post cleared." : "LinkedIn post saved.");
+        }
+    }
+
+    private async Task ResolveLinkedIn(string? urn)
+    {
+        if (await Commands.Run(new ResolveLinkedInPost(_id, urn, DateTimeOffset.UtcNow)))
+        {
+            _linkedInUrn = "";
+            Toasts.Show(urn is null ? "It will be sent again." : "Recorded as posted.");
+        }
+    }
 
     private bool ClassificationChanged =>
         _kind != (_post?.Kind ?? "") || !_products.SetEquals(_post?.Products ?? []);
@@ -837,6 +932,8 @@ else
         _kind = post.Kind ?? "";
         _products = [.. post.Products];
         _notes = post.ControlNotes ?? "";
+        _linkedInText = post.LinkedInText ?? "";
+        _linkedInSender = post.LinkedInSender ?? LinkedInSenders.FirstOrDefault()?.Key ?? "";
         _publishAtLocal = post.PublishAt is { } at
             ? EditorialTime.ToLocal(at).ToString("yyyy-MM-dd'T'HH:mm", System.Globalization.CultureInfo.InvariantCulture)
             : "";

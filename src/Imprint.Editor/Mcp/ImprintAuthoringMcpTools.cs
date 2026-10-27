@@ -57,6 +57,8 @@ using TagAssetCmd = Imprint.Authoring.Features.Assets.TagAsset.TagAsset;
 using UntagAssetCmd = Imprint.Authoring.Features.Assets.UntagAsset.UntagAsset;
 using UploadAssetCmd = Imprint.Authoring.Features.Assets.UploadAsset.UploadAsset;
 using UploadAssetDarkVariantCmd = Imprint.Authoring.Features.Assets.UploadAssetDarkVariant.UploadAssetDarkVariant;
+using SetPostLinkedInCmd = Imprint.Authoring.Features.Posts.SetPostLinkedIn.SetPostLinkedIn;
+using SetSiteLinkedInSendersCmd = Imprint.Authoring.Features.Sites.SetSiteLinkedInSenders.SetSiteLinkedInSenders;
 
 namespace Imprint.Editor.Mcp;
 
@@ -1006,6 +1008,35 @@ public sealed class ImprintAuthoringMcpTools
         if (posts.Get(pid) is null) return Fail("unknown post");
         return await Dispatch(dispatcher, config, new SetPostControlNotesCmd(pid, notes), ct,
             () => new { ok = true, postId = pid.Compact, length = notes?.Trim().Length ?? 0 });
+    }
+
+    [McpServerTool(Name = "set_post_linkedin")]
+    [Description("Set (or clear, with blank text) the LinkedIn post that goes out with an article: the text (at most 3,000 characters, plain; a link card to the article is added) and the sender, a key from the site's LinkedIn senders (see set_site_linkedin_senders). It is posted once, automatically, when the article is published with a signed approval; the reviewer signs the text with the words, so setting it on an approved post withdraws the approval.")]
+    public static async Task<object> SetPostLinkedIn(
+        [Description("The post id.")] string postId,
+        [Description("The LinkedIn text; blank to clear.")] string? text,
+        [Description("The sender's key, e.g. 'canine' or 'assert'; required with a text.")] string? sender,
+        ICommandDispatcher dispatcher, IConfiguration config, PostList posts, CancellationToken ct = default)
+    {
+        if (!AuthoringApi.TryPostIdPublic(postId, out var pid)) return Fail("invalid postId");
+        if (posts.Get(pid) is null) return Fail("unknown post");
+        return await Dispatch(dispatcher, config, new SetPostLinkedInCmd(pid, text, sender), ct,
+            () => new { ok = true, postId = pid.Compact, length = text?.Trim().Length ?? 0, sender = sender?.Trim().ToLowerInvariant() });
+    }
+
+    [McpServerTool(Name = "set_site_linkedin_senders")]
+    [Description("Replace the LinkedIn organization pages a site's articles may post as. Each sender has a key (lowercase letters, digits, hyphens; what an article names), a display name, and the page's organization URN (urn:li:organization:{id}; a showcase page is one too). An empty list removes them all.")]
+    public static async Task<object> SetSiteLinkedInSenders(
+        [Description("The site id.")] string siteId,
+        [Description("The senders: objects with key, name and organizationUrn.")] IReadOnlyList<AuthoringApi.SiteLinkedInSenderRequest>? senders,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        var list = (senders ?? [])
+            .Select(s => new Imprint.Authoring.Domain.Sites.LinkedInSender(s.Key ?? "", s.Name ?? "", s.OrganizationUrn ?? ""))
+            .ToList();
+        return await Dispatch(dispatcher, config, new SetSiteLinkedInSendersCmd(sid, list), ct,
+            () => new { ok = true, siteId = sid.Compact, senders = list.Select(s => s.Key).ToList() });
     }
 
     [McpServerTool(Name = "classify_post")]

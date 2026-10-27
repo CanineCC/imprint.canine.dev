@@ -134,3 +134,23 @@ post text per article first. Times are Copenhagen.
   B5, B6, B13, B8, B9, B10, B11, B15, B16, then B21 to B28), ending 16 March 2027.
 - **Whitepapers: every other Thursday 09:00, from 12 November 2026,** each only once its publication control is
   closed (none is today): W7 and W10 first (shortest, CAI-facing), then W1, W4, W8, W2, W3, W6, W9 and W5.
+
+## LinkedIn texts (C5)
+
+Drafted 2026-10-27 in `RC-LINKEDIN-DRAFTS.json` (slug → [sender, text]); none is on an article yet, because an
+article may only name a sender its site has, and the senders need the owner's LinkedIn organization ids
+(RC-WORKLIST question 5). `~/Hentet/kennel/resourcecenter/tools/rc_apply_linkedin.py` puts them on (dry run by
+default, `--write` to set; it refuses any article already in review, approved or published, since setting the
+text withdraws an approval).
+
+- **Which articles get one (31):** the 20 essays, the 10 whitepapers, and one launch post on `how-assert-works`
+  announcing the resource center. The other 15 documentation pages and the 10 guides get none: they go live together
+  on 3 November, and 26 announcements in one morning would flood the page. The launch post stands for them.
+- **Sender by product:** assert → `assert`, assay → `assay`, assure → `assure`; canine, cca and cai → `canine` (the
+  engine and the index have no page of their own).
+- **Language: English.** The articles are English and these post from the company and product pages; the owner's own
+  posts stay Danish and are written by the owner.
+- **Content:** each text restates its article's dek and adds no figure the article does not carry; no hashtags or
+  mentions (LinkedIn's markup characters are escaped, so they would appear literally); no em-dashes.
+- **Pacing:** the poster sends at most 2 per site per hour and only within 7 days of the publish, so the proposed
+  schedule (one essay a week, a whitepaper a fortnight) posts each on its own morning.
