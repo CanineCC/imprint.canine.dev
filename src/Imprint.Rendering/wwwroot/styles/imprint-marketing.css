@@ -697,7 +697,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 [class*="ip-ap-"] h3 { font-size: var(--fs-lg); color: var(--heading); }
 /* A section-level h3 introduces body copy, so it cannot be smaller than it. Card h3s keep
    --fs-lg: they sit above 13px card text, where 16px is already the step up. */
-[class*="ip-ap-"]:not(.ip-ap-note):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-docmock):not(.ip-ap-timeline) > .ip-stack > h3 { font-size: var(--fs-xl); }
+[class*="ip-ap-"]:not(.ip-ap-note):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-article):not(.ip-ap-resource-center):not(.ip-ap-docmock):not(.ip-ap-timeline) > .ip-stack > h3 { font-size: var(--fs-xl); }
 
 /* The lede: the first prose paragraph after the head heading. */
 [class*="ip-ap-"] > .ip-stack > .ip-prose:not(.ip-kicker) {
@@ -705,7 +705,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 }
 /* ★ The 18px/42rem pair is the CAI marketing work and stops at the article appearances:
    Prose, Doc, Docmock, Timeline and Note keep the size, leading and measure they had. */
-[class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > .ip-prose:not(.ip-kicker) {
+[class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-article):not(.ip-ap-resource-center):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > .ip-prose:not(.ip-kicker) {
   font-size: var(--mk-body); line-height: 1.65; max-width: var(--mk-measure);
 }
 [class*="ip-ap-"] .ip-prose p strong { color: var(--ink); }
@@ -749,16 +749,16 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    With a grid, columns or a widget in the section, it stretches to match them instead —
    those span the band, and a header narrower than its own cards reads as detached.
    The hero and the CTA are excluded from the alignment: both are centred statements. */
-[class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > :is(h2, h3) {
+[class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-article):not(.ip-ap-resource-center):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > :is(h2, h3) {
   max-width: var(--mk-measure-head); text-wrap: pretty; text-align: center;
 }
 /* ★ The kicker belongs to the HEAD, not to the copy. It is rich text, so the body rule was catching
    it and setting it left while the heading directly beneath centred — left, centred, left stacked on
    top of each other. Same scope as the heading above, so the two can never disagree. */
-[class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > .ip-prose.ip-kicker {
+[class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-article):not(.ip-ap-resource-center):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > .ip-prose.ip-kicker {
   text-align: center;
 }
-[class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack:has(> :is(.ip-grid, .ip-columns, .ip-widget)) > :is(h2, h3) {
+[class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-article):not(.ip-ap-resource-center):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack:has(> :is(.ip-grid, .ip-columns, .ip-widget)) > :is(h2, h3) {
   align-self: stretch; max-width: none;
 }
 /* the head grid/columns/widgets span the full band */
@@ -767,7 +767,7 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    (--ip-space-4) sets the same distance between kicker, heading and paragraph as between the
    head and a grid of cards, so a head did not read as a group. A single extra step is enough;
    more starts to break the section apart. */
-[class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > :is(.ip-grid, .ip-columns, .ip-widget) { margin-block-start: var(--ip-space-2); }
+[class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-article):not(.ip-ap-resource-center):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > :is(.ip-grid, .ip-columns, .ip-widget) { margin-block-start: var(--ip-space-2); }
 /* ★ Space between the paragraphs of one text (owner, 2026-09-29). imprint-base.css gives every block
    in a text after the first a step of space (.ip-prose > * + *), but its own margin reset for the
    page (.ip-page :is(h1, … p …), one class and one element) outranks that rule (one class), so the
@@ -1751,7 +1751,7 @@ a.ip-linkcard:hover .ip-linkcard-label { color: var(--accent-ink); }
    The selector now MIRRORS that rule and adds to it, which is the only way to be sure: same
    attribute, same six exclusions, plus .ip-ap-table-list and :has(ul). Measured before shipping by
    injecting it into the live page: 672px -> 1152px, two 575px columns. */
-[class*="ip-ap-"].ip-ap-table-list:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > .ip-prose:has(ul):not(.ip-kicker) { max-width: none; }
+[class*="ip-ap-"].ip-ap-table-list:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-article):not(.ip-ap-resource-center):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > .ip-prose:has(ul):not(.ip-kicker) { max-width: none; }
 /* A REAL table. The content model has no <table> — canonical rich text is p/ul/ol/li/strong/em/a/br —
    so each CELL is its own <li> and the grid does the rest. Column count defaults to 3; a section
    whose anchor ends in "-cols4" declares four (the subprocessor list). Below 40rem every table
@@ -2102,7 +2102,7 @@ a.ip-linkcard:hover .ip-linkcard-label { color: var(--accent-ink); }
 /* The kit asks balanced wrapping for headlines, so a heading never leaves two or three words alone
    on its last line. */
 .ip-site-assure :is(h1, h2),
-.ip-site-assure [class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > h2 {
+.ip-site-assure [class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-article):not(.ip-ap-resource-center):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > h2 {
   text-wrap: balance;
 }
 
@@ -2127,3 +2127,4 @@ a.ip-linkcard:hover .ip-linkcard-label { color: var(--accent-ink); }
   /* Room for the longest tool name, "set_cause_disposition", on one line. */
   .ip-site-assure .ip-table td:first-child { min-width: 11.5rem; }
 }
+

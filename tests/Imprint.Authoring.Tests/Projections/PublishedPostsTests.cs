@@ -91,6 +91,39 @@ public sealed class PublishedPostsTests
     }
 
     [Fact]
+    public void A_snapshot_carries_who_signed_the_words_and_when()
+    {
+        var id = PostId.New();
+
+        var model = Fold(
+            (Stream(id), new PostCreated(id, Site, "hello", En, "Hello")),
+            (Stream(id), new PostBodyChanged(En, "Prose.")),
+            (Stream(id), new PostSubmittedForReview(null, null)),
+            (Stream(id), new PostReviewApproved(null, 1, "abc")),
+            (Stream(id), new PostPublished(Day1, 1, "abc")));
+
+        var post = Assert.Single(model.AllForSite(Site));
+        Assert.Equal("test", post.SignedBy);
+        Assert.Equal(Day1.AddMinutes(4), post.SignedAt);
+    }
+
+    [Fact]
+    public void A_lapsed_approval_leaves_no_signature_on_the_next_publish()
+    {
+        var id = PostId.New();
+
+        var model = Fold(
+            (Stream(id), new PostCreated(id, Site, "hello", En, "Hello")),
+            (Stream(id), new PostBodyChanged(En, "Prose.")),
+            (Stream(id), new PostSubmittedForReview(null, null)),
+            (Stream(id), new PostReviewApproved(null, 1, "abc")),
+            (Stream(id), new PostApprovalLapsed()),
+            (Stream(id), new PostPublished(Day1, 1, "abc")));
+
+        Assert.Null(Assert.Single(model.AllForSite(Site)).SignedBy);
+    }
+
+    [Fact]
     public void An_unpublished_edit_does_not_reach_the_live_post()
     {
         // The whole reason this projection snapshots instead of reading the draft.

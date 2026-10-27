@@ -357,6 +357,7 @@ public sealed class SitePublisher(
             //      order against the screen rules they are correcting.
             var cssText = CssSlim.Strip(
                 ThemeCss.Emit(theme) + "\n" + ThemeCss.StructuralCss + "\n" + ThemeCss.MarketingCss
+                + (site.Kind == SiteKind.ResourceCenter ? "\n" + ThemeCss.ResourceCenterCss : "")
                 + "\n" + ThemeCss.PrintCss);
             var cssBytes = Encoding.UTF8.GetBytes(cssText);
             var cssHash = Hashing.Hash16(cssBytes);
@@ -1617,7 +1618,9 @@ public sealed class SitePublisher(
                     post.Title,
                     post.MetaTitle,
                     post.MetaDescription,
-                    new PageTree(WithDateline(post, post.RootsFor(_defaultLocale, _defaultLocale))),
+                    new PageTree(_siteKind == SiteKind.ResourceCenter
+                        ? ResourceCenterArticle(post)
+                        : WithDateline(post, post.RootsFor(_defaultLocale, _defaultLocale))),
                     PublishedVersion: 0)
                 {
                     PublicPath = $"{PostPrefix}{post.Slug.Value}",
@@ -1654,6 +1657,11 @@ public sealed class SitePublisher(
         /// </summary>
         private PublishedPage ListingPage()
         {
+            if (_siteKind == SiteKind.ResourceCenter)
+            {
+                return ResourceCenterIndex();
+            }
+
             // On a blog site the masthead IS the site's name — a heading reading "Blog" on
             // blog.canine.dev tells the reader something they knew before they arrived.
             var isBlogSite = _siteKind.IsPostStream();
@@ -1741,6 +1749,188 @@ public sealed class SitePublisher(
             };
 
             return NodeList.Of([dateline, .. body]);
+        }
+
+        // ------------------------------------------------------------ the resource center
+
+        /// <summary>
+        /// The resource center's index: one widget, rendered on the server from the list of published
+        /// articles (see <see cref="ResourceCenterTemplates"/>), so every title and link is in the HTML
+        /// and the tabs and product filter only enhance it. The hero copy is the approved design's.
+        /// </summary>
+        private PublishedPage ResourceCenterIndex()
+        {
+            var articles = _posts.Select(post => new
+            {
+                title = post.Title.Resolve(_defaultLocale, _defaultLocale),
+                dek = post.MetaDescription.Resolve(_defaultLocale, _defaultLocale),
+                kind = post.Kind ?? "essay",
+                products = post.Products,
+                href = $"/{PostPrefix}{post.Slug.Value}/",
+                version = post.Version,
+                date = EditorialTime.ForReader(post.PublishedAt),
+                signed = post.SignedBy is not null,
+                sha256 = post.Sha256,
+            });
+
+            var hub = new WidgetNode
+            {
+                Id = ListingNodeId(PostId.From(new Guid("00000000-0000-0000-0000-00000000c001"))),
+                Tag = ResourceCenterTemplates.Hub,
+                Props = PropBag.Of(
+                [
+                    new("articles", System.Text.Json.JsonSerializer.Serialize(articles)),
+                    new("eyebrow", $"{_siteName} · Canine Development"),
+                    new("heading", "Everything we know,"),
+                    new("emphasis", "and how we know it."),
+                    new("lede", "Essays, whitepapers, guides and system documentation for Assert, Assure, Assay and the "
+                        + "Canine Code Analyzer behind them. Every article is versioned and signed by a named person, "
+                        + "and every one that carries a number opens with the method behind it."),
+                ]),
+            };
+
+            var section = new SectionNode
+            {
+                Id = ListingNodeId(PostId.From(new Guid("00000000-0000-0000-0000-00000000c000"))),
+                Appearance = SectionAppearance.ResourceCenter,
+                // The filter is its own island beside the server-rendered index: a widget renders from a
+                // template OR hydrates from a bundle, never both, so the enhancement cannot sit on rc-hub.
+                Children = NodeList.Of(hub, new WidgetNode
+                {
+                    Id = ListingNodeId(PostId.From(new Guid("00000000-0000-0000-0000-00000000c002"))),
+                    Tag = "rc-filter",
+                }),
+            };
+
+            return new PublishedPage(
+                PostPageId(PostId.From(new Guid("00000000-0000-0000-0000-0000000000b1"))),
+                site.Id,
+                default,
+                LocalizedText.Of(_defaultLocale, _siteName),
+                LocalizedText.Empty,
+                LocalizedText.Empty,
+                new PageTree(NodeList.Of(section)),
+                PublishedVersion: 0)
+            {
+                PublicPath = IndexPath,
+            };
+        }
+
+        /// <summary>
+        /// A resource-center article: its contents, then the header and the body, then its document
+        /// record, in one <see cref="SectionAppearance.Article"/> section the theme lays out in three
+        /// columns. The body's own leading <c># title</c> is dropped, because the header carries it.
+        /// </summary>
+        private NodeList ResourceCenterArticle(PublishedPost post)
+        {
+            var roots = post.RootsFor(_defaultLocale, _defaultLocale);
+            var body = roots is [SectionNode wrapper] ? wrapper.Children : roots;
+            if (body.Count > 0 && body[0] is HeadingNode { Level: 1 })
+            {
+                body = body.RemoveAt(0);
+            }
+
+            var signed = post.SignedBy is not null;
+            var signer = SignerName(post.SignedBy);
+            var title = post.Title.Resolve(_defaultLocale, _defaultLocale);
+            var version = post.Version?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
+            var date = EditorialTime.ForReader(post.PublishedAt);
+            NodeId Id(string part) => ArticleNodeId(post.Id, part);
+
+            var head = new WidgetNode
+            {
+                Id = Id("head"),
+                Tag = ResourceCenterTemplates.ArticleHead,
+                Props = PropBag.Of(
+                [
+                    new("kind", post.Kind ?? "essay"),
+                    new("products", string.Join(',', post.Products)),
+                    new("title", title),
+                    new("dek", post.MetaDescription.Resolve(_defaultLocale, _defaultLocale)),
+                    new("version", version),
+                    new("date", date),
+                    new("signer", signer),
+                    new("signed", signed ? "true" : "false"),
+                    new("back", IndexHref),
+                ]),
+            };
+
+            var record = new WidgetNode
+            {
+                Id = Id("record"),
+                Tag = ResourceCenterTemplates.Record,
+                Props = PropBag.Of(
+                [
+                    new("version", version),
+                    new("date", date),
+                    new("signer", signer),
+                    new("signed-at", post.SignedAt is { } at ? EditorialTime.ForReader(at) : ""),
+                    new("signed", signed ? "true" : "false"),
+                    new("sha256", post.Sha256 ?? ""),
+                ]),
+            };
+
+            var toc = new WidgetNode
+            {
+                Id = Id("toc"),
+                Tag = ResourceCenterTemplates.Toc,
+                Props = PropBag.Of([new("headings", System.Text.Json.JsonSerializer.Serialize(ContentsOf(body)))]),
+            };
+
+            var article = new StackNode { Id = Id("article"), Children = NodeList.Of([head, .. body]) };
+            return NodeList.Of(new SectionNode
+            {
+                Id = Id("section"),
+                Appearance = SectionAppearance.Article,
+                Children = NodeList.Of(toc, article, record),
+            });
+        }
+
+        /// <summary>
+        /// The second-level headings, with the ids <c>HeadingView</c> gives them: the same slug from the
+        /// default locale's words, suffixed -2, -3 … on a collision, counted over every subheading in
+        /// document order (the renderer counts them all, so a skipped h3 would shift the ids).
+        /// </summary>
+        private object[] ContentsOf(NodeList body)
+        {
+            var used = new HashSet<string>(StringComparer.Ordinal);
+            var contents = new List<object>();
+            foreach (var heading in new PageTree(body).All().OfType<HeadingNode>().Where(h => h.Level > 1))
+            {
+                var text = heading.Text.Resolve(_defaultLocale, _defaultLocale);
+                if (SectionAnchor.ForHeading(text) is not { } slug)
+                {
+                    continue;
+                }
+
+                var id = slug;
+                for (var n = 2; !used.Add(id); n++)
+                {
+                    id = $"{slug}-{n}";
+                }
+
+                if (heading.Level == 2)
+                {
+                    contents.Add(new { id, text });
+                }
+            }
+
+            return [.. contents];
+        }
+
+        /// <summary>The name to print for whoever signed: the site reviewer's name when the approving
+        /// login is the reviewer's, otherwise empty (the record then says "a named person"). The login
+        /// itself is an email address and is never printed.</summary>
+        private string SignerName(string? login) =>
+            login is not null && site.ReviewerEmail is { Length: > 0 } email
+                && string.Equals(login, email, StringComparison.OrdinalIgnoreCase)
+                ? site.ReviewerName ?? ""
+                : "";
+
+        private static NodeId ArticleNodeId(PostId post, string part)
+        {
+            var seed = System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes($"rc-article:{post.Compact}:{part}"));
+            return NodeId.From(new Guid(seed.AsSpan(0, 16)));
         }
 
         /// <summary>Deterministic node ids for the generated index: the same posts must produce

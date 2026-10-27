@@ -29,7 +29,9 @@ public sealed record PublishedPost(
     int? Version = null,
     string? Sha256 = null,
     string? Kind = null,
-    IReadOnlyList<string>? Products = null)
+    IReadOnlyList<string>? Products = null,
+    string? SignedBy = null,
+    DateTimeOffset? SignedAt = null)
 {
     /// <summary>The products as published, in canonical order; empty, never null.</summary>
     public IReadOnlyList<string> Products { get; init; } = Products ?? [];
@@ -55,6 +57,10 @@ public sealed class PublishedPosts : ReadModel
 {
     private readonly Dictionary<PostId, Post> _drafts = [];
     private readonly Dictionary<PostId, PublishedPost> _published = [];
+
+    // Who signed the words the post now holds, and when: the approving event's actor (a login) and
+    // instant. The aggregate does not see metadata, so the projection keeps it beside the draft.
+    private readonly Dictionary<PostId, (string By, DateTimeOffset At)> _signatures = [];
 
     /// <summary>The published posts of one site, newest first — the listing and the feed order.</summary>
     public IReadOnlyList<PublishedPost> AllForSite(SiteId site) =>
@@ -111,8 +117,19 @@ public sealed class PublishedPosts : ReadModel
 
         switch (@event.Event)
         {
+            case PostReviewApproved:
+                _signatures[id] = (@event.Metadata.Actor, @event.Metadata.TimestampUtc);
+                break;
+
+            case PostApprovalLapsed or PostChangesRequested or PostSubmittedForReview:
+                _signatures.Remove(id);
+                break;
+
             case PostPublished:
-                _published[id] = Snapshot(draft, @event.Metadata.TimestampUtc);
+                _published[id] = Snapshot(draft, @event.Metadata.TimestampUtc) is var snapshot
+                    && _signatures.TryGetValue(id, out var signed)
+                    ? snapshot with { SignedBy = signed.By, SignedAt = signed.At }
+                    : snapshot;
                 NotifyChanged();
                 break;
 
@@ -127,6 +144,7 @@ public sealed class PublishedPosts : ReadModel
                 if (@event.Event is PostDeleted)
                 {
                     _drafts.Remove(id);
+                    _signatures.Remove(id);
                 }
 
                 break;
@@ -137,6 +155,7 @@ public sealed class PublishedPosts : ReadModel
     {
         _drafts.Clear();
         _published.Clear();
+        _signatures.Clear();
     }
 
     /// <summary>

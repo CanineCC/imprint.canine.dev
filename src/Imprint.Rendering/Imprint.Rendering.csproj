@@ -22,6 +22,7 @@
     <EmbeddedResource Include="wwwroot/styles/imprint-base.css" LogicalName="Imprint.Rendering.styles.imprint-base.css" />
     <EmbeddedResource Include="wwwroot/styles/imprint-marketing.css" LogicalName="Imprint.Rendering.styles.imprint-marketing.css" />
     <EmbeddedResource Include="wwwroot/styles/imprint-print.css" LogicalName="Imprint.Rendering.styles.imprint-print.css" />
+    <EmbeddedResource Include="wwwroot/styles/imprint-resource-center.css" LogicalName="Imprint.Rendering.styles.imprint-resource-center.css" />
     <!-- Self-hosted variable fonts referenced by imprint-marketing.css (@font-face).
          Embedded so the publisher writes them into every site's /fonts/ folder with no
          external CDN request — EU-resident, zero third parties. The wwwroot copies also

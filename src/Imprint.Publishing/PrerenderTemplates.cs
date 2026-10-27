@@ -54,6 +54,8 @@ public static class PrerenderTemplates
     {
         LinkCardsTemplate.Name => LinkCardsTemplate.Render(props, site),
         FlowTemplate.Name => FlowTemplate.Render(props),
+        ResourceCenterTemplates.Hub or ResourceCenterTemplates.ArticleHead
+            or ResourceCenterTemplates.Record or ResourceCenterTemplates.Toc => ResourceCenterTemplates.Render(name, props),
         _ => null,
     };
 
