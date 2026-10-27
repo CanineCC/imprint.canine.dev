@@ -31,7 +31,7 @@ send_post_back, per-post `PublishAt` scheduling.
 Status: [ ] open, [~] in progress, [x] done, [!] blocked (reason in the log).
 
 ### Platform (imprint, branch feat/resource-center)
-- [ ] **P0. Gatekeeping for the LinkedIn feature**: blind BUILD/DEFER/CUT review of the brief's item 3 (the owner
+- [x] **P0. Gatekeeping for the LinkedIn feature**: blind BUILD/DEFER/CUT review of the brief's item 3 (the owner
       chose option 2 explicitly; the review sizes it, it does not re-open the choice).
 - [x] **P1. Article kind** (A1): essay | guide | whitepaper | documentation, required at creation; API, MCP, editor.
 - [x] **P2. Product tags** (A2 minimal): optional, several allowed (canine, assert, assure, assay, cca, cai); accent only.
@@ -78,6 +78,9 @@ Status: [ ] open, [~] in progress, [x] done, [!] blocked (reason in the log).
 
 ## Questions for the owner (collected)
 
+6. LinkedIn sender: your reach is on your personal profile (the GTM plan says founder-led posting beats the company page), and option 2 as built posts as the Canine page or a product page. Posting as you needs a different permission (w_member_social) and is a later addition, not a rebuild. Which should the first posts come from?
+7. Scheduled PAGE publishes do not get a LinkedIn post (the review cut it: no page in the plan is announced). You wrote "any publish"; say so if pages should post too, and it is a small addition.
+
 5. LinkedIn (needed before anything can post, whatever P0 decides about the build): a LinkedIn developer app tied to
    the Canine company page with the Community Management API product approved (LinkedIn reviews it; the company must be
    verified), and a person with an admin or content-admin role on the Canine page and on each product page to authorize
@@ -108,3 +111,4 @@ Status: [ ] open, [~] in progress, [x] done, [!] blocked (reason in the log).
 - 2026-10-27 C1-C4 done: 56 drafts on the resource center (16 documentation, 10 guides, 10 whitepapers, 20 essays), all Draft, none submitted; rewrites and verification in RC-CONTENT.md 'Copy log'. Real-content render checked locally (The_real_articles_publish_and_can_be_previewed with RC_CONTENT_JSON): 56 cards, one h1, contents lists populated, no console errors, no horizontal scroll; screenshots real-*.png looked at.
 - 2026-10-27 C5 BLOCKED on P8 (the LinkedIn field does not exist yet; P8 waits on P0's blind review, which needs a fresh agent and the box has been too busy all day).
 - 2026-10-27 C6 done: a proposed schedule in RC-CONTENT.md (launch 3 Nov 09:00 docs + guides; essays weekly Tuesdays from 10 Nov; whitepapers fortnightly Thursdays from 12 Nov once each control closes). Nothing scheduled.
+- 2026-10-27 P0 done (blind review, fresh agent): BUILD a (text signed with the article), b (sender as one setting: a per-site list of senders, default Canine), c (auto-post after the publish, ONLY when an approved text exists, so the 3 Nov batch cannot flood the page), e minimal (record Attempting before the call; Posted / Failed / Unknown; never retry from Unknown, retry only 429/5xx that provably did not land), f minimal (owner authorize + callback, tokens in a secret file, refresh on 401, expiry shown), h (Details field, API, MCP); a per-site rate cap. DEFER d (thumbnail upload: title and description first). CUT g (page publishes): no page in the content plan is announced. The review also found the owner's LinkedIn reach is on his personal account (GTM: 'founder-led posting > company page'), so the sender stays a URN and a personal sender can be added later (w_member_social). P8 is built to this scope.
