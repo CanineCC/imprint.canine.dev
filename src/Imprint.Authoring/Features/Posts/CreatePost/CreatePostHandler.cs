@@ -34,6 +34,12 @@ public sealed class CreatePostHandler(IAggregateStore store, SiteOverview sites,
         }
 
         var post = Post.Create(cmd.PostId, cmd.SiteId, slug, locale, cmd.Title);
+        if (cmd.Kind is not null)
+        {
+            // Classified before the first save, so a refused kind leaves no post behind.
+            post.Classify(cmd.Kind, cmd.Products ?? []);
+        }
+
         await store.Save(post, ct);
         return Result.Ok();
     }

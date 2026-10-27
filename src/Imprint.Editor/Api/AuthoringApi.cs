@@ -49,6 +49,7 @@ using PublishPostCmd = Imprint.Authoring.Features.Posts.PublishPost.PublishPost;
 using RequestPostChangesCmd = Imprint.Authoring.Features.Posts.RequestPostChanges.RequestPostChanges;
 using SchedulePostCmd = Imprint.Authoring.Features.Posts.SchedulePost.SchedulePost;
 using HoldPostCmd = Imprint.Authoring.Features.Posts.HoldPost.HoldPost;
+using ClassifyPostCmd = Imprint.Authoring.Features.Posts.ClassifyPost.ClassifyPost;
 using SetSiteReviewerCmd = Imprint.Authoring.Features.Sites.SetSiteReviewer.SetSiteReviewer;
 using SubmitPostForReviewCmd = Imprint.Authoring.Features.Posts.SubmitPostForReview.SubmitPostForReview;
 using TagAssetCmd = Imprint.Authoring.Features.Assets.TagAsset.TagAsset;
@@ -934,7 +935,8 @@ public static class AuthoringApi
             // A slug is derived from the title when none is given — the same courtesy the editor's
             // "New post" box does, so a caller does not have to know the slug rules to create one.
             var slug = body.Slug is { Length: > 0 } given ? given : Slug.Suggest(body.Title);
-            var result = await DispatchAs(dispatcher, actor, new CreatePostCmd(postId, sid, body.Title, slug, locale), ct);
+            var result = await DispatchAs(dispatcher, actor,
+                new CreatePostCmd(postId, sid, body.Title, slug, locale, body.Kind, body.Products), ct);
             return result.Succeeded
                 ? Results.Ok(new { postId = postId.Compact, slug, locale })
                 : Results.BadRequest(new { error = "create post failed", details = result.Errors });
@@ -1003,6 +1005,18 @@ public static class AuthoringApi
             return result.Succeeded
                 ? Results.Ok(new { postId = pid.Compact, hold = string.IsNullOrWhiteSpace(body?.Reason) ? null : body.Reason.Trim() })
                 : Results.BadRequest(new { error = "hold failed", details = result.Errors });
+        });
+
+        // An article's kind (essay, guide, whitepaper, documentation) and the products it is about.
+        api.MapPut("/posts/{postId}/classification", async (
+            string postId, PostClassificationRequest? body, ICommandDispatcher dispatcher, PostList posts, CancellationToken ct) =>
+        {
+            if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
+            if (body is null || string.IsNullOrWhiteSpace(body.Kind)) return Results.BadRequest(new { error = "kind is required" });
+            var result = await DispatchAs(dispatcher, actor, new ClassifyPostCmd(pid, body.Kind, body.Products ?? []), ct);
+            return result.Succeeded && posts.Get(pid) is { } post
+                ? Results.Ok(new { postId = pid.Compact, kind = post.Kind, products = post.Products })
+                : Results.BadRequest(new { error = "classify failed", details = result.Errors });
         });
 
         api.MapPost("/posts/{postId}/submit-review", async (
@@ -1261,6 +1275,8 @@ public static class AuthoringApi
             ? new { signedBy = signed.SignedBy, signedAt = signed.SignedAt, revision = signed.Revision, sha256 = signed.Sha256 }
             : null,
         ["hold"] = post.Hold,
+        ["kind"] = post.Kind,
+        ["products"] = post.Products,
         ["publishAt"] = post.PublishAt,
         ["publishedAt"] = post.PublishedAt,
         ["updatedAt"] = post.UpdatedAt,
@@ -1379,6 +1395,7 @@ public static class AuthoringApi
             PostSubmittedForReview e => Entry("submitted", new { proposedPublishAt = e.ProposedPublishAt, note = e.Note }),
             PostReviewApproved e => Entry("approved", new { publishAt = e.PublishAt, revision = e.Revision, sha256 = e.Sha256 }),
             PostHoldSet e => Entry("hold", new { reason = e.Reason }),
+            PostClassified e => Entry("classification", new { kind = e.Kind, products = e.Products }),
             PostChangesRequested e => Entry("changes-requested", new { reason = e.Reason }),
             PostApprovalLapsed => Entry("approval-lapsed"),
             PostPublished e => Entry("published", new { publishedAt = e.PublishedAt }),
@@ -1864,7 +1881,8 @@ public static class AuthoringApi
     public sealed record SetAssetRefRequest(string? AssetId);
 
     /// <summary>Create a post. The slug is derived from the title when absent; locale defaults to the site's.</summary>
-    public sealed record CreatePostRequest(string Title, string? Slug, string? Locale);
+    public sealed record CreatePostRequest(
+        string Title, string? Slug, string? Locale, string? Kind = null, IReadOnlyList<string>? Products = null);
 
     /// <summary>The post's markdown for one locale — the authored truth, converted at publish.</summary>
     public sealed record PostBodyRequest(string? Locale, string Markdown);
@@ -1878,6 +1896,8 @@ public static class AuthoringApi
     /// <summary>The go-live instant, or null for "to be decided".</summary>
     public sealed record PostScheduleRequest(DateTimeOffset? PublishAt);
     public sealed record PostHoldRequest(string? Reason);
+
+    public sealed record PostClassificationRequest(string? Kind, IReadOnlyList<string>? Products);
 
     /// <summary>Hand a post to the site's reviewer, with a date they may overrule.</summary>
     public sealed record PostSubmitRequest(string? Locale, DateTimeOffset? ProposedPublishAt, string? Note);

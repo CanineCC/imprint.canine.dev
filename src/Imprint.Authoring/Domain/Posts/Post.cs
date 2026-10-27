@@ -80,6 +80,13 @@ public sealed class Post : AggregateRoot
     /// <summary>The sha256 of the words the standing approval covers (see <see cref="BodySha256"/>).</summary>
     public string? ApprovedSha256 { get; private set; }
 
+    /// <summary>What kind of article this is (see <see cref="ArticleClassification.Kinds"/>); null on a
+    /// post nobody has classified, which is every post written before articles had kinds.</summary>
+    public string? Kind { get; private set; }
+
+    /// <summary>The products the article is about, in canonical order; empty when none is named.</summary>
+    public IReadOnlyList<string> Products { get; private set; } = [];
+
     public override string StreamId => Id.Stream;
 
     // ------------------------------------------------------------------ behaviors
@@ -278,6 +285,28 @@ public sealed class Post : AggregateRoot
         Raise(new PostHoldSet(normalized));
     }
 
+    /// <summary>
+    /// Says what kind of article this is and which products it is about. Both change what a reader
+    /// sees (the template and index switch on the kind, the accent on the products), so changing them
+    /// after approval withdraws the approval, exactly as an edit to the words does.
+    /// </summary>
+    public void Classify(string kind, IEnumerable<string> products)
+    {
+        EnsureNotDeleted();
+        var classified = new PostClassified(
+            ArticleClassification.NormalizeKind(kind), ArticleClassification.NormalizeProducts(products));
+        if (classified.Kind == Kind && classified.Products.SequenceEqual(Products))
+        {
+            return;
+        }
+
+        Raise(classified);
+        if (Review is PostReview.Approved && !IsPublished)
+        {
+            Raise(new PostApprovalLapsed());
+        }
+    }
+
     public void Unpublish()
     {
         EnsureNotDeleted();
@@ -357,6 +386,10 @@ public sealed class Post : AggregateRoot
                 break;
             case PostHoldSet e:
                 Hold = e.Reason;
+                break;
+            case PostClassified e:
+                Kind = e.Kind;
+                Products = e.Products;
                 break;
             case PostDeleted:
                 IsDeleted = true;

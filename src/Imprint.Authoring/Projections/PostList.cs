@@ -54,8 +54,13 @@ public sealed record PostSummary(
     DateTimeOffset? PublishAt = null,
     string? ReviewNote = null,
     PostSignature? Signature = null,
-    string? Hold = null)
+    string? Hold = null,
+    string? Kind = null,
+    IReadOnlyList<string>? Products = null)
 {
+    /// <summary>The products the article is about, in canonical order; empty, never null, when none is named.</summary>
+    public IReadOnlyList<string> Products { get; init; } = Products ?? [];
+
     /// <summary>
     /// One word for where the post stands. Live beats everything — a published post that is
     /// waiting on a re-review is still on the internet, and saying "In review" about it would be
@@ -111,7 +116,9 @@ public sealed class PostList : ReadModel
         DateTimeOffset? PublishAt = null,
         string? ReviewNote = null,
         PostSignature? Signature = null,
-        string? Hold = null);
+        string? Hold = null,
+        string? Kind = null,
+        IReadOnlyList<string>? Products = null);
 
     private readonly Dictionary<PostId, Entry> _posts = [];
 
@@ -210,6 +217,7 @@ public sealed class PostList : ReadModel
             },
             PostApprovalLapsed => entry with { Review = PostReview.None, Signature = null },
             PostHoldSet held => entry with { Hold = held.Reason },
+            PostClassified classified => entry with { Kind = classified.Kind, Products = classified.Products },
             _ => entry,
         };
 
@@ -228,5 +236,6 @@ public sealed class PostList : ReadModel
 
     private static PostSummary Summarize(PostId id, Entry entry) =>
         new(id, entry.SiteId, entry.Slug, entry.Title, entry.PublishedAt, entry.Version, entry.PublishedVersion,
-            entry.UpdatedAt, entry.Review, entry.PublishAt, entry.ReviewNote, entry.Signature, entry.Hold);
+            entry.UpdatedAt, entry.Review, entry.PublishAt, entry.ReviewNote, entry.Signature, entry.Hold,
+            entry.Kind, entry.Products ?? []);
 }

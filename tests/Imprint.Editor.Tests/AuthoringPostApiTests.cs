@@ -175,6 +175,39 @@ public sealed class AuthoringPostApiTests(AuthoringPostApiHost host) : IClassFix
         Assert.Equal(JsonValueKind.Null, (await Send(HttpMethod.Get, $"/api/authoring/posts/{post}")).GetProperty("hold").ValueKind);
     }
 
+    // An article's kind and products are set at creation or afterwards, and read back on the post.
+    [Fact]
+    public async Task The_api_creates_a_post_with_a_kind_and_reclassifies_it()
+    {
+        var site = (await Send(HttpMethod.Post, "/api/authoring/sites",
+            new { Name = $"Center {Guid.NewGuid():N}" })).GetProperty("siteId").GetString()!;
+        var post = (await Send(HttpMethod.Post, $"/api/authoring/sites/{site}/posts",
+            new { Title = "Read-only by design", Kind = "guide", Products = new[] { "assert" } })).GetProperty("postId").GetString()!;
+
+        var created = await Send(HttpMethod.Get, $"/api/authoring/posts/{post}");
+        Assert.Equal("guide", created.GetProperty("kind").GetString());
+        Assert.Equal(["assert"], created.GetProperty("products").EnumerateArray().Select(p => p.GetString()));
+
+        var changed = await Send(HttpMethod.Put, $"/api/authoring/posts/{post}/classification",
+            new { Kind = "Whitepaper", Products = new[] { "assay", "canine" } });
+        Assert.Equal("whitepaper", changed.GetProperty("kind").GetString());
+        var read = await Send(HttpMethod.Get, $"/api/authoring/posts/{post}");
+        Assert.Equal(["canine", "assay"], read.GetProperty("products").EnumerateArray().Select(p => p.GetString()));
+    }
+
+    [Fact]
+    public async Task The_api_refuses_an_unknown_kind_with_the_kinds_named()
+    {
+        var site = (await Send(HttpMethod.Post, "/api/authoring/sites",
+            new { Name = $"Center {Guid.NewGuid():N}" })).GetProperty("siteId").GetString()!;
+
+        using var response = await host.Client.PostAsync($"/api/authoring/sites/{site}/posts",
+            JsonContent.Create(new { Title = "A tutorial", Kind = "tutorial" }));
+
+        Assert.False(response.IsSuccessStatusCode);
+        Assert.Contains("essay, guide, whitepaper, documentation", await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+    }
+
     // The history endpoint that made the blanked-post recovery possible.
     [Fact]
     public async Task History_carries_every_body_revision_and_its_markdown_on_request()

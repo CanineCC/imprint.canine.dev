@@ -46,6 +46,9 @@ public sealed class PostEventSamples : IEventSampleProvider
             yield return new PostHoldSet("Figures wait for WP-40 E7.");
             yield return new PostHoldSet(null);
 
+            yield return new PostClassified("whitepaper", ["canine", "assay"]);
+            yield return new PostClassified("essay", []);
+
             yield return new PostDeleted();
         }
     }

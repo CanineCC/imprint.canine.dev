@@ -47,6 +47,7 @@ using SetHeaderLogoCmd = Imprint.Authoring.Features.Sites.SetHeaderLogo.SetHeade
 using ChangePostBodyCmd = Imprint.Authoring.Features.Posts.ChangePostBody.ChangePostBody;
 using ChangePostMetaCmd = Imprint.Authoring.Features.Posts.ChangePostMeta.ChangePostMeta;
 using CreatePostCmd = Imprint.Authoring.Features.Posts.CreatePost.CreatePost;
+using ClassifyPostCmd = Imprint.Authoring.Features.Posts.ClassifyPost.ClassifyPost;
 using SetSiteReviewerCmd = Imprint.Authoring.Features.Sites.SetSiteReviewer.SetSiteReviewer;
 using SubmitPostForReviewCmd = Imprint.Authoring.Features.Posts.SubmitPostForReview.SubmitPostForReview;
 using RequestPostChangesCmd = Imprint.Authoring.Features.Posts.RequestPostChanges.RequestPostChanges;
@@ -920,13 +921,16 @@ public sealed class ImprintAuthoringMcpTools
     }
 
     [McpServerTool(Name = "create_post")]
-    [Description("Create a blog post and return its id. The body is markdown, set separately with set_post_body. The slug is derived from the title unless given.")]
+    [Description("Create a post (an article) and return its id. The body is markdown, set separately with set_post_body. The slug is derived from the title unless given. Give a kind (essay, guide, whitepaper, documentation) and products (canine, assert, assure, assay, cca, cai) for a resource-center article; both can be changed later with classify_post.")]
     public static async Task<object> CreatePost(
         [Description("The site id the post belongs to.")] string siteId,
         [Description("The post title.")] string title,
         [Description("Optional URL slug; derived from the title when omitted.")] string? slug,
         [Description("Optional locale tag; the site's default when omitted.")] string? locale,
-        ICommandDispatcher dispatcher, IConfiguration config, SiteOverview sites, CancellationToken ct = default)
+        ICommandDispatcher dispatcher, IConfiguration config, SiteOverview sites,
+        [Description("Optional article kind: essay, guide, whitepaper or documentation.")] string? kind = null,
+        [Description("Optional products the article is about: any of canine, assert, assure, assay, cca, cai.")] IReadOnlyList<string>? products = null,
+        CancellationToken ct = default)
     {
         if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
         if (sites.Get(sid) is not { } site) return Fail("unknown site");
@@ -935,8 +939,23 @@ public sealed class ImprintAuthoringMcpTools
         var postId = PostId.New();
         var tag = locale is { Length: > 0 } given ? given : site.DefaultLocale.Value;
         var address = slug is { Length: > 0 } chosen ? chosen : Slug.Suggest(title);
-        return await Dispatch(dispatcher, config, new CreatePostCmd(postId, sid, title, address, tag), ct,
+        return await Dispatch(dispatcher, config, new CreatePostCmd(postId, sid, title, address, tag, kind, products), ct,
             () => new { ok = true, postId = postId.Compact, slug = address, locale = tag });
+    }
+
+    [McpServerTool(Name = "classify_post")]
+    [Description("Set what kind of article a post is (essay, guide, whitepaper, documentation) and which products it is about (any of canine, assert, assure, assay, cca, cai; may be empty). The resource center's template and index follow the kind. Changing it on an approved post withdraws the approval, as an edit does.")]
+    public static async Task<object> ClassifyPost(
+        [Description("The post id.")] string postId,
+        [Description("essay, guide, whitepaper or documentation.")] string kind,
+        [Description("The products the article is about; empty or omitted for none.")] IReadOnlyList<string>? products,
+        ICommandDispatcher dispatcher, IConfiguration config, PostList posts, CancellationToken ct = default)
+    {
+        if (!AuthoringApi.TryPostIdPublic(postId, out var pid)) return Fail("invalid postId");
+        if (posts.Get(pid) is null) return Fail("unknown post");
+        if (string.IsNullOrWhiteSpace(kind)) return Fail("a kind is required");
+        return await Dispatch(dispatcher, config, new ClassifyPostCmd(pid, kind, products ?? []), ct,
+            () => new { ok = true, postId = pid.Compact, kind = kind.Trim().ToLowerInvariant() });
     }
 
     [McpServerTool(Name = "set_post_body")]

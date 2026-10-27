@@ -65,5 +65,29 @@ public sealed record PostApprovalLapsed;
 [EventType("post.hold-set")]
 public sealed record PostHoldSet(string? Reason);
 
+/// <summary>What kind of article the post is and which products it is about (see
+/// <see cref="ArticleClassification"/>). Both are already normalized: a known kind, and the products
+/// de-duplicated in canonical order, so an equal classification compares equal.</summary>
+[EventType("post.classified")]
+public sealed record PostClassified(string Kind, IReadOnlyList<string> Products)
+{
+    // A list-typed positional member defeats synthesized record equality (reference compare), and
+    // events must compare by value for Given/When/Then and round-trip tests: equality is by sequence.
+    public bool Equals(PostClassified? other) =>
+        other is not null && Kind == other.Kind && Products.SequenceEqual(other.Products);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(Kind);
+        foreach (var product in Products)
+        {
+            hash.Add(product);
+        }
+
+        return hash.ToHashCode();
+    }
+}
+
 [EventType("post.deleted")]
 public sealed record PostDeleted;
