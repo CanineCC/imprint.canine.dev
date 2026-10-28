@@ -11,18 +11,18 @@
 
 /* ── ASSERT: the metallic look (owner, 2026-10-28) ─────────────────────────────
    Assert's brand (brand document v0.3, kit v0.2) on its own site, every rule scoped to
-   .ip-site-assert so no other site changes; the steel itself comes from the site's theme tokens.
+   .ip-site-assert so no other site changes; the warm steel itself comes from the site's theme tokens.
    Where Assure is soft (pill buttons, rounded silver cards, a shadow), Assert is exact: 6px corners,
    cards drawn with a 1px line and no shadow, the only shadow on the metal buttons, headlines in
    Schibsted Grotesk 900 and labels in Martian Mono.
    ★ QUIET METAL ON BUTTONS (owner, 2026-10-28; brand document 5.3), as on Assure: a short run with
    no shine, a faint light line along the top edge and a small, close shadow. Its lightest point,
-   #34638c, still carries white lettering at 6.3:1, so the letters can sit anywhere on the button.
-   The logo's pulse keeps the full steel run. */
+   #5d5c81, still carries white lettering at 6.3:1, so the letters can sit anywhere on the button.
+   The logo's pulse keeps the full warm steel run. */
 .ip-site-assert {
   --font-mono: "Martian Mono", ui-monospace, Menlo, Consolas, monospace;
-  --metal: linear-gradient(135deg, #34638c 0%, #2f5d85 40%, #1f4262 100%);
-  --metal-fill: linear-gradient(135deg, #8fb3d4 0%, #2f5d85 50%, #173450 100%);
+  --metal: linear-gradient(135deg, #5d5c81 0%, #56557a 40%, #3d3b5d 100%);
+  --metal-fill: linear-gradient(135deg, #a7a7ca 0%, #56557a 50%, #2d2c4c 100%);
   --graphite: linear-gradient(165deg, #29323c 0%, #161b21 45%, #0c1014 100%);
 }
 .ip-site-assert :is(h1, h2) { font-weight: 900; letter-spacing: -0.02em; }
@@ -120,15 +120,15 @@
 
 /* ★ TWO-TONE HEADINGS (owner, 2026-10-28): the part of a heading marked <em>…</em> (HeadingText) is drawn in
    the accent metal and the rest stays in text colour, so a long heading reads as a line and its payoff.
-   The run is the steel metal, started one step darker on light grounds, where #8fb3d4 falls to 2.1:1; on dark it
-   starts on lifted steel with the shine in the middle, because #d6e6f3 next to the text colour reads as white.
-   Its weakest points are #5582aa, 4.0:1 on paper, and #5f88ad, 3.5:1 on the graphite top: AA for large text.
+   The run is the warm steel metal, started one step darker on light grounds, where #a7a7ca falls to 2.3:1; on dark it
+   starts on lifted warm steel with the shine in the middle, because #dfdff1 next to the text colour reads as white.
+   Its weakest points are #76769d, 4.2:1 on paper, and #8282a4, 3.5:1 on the graphite top: AA for large text.
    light-dark() follows each section's color-scheme, so a dark top gets the dark run in both themes. Print and
    forced colours get plain text colour: they drop the clipped background and would leave the words with no ink. */
-.ip-site-assert .ip-h-accent { color: light-dark(#2f5d85, #9bbedb); }
+.ip-site-assert .ip-h-accent { color: light-dark(#56557a, #b6b6d6); }
 @supports (background-clip: text) or (-webkit-background-clip: text) {
   .ip-site-assert .ip-h-accent {
-    background-image: linear-gradient(160deg, light-dark(#5582aa, #7fa3c4) 0%, light-dark(#3f6e97, #b7d2e8) 45%, light-dark(#2f5d85, #7fa3c4) 75%, light-dark(#173450, #5f88ad) 100%);
+    background-image: linear-gradient(160deg, light-dark(#76769d, #9b9bbe) 0%, light-dark(#626187, #cbcbe5) 45%, light-dark(#56557a, #9b9bbe) 75%, light-dark(#2d2c4c, #8282a4) 100%);
     -webkit-background-clip: text; background-clip: text; color: transparent;
     -webkit-box-decoration-break: clone; box-decoration-break: clone;
   }
@@ -140,6 +140,6 @@
 /* ★ THE LOGO'S METAL (owner, 2026-10-28; brand document 5.6): the drawn pulse lifts on dark grounds and the graphite
    top. The logo is inlined with the brand run on its stops; light-dark() follows the colour scheme of the place it
    sits, so the header and footer pick the right run in both themes without a second file. */
-.ip-site-assert .ip-brand-logo stop:nth-of-type(1) { stop-color: light-dark(#8fb3d4, #d6e6f3); }
-.ip-site-assert .ip-brand-logo stop:nth-of-type(2) { stop-color: light-dark(#2f5d85, #9bbedb); }
-.ip-site-assert .ip-brand-logo stop:nth-of-type(3) { stop-color: light-dark(#173450, #5f88ad); }
+.ip-site-assert .ip-brand-logo stop:nth-of-type(1) { stop-color: light-dark(#a7a7ca, #dfdff1); }
+.ip-site-assert .ip-brand-logo stop:nth-of-type(2) { stop-color: light-dark(#56557a, #b6b6d6); }
+.ip-site-assert .ip-brand-logo stop:nth-of-type(3) { stop-color: light-dark(#2d2c4c, #8282a4); }

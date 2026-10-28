@@ -4,7 +4,7 @@
 // and a sentence, the score of each area, then the facts of the scan (open findings by sprint, the
 // work with the team's coding agents, the rebuild cost).
 // Dressed in Assert's kit (v0.2): a silver card with a 1 px edge and no shadow, the score large in the
-// display face, the ladder in five greys with a steel metal marker, the area bars in steel, labels and
+// display face, the ladder in five greys with a warm steel metal marker, the area bars in warm steel, labels and
 // area figures in the mono face (the facts stay in the text face so they fit on one line). Assert has one accent and never uses colour for a warning, so the band is
 // said in words on the chip. Rendered into the element's LIGHT DOM with its own classes; every prop
 // is set as text, never as markup.
@@ -16,17 +16,17 @@ const STYLE = `
     --asc-ink: light-dark(#1c2126, #e4e9ed);
     --asc-ink-soft: light-dark(#3d4650, #c3cbd3);
     --asc-muted: light-dark(#616b76, #8694a1);
-    --asc-accent: light-dark(#2f5d85, #9bbedb);
+    --asc-accent: light-dark(#56557a, #b6b6d6);
     --asc-line: light-dark(#e2e6eb, #2b323a);
     --asc-outline: light-dark(#c3cad2, #3a434d);
-    --asc-wash: light-dark(#eaf1f7, #1e2c39);
-    --asc-on-wash: light-dark(#264b6b, #b7d2e8);
+    --asc-wash: light-dark(#efeff9, #262635);
+    --asc-on-wash: light-dark(#444367, #cbcbe5);
     --asc-silver-hi: light-dark(#ffffff, #232a31);
     --asc-silver-lo: light-dark(#f4f5f8, #1a1f25);
     --asc-silver-edge: light-dark(#c9ccd4, #3a434d);
-    --asc-chart-lo: light-dark(#173450, #6b93b8);
-    --asc-chart: light-dark(#2f5d85, #9bbedb);
-    --asc-chart-hi: light-dark(#5582aa, #d6e6f3);
+    --asc-chart-lo: light-dark(#2d2c4c, #8b8bae);
+    --asc-chart: light-dark(#56557a, #b6b6d6);
+    --asc-chart-hi: light-dark(#76769d, #dfdff1);
     --asc-rung-1: light-dark(#d5dae0, #2b323a);
     --asc-rung-2: light-dark(#bfc6ce, #3a434d);
     --asc-rung-3: light-dark(#a5adb7, #555f6a);
@@ -68,7 +68,7 @@ const STYLE = `
   assert-score-card .asc-rung { display: block; min-width: 0; border-radius: 2px; }
   assert-score-card .asc-pin {
     position: absolute; top: -3px; width: 14px; height: 14px; box-sizing: border-box; transform: translateX(-50%) rotate(45deg);
-    background: linear-gradient(135deg, #8fb3d4, #2f5d85 50%, #173450); border: 2px solid var(--asc-silver-hi);
+    background: linear-gradient(135deg, #a7a7ca, #56557a 50%, #2d2c4c); border: 2px solid var(--asc-silver-hi);
   }
   assert-score-card .asc-spark { margin-top: 1rem; color: var(--asc-accent); }
   assert-score-card .asc-spark svg { display: block; width: 100%; height: 40px; }

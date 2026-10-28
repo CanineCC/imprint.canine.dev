@@ -676,10 +676,10 @@ button { font: inherit; color: inherit; }
 .post-held-why { color: var(--ed-text-muted); font-size: .8rem; line-height: 1.35; }
 .post-products { display: flex; gap: .3rem; flex-wrap: wrap; justify-content: flex-end; }
 .post-product { font-size: .75rem; font-weight: 600; padding: .1rem .5rem; border-radius: 999px; color: #fff; background: #1c1f24; }
-.post-product-assert { background: #2f5d85; }
+.post-product-assert { background: #56557a; }
 .post-product-assure { background: #c2410c; }
 .post-product-assay { background: #8a5d33; }
-.post-product-cca { background: #0b7a5e; }
+.post-product-cca { background: #7f5b6f; }
 .post-move { display: flex; gap: 2px; }
 .post-move .ed-btn { padding: .15rem .45rem; }
 .post-sign-all { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; margin: 14px 0 0; }

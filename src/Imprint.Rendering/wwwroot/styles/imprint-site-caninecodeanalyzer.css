@@ -3,15 +3,15 @@
 
 /* ★ TWO-TONE HEADINGS (owner, 2026-10-28): the part of a heading marked <em>…</em> (HeadingText) is drawn in
    the accent metal and the rest stays in text colour, so a long heading reads as a line and its payoff.
-   The run is the teal metal, started one step darker on white, where #5fd0ae falls under 2:1; on dark it starts
-   on lifted teal with the shine in the middle. Its weakest points are #0f8a69, 4.0:1 on the code panel grey, and
-   #12a37b, 5.4:1 on the dark surface.
+   The run is the titanium metal, started one step darker on white, where #cdaebe falls to 2.0:1; on dark it starts
+   on lifted titanium with the shine in the middle. Its weakest points are #8e697d, 4.4:1 on the code panel grey, and
+   #a37f92, 5.0:1 on the dark surface.
    light-dark() follows each section's color-scheme, so a dark top gets the dark run in both themes. Print and
    forced colours get plain text colour: they drop the clipped background and would leave the words with no ink. */
-.ip-site-caninecodeanalyzer .ip-h-accent { color: light-dark(#0b7a5e, #38d9a9); }
+.ip-site-caninecodeanalyzer .ip-h-accent { color: light-dark(#7f5b6f, #d0b2c1); }
 @supports (background-clip: text) or (-webkit-background-clip: text) {
   .ip-site-caninecodeanalyzer .ip-h-accent {
-    background-image: linear-gradient(160deg, light-dark(#0f8a69, #38d9a9) 0%, light-dark(#0b7a5e, #a6f0d8) 45%, light-dark(#0b7a5e, #38d9a9) 75%, light-dark(#04402f, #12a37b) 100%);
+    background-image: linear-gradient(160deg, light-dark(#8e697d, #d0b2c1) 0%, light-dark(#7f5b6f, #ead8e2) 45%, light-dark(#7f5b6f, #d0b2c1) 75%, light-dark(#492a3c, #a37f92) 100%);
     -webkit-background-clip: text; background-clip: text; color: transparent;
     -webkit-box-decoration-break: clone; box-decoration-break: clone;
   }
@@ -21,11 +21,11 @@
 }
 
 /* ★ QUIET METAL ON BUTTONS (owner, 2026-10-28; brand document 5.3), as on Assure, Assert and Assay: a short
-   teal run with no shine, a faint light line along the top edge and a small, close shadow, 4px corners.
-   Its lightest point, #178166, still carries white lettering at 4.8:1, so the letters can sit anywhere on
+   titanium run with no shine, a faint light line along the top edge and a small, close shadow, 4px corners.
+   Its lightest point, #866276, still carries white lettering at 5.2:1, so the letters can sit anywhere on
    the button. The logo's radar keeps the full metal run. Lettering 16px semibold, 15px in the header. */
 .ip-site-caninecodeanalyzer {
-  --metal: linear-gradient(135deg, #178166 0%, #0b7a5e 40%, #085c47 100%);
+  --metal: linear-gradient(135deg, #866276 0%, #7f5b6f 40%, #644255 100%);
   --metal-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 2px rgb(18 19 24 / 0.25);
 }
 :root[data-theme=dark] .ip-site-caninecodeanalyzer { --metal-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 3px rgb(0 0 0 / 0.5); }
@@ -44,6 +44,6 @@
 /* ★ THE LOGO'S METAL (owner, 2026-10-28; brand document 5.6): the drawn radar lifts on dark grounds and the graphite
    top. The logo is inlined with the brand run on its stops; light-dark() follows the colour scheme of the place it
    sits, so the header and footer pick the right run in both themes without a second file. */
-.ip-site-caninecodeanalyzer .ip-brand-logo stop:nth-of-type(1) { stop-color: light-dark(#5fd0ae, #a6f0d8); }
-.ip-site-caninecodeanalyzer .ip-brand-logo stop:nth-of-type(2) { stop-color: light-dark(#0b7a5e, #38d9a9); }
-.ip-site-caninecodeanalyzer .ip-brand-logo stop:nth-of-type(3) { stop-color: light-dark(#04402f, #12a37b); }
+.ip-site-caninecodeanalyzer .ip-brand-logo stop:nth-of-type(1) { stop-color: light-dark(#cdaebe, #ead8e2); }
+.ip-site-caninecodeanalyzer .ip-brand-logo stop:nth-of-type(2) { stop-color: light-dark(#7f5b6f, #d0b2c1); }
+.ip-site-caninecodeanalyzer .ip-brand-logo stop:nth-of-type(3) { stop-color: light-dark(#492a3c, #a37f92); }

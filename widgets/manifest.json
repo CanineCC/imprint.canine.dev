@@ -1682,7 +1682,7 @@
   {
     "tag": "assert-score-card",
     "name": "Assert example result",
-    "description": "An Assert result in the shape of Watchdog's published-survey card, dressed in Assert's kit and always tagged as an example inside the card itself: the repository and its sprint, the CAI score out of 100 with its band in words, the ladder in five greys with a steel marker, the trend as a line and a sentence, the score of each area, and the facts of the scan. DATA ONLY: everything comes from the props, nothing is fetched.",
+    "description": "An Assert result in the shape of Watchdog's published-survey card, dressed in Assert's kit and always tagged as an example inside the card itself: the repository and its sprint, the CAI score out of 100 with its band in words, the ladder in five greys with a warm steel marker, the trend as a line and a sentence, the score of each area, and the facts of the scan. DATA ONLY: everything comes from the props, nothing is fetched.",
     "bundle": "assert-score-card.js",
     "placeholder": "Example result",
     "props": [
