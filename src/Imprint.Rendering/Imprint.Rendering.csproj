@@ -35,11 +35,10 @@
          serve the editor canvas. -->
     <EmbeddedResource Include="wwwroot/fonts/schibsted-var.woff2" LogicalName="Imprint.Rendering.fonts.schibsted-var.woff2" />
     <EmbeddedResource Include="wwwroot/fonts/jetbrains-var.woff2" LogicalName="Imprint.Rendering.fonts.jetbrains-var.woff2" />
-    <!-- Assure's own faces (Bricolage Grotesque for headings and numbers, Inter for text), read
-         only under .ip-site-assure. Shipped to every site like the others; a face no rule uses is
-         never downloaded. -->
-    <EmbeddedResource Include="wwwroot/fonts/bricolage-var.woff2" LogicalName="Imprint.Rendering.fonts.bricolage-var.woff2" />
-    <EmbeddedResource Include="wwwroot/fonts/inter-var.woff2" LogicalName="Imprint.Rendering.fonts.inter-var.woff2" />
+    <!-- Assure's own face (Figtree, SIL Open Font License 1.1, for headings, numbers and text; the
+         Google Fonts Latin variable file, weights 300 to 900), read only under .ip-site-assure.
+         Shipped to every site like the others; a face no rule uses is never downloaded. -->
+    <EmbeddedResource Include="wwwroot/fonts/figtree-var.woff2" LogicalName="Imprint.Rendering.fonts.figtree-var.woff2" />
     <!-- Assert's label face (Martian Mono, SIL Open Font License 1.1), read only under .ip-site-assert. -->
     <EmbeddedResource Include="wwwroot/fonts/martian-var.woff2" LogicalName="Imprint.Rendering.fonts.martian-var.woff2" />
     <EmbeddedResource Include="wwwroot/fonts/sourceserif4-var.woff2" LogicalName="Imprint.Rendering.fonts.sourceserif4-var.woff2" />

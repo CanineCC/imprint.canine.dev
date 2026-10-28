@@ -21,9 +21,8 @@ public static class FontAssets
     [
         Load("fonts/schibsted-var.woff2", "Imprint.Rendering.fonts.schibsted-var.woff2"),
         Load("fonts/jetbrains-var.woff2", "Imprint.Rendering.fonts.jetbrains-var.woff2"),
-        // Assure's faces, named only by imprint-site-assure.css, which ships to the Assure site alone.
-        Load("fonts/bricolage-var.woff2", "Imprint.Rendering.fonts.bricolage-var.woff2"),
-        Load("fonts/inter-var.woff2", "Imprint.Rendering.fonts.inter-var.woff2"),
+        // Assure's face, named only by imprint-site-assure.css, which ships to the Assure site alone.
+        Load("fonts/figtree-var.woff2", "Imprint.Rendering.fonts.figtree-var.woff2"),
         // Assert's label face, named only by imprint-site-assert.css, which ships to the Assert site alone.
         Load("fonts/martian-var.woff2", "Imprint.Rendering.fonts.martian-var.woff2"),
         // The brand mark. A FILE rather than a data URI in the stylesheet: the sheet is
