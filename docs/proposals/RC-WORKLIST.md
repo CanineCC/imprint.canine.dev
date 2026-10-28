@@ -60,7 +60,7 @@ Status: [ ] open, [~] in progress, [x] done, [!] blocked (reason in the log).
       wrx1 port in the host nginx (next after 8155, checked free).
 - [x] **S2. dgx1 vhost** `resourcecenter.canine.dev` → wrx1 port; its own certificate via certbot (webroot), renewal
       hook already reloads nginx; `nginx -t` first.
-- [!] **S3. The index answers** at https://resourcecenter.canine.dev with a valid certificate (empty grouped index is
+- [x] **S3. The index answers** at https://resourcecenter.canine.dev with a valid certificate (empty grouped index is
       fine until articles are signed); checked in a browser, screenshot looked at.
 
 ### Content (copied, rewritten for the resource center; drafts in review)
@@ -70,8 +70,35 @@ Status: [ ] open, [~] in progress, [x] done, [!] blocked (reason in the log).
 - [x] **C2. Guides** rewritten as `guide` articles.
 - [x] **C3. Whitepapers** rewritten as `whitepaper` articles.
 - [x] **C4. Blog posts** copied as `essay` articles (the lifted text; their review state is the owner's).
-- [!] **C5. LinkedIn text** drafted for each article (sender chosen by product), stored with the article, unapproved.
+- [x] **C5. LinkedIn text** drafted for each article (sender: the company, owner 2026-10-28), stored with the article, unapproved.
 - [x] **C6. A proposed schedule**: date + time per article, in `RC-CONTENT.md`, nothing scheduled until signed.
+
+### Round 2: the owner's smoke test (2026-10-28)
+Owner, after opening an article preview: a lot of air left of the contents, the article far too narrow, an EMPTY
+box on the right (`<rc-record>` with nothing in it), and a bar (`rc-bar`) that looks like reading progress but scrolls
+away. Answers: build ALL the deferred design parts, ship Source Serif 4, the old blog retires into the resource center,
+everything posts as the company "Canine Development" (organization 141183954); questions 5 and 7 pinned.
+- [x] **R1. The reader as designed**: the site header (family mark, "by Canine Development", product links, Search,
+      theme), the 1240 px frame with the design's three columns and type (19 px serif prose at 68ch), the left column
+      sticky with back link, a REAL reading progress (% read, stays on screen) and contents with the active section
+      marked; the decorative `rc-bar` goes (it read as progress and was not). The record ALWAYS renders: a preview of an
+      unpublished article shows "Draft · not yet submitted" or "In review · awaiting NAME", never an empty frame.
+      Documentation gets the docs tree on the left and "On this page" on the right. Whitepapers the sheet head.
+- [x] **R2. Source Serif 4** (OFL, self-hosted woff2, reading text only) plus the design's display and mono faces.
+- [x] **R3. Go deeper**: related articles in the right column, from the article's own links (and the articles that
+      link to it), then the same product in another kind; no new authoring field.
+- [x] **R4. Version history** in the record: every published version with its date (no old texts served).
+- [x] **R5. Search (⌘K and /)**: a palette over a static index of every published article (title, dek, kind,
+      product), grouped by kind, keyboard driven; the hero's search field opens it.
+- [x] **R6. The index's bento and "Latest"**: the featured cards over the grouped lists, chosen by recency per kind,
+      and the five newest in the hero.
+- [x] **R7. Guide steps you can tick** (kept in this browser only) with a progress line; the steps are the guide's h2s.
+- [x] **R8. The hand-off animation**: cross-document view transitions, the card title becoming the article title;
+      off under reduced motion.
+- [!] **R9. The blog retires into the resource center**: blog.canine.dev 301s each post to its copy and the rest to
+      the index, prepared on dgx1 but switched on only when the copies are signed and published (an unsigned copy
+      would turn a live post into a 404).
+- [~] **R10. Land**: every test project green, E2E, axe both themes, screenshots looked at, main, deploy watched.
 
 ### Last
 - [x] **Q. Questions for the owner**, collected here as they come up, asked once at the end.
@@ -98,6 +125,9 @@ Status: [ ] open, [~] in progress, [x] done, [!] blocked (reason in the log).
 1. The design has a search palette (⌘K), a 'Go deeper' related panel, a bento of featured cards, guide step ticks, view-transition animation and a version-history list. The gatekept plan you approved on 2026-10-25 deferred or cut these (public old versions are against ARTICLE-BAR §1). Build any of them now?
 2. The reading serif in the design is Source Serif 4, which imprint does not ship; a Georgia-like fallback is used. Add the font (OFL, about 60 KB woff2)?
 
+8. The blog retires (your answer 3): on dgx1, in /etc/nginx/sites-available/blog.canine.dev, replace the 443 server's `location / { proxy_pass ... }` with `location / { return 301 https://resourcecenter.canine.dev$request_uri; }`, then `sudo nginx -t && sudo systemctl reload nginx`. The live blog publishes no post (its sitemap lists only the front page), and the essays kept their slugs, so every old address lands on its copy once it is published. Do it, or allow this session to edit that vhost.
+9. The copied documentation still says "Watchdog" (e.g. "How Watchdog works", filed under Assert). Should the copies say Assert where the old product name stands, or keep Watchdog until the product split is decided?
+
 ## Log
 - 2026-10-27 P0 waits: the box is busy (9 heavy runs), and a blind review needs a fresh agent; it gates only P8.
 - 2026-10-27 P1+P2 done (domain, slice, list, API, MCP): `post.classified(Kind, Products)`; `ArticleClassification` holds the closed lists (essay, guide, whitepaper, documentation; canine, assert, assure, assay, cca, cai), normalizes case, de-duplicates and orders products canonically; reclassifying an approved post lapses the approval; CreatePost takes an optional kind (refused kind leaves no post); `PUT /posts/{id}/classification`, `kind`/`products` on the post view and history; MCP `create_post` kind/products + `classify_post`. Tests red first; Authoring 989/989, Editor 199/199. Editor UI moved into P3.
@@ -121,3 +151,8 @@ Status: [ ] open, [~] in progress, [x] done, [!] blocked (reason in the log).
 - 2026-10-27 P8 done, to the P0 scope. Authoring: `post.linkedin-changed` (text up to 3,000 characters + a sender key the site has; setting it lapses the approval, and the approval carries its sha256); site LinkedIn senders (key, name, `urn:li:organization:N`); a LinkedInPost record per article in its own stream (attempting / posted / failed / unknown / resolved) with the attempt written BEFORE the call, so an unknown result is never re-sent until a person resolves it and only a retryable refusal (429/503) goes again after its wait; DueLinkedInPoster posts the PUBLISHED snapshot's text, only for a signed publish within 7 days, at most 2 per site per hour, linking to the article on the site's Production address. Editor: the real client (`/rest/posts`, Linkedin-Version configurable, little-text escaping, 201 + x-restli-id = posted; 401 refreshes once and retries; other 4xx final; 408/409/5xx/exceptions unknown), tokens in `secrets/linkedin-token.json` mode 600 (never in the stream or a log), OAuth connect/callback with the state bound to the browser by an HttpOnly cookie, settings card (connection state, renewal date, senders), post Details field (sender, text, counter, outcome, and for an unknown result "It is on LinkedIn" with its URN or "It is not: send it again"), API PUT /posts/{id}/linkedin and /sites/{id}/linkedin-senders, MCP set_post_linkedin and set_site_linkedin_senders (resolving stays a person's act in the editor), deploy injects the app's id and secret from two repo secrets (empty = off). Tests: 10 scheduler slice tests and 18 client tests against fakes (nothing reaches LinkedIn), each guard falsified (signature, may-send, rate cap, conflict-is-unknown, escaping) and seen red; E2E LinkedInSettingsTests (E2E 47 green); boyscout: The_posts_index_reads_in_plan_order failed 2 in 6 because the layout-wide [data-interactive] marker survives GoBack, so the fill landed before the page was wired; the driver now waits for the button to enable (12 of 12 green after); screenshots linkedin-settings.png and linkedin-post-details.png looked at (fixed: names and the text rendered in the code font). Deferred per P0: the thumbnail upload; cut: page publishes (question 7).
 - 2026-10-27 C5 drafted, BLOCKED on question 5: 31 texts in RC-LINKEDIN-DRAFTS.json (20 essays, 10 whitepapers, one launch post on how-assert-works; the other 25 launch-day pages get none, so 3 November is one announcement, not 26), English, sender by product, each restating its dek. Applying needs the senders, which need the organization ids; `rc_apply_linkedin.py` (dry run by default) refuses until they exist, and refuses any article already in review or published.
 - 2026-10-27 P8 landed: all six test projects green (EventSourcing 7, Authoring 1088, Publishing 550, Media 98+3 skipped, Editor 219, E2E 47); imprint main fast-forwarded to 988b9e5; deploy run 40584764772 green incl. cutover; prod site view carries linkedInSenders (empty) and the post list carries linkedIn. Every item is now [x] or [!] (S3 on question 3, C5 on question 5); the loop stops and the questions go to the owner.
+- 2026-10-28 S3 done (owner: "go on canine-wrx1"): new file /etc/nginx/sites-available/canine-resourcecenter on wrx1 (the blog block's shape, port 8156, root publish-sites/resourcecenter), enabled, nginx -t, reload; ufw allow 192.168.1.0/24 -> 8156. https://resourcecenter.canine.dev/ answers 200 with a valid certificate (the empty index until articles are signed).
+- 2026-10-28 C5 done: owner answer 6, everything posts as the company "Canine Development" (urn:li:organization:141183954). The site has that one sender (key canine); all 31 drafted texts set on their articles (rc_apply_linkedin.py --write), all still drafts, none submitted; nothing can post until question 5 (the app) is done.
+- 2026-10-28 R1-R8 done (owner's smoke test). Root causes: a generic "lede" rule in the marketing sheet set EVERY prose block in the article stack to 16px muted at 60ch (480px); the frame was the shared 72rem track (1152), not the design's 1240; the record template returned nothing for an unpublished article, and an unbaked widget is styled as a loading placeholder (the dashed empty box); rc-bar was the design's decorative accent bar, not progress. Built: the site header (mark, "by Canine Development", product links to the filtered index, Search, a moon/sun theme button; sticky at every width), the three columns at the design's sizes (19px Source Serif 4 at 68ch), the left column always rendered (back, a real reading progress filled by rc-reader.js and pinned under the header below 1080px, contents with the section in view marked; the documentation tree on documentation; numbered steps on a guide), the right column always rendered (record with status Draft / In review / Changes requested / Approved / Signed / Published, every published version with its date, newest first, no old text served; On this page on documentation; Go deeper from the article's own links, the articles linking to it, then the same product in another kind), the whitepaper sheet head and abstract, the method card, callouts, the index hero with search field and Latest, the bento (newest by kind), search (rc-search.js: a dialog over search.json, Cmd/Ctrl+K and /, every word must match, keyboard driven), guide ticks (this browser only), cross-document view transitions (off under reduced motion), the product accent from the article's own tag. Source Serif 4 (OFL) instanced to opsz 20, wght 400-700, Latin: 33 KB each, written only on a resource center. Boyscout: a link's words were escaped raw, so [`path`](url) showed its backticks (now code spans inside link words; test red first). Tests: 9 new publishing tests red first then green, 1 markdown test; Authoring 1090, Publishing 559, Media 98+3, Editor 219, EventSourcing 7, E2E 47 (one run had 1 failure in A_site_with_a_reviewer_publishes_through_them_and_the_date_they_set, passing alone and in the next full run; being chased). axe wcag2a/aa/21aa clean on the index and every kind plus a draft and an in-review preview, both themes (fixed: doc-path chips were unfocusable scroll regions). Screenshots looked at: ~/Hentet/kennel/resourcecenter/shots/r2-*.png (index, filtered, palette, essay 1440/1280/1024/390, dark, doc, guide with ticks, whitepaper, draft, in review); no horizontal scroll at any width; no console errors.
+- 2026-10-28 R9 BLOCKED: blog.canine.dev publishes no post today (its sitemap lists only /), so a 301 of every path to the same path on resourcecenter.canine.dev loses nothing; editing the blog vhost on dgx1 was refused to this session by the permission layer. See question 8.
+

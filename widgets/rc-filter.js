@@ -1,7 +1,10 @@
 // The resource center index's tabs and product filter (<rc-filter>, placed beside the server-rendered
-// <rc-hub> in the same section): a progressive enhancement over markup the publisher already rendered (every article listed, grouped by kind). Nothing here fetches, and the
-// choice is never remembered across visits: a remembered filter once made a reader see 12 of 29 and
-// believe the rest were only reachable by search (owner decision 2026-10-25).
+// <rc-hub> in the same section): a progressive enhancement over markup the publisher already rendered
+// (every article listed, grouped by kind). Nothing here fetches, and the choice is never remembered across
+// visits: a remembered filter once made a reader see 12 of 29 and believe the rest were only reachable by
+// search (owner decision 2026-10-25). A ?product= in the address (the header's product links) starts it on
+// that product, which is the address saying so, not a memory. The featured cards are copies of cards in the
+// lists, so they are neither filtered nor counted; the bento steps aside while a filter is on.
 class RcFilter extends HTMLElement {
   connectedCallback() {
     const hub = this.closest('section')?.querySelector('.rc-hub');
@@ -11,12 +14,13 @@ class RcFilter extends HTMLElement {
     const tabs = [...hub.querySelectorAll('.rc-tab')];
     const chips = [...hub.querySelectorAll('.rc-chip')];
     const groups = [...hub.querySelectorAll('.rc-group')];
-    const cards = [...hub.querySelectorAll('.rc-card')];
+    const cards = [...hub.querySelectorAll('.rc-group .rc-card')];
     const bar = hub.querySelector('.rc-filterbar');
     const empty = hub.querySelector('.rc-empty');
     const total = cards.length;
     let kind = 'all';
-    let product = 'all';
+    const asked = new URLSearchParams(location.search).get('product');
+    let product = chips.some((c) => c.dataset.product === asked) ? asked : 'all';
 
     const fits = (card, k, p) =>
       (k === 'all' || card.dataset.kind === k) &&
@@ -45,6 +49,7 @@ class RcFilter extends HTMLElement {
       for (const chip of chips) chip.setAttribute('aria-pressed', String(chip.dataset.product === product));
 
       const filtered = kind !== 'all' || product !== 'all';
+      hub.classList.toggle('rc-filtered', filtered);
       if (bar) {
         bar.hidden = !filtered;
         if (filtered) {

@@ -687,6 +687,62 @@ public static class MarkdownToNodes
         return -1;
     }
 
+    /// <summary>
+    /// A backtick run at <paramref name="i"/>: CommonMark's code span (a run of n backticks opens a span
+    /// that the next run of exactly n closes; one space each side is stripped when both are there), or,
+    /// with no closing run, literal backticks. Appends to <paramref name="html"/> and returns the index of
+    /// the last character consumed.
+    /// </summary>
+    private static int CodeSpan(string source, int i, StringBuilder html)
+    {
+        var run = 1;
+        while (i + run < source.Length && source[i + run] == '`')
+        {
+            run++;
+        }
+
+        var close = FindBacktickRun(source, i + run, run);
+        if (close < 0)
+        {
+            html.Append('`', run);
+            return i + run - 1;
+        }
+
+        var code = source[(i + run)..close];
+        if (code.Length >= 2 && code[0] == ' ' && code[^1] == ' ' && code.Trim().Length > 0)
+        {
+            code = code[1..^1];
+        }
+
+        html.Append("<code>");
+        foreach (var ch in code)
+        {
+            Append(html, ch);
+        }
+
+        html.Append("</code>");
+        return close + run - 1;
+    }
+
+    /// <summary>A link's words: text, with code spans (a link to a file or a commit is often one).
+    /// Nothing else is markdown inside a link, as before.</summary>
+    private static string LinkWords(string text)
+    {
+        var html = new StringBuilder();
+        for (var i = 0; i < text.Length; i++)
+        {
+            if (text[i] == '`')
+            {
+                i = CodeSpan(text, i, html);
+                continue;
+            }
+
+            html.Append(EscapeAll(text[i].ToString()));
+        }
+
+        return html.ToString();
+    }
+
     private static string Inline(string source, int line, List<MarkdownProblem> problems)
     {
         var html = new StringBuilder();
@@ -705,36 +761,7 @@ public static class MarkdownToNodes
 
             if (c == '`')
             {
-                // CommonMark: a run of n backticks opens a code span that the next run of exactly n
-                // closes. With no closing run the backticks are literal text.
-                var run = 1;
-                while (i + run < source.Length && source[i + run] == '`')
-                {
-                    run++;
-                }
-
-                var close = FindBacktickRun(source, i + run, run);
-                if (close < 0)
-                {
-                    html.Append('`', run);
-                    i += run - 1;
-                    continue;
-                }
-
-                var code = source[(i + run)..close];
-                if (code.Length >= 2 && code[0] == ' ' && code[^1] == ' ' && code.Trim().Length > 0)
-                {
-                    code = code[1..^1];
-                }
-
-                html.Append("<code>");
-                foreach (var ch in code)
-                {
-                    Append(html, ch);
-                }
-
-                html.Append("</code>");
-                i = close + run - 1;
+                i = CodeSpan(source, i, html);
                 continue;
             }
 
@@ -768,7 +795,7 @@ public static class MarkdownToNodes
                     return html.ToString();
                 }
 
-                html.Append("<a href=\"").Append(href).Append("\">").Append(EscapeAll(text)).Append("</a>");
+                html.Append("<a href=\"").Append(href).Append("\">").Append(LinkWords(text)).Append("</a>");
                 i += length - 1;
                 continue;
             }

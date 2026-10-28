@@ -97,6 +97,19 @@ public sealed record StaticPageChrome
     public string? LogoSvg { get; init; }
 
     /// <summary>
+    /// The resource center's own header pieces (its mark, "by Canine Development" and the product links;
+    /// and the search button among the actions), or null on every other site. Rendered by
+    /// <see cref="ResourceCenterTemplates"/>; the site's configured navigation is not shown beside them.
+    /// </summary>
+    public string? ResourceCenterBrand { get; init; }
+
+    /// <inheritdoc cref="ResourceCenterBrand"/>
+    public string? ResourceCenterSearch { get; init; }
+
+    /// <summary>The resource center's mark for the footer, beside its name; null elsewhere.</summary>
+    public string? ResourceCenterMark { get; init; }
+
+    /// <summary>
     /// True only when the rendered content carries <c>data-island</c> markup — decided
     /// from the page tree (a widget renders an island exactly when its manifest entry
     /// and bundle resolve), so no second render pass is needed.

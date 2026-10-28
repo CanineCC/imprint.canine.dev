@@ -441,6 +441,14 @@ public sealed class SitePublisher(
                 // reader's aggregator would keep polling.
                 await WriteIfChanged("feed.xml", Encoding.UTF8.GetBytes(BuildFeed()), ct);
             }
+
+            if (_siteKind == SiteKind.ResourceCenter)
+            {
+                // The search palette's index (rc-search.js): every listed article's words, fetched once
+                // when a reader opens the search.
+                await WriteIfChanged(ResourceCenterSearchFile, Encoding.UTF8.GetBytes(BuildResourceCenterSearch()), ct);
+            }
+
             await WriteRedirects(plans, ct);
             await WriteIfChanged("llms.txt", Encoding.UTF8.GetBytes(BuildLlmsTxt(plans)), ct);
             await WriteIfChanged("llms-full.txt", Encoding.UTF8.GetBytes(BuildLlmsFullTxt(plans)), ct);
@@ -774,6 +782,9 @@ public sealed class SitePublisher(
                 FaviconUrl = _faviconUrl,
                 LogoUrl = _logoUrl,
                 LogoSvg = _logoSvg,
+                ResourceCenterBrand = ResourceCenterBrandFor(locale),
+                ResourceCenterMark = _siteKind == SiteKind.ResourceCenter ? ResourceCenterTemplates.Mark("canine") : null,
+                ResourceCenterSearch = _siteKind == SiteKind.ResourceCenter ? ResourceCenterTemplates.HeaderSearch() : null,
                 // Exact by construction: WidgetView emits data-island precisely when
                 // the tag has a descriptor AND ResolveWidgetBundle returns a URL —
                 // the same condition, so no second render pass is needed.
@@ -810,6 +821,8 @@ public sealed class SitePublisher(
                 FaviconUrl = _faviconUrl,
                 LogoUrl = _logoUrl,
                 LogoSvg = _logoSvg,
+                ResourceCenterBrand = ResourceCenterBrandFor(_defaultLocale),
+                ResourceCenterMark = _siteKind == SiteKind.ResourceCenter ? ResourceCenterTemplates.Mark("canine") : null,
                 IncludeIslandLoader = false,
             };
 
@@ -1546,11 +1559,15 @@ public sealed class SitePublisher(
         /// </summary>
         private async Task CopyFonts(CancellationToken ct)
         {
-            foreach (var font in FontAssets.All)
+            foreach (var font in ShippedAssets)
             {
                 await WriteIfChanged(font.RelativePath, font.Bytes, ct);
             }
         }
+
+        /// <summary>The fixed files every site gets, plus the reading serif on a resource center.</summary>
+        private IEnumerable<FontAssets.FontFile> ShippedAssets =>
+            _siteKind == SiteKind.ResourceCenter ? [.. FontAssets.All, .. FontAssets.ResourceCenter] : FontAssets.All;
 
         private async Task CopyAssets(CancellationToken ct)
         {
@@ -1796,21 +1813,31 @@ public sealed class SitePublisher(
         /// <summary>
         /// The resource center's index: one widget, rendered on the server from the list of published
         /// articles (see <see cref="ResourceCenterTemplates"/>), so every title and link is in the HTML
-        /// and the tabs and product filter only enhance it. The hero copy is the approved design's.
+        /// and the tabs, product filter and search only enhance it. The hero copy is the approved design's.
         /// </summary>
         private PublishedPage ResourceCenterIndex()
         {
-            var articles = _posts.Select(post => new
+            var articles = _posts.Select(post =>
             {
-                title = post.Title.Resolve(_defaultLocale, _defaultLocale),
-                dek = post.MetaDescription.Resolve(_defaultLocale, _defaultLocale),
-                kind = post.Kind ?? "essay",
-                products = post.Products,
-                href = $"/{PostPrefix}{post.Slug.Value}/",
-                version = post.Version,
-                date = EditorialTime.ForReader(post.PublishedAt),
-                signed = post.SignedBy is not null,
-                sha256 = post.Sha256,
+                var body = ResourceCenterBody(post);
+                var kind = post.Kind ?? "essay";
+                return new
+                {
+                    title = post.Title.Resolve(_defaultLocale, _defaultLocale),
+                    dek = post.MetaDescription.Resolve(_defaultLocale, _defaultLocale),
+                    kind,
+                    products = post.Products,
+                    href = ArticleHref(post),
+                    version = post.Version,
+                    date = EditorialTime.ForReader(post.PublishedAt),
+                    signed = post.SignedBy is not null,
+                    sha256 = post.Sha256,
+                    status = ResourceCenterStatus(post),
+                    words = WordsIn(body),
+                    steps = kind == "guide" ? StepsOf(body).Length : 0,
+                    // The feature card lists an essay's own sections (B21's are its ten questions).
+                    sections = kind == "essay" ? ContentsOf(body).Select(c => c.Text).Take(10).ToArray() : [],
+                };
             });
 
             var hub = new WidgetNode
@@ -1833,12 +1860,16 @@ public sealed class SitePublisher(
             {
                 Id = ListingNodeId(PostId.From(new Guid("00000000-0000-0000-0000-00000000c000"))),
                 Appearance = SectionAppearance.ResourceCenter,
-                // The filter is its own island beside the server-rendered index: a widget renders from a
-                // template OR hydrates from a bundle, never both, so the enhancement cannot sit on rc-hub.
+                // The filter and the search are islands beside the server-rendered index: a widget renders
+                // from a template OR hydrates from a bundle, never both, so neither can sit on rc-hub.
                 Children = NodeList.Of(hub, new WidgetNode
                 {
                     Id = ListingNodeId(PostId.From(new Guid("00000000-0000-0000-0000-00000000c002"))),
                     Tag = "rc-filter",
+                }, new WidgetNode
+                {
+                    Id = ListingNodeId(PostId.From(new Guid("00000000-0000-0000-0000-00000000c003"))),
+                    Tag = "rc-search",
                 }),
             };
 
@@ -1857,25 +1888,38 @@ public sealed class SitePublisher(
         }
 
         /// <summary>
-        /// A resource-center article: its contents, then the header and the body, then its document
-        /// record, in one <see cref="SectionAppearance.Article"/> section the theme lays out in three
-        /// columns. The body's own leading <c># title</c> is dropped, because the header carries it.
+        /// A resource-center article in the design's three columns, one <see cref="SectionAppearance.Article"/>
+        /// section: the way through on the left (contents with a reading progress; the documentation tree
+        /// on a documentation page; the steps on a guide), the header and the body in the middle, and the
+        /// context on the right (the document record with its versions, and Go deeper). The body's own
+        /// leading <c># title</c> is dropped, because the header carries it.
         /// </summary>
         private NodeList ResourceCenterArticle(PublishedPost post)
         {
-            var roots = post.RootsFor(_defaultLocale, _defaultLocale);
-            var body = roots is [SectionNode wrapper] ? wrapper.Children : roots;
-            if (body.Count > 0 && body[0] is HeadingNode { Level: 1 })
-            {
-                body = body.RemoveAt(0);
-            }
-
-            var signed = post.SignedBy is not null;
+            var body = ResourceCenterBody(post);
+            var kind = post.Kind ?? "essay";
             var signer = SignerName(post.SignedBy);
-            var title = post.Title.Resolve(_defaultLocale, _defaultLocale);
-            var version = post.Version?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
-            var date = EditorialTime.ForReader(post.PublishedAt);
+            var contents = ContentsOf(body);
+            var steps = kind == "guide" ? StepsOf(body) : [];
+            var words = WordsIn(body);
             NodeId Id(string part) => ArticleNodeId(post.Id, part);
+            var json = (object value) => System.Text.Json.JsonSerializer.Serialize(value);
+
+            var mode = kind == "documentation" ? "docs" : steps.Length > 0 ? "steps" : "contents";
+            var left = new WidgetNode
+            {
+                Id = Id("toc"),
+                Tag = ResourceCenterTemplates.Toc,
+                Props = PropBag.Of(
+                [
+                    new("mode", mode),
+                    new("back", IndexHref),
+                    new("read", ReadingTime(words)),
+                    new("headings", json(contents.Select(c => new { id = c.Id, text = c.Text }))),
+                    new("steps", json(steps.Select(c => new { id = c.Id, text = c.Text }))),
+                    new("docs", mode == "docs" ? json(DocumentationTree(post)) : ""),
+                ]),
+            };
 
             var head = new WidgetNode
             {
@@ -1883,58 +1927,248 @@ public sealed class SitePublisher(
                 Tag = ResourceCenterTemplates.ArticleHead,
                 Props = PropBag.Of(
                 [
-                    new("kind", post.Kind ?? "essay"),
+                    new("kind", kind),
                     new("products", string.Join(',', post.Products)),
-                    new("title", title),
+                    new("title", post.Title.Resolve(_defaultLocale, _defaultLocale)),
                     new("dek", post.MetaDescription.Resolve(_defaultLocale, _defaultLocale)),
-                    new("version", version),
-                    new("date", date),
+                    new("version", post.Version?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? ""),
+                    new("date", post.Version is null ? "" : EditorialTime.ForReader(post.PublishedAt)),
                     new("signer", signer),
-                    new("signed", signed ? "true" : "false"),
-                    new("back", IndexHref),
+                    new("status", ResourceCenterStatus(post)),
+                    new("byline", site.Byline?.Name.Resolve(_defaultLocale, _defaultLocale) ?? ""),
+                    new("read", ReadingTime(words)),
+                    new("words", words.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                    new("steps", steps.Length.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                    new("sha256", post.Sha256 ?? ""),
+                    new("cite", post.Slug.Value),
                 ]),
             };
 
-            var record = new WidgetNode
+            var context = new WidgetNode
             {
                 Id = Id("record"),
-                Tag = ResourceCenterTemplates.Record,
+                Tag = ResourceCenterTemplates.Context,
                 Props = PropBag.Of(
                 [
-                    new("version", version),
-                    new("date", date),
+                    new("status", ResourceCenterStatus(post)),
+                    new("products", string.Join(',', post.Products)),
+                    new("reviewer", site.ReviewerName ?? ""),
+                    new("version", post.Version?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? ""),
+                    new("date", post.Version is null ? "" : EditorialTime.ForReader(post.PublishedAt)),
                     new("signer", signer),
                     new("signed-at", post.SignedAt is { } at ? EditorialTime.ForReader(at) : ""),
-                    new("signed", signed ? "true" : "false"),
                     new("sha256", post.Sha256 ?? ""),
+                    new("versions", json(post.Versions.Select(v => new { version = v.Version, date = EditorialTime.ForReader(v.PublishedAt) }))),
+                    new("related", json(RelatedTo(post))),
+                    new("sections", mode == "docs" ? json(contents.Select(c => new { id = c.Id, text = c.Text })) : ""),
                 ]),
             };
 
-            var toc = new WidgetNode
-            {
-                Id = Id("toc"),
-                Tag = ResourceCenterTemplates.Toc,
-                Props = PropBag.Of([new("headings", System.Text.Json.JsonSerializer.Serialize(ContentsOf(body)))]),
-            };
-
-            var article = new StackNode { Id = Id("article"), Children = NodeList.Of([head, .. body]) };
+            // The reader island (progress, the active section, a guide's ticks) and the search palette.
+            var reader = new WidgetNode { Id = Id("reader"), Tag = "rc-reader" };
+            var search = new WidgetNode { Id = Id("search"), Tag = "rc-search" };
+            var article = new StackNode { Id = Id("article"), Children = NodeList.Of([head, .. body, reader, search]) };
             return NodeList.Of(new SectionNode
             {
                 Id = Id("section"),
                 Appearance = SectionAppearance.Article,
-                Children = NodeList.Of(toc, article, record),
+                Children = NodeList.Of(left, article, context),
             });
         }
+
+        /// <summary>An article's body without the leading <c># title</c> the header already carries.</summary>
+        private NodeList ResourceCenterBody(PublishedPost post)
+        {
+            var roots = post.RootsFor(_defaultLocale, _defaultLocale);
+            var body = roots is [SectionNode wrapper] ? wrapper.Children : roots;
+            return body.Count > 0 && body[0] is HeadingNode { Level: 1 } ? body.RemoveAt(0) : body;
+        }
+
+        private string? ResourceCenterBrandFor(Locale locale) => _siteKind == SiteKind.ResourceCenter
+            ? ResourceCenterTemplates.HeaderBrand(_siteName, HomeHref(locale), IndexHref)
+            : null;
+
+        private string ArticleHref(PublishedPost post) => $"/{PostPrefix}{post.Slug.Value}/";
+
+        /// <summary>Where an article stands, in the record's words: <c>signed</c> or <c>published</c>
+        /// once it is out; before that (the preview only) <c>draft</c>, <c>review</c>, <c>changes</c> or
+        /// <c>approved</c>.</summary>
+        private static string ResourceCenterStatus(PublishedPost post) => post.Version is not null
+            ? post.SignedBy is not null ? "signed" : "published"
+            : post.Review switch
+            {
+                PostReview.Pending => "review",
+                PostReview.ChangesRequested => "changes",
+                PostReview.Approved => "approved",
+                _ => "draft",
+            };
+
+        /// <summary>A guide's steps: its second-level headings that start with a number ("1. Connect …").</summary>
+        private (string Id, string Text)[] StepsOf(NodeList body) =>
+            [.. ContentsOf(body).Where(c => c.Text.Length > 1 && char.IsAsciiDigit(c.Text[0])
+                && c.Text.SkipWhile(char.IsAsciiDigit).FirstOrDefault() is '.' or ')')];
+
+        private int WordsIn(NodeList body) =>
+            new PageTree(body).All().Sum(node => node switch
+            {
+                RichTextNode text => CountWords(HtmlTagRegex.Replace(text.Html.Resolve(_defaultLocale, _defaultLocale), " ")),
+                HeadingNode heading => CountWords(heading.Text.Resolve(_defaultLocale, _defaultLocale)),
+                _ => 0,
+            });
+
+        private static int CountWords(string text) =>
+            text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Count(w => w.Any(char.IsLetterOrDigit));
+
+        /// <summary>Minutes at 230 words a minute, never under one.</summary>
+        private static string ReadingTime(int words) => $"{Math.Max(1, (int)Math.Ceiling(words / 230.0))} min";
+
+        /// <summary>
+        /// The documentation, grouped by the product it is about, for the tree beside a documentation page.
+        /// Within a group, in the order the pages were first published.
+        /// </summary>
+        private object[] DocumentationTree(PublishedPost current)
+        {
+            string[] order = ["assert", "assay", "assure", "cca", "cai", "canine"];
+            return
+            [
+                .. _posts.Where(p => p.Kind == "documentation")
+                    .GroupBy(p => p.Products.FirstOrDefault(x => x != "canine") ?? p.Products.FirstOrDefault() ?? "canine")
+                    .OrderBy(g => Array.IndexOf(order, g.Key) is var i and >= 0 ? i : order.Length)
+                    .Select(g => (object)new
+                    {
+                        group = ResourceCenterTemplates.ProductName(g.Key),
+                        items = g.OrderBy(p => p.Versions.Count > 0 ? p.Versions[^1].PublishedAt : p.PublishedAt)
+                            .ThenBy(p => p.Slug.Value, StringComparer.Ordinal)
+                            .Select(p => new
+                            {
+                                title = p.Title.Resolve(_defaultLocale, _defaultLocale),
+                                href = ArticleHref(p),
+                                current = p.Id == current.Id,
+                            }),
+                    }),
+            ];
+        }
+
+        /// <summary>
+        /// Go deeper: the articles this one links to (in the order it names them), then those that link
+        /// to it, then the newest of the same product in another kind, four at most. Derived from the
+        /// links the author already wrote, so there is no second list to keep in step with the text.
+        /// </summary>
+        private object[] RelatedTo(PublishedPost post)
+        {
+            var bySlug = _posts.ToDictionary(p => p.Slug.Value, StringComparer.Ordinal);
+            var kindWord = ThisKind(post.Kind);
+            var picked = new List<(PublishedPost Post, string Why)>();
+            void Add(PublishedPost candidate, string why)
+            {
+                if (candidate.Id != post.Id && picked.Count < 4 && picked.All(p => p.Post.Id != candidate.Id))
+                {
+                    picked.Add((candidate, why));
+                }
+            }
+
+            foreach (var slug in LinkedSlugs(post, bySlug))
+            {
+                Add(bySlug[slug], $"Linked from this {kindWord}");
+            }
+
+            foreach (var other in _posts.Where(p => LinkedSlugs(p, bySlug).Contains(post.Slug.Value)))
+            {
+                Add(other, $"Links to this {kindWord}");
+            }
+
+            var product = post.Products.FirstOrDefault(p => p != "canine");
+            foreach (var other in _posts.Where(p => p.Kind != post.Kind && (product is null || p.Products.Contains(product))))
+            {
+                if (picked.Count >= 3)
+                {
+                    break;
+                }
+
+                Add(other, $"Related {ResourceCenterTemplates.KindWord(other.Kind ?? "essay").ToLowerInvariant()}");
+            }
+
+            return
+            [
+                .. picked.Select(p => (object)new
+                {
+                    title = p.Post.Title.Resolve(_defaultLocale, _defaultLocale),
+                    href = ArticleHref(p.Post),
+                    kind = p.Post.Kind ?? "essay",
+                    products = p.Post.Products,
+                    why = p.Why,
+                }),
+            ];
+        }
+
+        private static string ThisKind(string? kind) => kind switch
+        {
+            "guide" => "guide",
+            "whitepaper" => "whitepaper",
+            "documentation" => "page",
+            _ => "essay",
+        };
+
+        /// <summary>The slugs of other articles this one links to, in order: a site-relative
+        /// <c>/slug/</c> or the same path on one of the site's own addresses.</summary>
+        private List<string> LinkedSlugs(PublishedPost post, IReadOnlyDictionary<string, PublishedPost> bySlug)
+        {
+            if (_linkedSlugs.TryGetValue(post.Id, out var cached))
+            {
+                return cached;
+            }
+
+            var origins = site.Environments.Select(e => e.BaseUrl).Append(_baseUrl)
+                .OfType<string>().Select(o => o.TrimEnd('/')).Where(o => o.Length > 0).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var found = new List<string>();
+            foreach (var text in new PageTree(ResourceCenterBody(post)).All().OfType<RichTextNode>())
+            {
+                foreach (System.Text.RegularExpressions.Match link in HrefRegex.Matches(text.Html.Resolve(_defaultLocale, _defaultLocale)))
+                {
+                    var href = System.Net.WebUtility.HtmlDecode(link.Groups[1].Value);
+                    var origin = origins.FirstOrDefault(o => href.StartsWith(o + "/", StringComparison.OrdinalIgnoreCase));
+                    var path = origin is not null ? href[origin.Length..] : href.StartsWith('/') && !href.StartsWith("//", StringComparison.Ordinal) ? href : null;
+                    var slug = path?.Split('#', '?')[0].Trim('/');
+                    if (slug is { Length: > 0 } && !slug.Contains('/') && bySlug.ContainsKey(slug) && !found.Contains(slug))
+                    {
+                        found.Add(slug);
+                    }
+                }
+            }
+
+            _linkedSlugs[post.Id] = found;
+            return found;
+        }
+
+        private readonly Dictionary<PostId, List<string>> _linkedSlugs = [];
+
+        private static readonly System.Text.RegularExpressions.Regex HrefRegex =
+            new("href=\"([^\"]+)\"", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        private static readonly System.Text.RegularExpressions.Regex HtmlTagRegex =
+            new("<[^>]+>", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        /// <summary>The search palette's index: every article the index lists, in its order.</summary>
+        private const string ResourceCenterSearchFile = "search.json";
+
+        private string BuildResourceCenterSearch() => System.Text.Json.JsonSerializer.Serialize(_posts.Select(post => new
+        {
+            title = post.Title.Resolve(_defaultLocale, _defaultLocale),
+            dek = post.MetaDescription.Resolve(_defaultLocale, _defaultLocale),
+            kind = post.Kind ?? "essay",
+            products = post.Products,
+            href = ArticleHref(post),
+        }));
 
         /// <summary>
         /// The second-level headings, with the ids <c>HeadingView</c> gives them: the same slug from the
         /// default locale's words, suffixed -2, -3 … on a collision, counted over every subheading in
         /// document order (the renderer counts them all, so a skipped h3 would shift the ids).
         /// </summary>
-        private object[] ContentsOf(NodeList body)
+        private (string Id, string Text)[] ContentsOf(NodeList body)
         {
             var used = new HashSet<string>(StringComparer.Ordinal);
-            var contents = new List<object>();
+            var contents = new List<(string Id, string Text)>();
             foreach (var heading in new PageTree(body).All().OfType<HeadingNode>().Where(h => h.Level > 1))
             {
                 var text = heading.Text.Resolve(_defaultLocale, _defaultLocale);
@@ -1951,7 +2185,7 @@ public sealed class SitePublisher(
 
                 if (heading.Level == 2)
                 {
-                    contents.Add(new { id, text });
+                    contents.Add((id, text));
                 }
             }
 
@@ -2416,6 +2650,11 @@ public sealed class SitePublisher(
                 Keep("feed.xml");
             }
 
+            if (_siteKind == SiteKind.ResourceCenter)
+            {
+                Keep(ResourceCenterSearchFile);
+            }
+
             Keep("llms-full.txt");
             foreach (var redirect in _redirectFiles)
             {
@@ -2449,7 +2688,7 @@ public sealed class SitePublisher(
             // SVG is text and Precompress WILL write .br/.gz for it — so those have to be desired
             // too, or Sweep deletes them and the next run rewrites them, breaking the zero-rewrite
             // guarantee with two files every single sync.
-            foreach (var asset in FontAssets.All)
+            foreach (var asset in ShippedAssets)
             {
                 desired.Add(asset.RelativePath);
                 if (Precompressor.IsCompressible(asset.RelativePath))

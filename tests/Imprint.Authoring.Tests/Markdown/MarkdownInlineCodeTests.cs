@@ -48,7 +48,15 @@ public sealed class MarkdownInlineCodeTests
         Assert.Equal("<code>b</code>", ((TableNode)Assert.Single(table.Nodes)).Rows[0][0].Get(En));
     }
 
+    // Found in the resource center's copies (2026-10-28): a link whose words are a file path or a commit
+    // showed its backticks, because a link's words were escaped as plain text.
+    [Fact]
+    public void Code_works_inside_a_links_words() =>
+        Assert.Equal("<p>See <a href=\"https://x.test/a\"><code>src/a.php</code></a> and <a href=\"https://x.test/b\">b <code>c</code></a>.</p>",
+            Html("See [`src/a.php`](https://x.test/a) and [b `c`](https://x.test/b)."));
+
     [Theory]
+    [InlineData("<p><a href=\"https://x.test\"><code>x</code></a></p>", true)]
     [InlineData("<p><code>x</code></p>", true)]
     [InlineData("<p><code>a &amp; b</code></p>", true)]
     [InlineData("<p><code><strong>x</strong></code></p>", false)]

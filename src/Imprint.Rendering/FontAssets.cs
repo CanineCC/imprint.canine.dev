@@ -35,6 +35,20 @@ public static class FontAssets
         Load("brand/cai-mark.svg", "Imprint.Rendering.brand.cai-mark.svg"),
     ];
 
+    private static IReadOnlyList<FontFile>? _resourceCenter;
+
+    /// <summary>
+    /// The resource center's reading serif, Source Serif 4 (SIL Open Font License 1.1, Adobe), roman
+    /// and italic: written only on a resource-center site, whose sheet is the only one that names it.
+    /// Instanced from the Google Fonts variable files with the optical-size axis pinned at 20 (reading
+    /// text) and weight kept at 400 to 700, then subset to Latin: 33 KB each instead of 122 and 130.
+    /// </summary>
+    public static IReadOnlyList<FontFile> ResourceCenter => _resourceCenter ??=
+    [
+        Load("fonts/sourceserif4-var.woff2", "Imprint.Rendering.fonts.sourceserif4-var.woff2"),
+        Load("fonts/sourceserif4-italic-var.woff2", "Imprint.Rendering.fonts.sourceserif4-italic-var.woff2"),
+    ];
+
     private static FontFile Load(string relativePath, string resource)
     {
         using var stream = typeof(FontAssets).Assembly.GetManifestResourceStream(resource)
