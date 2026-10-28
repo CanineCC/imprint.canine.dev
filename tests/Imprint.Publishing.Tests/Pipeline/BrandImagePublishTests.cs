@@ -78,4 +78,57 @@ public sealed class BrandImagePublishTests
         Assert.DoesNotContain("<img class=\"ip-brand-logo\"", html);
         Assert.DoesNotContain("ip-brand-dot", html);
     }
+    // A mark drawn as a vector is the favicon as it is: one favicon.svg holding both renditions, and the browser's
+    // own colour scheme picks one (the dark ink on light tab bars, the light ink on dark), like the header's mark.
+    [Fact]
+    public async Task A_vector_favicon_with_a_dark_rendition_ships_as_one_svg_that_follows_the_colour_scheme()
+    {
+        await using var host = new PublishingTestHost();
+        var siteId = await host.CreateSite("Acme Studio", "en");
+        var homeId = await host.CreatePage(siteId, "home", "Home");
+        await host.SetNavigation(siteId, homeId);
+        await host.Publish(homeId);
+        var markId = await host.CreateSvgAsset("<svg viewBox=\"0 0 10 10\" width=\"512\" height=\"512\"><path d=\"M0 0h10v10z\" fill=\"#14171c\"/></svg>");
+        await host.AddDarkSvgVariant(markId, "<svg viewBox=\"0 0 10 10\"><path d=\"M0 0h10v10z\" fill=\"#eceef2\"/></svg>");
+        await host.SetFavicon(siteId, markId);
+
+        await host.Publisher.Synchronize();
+
+        var link = Regex.Match(host.ReadText("index.html"), "<link rel=\"icon\" href=\"(/favicon\\.svg\\?v=[0-9a-f]+)\" type=\"image/svg(?:\\+|&#x2B;)xml\" />");
+        // The renderer writes the '+' as &#x2B;, which is the same attribute value to a browser.
+        Assert.True(link.Success, "the favicon link should point at /favicon.svg with a content version");
+        var svg = host.ReadText("favicon.svg");
+        Assert.StartsWith("<svg xmlns=\"http://www.w3.org/2000/svg\"", svg, StringComparison.Ordinal);
+        Assert.Contains("@media (prefers-color-scheme: dark)", svg, StringComparison.Ordinal);
+        Assert.Contains("fill=\"#14171c\"", svg, StringComparison.Ordinal);
+        Assert.Contains("fill=\"#eceef2\"", svg, StringComparison.Ordinal);
+        Assert.DoesNotContain("width=\"512\"", svg, StringComparison.Ordinal);
+
+        // Back to a raster favicon: the svg file is swept and the link follows.
+        var rasterId = await host.CreateImageAsset("favicon", 32, 64);
+        await host.SetFavicon(siteId, rasterId);
+        await host.Publisher.Synchronize();
+        Assert.False(host.FileExists("favicon.svg"));
+        Assert.Contains($"/assets/{rasterId.Compact}-32.", host.ReadText("index.html"), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_vector_favicon_without_a_dark_rendition_ships_as_it_is()
+    {
+        await using var host = new PublishingTestHost();
+        var siteId = await host.CreateSite("Acme Studio", "en");
+        var homeId = await host.CreatePage(siteId, "home", "Home");
+        await host.SetNavigation(siteId, homeId);
+        await host.Publish(homeId);
+        var markId = await host.CreateSvgAsset("<svg viewBox=\"0 0 10 10\"><path d=\"M0 0h10v10z\" fill=\"#14171c\"/></svg>");
+        await host.SetFavicon(siteId, markId);
+
+        await host.Publisher.Synchronize();
+
+        var svg = host.ReadText("favicon.svg");
+        Assert.Contains("fill=\"#14171c\"", svg, StringComparison.Ordinal);
+        Assert.DoesNotContain("prefers-color-scheme", svg, StringComparison.Ordinal);
+        Assert.Contains("href=\"/favicon.svg?v=", host.ReadText("index.html"), StringComparison.Ordinal);
+    }
 }
+

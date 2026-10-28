@@ -77,8 +77,9 @@ public sealed record StaticPageChrome
     public sealed record SiteByline(string Name, string? Url);
 
     /// <summary>
-    /// The resolved published <c>/assets/…</c> URL of the site's favicon (a small variant),
-    /// or null when the site sets none — then no <c>&lt;link rel="icon"&gt;</c> is emitted.
+    /// The resolved published URL of the site's favicon: <c>/favicon.svg?v=…</c> for a vector mark, else the
+    /// <c>/assets/…</c> URL of a small raster variant; null when the site sets none — then no
+    /// <c>&lt;link rel="icon"&gt;</c> is emitted.
     /// </summary>
     public string? FaviconUrl { get; init; }
 

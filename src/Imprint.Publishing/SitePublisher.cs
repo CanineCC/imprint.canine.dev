@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using System.Text.RegularExpressions;
 using Imprint.Authoring.Domain;
 using Imprint.Authoring.Domain.Assets;
 using Imprint.Authoring.Domain.Pages;
@@ -155,6 +156,7 @@ public sealed class SitePublisher(
         private AssetId? _headerLogoAssetId;
         private AssetId? _socialImageAssetId;
         private string? _faviconUrl;
+        private string? _faviconSvg;
         private string? _logoUrl;
         private string? _logoSvg;
         private string? _socialImageUrl;
@@ -416,7 +418,10 @@ public sealed class SitePublisher(
                 withOriginals: _socialImageAssetId is { } social ? [social] : []);
 
             // Now the catalog exists, resolve the brand imagery to its PUBLISHED /assets URL.
-            _faviconUrl = BrandPublishedUrl(_faviconAssetId, preferSmallest: true);
+            _faviconSvg = FaviconSvg(_faviconAssetId);
+            _faviconUrl = _faviconSvg is { } faviconSvg
+                ? $"/favicon.svg?v={Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(faviconSvg)))[..16]}"
+                : BrandPublishedUrl(_faviconAssetId, preferSmallest: true);
             _logoUrl = BrandPublishedUrl(_headerLogoAssetId, preferSmallest: false);
             _logoSvg = BrandInlineSvg(_headerLogoAssetId);
             _socialImageUrl = SocialImagePublishedUrl(_socialImageAssetId);
@@ -436,6 +441,10 @@ public sealed class SitePublisher(
             await WriteIfChanged(_cssFile, cssBytes, ct);
             await WriteIfChanged("sitemap.xml", Encoding.UTF8.GetBytes(BuildSitemap(plans)), ct);
             await WriteIfChanged("robots.txt", Encoding.UTF8.GetBytes(BuildRobots()), ct);
+            if (_faviconSvg is { } favicon)
+            {
+                await WriteIfChanged("favicon.svg", Encoding.UTF8.GetBytes(favicon), ct);
+            }
             if (_posts.Count > 0)
             {
                 // Only when there is something to syndicate: an empty feed is a broken promise a
@@ -904,6 +913,60 @@ public sealed class SitePublisher(
 
             // Vector (inline-only, no file) or any non-raster kind: no published file URL.
             return null;
+        }
+
+        /// <summary>
+        /// A vector favicon as one standalone <c>favicon.svg</c>: the sanitized mark, its size attributes dropped so
+        /// it fills the tab, and with a dark rendition both of them, the browser's colour scheme showing one, the
+        /// way the header's mark follows the page. Null for a raster favicon or none.
+        /// </summary>
+        private string? FaviconSvg(AssetId? assetId)
+        {
+            if (assetId is not { } id || _assets.Resolve(id) is not { Kind: AssetKind.Vector, InlineSvg: { Length: > 0 } light } info)
+            {
+                return null;
+            }
+
+            if (info.DarkInlineSvg is not { Length: > 0 } dark)
+            {
+                return StandaloneSvg(light, null);
+            }
+
+            var box = SvgViewBox(light);
+            return "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"" + (box ?? "0 0 100 100") + "\">"
+                + "<style>.d{display:none}@media (prefers-color-scheme: dark){.l{display:none}.d{display:inline}}</style>"
+                + NestedSvg(light, "l", box) + NestedSvg(dark, "d", box) + "</svg>";
+        }
+
+        private static readonly Regex SvgRoot = new("^\\s*<svg\\b([^>]*)>", RegexOptions.Compiled);
+        private static readonly Regex SizeAttribute = new("\\s(?:width|height|class|x|y)=\"[^\"]*\"", RegexOptions.Compiled);
+
+        private static string? SvgViewBox(string svg) =>
+            SvgRoot.Match(svg) is { Success: true } root
+            && Regex.Match(root.Groups[1].Value, "viewBox=\"([^\"]+)\"") is { Success: true } box
+                ? box.Groups[1].Value
+                : null;
+
+        /// <summary>The mark as its own document: the namespace it needs, without the size it was drawn at.</summary>
+        private static string StandaloneSvg(string svg, string? extra)
+        {
+            var root = SvgRoot.Match(svg);
+            var attributes = SizeAttribute.Replace(root.Groups[1].Value, "");
+            if (!attributes.Contains("xmlns=", StringComparison.Ordinal))
+            {
+                attributes = " xmlns=\"http://www.w3.org/2000/svg\"" + attributes;
+            }
+
+            return "<svg" + attributes + extra + ">" + svg[root.Length..];
+        }
+
+        /// <summary>One rendition placed over the whole favicon, in its own coordinates.</summary>
+        private static string NestedSvg(string svg, string cssClass, string? outerBox)
+        {
+            var place = outerBox?.Split([' ', ','], StringSplitOptions.RemoveEmptyEntries) is [var x, var y, var w, var h]
+                ? $" x=\"{x}\" y=\"{y}\" width=\"{w}\" height=\"{h}\""
+                : " width=\"100\" height=\"100\"";
+            return StandaloneSvg(svg, $" class=\"{cssClass}\"{place}");
         }
 
         /// <summary>
@@ -2655,6 +2718,11 @@ public sealed class SitePublisher(
             Keep("sitemap.xml");
             Keep("robots.txt");
             Keep("llms.txt");
+            if (_faviconSvg is not null)
+            {
+                Keep("favicon.svg");
+            }
+
             if (_posts.Count > 0)
             {
                 // Written only when posts exist, so it may only be KEPT then — otherwise the

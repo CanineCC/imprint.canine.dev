@@ -65,7 +65,14 @@
   }
   @if (Chrome.FaviconUrl is not null)
   {
-    <link rel="icon" href="@Chrome.FaviconUrl" />
+    @if (Chrome.FaviconUrl.StartsWith("/favicon.svg", StringComparison.Ordinal))
+    {
+      <link rel="icon" href="@Chrome.FaviconUrl" type="image/svg+xml" />
+    }
+    else
+    {
+      <link rel="icon" href="@Chrome.FaviconUrl" />
+    }
   }
   <script>@((MarkupString)PublisherScripts.ThemeToggle)</script>
   <script>@((MarkupString)PublisherScripts.LanguagePreference)</script>
