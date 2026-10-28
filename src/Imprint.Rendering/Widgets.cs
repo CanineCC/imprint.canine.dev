@@ -34,9 +34,17 @@ public static class WidgetTemplate
     /// is produced, and both sections look it up.</para>
     /// <para>It lives beside <see cref="Resolve"/> for the same reason Resolve does: the publisher
     /// writes this key and the view reads it, and a key built twice is a key that can differ.</para>
+    /// <para>A <paramref name="language"/> keys a bake the template wrote in a page's own language
+    /// (<c>da</c> on the Danish pages); without one the key is the site's default-language bake.</para>
     /// </summary>
-    public static string BakeKey(string url, string? template, string? context = null) =>
-        context is { Length: > 0 } ? $"{url}\n{template}\n{context}" : $"{url}\n{template}";
+    public static string BakeKey(string url, string? template, string? context = null, string? language = null)
+    {
+        var key = context is { Length: > 0 } ? $"{url}\n{template}\n{context}" : $"{url}\n{template}";
+        return language is { Length: > 0 } ? $"{key}\n@{language}" : key;
+    }
+
+    /// <summary>The language part of a locale tag: <c>da</c> for both <c>da</c> and <c>da-DK</c>.</summary>
+    public static string LanguageOf(string locale) => locale.Split('-')[0].ToLowerInvariant();
 
     /// <summary>
     /// The descriptor's context url for these props — or "" when it declares none.

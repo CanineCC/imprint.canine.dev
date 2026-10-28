@@ -260,6 +260,18 @@ public sealed class SitePublisher(
                     ? PrerenderTemplates.Render(template, body, url, contextBody)
                     : WidgetPrerender.Reduce(body);
 
+                // A template with its own words in one of the site's other languages bakes that
+                // language too; a page in it looks that bake up first (WidgetView).
+                foreach (var language in _locales.Where(l => l != _defaultLocale)
+                             .Select(l => WidgetTemplate.LanguageOf(l.Value)).Distinct(StringComparer.Ordinal))
+                {
+                    if (PrerenderTemplates.Speaks(template, language)
+                        && PrerenderTemplates.Render(template, body, url, contextBody, language) is { Length: > 0 } spoken)
+                    {
+                        baked[WidgetTemplate.BakeKey(url, template, context, language)] = spoken;
+                    }
+                }
+
                 var bakeKey = WidgetTemplate.BakeKey(url, template, context);
                 if (rendered is { Length: > 0 })
                 {

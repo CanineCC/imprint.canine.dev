@@ -1677,7 +1677,8 @@
       { "name": "total", "label": "How many items there were in all", "type": "number", "default": "312" },
       { "name": "done-text", "label": "Words after the fixed count", "type": "text", "default": "fixed by your AI" },
       { "name": "items", "label": "Recent fixes (JSON array of {text, done}); done items get a filled dot, the rest a ring", "type": "text", "default": "[]" },
-      { "name": "facts", "label": "Facts (JSON array of {label, value})", "type": "text", "default": "[]" }
+      { "name": "facts", "label": "Facts (JSON array of {label, value})", "type": "text", "default": "[]" },
+      { "name": "translations", "label": "The same props in another language, by language code (JSON, e.g. {\"da\": {\"band\": \"Stærk\", \"items\": [...]}}); a page in that language shows them, and the card's own words follow the page's language", "type": "text", "default": "{}" }
     ]
   },
   {

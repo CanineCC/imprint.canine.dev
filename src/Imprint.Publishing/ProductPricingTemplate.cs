@@ -72,8 +72,12 @@ public static class ProductPricingTemplate
         return html.ToString();
     }
 
-    /// <summary>Assure's price, or null when it is not on sale.</summary>
-    public static string? RenderAssure(string? json)
+    /// <summary>The languages Assure's price has its own words in, besides English.</summary>
+    public static readonly IReadOnlySet<string> AssureLanguages = new HashSet<string>(StringComparer.Ordinal) { "da" };
+
+    /// <summary>Assure's price, or null when it is not on sale. <paramref name="language"/> <c>da</c> writes
+    /// the words around the price in Danish; the price itself is printed as the product formatted it.</summary>
+    public static string? RenderAssure(string? json, string? language = null)
     {
         if (Parse(json) is not { } root || root.TryGetProperty("onSale", out var onSale) && onSale.ValueKind == JsonValueKind.False
             || Str(root, "price") is not { Length: > 0 } price)
@@ -81,13 +85,18 @@ public static class ProductPricingTemplate
             return null;
         }
 
+        var danish = language == "da";
         var vat = root.TryGetProperty("vatIncluded", out var v) && v.ValueKind == JsonValueKind.True;
         var html = new StringBuilder("<div class=\"ip-stack\">");
         html.Append("<p class=\"ip-price\">").Append(Esc(price))
-            .Append("<span class=\"ip-price-unit\">a month for each repository we scan").Append(vat ? ", VAT included" : "").Append("</span>");
+            .Append("<span class=\"ip-price-unit\">")
+            .Append(danish ? "om måneden for hvert projekt, vi scanner" : "a month for each repository we scan")
+            .Append(vat ? danish ? ", inkl. moms" : ", VAT included" : "").Append("</span>");
         if (Long(root, "repositoryLineCap") is { } cap and > 0)
         {
-            html.Append("<span class=\"ip-price-allowance\">Up to ").Append(Esc(Lines(cap))).Append(" lines of code per repository</span>");
+            html.Append(danish
+                ? $"<span class=\"ip-price-allowance\">Op til {Esc(cap.ToString("N0", Danish))} linjer kode pr. projekt</span>"
+                : $"<span class=\"ip-price-allowance\">Up to {Esc(Lines(cap))} lines of code per repository</span>");
         }
 
         html.Append("</p></div>");
@@ -215,6 +224,10 @@ public static class ProductPricingTemplate
 
     /// <summary>A line count as people read it: <c>1,000,000</c>.</summary>
     private static string Lines(long lines) => lines.ToString("N0", CultureInfo.InvariantCulture);
+
+    /// <summary>Danish digit grouping, so a line count reads <c>500.000</c>. Built by hand because the app
+    /// runs with invariant globalization, where no Danish culture exists to ask.</summary>
+    private static readonly NumberFormatInfo Danish = new() { NumberGroupSeparator = ".", NumberDecimalSeparator = "," };
 
     private static string Esc(string s) => WebUtility.HtmlEncode(s);
 }

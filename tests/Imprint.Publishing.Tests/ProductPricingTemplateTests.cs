@@ -66,6 +66,17 @@ public sealed class ProductPricingTemplateTests
     }
 
     [Fact]
+    public void Assure_in_danish_keeps_the_products_price_and_says_the_rest_in_danish()
+    {
+        var html = ProductPricingTemplate.RenderAssure(AssureJson, "da");
+        Assert.NotNull(html);
+        Assert.Contains("€10<span class=\"ip-price-unit\">om måneden for hvert projekt, vi scanner, inkl. moms</span>", html);
+        Assert.Contains("Op til 500.000 linjer kode pr. projekt", html);
+        Assert.True(PrerenderTemplates.Speaks(ProductPricingTemplate.AssureName, "da"));
+        Assert.False(PrerenderTemplates.Speaks(ProductPricingTemplate.AssertName, "da"));
+    }
+
+    [Fact]
     public void Cca_renders_the_free_lines_pay_as_you_go_and_every_tier()
     {
         var html = ProductPricingTemplate.RenderCca(CcaJson);

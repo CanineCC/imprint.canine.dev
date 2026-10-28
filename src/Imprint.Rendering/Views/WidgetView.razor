@@ -166,11 +166,26 @@ else if (descriptor is not null)
       ? render(template, Node.Props.Get)
       : null;
 
-  private string? Prerendered(WidgetDescriptor descriptor) =>
-    Ctx.ResolvePrerendered is { } lookup
-      && WidgetTemplate.Resolve(descriptor, descriptor.Prerender, Node.Props.Get) is { } url
-        ? lookup(WidgetTemplate.BakeKey(
-            url, descriptor.PrerenderTemplate, WidgetTemplate.ContextUrl(descriptor, Node.Props.Get)))
-        : null;
+  private string? Prerendered(WidgetDescriptor descriptor)
+  {
+    if (Ctx.ResolvePrerendered is not { } lookup
+        || WidgetTemplate.Resolve(descriptor, descriptor.Prerender, Node.Props.Get) is not { } url)
+    {
+      return null;
+    }
+
+    var context = WidgetTemplate.ContextUrl(descriptor, Node.Props.Get);
+
+    // A page in another language takes the bake its template wrote in that language, when the
+    // template speaks it; otherwise the default-language bake, as before.
+    if (Ctx.Locale != Ctx.DefaultLocale
+        && lookup(WidgetTemplate.BakeKey(
+            url, descriptor.PrerenderTemplate, context, WidgetTemplate.LanguageOf(Ctx.Locale.Value))) is { } spoken)
+    {
+      return spoken;
+    }
+
+    return lookup(WidgetTemplate.BakeKey(url, descriptor.PrerenderTemplate, context));
+  }
 
 }

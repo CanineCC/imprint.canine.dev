@@ -21,12 +21,16 @@ public static class PrerenderTemplates
     /// keyed by (url, template) and cannot see props: a prop that changed the output would produce one
     /// fragment shared by instances that disagreed about it.
     /// </param>
-    public static string? Render(string? name, string? body, string? url = null, string? context = null) => name switch
+    /// <param name="language">
+    /// The language to write the template's own words in (<c>da</c>), for a template that
+    /// <see cref="Speaks"/> it; null for the site's default language.
+    /// </param>
+    public static string? Render(string? name, string? body, string? url = null, string? context = null, string? language = null) => name switch
     {
         PricingTemplate.Name => PricingTemplate.Render(body),
         PricingTemplate.OnPremName => PricingTemplate.RenderOnPrem(body),
         ProductPricingTemplate.AssertName => ProductPricingTemplate.RenderAssert(body),
-        ProductPricingTemplate.AssureName => ProductPricingTemplate.RenderAssure(body),
+        ProductPricingTemplate.AssureName => ProductPricingTemplate.RenderAssure(body, language),
         ProductPricingTemplate.CcaName => ProductPricingTemplate.RenderCca(body),
         ProductPricingTemplate.AssayName => ProductPricingTemplate.RenderAssay(body),
         PricingTemplate.PlansName => PricingTemplate.RenderPlans(body),
@@ -48,6 +52,14 @@ public static class PrerenderTemplates
         ArchitectureSvgTemplate.Name => ArchitectureSvgTemplate.Render(body),
         _ => null,
     };
+
+    /// <summary>
+    /// Whether template <paramref name="name"/> has its own words in <paramref name="language"/>. The
+    /// publisher bakes a second rendering for each such language the site has; every other template
+    /// renders once, in the default language, and every locale shows that.
+    /// </summary>
+    public static bool Speaks(string? name, string language) =>
+        name == ProductPricingTemplate.AssureName && ProductPricingTemplate.AssureLanguages.Contains(language);
 
     /// <summary>
     /// The markup for a widget rendered from its OWN props. Same shape of answer as

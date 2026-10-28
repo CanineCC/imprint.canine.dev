@@ -68,6 +68,39 @@ const STYLE = `
 
 const BAND_KEYS = ['critical', 'poor', 'fair', 'healthy', 'exemplary'];
 
+// The card's own words, by the page's language (the nearest lang attribute). Everything else is
+// said by the props, and a page in another language gives its own through `translations`.
+const WORDS = {
+  en: {
+    app: 'your-project', example: 'Example', fixed: 'fixed by your AI', done: ', done',
+    result: (label, app) => `${label}: a result for ${app}`,
+    outOf: (shown) => `${shown} out of 100`,
+    of: (done, total) => `${done} of ${total}`,
+    areas: (app) => `${app}: score by area`,
+    scans: (app) => `${app}: about the scans`,
+  },
+  da: {
+    app: 'dit-projekt', example: 'Eksempel', fixed: 'rettet af din AI', done: ', færdig',
+    result: (label, app) => `${label}: et resultat for ${app}`,
+    outOf: (shown) => `${shown} ud af 100`,
+    of: (done, total) => `${done} af ${total}`,
+    areas: (app) => `${app}: score pr. område`,
+    scans: (app) => `${app}: om scanningerne`,
+  },
+};
+
+const languageOf = (node) => (node.closest('[lang]')?.getAttribute('lang') || 'en').split('-')[0].toLowerCase();
+
+// The page language's entry in the `translations` prop ({"da": {"band": "Stærk", "items": [...]}}), or {}.
+const overridesFor = (json, language) => {
+  try {
+    const all = JSON.parse(json || '{}');
+    return all && typeof all[language] === 'object' && all[language] ? all[language] : {};
+  } catch {
+    return {};
+  }
+};
+
 const number = (value) => {
   const n = Number.parseFloat(value ?? '');
   return Number.isNaN(n) || n < 0 ? 0 : n;
@@ -126,7 +159,7 @@ const table = (className, caption, rows) => {
 
 customElements.define('assure-progress-card', class extends HTMLElement {
   static observedAttributes = ['app', 'example-label', 'band', 'band-key', 'score', 'floors', 'series', 'trend-note',
-    'lenses', 'done', 'total', 'done-text', 'items', 'facts'];
+    'lenses', 'done', 'total', 'done-text', 'items', 'facts', 'translations'];
 
   connectedCallback() {
     if (!document.getElementById(STYLE_ID)) {
@@ -143,16 +176,27 @@ customElements.define('assure-progress-card', class extends HTMLElement {
   }
 
   #render() {
-    const text = (name) => this.getAttribute(name) ?? '';
-    const app = text('app') || 'your-project';
-    const label = text('example-label') || 'Example';
+    // A prop the page's language overrides comes from `translations`; a list given there as JSON
+    // is read the same as the list prop it replaces.
+    const language = languageOf(this);
+    const words = WORDS[language] ?? WORDS.en;
+    const overrides = overridesFor(this.getAttribute('translations'), language);
+    const text = (name) => {
+      if (Object.hasOwn(overrides, name)) {
+        const value = overrides[name];
+        return typeof value === 'string' ? value : JSON.stringify(value);
+      }
+      return this.getAttribute(name) ?? '';
+    };
+    const app = text('app') || words.app;
+    const label = text('example-label') || words.example;
     const bandKey = BAND_KEYS.includes(text('band-key')) ? text('band-key') : 'healthy';
     const score = number(text('score'));
     const shown = String(Math.round(score));
 
     const card = el('div', 'ip-stack ip-survey ip-survey-detail');
     card.setAttribute('role', 'group');
-    card.setAttribute('aria-label', `${label}: a result for ${app}`);
+    card.setAttribute('aria-label', words.result(label, app));
 
     // The project, the Example tag and the band.
     const top = el('div', 'ip-survey-top');
@@ -170,7 +214,7 @@ customElements.define('assure-progress-card', class extends HTMLElement {
     if (floors.length === BAND_KEYS.length) {
       const ladder = el('div', 'ip-cai-ladder');
       ladder.setAttribute('role', 'img');
-      ladder.setAttribute('aria-label', `${shown} out of 100`);
+      ladder.setAttribute('aria-label', words.outOf(shown));
       floors.forEach((floor, i) => {
         const rung = el('span', `ip-cai-rung ip-cai-rung-${BAND_KEYS[i]}`);
         rung.style.flex = String((i + 1 < floors.length ? floors[i + 1] : 100) - floor);
@@ -202,7 +246,7 @@ customElements.define('assure-progress-card', class extends HTMLElement {
     // The score of each area.
     const lenses = parseList(text('lenses')).filter((l) => typeof l.label === 'string');
     if (lenses.length) {
-      card.append(table('ip-lens-table', `${app}: score by area`, lenses.map((lens) => {
+      card.append(table('ip-lens-table', words.areas(app), lenses.map((lens) => {
         const key = BAND_KEYS.includes(lens.band) ? lens.band : bandKey;
         const value = number(lens.value);
         const row = el('tr');
@@ -227,13 +271,13 @@ customElements.define('assure-progress-card', class extends HTMLElement {
       const work = el('div', 'assure-block');
       if (total > 0) {
         const head = el('p', 'assure-work-head');
-        head.append(el('strong', '', `${done} of ${total}`), ` ${text('done-text') || 'fixed by your AI'}`);
+        head.append(el('strong', '', words.of(done, total)), ` ${text('done-text') || words.fixed}`);
         const bar = el('span', 'ip-lens-bar');
         bar.setAttribute('role', 'progressbar');
         bar.setAttribute('aria-valuemin', '0');
         bar.setAttribute('aria-valuemax', String(total));
         bar.setAttribute('aria-valuenow', String(done));
-        bar.setAttribute('aria-label', `${done} of ${total} ${text('done-text') || 'fixed by your AI'}`);
+        bar.setAttribute('aria-label', `${words.of(done, total)} ${text('done-text') || words.fixed}`);
         const fill = el('span', 'ip-lens-fill');
         fill.style.width = `${(done / total) * 100}%`;
         bar.append(fill);
@@ -244,7 +288,7 @@ customElements.define('assure-progress-card', class extends HTMLElement {
         if (total > 0) list.style.marginTop = '0.75rem';
         items.forEach((item) => {
           const li = el('li', item.done ? 'assure-win done' : 'assure-win open', item.text);
-          if (item.done) li.append(el('span', 'sr-only', ', done'));
+          if (item.done) li.append(el('span', 'sr-only', words.done));
           list.append(li);
         });
         work.append(list);
@@ -255,7 +299,7 @@ customElements.define('assure-progress-card', class extends HTMLElement {
     // The facts of the last and the next scan.
     const facts = parseList(text('facts')).filter((f) => typeof f.label === 'string' && typeof f.value === 'string');
     if (facts.length) {
-      card.append(table('ip-fact-table', `${app}: about the scans`, facts.map((fact) => {
+      card.append(table('ip-fact-table', words.scans(app), facts.map((fact) => {
         const row = el('tr');
         const th = el('th', '', fact.label);
         th.scope = 'row';

@@ -59,6 +59,14 @@ public sealed class BakeKeyAgreementTests
     }
 
     [Fact]
+    public void A_language_keys_its_own_bake_and_no_language_keys_the_default_one()
+    {
+        Assert.Equal(WidgetTemplate.BakeKey("u", "t"), WidgetTemplate.BakeKey("u", "t", "", null));
+        Assert.NotEqual(WidgetTemplate.BakeKey("u", "t"), WidgetTemplate.BakeKey("u", "t", "", "da"));
+        Assert.Equal("da", WidgetTemplate.LanguageOf("da-DK"));
+    }
+
+    [Fact]
     public void The_key_the_publisher_stores_is_the_key_the_view_asks_for()
     {
         var url = WidgetTemplate.Resolve(Card, Card.Prerender, Props)!;

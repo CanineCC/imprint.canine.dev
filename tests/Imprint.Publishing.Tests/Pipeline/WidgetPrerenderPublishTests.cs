@@ -236,6 +236,51 @@ public sealed class WidgetPrerenderPublishTests
     }
 
     [Fact]
+    public async Task A_template_that_speaks_the_pages_language_bakes_it_there_and_english_stays_english()
+    {
+        var source = new StubSource("""{"product":"assure","vatIncluded":true,"onSale":true,"price":"€10","repositoryLineCap":500000}""");
+        var host = new PublishingTestHost(configure: services =>
+            services.AddSingleton<IWidgetPrerenderSource>(source));
+        File.WriteAllText(
+            Path.Combine(host.WidgetsDirectory, "manifest.json"),
+            JsonSerializer.Serialize(new[]
+            {
+                new
+                {
+                    tag = "assure-pricing",
+                    name = "Assure pricing",
+                    bundle = "",
+                    placeholder = "Prices are published here.",
+                    prerender = "https://app.example.test/api/public/pricing/assure",
+                    prerenderTemplate = "assure-pricing",
+                    props = Array.Empty<object>(),
+                },
+            }));
+
+        await using var _ = host;
+        var siteId = await host.CreateSite();
+        await host.AddLocale(siteId, "da");
+        var homeId = await host.CreatePage(siteId, "home", "Home");
+        await host.AddSection(homeId, new SectionNode
+        {
+            Id = NodeId.New(),
+            Children = NodeList.Of(new WidgetNode { Id = NodeId.New(), Tag = "assure-pricing" }),
+        });
+        await host.SetNavigation(siteId, homeId);
+        await host.Publish(homeId);
+        await host.Publisher.Synchronize();
+
+        var english = host.ReadText("index.html");
+        var danish = host.ReadText("da/index.html");
+
+        Assert.Contains("a month for each repository we scan, VAT included", english, StringComparison.Ordinal);
+        Assert.DoesNotContain("om måneden", english, StringComparison.Ordinal);
+        Assert.Contains("om måneden for hvert projekt, vi scanner, inkl. moms", danish, StringComparison.Ordinal);
+        Assert.DoesNotContain("VAT included", danish, StringComparison.Ordinal);
+        Assert.Single(source.Requested);
+    }
+
+    [Fact]
     public async Task A_rendered_widget_does_not_offer_a_link_to_the_view_it_replaced()
     {
         var source = new StubSource("""
