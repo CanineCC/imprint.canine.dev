@@ -98,7 +98,7 @@ C# abstract record `Node` with sealed subtypes (exhaustive switching everywhere)
 
 | Type | Props (locale-valued in **bold**) |
 |---|---|
-| `HeadingNode` | `Level (1–4)`, **`Text`** (plain) |
+| `HeadingNode` | `Level (1–4)`, **`Text`** (plain words, with at most one part marked `<em>…</em>`: the accent run a product site draws in its own metal, see `HeadingText`. On Assure, Assert, Assay and CCA an h1 or h2 that ends on its payoff marks that last part; labels, questions and legal headings stay unmarked) |
 | `RichTextNode` | **`Html`** (canonical inline subset — see §2.2) |
 | `ButtonNode` | **`Label`**, `LinkTo (PageLink(PageId) \| ExternalLink(Url))`, `Variant (Primary\|Secondary\|Ghost)` |
 | `ImageNode` | `AssetId?`, **`Alt`**, `Aspect (Natural\|Square\|Wide16x9\|Portrait3x4)`, `Rounded (bool)` |
