@@ -103,9 +103,9 @@ public sealed class Site : AggregateRoot
     public IReadOnlyList<LinkedInSender> LinkedInSenders { get; private set; } = [];
 
     /// <summary>
-    /// Replaces the LinkedIn senders: each a key an article names (lower-cased), a display name, and the LinkedIn
-    /// organization URN that posts. Refused: a URN that is not <c>urn:li:organization:{digits}</c>, a key listed
-    /// twice, and a sender with no name.
+    /// Replaces the LinkedIn senders: each a key an article or update names (lower-cased), a display name, and the
+    /// author URN that posts: a page (<c>urn:li:organization:{digits}</c>) or a member (<c>urn:li:person:{id}</c>).
+    /// Refused: any other URN, a key listed twice, and a sender with no name.
     /// </summary>
     public void SetLinkedInSenders(IReadOnlyList<LinkedInSender>? senders)
     {
@@ -126,9 +126,10 @@ public sealed class Site : AggregateRoot
                 throw new DomainException($"Sender '{key}' needs a name, shown to the author choosing it.");
             }
 
-            if (!System.Text.RegularExpressions.Regex.IsMatch(urn, @"^urn:li:organization:\d+$"))
+            if (!System.Text.RegularExpressions.Regex.IsMatch(urn, @"^(urn:li:organization:\d+|urn:li:person:[A-Za-z0-9_-]+)$"))
             {
-                throw new DomainException($"'{urn}' is not a LinkedIn organization: give it as urn:li:organization:{{id}}.");
+                throw new DomainException(
+                    $"'{urn}' is neither a LinkedIn page nor a member: give it as urn:li:organization:{{id}} or urn:li:person:{{id}}.");
             }
 
             if (!keys.Add(key))

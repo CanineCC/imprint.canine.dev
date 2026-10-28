@@ -41,6 +41,15 @@ public readonly record struct PostId(Guid Value) : IGuidId<PostId>
     public override string ToString() => Compact;
 }
 
+public readonly record struct LinkedInUpdateId(Guid Value) : IGuidId<LinkedInUpdateId>
+{
+    public static LinkedInUpdateId New() => new(Guid.NewGuid());
+    public static LinkedInUpdateId From(Guid value) => new(value);
+    public string Stream => $"linkedin-update-{Value:N}";
+    public string Compact => Value.ToString("N");
+    public override string ToString() => Compact;
+}
+
 public readonly record struct AssetId(Guid Value) : IGuidId<AssetId>
 {
     public static AssetId New() => new(Guid.NewGuid());
