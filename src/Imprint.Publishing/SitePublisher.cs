@@ -1673,7 +1673,7 @@ public sealed class SitePublisher(
         {
             foreach (var post in _posts)
             {
-                _postStamps[PostPageId(post.Id)] = post.UpdatedAt.UtcTicks.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                _postStamps[PostPageId(post.Id)] = PostStamp(post);
                 yield return new PublishedPage(
                     PostPageId(post.Id),
                     post.SiteId,
@@ -1701,10 +1701,16 @@ public sealed class SitePublisher(
                 // the stamp too, so going from one post to none re-renders it into its empty state
                 // instead of leaving the last post listed on a blog that no longer has it.
                 _postStamps[listing.Id] = $"{_posts.Count}:" + string.Join(
-                    '|', _posts.Select(post => $"{post.Slug.Value}:{post.UpdatedAt.UtcTicks}"));
+                    '|', _posts.Select(post => $"{post.Slug.Value}:{PostStamp(post)}"));
                 yield return listing;
             }
         }
+
+        /// <summary>What a post's page is rendered from beyond its words: the signature is on the page (the document
+        /// record, the index status), and a signature given after the article went live moves nothing else.</summary>
+        private static string PostStamp(PublishedPost post) =>
+            post.UpdatedAt.UtcTicks.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            + (post.SignedAt is { } signed ? "+" + signed.UtcTicks.ToString(System.Globalization.CultureInfo.InvariantCulture) : "");
 
         /// <summary>
         /// The blog index, built as an ordinary page out of ordinary nodes — a masthead and one

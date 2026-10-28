@@ -8,6 +8,7 @@ using Imprint.Authoring.Features.Posts.ChangePostBody;
 using Imprint.Authoring.Features.Posts.ChangePostMeta;
 using Imprint.Authoring.Features.Posts.CreatePost;
 using Imprint.Authoring.Features.Posts.PublishPost;
+using Imprint.Authoring.Features.Posts.SignPublishedPost;
 using Imprint.Authoring.Features.Posts.SubmitPostForReview;
 using Imprint.Authoring.Features.Posts.UnpublishPost;
 using Imprint.Authoring.Features.Sites.SetByline;
@@ -278,6 +279,41 @@ public sealed class ResourceCenterPublishingTests
         Assert.DoesNotContain(Login, index, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("someone-else@example.com", article, StringComparison.OrdinalIgnoreCase);
     }
+    // A signature given after the article went live changes no words, so nothing the page stamp used to watch moved
+    // and the live page kept saying "Not signed" (2026-10-28, the 24 articles signed in one go). The signature is
+    // part of the page: signing re-renders the article and the index.
+    [Fact]
+    public async Task Signing_a_live_article_rewrites_its_page_and_the_index()
+    {
+        await using var host = NewHost();
+        var site = await host.CreateSite("Resource Center", kind: SiteKind.ResourceCenter);
+        var id = PostId.New();
+        await host.Ok(new CreatePost(id, site, "Read-only by design", "read-only-by-design", En, "guide", ["assert"]));
+        await host.Ok(new ChangePostBody(id, En, Body));
+        await host.Ok(new PublishPost(id, En));
+        await host.Ok(new SetSiteReviewer(site, "Jimmy Borch", Login));
+        await host.Publisher.Synchronize();
+        Assert.Contains("Not signed", host.ReadText("read-only-by-design/index.html"), StringComparison.Ordinal);
+
+        var metadata = host.Services.GetRequiredService<EventMetadataProvider>();
+        var person = metadata.ActorSource;
+        metadata.ActorSource = () => Login;
+        try
+        {
+            await host.Ok(new SignPublishedPost(id));
+        }
+        finally
+        {
+            metadata.ActorSource = person;
+        }
+
+        await host.Publisher.Synchronize();
+        var article = host.ReadText("read-only-by-design/index.html");
+        Assert.Contains("Signed by Jimmy Borch", article, StringComparison.Ordinal);
+        Assert.DoesNotContain("Not signed", article, StringComparison.Ordinal);
+        Assert.Contains("rc-st signed", host.ReadText("index.html"), StringComparison.Ordinal);
+    }
+
     // ------------------------------------------------------------------ round 2 (owner smoke test, 2026-10-28)
 
     private static async Task<PostId> Draft(PublishingTestHost host, SiteId site, string slug, string title, string kind,
