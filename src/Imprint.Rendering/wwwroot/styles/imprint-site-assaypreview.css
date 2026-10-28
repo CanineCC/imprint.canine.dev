@@ -33,7 +33,7 @@
    no shadow on anything but the metal. No green or red: results are carried by words.
    ★ QUIET METAL ON BUTTONS (owner, 2026-10-28; brand document 5.3), as on Assure and Assert: a short
    bronze run with no shine, a faint light line along the top edge and a small, close shadow. Its
-   lightest point, #946538, still carries white lettering at 5.0:1, so the letters can sit anywhere on
+   lightest point, #8f633b, still carries white lettering at 5.2:1, so the letters can sit anywhere on
    the button. The logo's lens keeps the full foil run. */
 .ip-site-assaypreview {
   --font-ui: "Source Serif 4", Georgia, "Times New Roman", serif;
@@ -47,10 +47,15 @@
   --mk-body: 18px;
   --mk-display: clamp(2.5rem, 1.55rem + 3.3vw, 3.75rem);
   --mk-h2: clamp(1.75rem, 1.3rem + 1.6vw, 2.375rem);
-  --metal: linear-gradient(135deg, #946538 0%, #8a5d33 40%, #5e3e20 100%);
-  --metal-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 2px light-dark(rgb(18 19 24 / 0.25), rgb(0 0 0 / 0.5));
+  --metal: linear-gradient(135deg, #8f633b 0%, #8a5d33 40%, #684626 100%);
+  --metal-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 2px rgb(18 19 24 / 0.25);
   font-size: 18px;
   font-variant-numeric: lining-nums;
+}
+/* The metal's close shadow is a step deeper on the dark ground (the family standard). */
+:root[data-theme=dark] .ip-site-assaypreview { --metal-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 3px rgb(0 0 0 / 0.5); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme=light]) .ip-site-assaypreview { --metal-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 3px rgb(0 0 0 / 0.5); }
 }
 .ip-site-assaypreview :is(h1, h2, h3, h4) { font-family: var(--font-display); letter-spacing: -0.01em; }
 .ip-site-assaypreview :is(h1, h2) { font-weight: 800; text-wrap: balance; }
