@@ -85,6 +85,28 @@ public static class ThemeCss
         return reader.ReadToEnd();
     });
 
+    /// <summary>
+    /// The faces a site's own sheet sets over the theme's stacks, as (role, family) pairs in the order
+    /// headings, text, labels: Assure's sheet gives Figtree, Figtree and JetBrains Mono. A site without a
+    /// sheet, or a sheet that leaves a role to the theme, gives nothing for it. The editor's Theme panel
+    /// names these, because its own font pickers cannot show a face that only the site's sheet carries.
+    /// </summary>
+    public static IReadOnlyList<(string Role, string Family)> SiteFaces(string siteName)
+    {
+        var css = SiteCss(siteName);
+        var faces = new List<(string, string)>();
+        foreach (var (property, role) in new[] { ("--font-display", "Headings"), ("--font-ui", "Text"), ("--font-mono", "Labels") })
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(css, property + @"\s*:\s*""([^""]+)""");
+            if (match.Success)
+            {
+                faces.Add((role, match.Groups[1].Value));
+            }
+        }
+
+        return faces;
+    }
+
     /// <summary>The site as a CSS hook and file name: "Canine Code Analyzer" becomes <c>caninecodeanalyzer</c>.</summary>
     public static string SiteSlug(string siteName) =>
         new([.. siteName.ToLowerInvariant().Where(c => char.IsAsciiLetterOrDigit(c) || c == '-')]);

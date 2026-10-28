@@ -144,6 +144,20 @@ public sealed class ThemeCssTests
     }
 
     /// <summary>
+    /// The editor's Theme panel names the faces a site's own sheet sets, since its pickers only know the
+    /// theme's stacks: Assure is Figtree with JetBrains Mono labels, Assert sets only its label face.
+    /// </summary>
+    [Fact]
+    public void A_sites_own_faces_are_read_from_its_sheet()
+    {
+        Assert.Equal(
+            [("Headings", "Figtree"), ("Text", "Figtree"), ("Labels", "JetBrains Mono")],
+            ThemeCss.SiteFaces("Assure"));
+        Assert.Equal([("Labels", "Martian Mono")], ThemeCss.SiteFaces("Assert"));
+        Assert.Empty(ThemeCss.SiteFaces("Watchdog"));
+    }
+
+    /// <summary>
     /// ★ The new Assay site is built as "Assay Preview" beside the live "Assay" site, and the live site must
     /// read and look exactly as it does until the owner moves the new one onto its address. Its look and its
     /// faces are keyed to the preview's name, so neither can reach the live site's sheet or folder.

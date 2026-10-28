@@ -59,6 +59,16 @@
         }
 
         <h3 class="group">Type</h3>
+        @* A product site's own sheet can set faces these pickers do not offer (Assure's Figtree);
+           say which, so the panel never claims a font the published site does not use. *@
+        @if (Imprint.Rendering.ThemeCss.SiteFaces(site.Name) is { Count: > 0 } siteFaces)
+        {
+            <p class="hint">
+                The published site uses its own brand faces:
+                @string.Join(", ", siteFaces.Select(f => $"{f.Role.ToLowerInvariant()} in {f.Family}")).
+                They win over the choices below, which the page preview here still shows.
+            </p>
+        }
         <div class="ed-field">
             <label for="th-heading">Headings</label>
             <select id="th-heading" class="ed-select" value="@typography.Heading" @onchange="e => ApplyStack(e, heading: true)">
