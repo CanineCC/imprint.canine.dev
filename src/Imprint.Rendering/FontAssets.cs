@@ -51,6 +51,27 @@ public static class FontAssets
         Load("fonts/sourceserif4-italic-var.woff2", "Imprint.Rendering.fonts.sourceserif4-italic-var.woff2"),
     ];
 
+    private static IReadOnlyList<FontFile>? _assayPreview;
+
+    /// <summary>
+    /// The faces only one site's own sheet names, written only on that site: Assay's Source Serif 4 with
+    /// its full weight and optical-size axes (the brand sets headlines at 800, past the resource center's
+    /// 400 to 700 instance), the resource center's italic for interpretation lines, and Source Code Pro
+    /// for the measurement details. Keyed by <see cref="ThemeCss.SiteSlug"/>, as the site's sheet is.
+    /// ★ "assaypreview", never "assay": the Assay site is live, and its pages must not change until the
+    /// owner moves the new site onto its address.
+    /// </summary>
+    public static IReadOnlyList<FontFile> ForSite(string siteSlug) => siteSlug switch
+    {
+        "assaypreview" => _assayPreview ??=
+        [
+            Load("fonts/sourceserif4-opsz-var.woff2", "Imprint.Rendering.fonts.sourceserif4-opsz-var.woff2"),
+            Load("fonts/sourceserif4-italic-var.woff2", "Imprint.Rendering.fonts.sourceserif4-italic-var.woff2"),
+            Load("fonts/sourcecodepro-var.woff2", "Imprint.Rendering.fonts.sourcecodepro-var.woff2"),
+        ],
+        _ => [],
+    };
+
     private static FontFile Load(string relativePath, string resource)
     {
         using var stream = typeof(FontAssets).Assembly.GetManifestResourceStream(resource)

@@ -1566,9 +1566,14 @@ public sealed class SitePublisher(
             }
         }
 
-        /// <summary>The fixed files every site gets, plus the reading serif on a resource center.</summary>
+        /// <summary>The fixed files every site gets, plus the reading serif on a resource center and the faces
+        /// a site's own sheet names (FontAssets.ForSite).</summary>
         private IEnumerable<FontAssets.FontFile> ShippedAssets =>
-            _siteKind == SiteKind.ResourceCenter ? [.. FontAssets.All, .. FontAssets.ResourceCenter] : FontAssets.All;
+            [
+                .. FontAssets.All,
+                .. _siteKind == SiteKind.ResourceCenter ? FontAssets.ResourceCenter : [],
+                .. FontAssets.ForSite(ThemeCss.SiteSlug(_siteName)),
+            ];
 
         private async Task CopyAssets(CancellationToken ct)
         {

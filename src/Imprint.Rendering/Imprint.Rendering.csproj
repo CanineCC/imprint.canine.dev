@@ -26,6 +26,8 @@
     <!-- One product site's own rules, appended only to that site's sheet (ThemeCss.SiteCss). -->
     <EmbeddedResource Include="wwwroot/styles/imprint-site-assure.css" LogicalName="Imprint.Rendering.styles.imprint-site-assure.css" />
     <EmbeddedResource Include="wwwroot/styles/imprint-site-assert.css" LogicalName="Imprint.Rendering.styles.imprint-site-assert.css" />
+    <!-- The new Assay site, built as "Assay Preview" beside the live "Assay" site, which takes nothing from it. -->
+    <EmbeddedResource Include="wwwroot/styles/imprint-site-assaypreview.css" LogicalName="Imprint.Rendering.styles.imprint-site-assaypreview.css" />
     <!-- Self-hosted variable fonts referenced by imprint-marketing.css (@font-face).
          Embedded so the publisher writes them into every site's /fonts/ folder with no
          external CDN request — EU-resident, zero third parties. The wwwroot copies also
@@ -41,6 +43,11 @@
     <EmbeddedResource Include="wwwroot/fonts/martian-var.woff2" LogicalName="Imprint.Rendering.fonts.martian-var.woff2" />
     <EmbeddedResource Include="wwwroot/fonts/sourceserif4-var.woff2" LogicalName="Imprint.Rendering.fonts.sourceserif4-var.woff2" />
     <EmbeddedResource Include="wwwroot/fonts/sourceserif4-italic-var.woff2" LogicalName="Imprint.Rendering.fonts.sourceserif4-italic-var.woff2" />
+    <!-- Assay's faces from its brand kit (SIL Open Font License 1.1, Adobe): Source Serif 4 with its full
+         weight and optical-size axes, and Source Code Pro. Written only on the site that names them
+         (FontAssets.ForSite). -->
+    <EmbeddedResource Include="wwwroot/fonts/sourceserif4-opsz-var.woff2" LogicalName="Imprint.Rendering.fonts.sourceserif4-opsz-var.woff2" />
+    <EmbeddedResource Include="wwwroot/fonts/sourcecodepro-var.woff2" LogicalName="Imprint.Rendering.fonts.sourcecodepro-var.woff2" />
     <EmbeddedResource Include="wwwroot/brand/canine-badge.svg" LogicalName="Imprint.Rendering.brand.canine-badge.svg" />
     <EmbeddedResource Include="wwwroot/brand/cai-mark.svg" LogicalName="Imprint.Rendering.brand.cai-mark.svg" />
   </ItemGroup>

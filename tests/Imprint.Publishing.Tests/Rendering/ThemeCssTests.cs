@@ -143,6 +143,23 @@ public sealed class ThemeCssTests
         Assert.Equal("caninecodeanalyzer", ThemeCss.SiteSlug("Canine Code Analyzer"));
     }
 
+    /// <summary>
+    /// ★ The new Assay site is built as "Assay Preview" beside the live "Assay" site, and the live site must
+    /// read and look exactly as it does until the owner moves the new one onto its address. Its look and its
+    /// faces are keyed to the preview's name, so neither can reach the live site's sheet or folder.
+    /// </summary>
+    [Fact]
+    public void The_new_assay_look_reaches_the_preview_site_and_never_the_live_one()
+    {
+        Assert.Contains(".ip-site-assaypreview", ThemeCss.SiteCss("Assay Preview"));
+        Assert.Equal(string.Empty, ThemeCss.SiteCss("Assay"));
+        Assert.DoesNotContain(".ip-site-assaypreview", ThemeCss.MarketingCss);
+
+        Assert.Equal(3, FontAssets.ForSite(ThemeCss.SiteSlug("Assay Preview")).Count);
+        Assert.Empty(FontAssets.ForSite(ThemeCss.SiteSlug("Assay")));
+        Assert.All(FontAssets.ForSite("assaypreview"), font => Assert.NotEmpty(font.Bytes));
+    }
+
     [Fact]
     public void Structural_css_stays_within_the_size_budget()
     {
