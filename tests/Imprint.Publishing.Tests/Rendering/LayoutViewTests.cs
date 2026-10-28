@@ -152,6 +152,18 @@ public sealed class LayoutViewTests
     }
 
     [Fact]
+    public async Task Heading_accent_mark_renders_as_a_span_and_leaves_the_id_alone()
+    {
+        var html = await RenderHarness.RenderNode(
+            Static with { UsedAnchors = [] },
+            SampleNodes.Heading("Data you keep, <em>and Fish & Chips.</em>", level: 2));
+
+        Assert.Contains("<h2 id=\"data-you-keep-and-fish-chips\">Data you keep, <span class=\"ip-h-accent\">and Fish &amp; Chips.</span></h2>", html);
+        Assert.DoesNotContain("<em>", html);
+        Assert.DoesNotContain("&lt;em", html);
+    }
+
+    [Fact]
     public async Task Heading_h1_gets_no_id()
     {
         var html = await RenderHarness.RenderNode(Static, SampleNodes.Heading("The title", level: 1));

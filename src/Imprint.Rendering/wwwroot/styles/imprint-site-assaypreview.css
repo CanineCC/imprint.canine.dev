@@ -261,3 +261,22 @@
   .ip-site-assaypreview .ip-ap-hero .ip-stack > .ip-stack:has(> .ip-btn) { align-self: stretch; }
   .ip-site-assaypreview .ip-ap-hero .ip-stack > .ip-stack > .ip-btn { width: 100%; justify-content: center; }
 }
+
+/* ★ TWO-TONE HEADINGS (owner, 2026-10-28): the part of a heading marked <em>…</em> (HeadingText) is drawn in
+   the accent metal and the rest stays in text colour, so a long heading reads as a line and its payoff.
+   The run is the bronze foil, started one step darker on paper, where #d2a776 falls under 2:1; on dark it starts on
+   lifted bronze with the shine in the middle, so the start never reads as the text colour. Its weakest points are
+   #9a6e44, 3.9:1 at the low end of the paper top and 3.9:1 on the dark ground: AA for large text, which these are.
+   light-dark() follows each section's color-scheme, so a dark top gets the dark run in both themes. Print and
+   forced colours get plain text colour: they drop the clipped background and would leave the words with no ink. */
+.ip-site-assaypreview .ip-h-accent { color: light-dark(#8a5d33, #c99a6a); }
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .ip-site-assaypreview .ip-h-accent {
+    background-image: linear-gradient(160deg, light-dark(#9a6e44, #c99a6a) 0%, light-dark(#8a5d33, #e4c9a8) 45%, light-dark(#8a5d33, #c99a6a) 75%, light-dark(#5a3a1e, #9a6e44) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  }
+}
+@media print, (forced-colors: active) {
+  .ip-site-assaypreview .ip-h-accent { background: none; color: inherit; }
+}

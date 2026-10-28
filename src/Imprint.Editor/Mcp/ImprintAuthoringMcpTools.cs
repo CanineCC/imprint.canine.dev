@@ -418,7 +418,7 @@ public sealed class ImprintAuthoringMcpTools
     }
 
     [McpServerTool(Name = "edit_text")]
-    [Description("Rewrite one text field on one node — the copy-editing tool. field is 'text' (heading), 'html' (rich text, canonical inline subset), 'label' (button) or 'alt' (image/graphic). Locale defaults to the site's default. Read get_page_tree first to see the current value.")]
+    [Description("Rewrite one text field on one node — the copy-editing tool. field is 'text' (heading: plain words, with at most one part marked <em>…</em> for the product site's accent colour, e.g. \"Build fast, <em>with Assure looking after the quality.</em>\"), 'html' (rich text, canonical inline subset), 'label' (button) or 'alt' (image/graphic). Locale defaults to the site's default. Read get_page_tree first to see the current value.")]
     public static async Task<object> EditText(
         [Description("The page id.")] string pageId,
         [Description("The node id to edit.")] string nodeId,

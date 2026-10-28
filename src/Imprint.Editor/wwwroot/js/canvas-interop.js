@@ -630,7 +630,13 @@ function currentEditValue() {
 
 function currentEditValueFor(edit) {
   if (edit.mode === 'plain') {
-    return edit.el.innerText.replace(/\s+/g, ' ').trim();
+    // A heading's accent part renders as <span class="ip-h-accent">; write it back as the <em>…</em> mark
+    // it was stored as (HeadingText), or editing a word in the canvas would silently drop the accent.
+    const text = Array.from(edit.el.childNodes, node =>
+      node.nodeType === Node.ELEMENT_NODE && node.classList.contains('ip-h-accent')
+        ? `<em>${node.innerText}</em>`
+        : node.textContent).join('');
+    return text.replace(/\s+/g, ' ').trim();
   }
   return window.imprintRichText.normalize(edit.el);
 }

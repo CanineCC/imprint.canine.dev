@@ -148,3 +148,21 @@
   /* Room for the longest tool name, "set_cause_disposition", on one line. */
   .ip-site-assure .ip-table td:first-child { min-width: 11.5rem; }
 }
+
+/* ★ TWO-TONE HEADINGS (owner, 2026-10-28): the part of a heading marked <em>…</em> (HeadingText) is drawn in
+   the accent metal and the rest stays in text colour, so a long heading reads as a line and its payoff.
+   The run is the brand metal, started one step darker on light grounds, where #f59a5c falls to 2.0:1. Its weakest
+   point, #d9661f, reads 3.35:1 on paper and 3.8:1 on the graphite top: AA for large text, which these are.
+   light-dark() follows each section's color-scheme, so a dark top gets the dark run in both themes. Print and
+   forced colours get plain text colour: they drop the clipped background and would leave the words with no ink. */
+.ip-site-assure .ip-h-accent { color: light-dark(#c2410c, #fb923c); }
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .ip-site-assure .ip-h-accent {
+    background-image: linear-gradient(160deg, light-dark(#d9661f, #ffc39a) 0%, light-dark(#c2410c, #fb923c) 45%, light-dark(#7a2508, #d9661f) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  }
+}
+@media print, (forced-colors: active) {
+  .ip-site-assure .ip-h-accent { background: none; color: inherit; }
+}

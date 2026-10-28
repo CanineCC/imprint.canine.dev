@@ -32,7 +32,7 @@
         // three anonymous "Heading" crumbs.
         var preview = node switch
         {
-            HeadingNode heading => heading.Text.Resolve(Session.EditLocale, Session.EditLocale),
+            HeadingNode heading => HeadingText.Plain(heading.Text.Resolve(Session.EditLocale, Session.EditLocale)),
             ButtonNode button => button.Label.Resolve(Session.EditLocale, Session.EditLocale),
             _ => null,
         };

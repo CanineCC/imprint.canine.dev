@@ -559,6 +559,11 @@ public sealed class Page : AggregateRoot
         {
             throw new DomainException($"Text is limited to {MaxTextLength} characters.");
         }
+        else if (field == TextField && !HeadingText.TryValidate(value, out var markError))
+        {
+            // "text" is a heading's field only (TextFieldOf), so this is the heading's accent mark.
+            throw new DomainException(markError!);
+        }
     }
 
     private Node? FindTargetParent(NodeId parentId) =>

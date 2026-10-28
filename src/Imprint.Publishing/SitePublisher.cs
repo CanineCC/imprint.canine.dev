@@ -2018,7 +2018,7 @@ public sealed class SitePublisher(
             new PageTree(body).All().Sum(node => node switch
             {
                 RichTextNode text => CountWords(HtmlTagRegex.Replace(text.Html.Resolve(_defaultLocale, _defaultLocale), " ")),
-                HeadingNode heading => CountWords(heading.Text.Resolve(_defaultLocale, _defaultLocale)),
+                HeadingNode heading => CountWords(HeadingText.Plain(heading.Text.Resolve(_defaultLocale, _defaultLocale))),
                 _ => 0,
             });
 
@@ -2177,7 +2177,7 @@ public sealed class SitePublisher(
             var contents = new List<(string Id, string Text)>();
             foreach (var heading in new PageTree(body).All().OfType<HeadingNode>().Where(h => h.Level > 1))
             {
-                var text = heading.Text.Resolve(_defaultLocale, _defaultLocale);
+                var text = HeadingText.Plain(heading.Text.Resolve(_defaultLocale, _defaultLocale));
                 if (SectionAnchor.ForHeading(text) is not { } slug)
                 {
                     continue;
@@ -2530,7 +2530,7 @@ public sealed class SitePublisher(
             {
                 switch (node)
                 {
-                    case HeadingNode heading when Localized(heading.Text) is { Length: > 0 } value:
+                    case HeadingNode heading when HeadingText.Plain(Localized(heading.Text)) is { Length: > 0 } value:
                         // The page owns "##", so its own headings start one level below it and
                         // stop at Markdown's floor rather than emitting "#######".
                         text.Append('\n').Append(new string('#', Math.Clamp(heading.Level + 1, 3, 6)))

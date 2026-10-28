@@ -127,6 +127,23 @@ public sealed class PageEditTextTests
     }
 
     [Fact]
+    public void EditText_heading_takes_one_accent_mark()
+    {
+        Spec()
+            .When(p => p.EditText(_heading.Id, "text", En, "Build fast, <em>with Assure looking after the quality.</em>"))
+            .ThenRaised(new TextChanged(_heading.Id, "text", En, "Build fast, <em>with Assure looking after the quality.</em>"));
+    }
+
+    [Fact]
+    public void EditText_heading_rejects_a_second_open_or_empty_accent_mark()
+    {
+        Spec().When(p => p.EditText(_heading.Id, "text", En, "<em>One</em> and <em>two</em>")).ThenFails("one part");
+        Spec().When(p => p.EditText(_heading.Id, "text", En, "Open <em>and never closed")).ThenFails("one part");
+        Spec().When(p => p.EditText(_heading.Id, "text", En, "Closed</em> before <em>opened")).ThenFails("one part");
+        Spec().When(p => p.EditText(_heading.Id, "text", En, "Nothing <em> </em> inside")).ThenFails("needs some words");
+    }
+
+    [Fact]
     public void EditText_richtext_accepts_a_link_to_a_section_of_this_page()
     {
         var outcome = Spec().When(p =>

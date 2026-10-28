@@ -20,11 +20,12 @@ public static class SectionAnchor
     /// anchor. It differs in one way: a leading run of digits is dropped instead of
     /// rejecting the whole value, because a numbered legal heading ("6. Subprocessors")
     /// must still yield a usable id — <c>#subprocessors</c>. The number stays visible in
-    /// the heading, so nothing is lost for someone citing a clause.
+    /// the heading, so nothing is lost for someone citing a clause. The accent mark (<see cref="HeadingText"/>) is
+    /// not part of the words, so marking a part of a heading never moves its id.
     /// </summary>
     public static string? ForHeading(string? text)
     {
-        if (Slug(text) is not { } slug)
+        if (Slug(HeadingText.Plain(text)) is not { } slug)
         {
             return null;
         }

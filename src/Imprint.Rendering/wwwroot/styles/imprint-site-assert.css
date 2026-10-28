@@ -117,3 +117,22 @@
   .ip-site-assert .ip-table :is(th, td) { padding-inline: 0.5rem; }
   .ip-site-assert .ip-table td:first-child { min-width: 11.5rem; }
 }
+
+/* ★ TWO-TONE HEADINGS (owner, 2026-10-28): the part of a heading marked <em>…</em> (HeadingText) is drawn in
+   the accent metal and the rest stays in text colour, so a long heading reads as a line and its payoff.
+   The run is the steel metal, started one step darker on light grounds, where #8fb3d4 falls to 2.1:1; on dark it
+   starts on lifted steel with the shine in the middle, because #d6e6f3 next to the text colour reads as white.
+   Its weakest points are #5582aa, 4.0:1 on paper, and #5f88ad, 3.5:1 on the graphite top: AA for large text.
+   light-dark() follows each section's color-scheme, so a dark top gets the dark run in both themes. Print and
+   forced colours get plain text colour: they drop the clipped background and would leave the words with no ink. */
+.ip-site-assert .ip-h-accent { color: light-dark(#2f5d85, #9bbedb); }
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .ip-site-assert .ip-h-accent {
+    background-image: linear-gradient(160deg, light-dark(#5582aa, #7fa3c4) 0%, light-dark(#3f6e97, #b7d2e8) 45%, light-dark(#2f5d85, #7fa3c4) 75%, light-dark(#173450, #5f88ad) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  }
+}
+@media print, (forced-colors: active) {
+  .ip-site-assert .ip-h-accent { background: none; color: inherit; }
+}

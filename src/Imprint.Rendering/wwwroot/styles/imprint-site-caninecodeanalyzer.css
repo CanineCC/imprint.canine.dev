@@ -1,0 +1,21 @@
+/* imprint-site-caninecodeanalyzer.css: the Canine Code Analyzer site's own rules, appended by the publisher to the
+   sheet of the site named "Canine Code Analyzer" only (ThemeCss.SiteCss), so no other site downloads them. */
+
+/* ★ TWO-TONE HEADINGS (owner, 2026-10-28): the part of a heading marked <em>…</em> (HeadingText) is drawn in
+   the accent metal and the rest stays in text colour, so a long heading reads as a line and its payoff.
+   The run is the teal metal, started one step darker on white, where #5fd0ae falls under 2:1; on dark it starts
+   on lifted teal with the shine in the middle. Its weakest points are #0f8a69, 4.0:1 on the code panel grey, and
+   #12a37b, 5.4:1 on the dark surface.
+   light-dark() follows each section's color-scheme, so a dark top gets the dark run in both themes. Print and
+   forced colours get plain text colour: they drop the clipped background and would leave the words with no ink. */
+.ip-site-caninecodeanalyzer .ip-h-accent { color: light-dark(#0b7a5e, #38d9a9); }
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .ip-site-caninecodeanalyzer .ip-h-accent {
+    background-image: linear-gradient(160deg, light-dark(#0f8a69, #38d9a9) 0%, light-dark(#0b7a5e, #a6f0d8) 45%, light-dark(#0b7a5e, #38d9a9) 75%, light-dark(#04402f, #12a37b) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  }
+}
+@media print, (forced-colors: active) {
+  .ip-site-caninecodeanalyzer .ip-h-accent { background: none; color: inherit; }
+}

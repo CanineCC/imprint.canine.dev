@@ -160,6 +160,26 @@ public sealed class ThemeCssTests
         Assert.All(FontAssets.ForSite("assaypreview"), font => Assert.NotEmpty(font.Bytes));
     }
 
+    /// <summary>
+    /// ★ Two-tone headings (owner, 2026-10-28): the four product sites draw a heading's marked part in their own
+    /// metal, and every other site, the live Assay site included, leaves it in text colour.
+    /// </summary>
+    [Theory]
+    [InlineData("Assure")]
+    [InlineData("Assert")]
+    [InlineData("Assay Preview")]
+    [InlineData("Canine Code Analyzer")]
+    public void A_product_site_draws_the_heading_accent_in_its_own_metal(string site)
+    {
+        var css = ThemeCss.SiteCss(site);
+
+        Assert.Contains($".ip-site-{ThemeCss.SiteSlug(site)} .ip-h-accent", css);
+        Assert.Contains("background-clip: text", css);
+        Assert.Contains("forced-colors: active", css);
+        Assert.DoesNotContain(".ip-h-accent", ThemeCss.MarketingCss);
+        Assert.Equal(string.Empty, ThemeCss.SiteCss("Assay"));
+    }
+
     [Fact]
     public void Structural_css_stays_within_the_size_budget()
     {

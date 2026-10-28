@@ -17,7 +17,23 @@
     }
 
     builder.AddMultipleAttributes(2, NodeAttributes);
-    builder.AddContent(3, Resolve(Node.Text));
+    // A part marked <em>…</em> becomes a span the product site colours (HeadingText); the words stay one
+    // heading, so a screen reader reads one sentence and nothing is announced as emphasis.
+    foreach (var (text, accent) in HeadingText.Runs(Resolve(Node.Text)))
+    {
+      if (accent)
+      {
+        builder.OpenElement(3, "span");
+        builder.AddAttribute(4, "class", "ip-h-accent");
+        builder.AddContent(5, text);
+        builder.CloseElement();
+      }
+      else
+      {
+        builder.AddContent(6, text);
+      }
+    }
+
     builder.CloseElement();
   }
 

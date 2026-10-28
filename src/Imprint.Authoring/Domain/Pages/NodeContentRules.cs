@@ -25,6 +25,14 @@ public static class NodeContentRules
                 }
 
                 EnsurePlainText(heading.Text);
+                foreach (var (_, text) in heading.Text.Values)
+                {
+                    if (!HeadingText.TryValidate(text, out var error))
+                    {
+                        throw new DomainException(error!);
+                    }
+                }
+
                 break;
 
             case RichTextNode richText:
