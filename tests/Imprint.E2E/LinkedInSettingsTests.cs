@@ -25,7 +25,7 @@ public sealed class LinkedInSettingsTests(EditorFixture fixture)
             await page.ClickToAdd("[data-testid='linkedin-sender-add']", "input[aria-label='Sender key']");
             await page.FillAsync("input[aria-label='Sender key'] >> nth=-1", "canine");
             await page.FillAsync("input[aria-label='Sender name'] >> nth=-1", "Canine Development");
-            await page.FillAsync("input[aria-label='Organization URN'] >> nth=-1", "urn:li:organization:12345");
+            await page.FillAsync("input[aria-label='Author URN'] >> nth=-1", "urn:li:organization:12345");
             await page.SaveAndConfirm("[data-testid='linkedin-senders-save']", () =>
                 Expect(page.Locator("input[aria-label='Sender key'] >> nth=-1")).ToHaveValueAsync("canine"));
         }

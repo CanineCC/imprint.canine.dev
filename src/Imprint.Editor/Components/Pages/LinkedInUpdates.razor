@@ -1,0 +1,149 @@
+@page "/site/{SiteIdValue}/linkedin"
+@using Imprint.Authoring.Domain
+@using Imprint.Authoring.Domain.LinkedIn
+@using Imprint.Authoring.Features.LinkedInUpdates
+@using Imprint.Authoring.Projections
+@using Imprint.Editor.Auth
+@using Imprint.Editor.Services
+@implements IDisposable
+@inject LinkedInUpdateList Updates
+@inject SiteOverview Sites
+@inject PageList Pages
+@inject SiteAccess Access
+@inject CommandRunner Commands
+@inject NavigationManager Navigation
+
+<PageTitle>LinkedIn updates · Imprint</PageTitle>
+
+<main class="dash">
+    <Breadcrumbs Trail="@Trail" />
+    <header class="dash-head">
+        <h1>LinkedIn updates</h1>
+        <p class="dash-sub">
+            Posts of their own, each sent once at its time as its sender. One more than two hours late is held back
+            as missed instead of posted late. They are planned through the MCP tools; here you see the plan, cancel
+            what should not go out, and say what happened when LinkedIn's answer was unclear.
+        </p>
+    </header>
+
+    @if (_rows.Count == 0)
+    {
+        <p class="dash-sub" data-testid="linkedin-updates-empty">No LinkedIn updates planned for this site.</p>
+    }
+    else
+    {
+        <ol class="li-updates" aria-label="LinkedIn updates" data-testid="linkedin-updates">
+            @foreach (var row in _rows)
+            {
+                <li class="li-update" data-testid="linkedin-update" data-state="@row.State">
+                    <div class="li-when">
+                        <time datetime="@row.PublishAt.ToString("O")">@row.PublishAt.ToString("ddd d MMM yyyy, HH:mm") <span class="li-offset">UTC@(row.PublishAt.Offset < TimeSpan.Zero ? "−" : "+")@row.PublishAt.Offset.ToString(@"h\:mm")</span></time>
+                        <span class="post-status li-state li-state-@row.State.ToString().ToLowerInvariant()" data-testid="linkedin-update-state">@Label(row.State)</span>
+                    </div>
+                    <p class="li-text">@FirstLine(row.Text)</p>
+                    <p class="li-meta">
+                        As <strong>@row.Sender</strong> · @(row.Images.Count == 1 ? "1 image" : $"{row.Images.Count} images")
+                        @if (row.Urn is { } urn)
+                        {
+                            <text> · </text><a href="@($"https://www.linkedin.com/feed/update/{urn}/")" target="_blank" rel="noopener">See it on LinkedIn</a>
+                        }
+                    </p>
+                    @if (row.Reason is { Length: > 0 } reason)
+                    {
+                        <p class="li-reason" data-testid="linkedin-update-reason">@reason</p>
+                    }
+                    @if (row.State is LinkedInUpdateState.Unknown)
+                    {
+                        <div class="li-actions">
+                            <label class="ed-visually-hidden" for="@($"urn-{row.Id.Compact}")">The post's URN</label>
+                            <input id="@($"urn-{row.Id.Compact}")" class="ed-input li-urn" placeholder="urn:li:share:…"
+                                   @bind="_urns[row.Id]" @bind:event="oninput" />
+                            <button type="button" class="ed-btn" disabled="@(Urn(row).Length == 0)"
+                                    data-testid="linkedin-update-posted" @onclick="() => Resolve(row, Urn(row))">It is on LinkedIn</button>
+                            <button type="button" class="ed-btn" data-testid="linkedin-update-not-posted"
+                                    @onclick="() => Resolve(row, null)">It did not post</button>
+                        </div>
+                    }
+                    else if (row.State is LinkedInUpdateState.Scheduled or LinkedInUpdateState.Missed
+                             || (row.State is LinkedInUpdateState.Failed && !row.Retryable))
+                    {
+                        <div class="li-actions">
+                            <button type="button" class="ed-btn" data-testid="linkedin-update-cancel"
+                                    @onclick="() => Cancel(row)">Cancel</button>
+                        </div>
+                    }
+                </li>
+            }
+        </ol>
+    }
+</main>
+
+@code {
+    [Parameter] public string SiteIdValue { get; set; } = "";
+
+    private SiteId _site;
+    private IReadOnlyList<LinkedInUpdateRow> _rows = [];
+    private readonly Dictionary<LinkedInUpdateId, string> _urns = [];
+
+    private IReadOnlyList<Breadcrumbs.Crumb> Trail =>
+        Sites.Get(_site) is { } site
+            ? [Breadcrumbs.Sites, Breadcrumbs.Of(site, Pages.HomeOf(site.Id)?.Id), new Breadcrumbs.Crumb("LinkedIn")]
+            : [Breadcrumbs.Sites, new Breadcrumbs.Crumb("LinkedIn")];
+
+    protected override void OnInitialized() => Updates.Changed += OnChanged;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!Guid.TryParseExact(SiteIdValue, "N", out var guid) && !Guid.TryParse(SiteIdValue, out guid))
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        _site = SiteId.From(guid);
+        // A site id in a URL is guessable: opening the plan is an access check, as for the posts list.
+        if (!await Access.CanAccessAsync(_site))
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        Reload();
+    }
+
+    private void Reload()
+    {
+        _rows = Updates.ForSite(_site);
+        foreach (var row in _rows)
+        {
+            _urns.TryAdd(row.Id, "");
+        }
+    }
+
+    private void OnChanged() => _ = InvokeAsync(() =>
+    {
+        Reload();
+        StateHasChanged();
+    });
+
+    private string Urn(LinkedInUpdateRow row) => _urns.GetValueOrDefault(row.Id, "").Trim();
+
+    private async Task Cancel(LinkedInUpdateRow row) => await Commands.Run(new CancelLinkedInUpdate(row.Id));
+
+    private async Task Resolve(LinkedInUpdateRow row, string? urn) => await Commands.Run(new ResolveLinkedInUpdate(row.Id, urn));
+
+    private static string FirstLine(string text) => text.Split('\n')[0];
+
+    private static string Label(LinkedInUpdateState state) => state switch
+    {
+        LinkedInUpdateState.Scheduled => "Scheduled",
+        LinkedInUpdateState.Attempting => "Sending",
+        LinkedInUpdateState.Posted => "Posted",
+        LinkedInUpdateState.Failed => "Refused",
+        LinkedInUpdateState.Unknown => "Check LinkedIn",
+        LinkedInUpdateState.Missed => "Missed",
+        _ => "Cancelled",
+    };
+
+    public void Dispose() => Updates.Changed -= OnChanged;
+}
