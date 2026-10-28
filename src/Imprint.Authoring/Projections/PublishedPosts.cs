@@ -25,8 +25,26 @@ public sealed record PublishedPost(
     LocalizedText MetaDescription,
     IReadOnlyDictionary<Locale, NodeList> RootsByLocale,
     DateTimeOffset PublishedAt,
-    DateTimeOffset UpdatedAt)
+    DateTimeOffset UpdatedAt,
+    int? Version = null,
+    string? Sha256 = null,
+    string? Kind = null,
+    IReadOnlyList<string>? Products = null,
+    string? SignedBy = null,
+    DateTimeOffset? SignedAt = null,
+    string? LinkedInText = null,
+    string? LinkedInSender = null,
+    PostReview? Review = null,
+    IReadOnlyList<PublishedVersion>? Versions = null)
 {
+    /// <summary>Every version this post has been published at, newest first; empty, never null.
+    /// A version is a set of words (see <c>post.published</c>), so a republish of the same words
+    /// adds nothing here.</summary>
+    public IReadOnlyList<PublishedVersion> Versions { get; init; } = Versions ?? [];
+
+    /// <summary>The products as published, in canonical order; empty, never null.</summary>
+    public IReadOnlyList<string> Products { get; init; } = Products ?? [];
+
     /// <summary>The tree to render for a locale, falling back to the site default the way every
     /// other text does — a post translated into one language still serves its other pages.</summary>
     public NodeList RootsFor(Locale locale, Locale defaultLocale) =>
@@ -38,6 +56,10 @@ public sealed record PublishedPost(
     public IReadOnlyCollection<Locale> Locales => [.. RootsByLocale.Keys];
 }
 
+/// <summary>One published version of a post: its number, when it first went out, and the sha256 of
+/// its words.</summary>
+public sealed record PublishedVersion(int Version, DateTimeOffset PublishedAt, string? Sha256);
+
 /// <summary>
 /// The publisher's post source. Folds post events through their own <see cref="Post"/> instances —
 /// independently of <see cref="PostList"/>, because projections must not depend on each other's
@@ -48,6 +70,13 @@ public sealed class PublishedPosts : ReadModel
 {
     private readonly Dictionary<PostId, Post> _drafts = [];
     private readonly Dictionary<PostId, PublishedPost> _published = [];
+
+    // Who signed the words the post now holds, and when: the approving event's actor (a login) and
+    // instant. The aggregate does not see metadata, so the projection keeps it beside the draft.
+    private readonly Dictionary<PostId, (string By, DateTimeOffset At)> _signatures = [];
+
+    // Every version each post has been published at, newest first (the document record's history).
+    private readonly Dictionary<PostId, List<PublishedVersion>> _versions = [];
 
     /// <summary>The published posts of one site, newest first — the listing and the feed order.</summary>
     public IReadOnlyList<PublishedPost> AllForSite(SiteId site) =>
@@ -73,7 +102,7 @@ public sealed class PublishedPosts : ReadModel
     [
         .. _drafts.Values
             .Where(post => post.SiteId == site && !post.IsDeleted)
-            .Select(post => _published.GetValueOrDefault(post.Id) ?? DraftSnapshot(post, draftDate))
+            .Select(post => _published.GetValueOrDefault(post.Id) ?? DraftSnapshot(post, draftDate, VersionsOf(post.Id)))
             .Where(post => post.RootsByLocale.Count > 0)
             .OrderByDescending(post => post.PublishedAt)
             .ThenBy(post => post.Slug.Value, StringComparer.Ordinal),
@@ -104,8 +133,26 @@ public sealed class PublishedPosts : ReadModel
 
         switch (@event.Event)
         {
-            case PostPublished:
-                _published[id] = Snapshot(draft, @event.Metadata.TimestampUtc);
+            case PostReviewApproved:
+                _signatures[id] = (@event.Metadata.Actor, @event.Metadata.TimestampUtc);
+                break;
+
+            case PostApprovalLapsed or PostChangesRequested or PostSubmittedForReview:
+                _signatures.Remove(id);
+                break;
+
+            case PostPublished published:
+                var versions = _versions.TryGetValue(id, out var list) ? list : _versions[id] = [];
+                var number = published.Version ?? 1;
+                if (versions.Count == 0 || versions[0].Version != number)
+                {
+                    versions.Insert(0, new PublishedVersion(number, published.PublishedAt, published.Sha256));
+                }
+
+                _published[id] = (Snapshot(draft, @event.Metadata.TimestampUtc) with { Versions = [.. versions] }) is var snapshot
+                    && _signatures.TryGetValue(id, out var signed)
+                    ? snapshot with { SignedBy = signed.By, SignedAt = signed.At }
+                    : snapshot;
                 NotifyChanged();
                 break;
 
@@ -120,6 +167,8 @@ public sealed class PublishedPosts : ReadModel
                 if (@event.Event is PostDeleted)
                 {
                     _drafts.Remove(id);
+                    _signatures.Remove(id);
+                    _versions.Remove(id);
                 }
 
                 break;
@@ -130,7 +179,12 @@ public sealed class PublishedPosts : ReadModel
     {
         _drafts.Clear();
         _published.Clear();
+        _signatures.Clear();
+        _versions.Clear();
     }
+
+    private IReadOnlyList<PublishedVersion> VersionsOf(PostId id) =>
+        _versions.TryGetValue(id, out var versions) ? [.. versions] : [];
 
     /// <summary>
     /// A not-yet-published post as the preview should show it. Unlike <see cref="Snapshot"/> this
@@ -138,7 +192,7 @@ public sealed class PublishedPosts : ReadModel
     /// out entirely: the aggregate would have refused to publish it, and a preview that renders
     /// half of a broken post teaches the author the wrong thing about what they are about to ship.
     /// </summary>
-    private static PublishedPost DraftSnapshot(Post post, DateTimeOffset at)
+    private static PublishedPost DraftSnapshot(Post post, DateTimeOffset at, IReadOnlyList<PublishedVersion> versions)
     {
         var roots = new Dictionary<Locale, NodeList>();
         foreach (var (locale, markdown) in post.Body.Values)
@@ -157,7 +211,8 @@ public sealed class PublishedPosts : ReadModel
 
         return new PublishedPost(
             post.Id, post.SiteId, post.Slug, post.Title, post.MetaTitle, post.MetaDescription,
-            roots, post.PublishedAt ?? at, at);
+            roots, post.PublishedAt ?? at, at, post.PublishedVersion, post.PublishedSha256, post.Kind, post.Products,
+            Review: post.Review, Versions: versions);
     }
 
     private static PublishedPost Snapshot(Post post, DateTimeOffset at)
@@ -176,6 +231,7 @@ public sealed class PublishedPosts : ReadModel
 
         return new PublishedPost(
             post.Id, post.SiteId, post.Slug, post.Title, post.MetaTitle, post.MetaDescription,
-            roots, post.PublishedAt ?? at, at);
+            roots, post.PublishedAt ?? at, at, post.PublishedVersion, post.PublishedSha256, post.Kind, post.Products,
+            LinkedInText: post.LinkedInText, LinkedInSender: post.LinkedInSender);
     }
 }

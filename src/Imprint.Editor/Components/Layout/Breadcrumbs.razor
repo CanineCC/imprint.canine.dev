@@ -45,7 +45,7 @@
     /// answer it separately.
     /// </summary>
     public static Crumb Of(Authoring.Domain.Sites.Site site, Authoring.Domain.PageId? home = null) =>
-        new(site.Name, site.Kind == Authoring.Domain.Sites.SiteKind.Blog
+        new(site.Name, Authoring.Domain.Sites.SiteKinds.IsPostStream(site.Kind)
             ? $"/site/{site.Id.Compact}/posts"
             : home is { } page
                 ? $"/edit/{page.Compact}"

@@ -1655,5 +1655,381 @@
       }
     ],
     "prerenderContext": "{base}/api/public/reports"
+  },
+  {
+    "tag": "assure-progress-card",
+    "name": "Assure example result",
+    "description": "An Assure result in the shape of Watchdog's published-survey card, always tagged as an example inside the card itself: the project and its band, the CAI score out of 100 on the banded ladder (five greys with Assure's orange marker), the trend as a line and a sentence, the score of each area, how much the builder's AI has fixed with the recent fixes, and the facts of the last and next scan. DATA ONLY: everything comes from the props, nothing is fetched.",
+    "bundle": "assure-progress-card.js",
+    "placeholder": "Example result",
+    "props": [
+      { "name": "app", "label": "Project name, shown as its repository", "type": "text", "default": "your-project" },
+      { "name": "example-label", "label": "The example tag", "type": "text", "default": "Example" },
+      { "name": "band", "label": "Band word on the chip (Critical, Weak, Adequate, Strong, Exemplary)", "type": "text", "default": "Strong" },
+      { "name": "band-key", "label": "Band key (critical, poor, fair, healthy, exemplary)", "type": "text", "default": "healthy" },
+      { "name": "score", "label": "CAI score (0 to 100)", "type": "text", "default": "80" },
+      { "name": "floors", "label": "Band floors, lowest first (from the CAI rubric)", "type": "text", "default": "0,25,50,70,90" },
+      { "name": "series", "label": "Score at each scan, oldest first, comma separated", "type": "text", "default": "61,64,66,70,73,77,80" },
+      { "name": "trend-note", "label": "Sentence beside the trend", "type": "text", "default": "up 19 over 7 scans" },
+      { "name": "lenses", "label": "Areas (JSON array of {label, value, band?})", "type": "text", "default": "[]" },
+      { "name": "done", "label": "How many items the AI has fixed", "type": "number", "default": "280" },
+      { "name": "total", "label": "How many items there were in all", "type": "number", "default": "312" },
+      { "name": "done-text", "label": "Words after the fixed count", "type": "text", "default": "fixed by your AI" },
+      { "name": "items", "label": "Recent fixes (JSON array of {text, done}); done items get a filled dot, the rest a ring", "type": "text", "default": "[]" },
+      { "name": "facts", "label": "Facts (JSON array of {label, value})", "type": "text", "default": "[]" }
+    ]
+  },
+  {
+    "tag": "assert-score-card",
+    "name": "Assert example result",
+    "description": "An Assert result in the shape of Watchdog's published-survey card, dressed in Assert's kit and always tagged as an example inside the card itself: the repository and its sprint, the CAI score out of 100 with its band in words, the ladder in five greys with a steel marker, the trend as a line and a sentence, the score of each area, and the facts of the scan. DATA ONLY: everything comes from the props, nothing is fetched.",
+    "bundle": "assert-score-card.js",
+    "placeholder": "Example result",
+    "props": [
+      { "name": "repo", "label": "Repository name", "type": "text", "default": "checkout-service" },
+      { "name": "sprint", "label": "Line under the name (for example the sprint)", "type": "text", "default": "Sprint 46" },
+      { "name": "example-label", "label": "The example tag", "type": "text", "default": "Example" },
+      { "name": "band", "label": "Band word on the chip (Critical, Weak, Adequate, Strong, Exemplary)", "type": "text", "default": "Strong" },
+      { "name": "score", "label": "CAI score (0 to 100)", "type": "text", "default": "78" },
+      { "name": "floors", "label": "Band floors, lowest first (from the CAI rubric)", "type": "text", "default": "0,25,50,70,90" },
+      { "name": "series", "label": "Score at each sprint, oldest first, comma separated", "type": "text", "default": "64,68,71,72,74,78" },
+      { "name": "trend-note", "label": "Sentence beside the trend", "type": "text", "default": "up 14 since sprint 41" },
+      { "name": "areas", "label": "Areas (JSON array of {label, value})", "type": "text", "default": "[]" },
+      { "name": "facts", "label": "Facts (JSON array of {label, value})", "type": "text", "default": "[]" }
+    ]
+  },
+  {
+    "tag": "assay-report-card",
+    "name": "Assay example report",
+    "description": "An Assay report in the kit's design, always tagged as an example inside the card itself: the kind of report, the decision in the reader's words, the result against the bar one area per row (Pass, Fail, Not applicable, No usable evidence, said as words on small labels), the count of risks, unknowns and questions, and the measurement details in the mono face. Given evidence, risks, unknowns, questions or a record it draws a whole report page in the report's order, numbered 1 to 7. DATA ONLY: everything comes from the props, nothing is fetched.",
+    "bundle": "assay-report-card.js",
+    "placeholder": "Example report",
+    "props": [
+      { "name": "kind", "label": "Line above the decision (for example Report · acquisition)", "type": "text", "default": "Report · acquisition" },
+      { "name": "example-label", "label": "The example tag", "type": "text", "default": "Example" },
+      { "name": "decision", "label": "The decision, in the reader's words", "type": "text", "default": "" },
+      { "name": "score-line", "label": "Score line above the rows (optional)", "type": "text", "default": "" },
+      { "name": "rows", "label": "Result against the bar (JSON array of {area, result}; result is Pass, Fail, Not applicable or No usable evidence)", "type": "text", "default": "[]" },
+      { "name": "summary", "label": "Counts under the rows (JSON array of strings)", "type": "text", "default": "[]" },
+      { "name": "identity", "label": "Measurement details line (mono)", "type": "text", "default": "" },
+      { "name": "evidence", "label": "Evidence used (JSON array of {label, value}); makes the card a whole report page", "type": "text", "default": "[]" },
+      { "name": "risks", "label": "Material risks (JSON array of {title, measured, interpretation, evidence})", "type": "text", "default": "[]" },
+      { "name": "unknowns", "label": "Unknowns (JSON array of strings)", "type": "text", "default": "[]" },
+      { "name": "questions", "label": "Questions for the seller or team (JSON array of strings)", "type": "text", "default": "[]" },
+      { "name": "record", "label": "Measurement identity and verification record (JSON array of {key, value})", "type": "text", "default": "[]" },
+      { "name": "note", "label": "Note at the foot of the card", "type": "text", "default": "" }
+    ]
+  },
+  {
+    "tag": "rc-hub",
+    "name": "Resource center index",
+    "description": "The resource center's index, generated by the publisher on a resource-center site: every published article listed by kind (thought leadership, whitepapers, guides, documentation), each card with its kind, products, version, date and status. Rendered on the server from its own props, so every title and link is in the HTML; the bundle only adds the type tabs and the product filter on top.",
+    "bundle": "",
+    "placeholder": "The articles are listed here.",
+    "propTemplate": "rc-hub",
+    "props": [
+      {
+        "name": "articles",
+        "label": "Articles (JSON array of {title, dek, kind, products, href, version, date, signed, sha256}); written by the publisher.",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "eyebrow",
+        "label": "Eyebrow above the heading",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "heading",
+        "label": "Heading",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "emphasis",
+        "label": "Second, quieter half of the heading",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "name": "lede",
+        "label": "Lede under the heading",
+        "type": "text",
+        "default": ""
+      }
+    ]
+  },
+  {
+    "tag": "rc-article-head",
+    "name": "Resource center article header",
+    "description": "An article's header on a resource-center site: kind, products, status, title, dek, byline, version and date, and who signed it (a name, never a login). Generated by the publisher; data only, no script.",
+    "bundle": "",
+    "placeholder": "",
+    "propTemplate": "rc-article-head",
+    "props": [
+      {
+        "name": "kind",
+        "label": "kind",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "products",
+        "label": "products",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "title",
+        "label": "title",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "dek",
+        "label": "dek",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "byline",
+        "label": "byline",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "version",
+        "label": "version",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "date",
+        "label": "date",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "signer",
+        "label": "signer",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "status",
+        "label": "status",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "read",
+        "label": "read",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "words",
+        "label": "words",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "steps",
+        "label": "steps",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "sha256",
+        "label": "sha256",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "cite",
+        "label": "cite",
+        "type": "text",
+        "default": "",
+        "private": true
+      }
+    ]
+  },
+  {
+    "tag": "rc-context",
+    "name": "Resource center article context",
+    "description": "An article's right column on a resource-center site: the document record (status, version, publication date, who signed it as a name or 'a named person', never a login; the sha256 of the signed words; every published version with its date), an 'On this page' list on documentation, and Go deeper (the articles it links to, those that link to it, then the same product in another kind). Always renders, a draft included. Generated by the publisher; data only, no script.",
+    "bundle": "",
+    "placeholder": "",
+    "propTemplate": "rc-context",
+    "props": [
+      {
+        "name": "status",
+        "label": "status",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "products",
+        "label": "products",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "reviewer",
+        "label": "reviewer",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "version",
+        "label": "version",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "date",
+        "label": "date",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "signer",
+        "label": "signer",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "signed-at",
+        "label": "signed-at",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "sha256",
+        "label": "sha256",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "versions",
+        "label": "versions",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "related",
+        "label": "related",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "sections",
+        "label": "sections",
+        "type": "text",
+        "default": "",
+        "private": true
+      }
+    ]
+  },
+  {
+    "tag": "rc-toc",
+    "name": "Resource center article way through",
+    "description": "An article's left column on a resource-center site: the link back, a reading progress, and its contents (the documentation tree on a documentation page; the numbered steps on a guide). Always renders. Generated by the publisher; data only, the reader island fills the progress.",
+    "bundle": "",
+    "placeholder": "",
+    "propTemplate": "rc-toc",
+    "props": [
+      {
+        "name": "mode",
+        "label": "mode",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "back",
+        "label": "back",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "read",
+        "label": "read",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "headings",
+        "label": "headings",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "steps",
+        "label": "steps",
+        "type": "text",
+        "default": "",
+        "private": true
+      },
+      {
+        "name": "docs",
+        "label": "docs",
+        "type": "text",
+        "default": "",
+        "private": true
+      }
+    ]
+  },
+  {
+    "tag": "rc-filter",
+    "name": "Resource center filter",
+    "description": "The type tabs and the product filter on a resource center index: finds the server-rendered rc-hub beside it in the same section and filters its cards in place; a ?product= in the address starts it on that product (the header's product links). Nothing is fetched and the choice is not remembered across visits. Placed by the publisher.",
+    "bundle": "rc-filter.js",
+    "placeholder": "",
+    "eager": true
+  },
+  {
+    "tag": "rc-reader",
+    "name": "Resource center reader",
+    "description": "The reading aids on a resource-center article: fills the reading progress, marks the section in view in the contents, and on a guide adds a tick to each numbered step (kept in this browser only). Placed by the publisher; enhances markup that already works without it.",
+    "bundle": "rc-reader.js",
+    "placeholder": "",
+    "eager": true
+  },
+  {
+    "tag": "rc-search",
+    "name": "Resource center search",
+    "description": "The search palette on every resource-center page: opened by the header's Search, the index's search field, Cmd/Ctrl+K or '/'; searches the site's search.json (title, dek, kind, product of every listed article) and opens the chosen article. Also names the clicked card's title for the cross-document view transition. Placed by the publisher.",
+    "bundle": "rc-search.js",
+    "placeholder": "",
+    "eager": true
   }
 ]

@@ -156,7 +156,7 @@ else
     {
         var accessible = await Access.SitesAsync();
         _sites = [.. accessible.Where(s => s.Kind == SiteKind.Site)];
-        _blogs = [.. accessible.Where(s => s.Kind == SiteKind.Blog)];
+        _blogs = [.. accessible.Where(s => s.Kind.IsPostStream())];
     }
 
     private int PageCount(SiteId id) => Pages.All(id).Count;

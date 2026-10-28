@@ -61,6 +61,37 @@ public sealed class AssetDownloadPublishTests
     }
 
     [Fact]
+    public async Task A_file_linked_only_from_a_table_cell_still_ships()
+    {
+        await using var host = new PublishingTestHost();
+        var siteId = await host.CreateSite("Acme Studio", "en");
+        var homeId = await host.CreatePage(siteId, "home", "Home");
+        await host.SetNavigation(siteId, homeId);
+
+        var paperId = await host.CreateFileAsset("whitepaper");
+        await host.AddSection(homeId, new SectionNode
+        {
+            Id = NodeId.New(),
+            Children = NodeList.Of(new TableNode
+            {
+                Id = NodeId.New(),
+                CellMarkup = TableCellMarkup.Inline,
+                Head = [LocalizedText.Of(PublishingTestHost.En, "Paper")],
+                Rows = [[LocalizedText.Of(PublishingTestHost.En, $"<a href=\"asset:{paperId.Compact}\">the paper</a>")]],
+            }),
+        });
+        await host.Publish(homeId);
+
+        await host.Publisher.Synchronize();
+
+        var html = host.ReadText("index.html");
+        var href = System.Text.RegularExpressions.Regex
+            .Match(html, $"href=\"(/assets/{paperId.Compact}\\.[0-9a-f]+\\.pdf)\"").Groups[1].Value;
+        Assert.NotEqual("", href);
+        Assert.True(File.Exists(host.FullPath(href.TrimStart('/'))), $"{href} should exist in the output");
+    }
+
+    [Fact]
     public async Task A_link_to_a_deleted_file_degrades_to_prose_and_ships_nothing()
     {
         await using var host = new PublishingTestHost();

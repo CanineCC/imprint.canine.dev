@@ -3,7 +3,12 @@ using Imprint.EventSourcing;
 
 namespace Imprint.Authoring.Features.Posts.CreatePost;
 
-public sealed record CreatePost(PostId PostId, SiteId SiteId, string Title, string Slug, string Locale)
+/// <param name="Kind">Optional article kind (essay, guide, whitepaper, documentation); classified at
+/// creation when given, so a resource-center article never exists without one.</param>
+/// <param name="Products">The products the article is about, used only with a kind.</param>
+public sealed record CreatePost(
+    PostId PostId, SiteId SiteId, string Title, string Slug, string Locale,
+    string? Kind = null, IReadOnlyList<string>? Products = null)
     : IValidatableCommand
 {
     public IEnumerable<string> Validate()

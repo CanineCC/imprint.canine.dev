@@ -114,6 +114,31 @@ public sealed class DeleteAssetTests
         Assert.NotNull(host.Get<AssetLibrary>().Get(assetId));
     }
 
+    [Fact]
+    public async Task DeleteAsset_linked_from_an_inline_table_cell_is_rejected_with_usage_counts()
+    {
+        await using var host = SliceTestHelpers.NewAssetHost();
+        var assetId = AssetId.New();
+        await host.Ok(SliceTestHelpers.NewUpload(assetId, "whitepaper.pdf", "application/pdf"));
+
+        var siteId = await host.CreateTestSite();
+        await host.CreateTestPage(siteId, build: page => page.AddNode(NodeId.Root, 0, new SectionNode
+        {
+            Id = NodeId.New(),
+            Children = NodeList.Of(new TableNode
+            {
+                Id = NodeId.New(),
+                CellMarkup = TableCellMarkup.Inline,
+                Rows = [[LocalizedText.Of(En, $"<a href=\"{AssetHref.Scheme}{assetId.Value:D}\">the paper</a>")]],
+            }),
+        }));
+
+        var error = await host.Fails(new DeleteAsset(assetId));
+
+        Assert.Contains("1 page(s)", error);
+        Assert.NotNull(host.Get<AssetLibrary>().Get(assetId));
+    }
+
     // A near-miss id must not hold the deletion: the guard reads the href, it does not merely
     // notice that some asset is linked.
     [Fact]

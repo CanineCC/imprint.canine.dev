@@ -28,6 +28,9 @@ public sealed class PostEventSamples : IEventSampleProvider
             yield return new PostBodyChanged(Da, "");
 
             yield return new PostPublished(new DateTimeOffset(2026, 8, 14, 12, 0, 0, TimeSpan.Zero));
+            yield return new PostPublished(
+                new DateTimeOffset(2026, 10, 27, 9, 0, 0, TimeSpan.Zero), 3,
+                "e32ca9e3653bb5adc50c1901415438988ba26fea4ba1e410120aa731991fadca");
             yield return new PostUnpublished();
 
             // Review and scheduling. Both shapes of every optional date, because "no date" is a
@@ -40,8 +43,20 @@ public sealed class PostEventSamples : IEventSampleProvider
             yield return new PostSubmittedForReview(null, null);
             yield return new PostReviewApproved(new DateTimeOffset(2026, 9, 2, 6, 0, 0, TimeSpan.FromHours(2)));
             yield return new PostReviewApproved(null);
+            yield return new PostReviewApproved(null, 3, "e32ca9e3653bb5adc50c1901415438988ba26fea4ba1e410120aa731991fadca");
             yield return new PostChangesRequested("The second paragraph names a customer we cannot name.");
             yield return new PostApprovalLapsed();
+            yield return new PostHoldSet("Figures wait for WP-40 E7.");
+            yield return new PostHoldSet(null);
+
+            yield return new PostClassified("whitepaper", ["canine", "assay"]);
+            yield return new PostClassified("essay", []);
+            yield return new PostControlNotesChanged("Figure 1: CYCLE-1-FINDINGS.md §4a.\nChecked by J.B. 2026-10-25.");
+            yield return new PostControlNotesChanged(null);
+            yield return new PostLinkedInChanged("What would you ask a benchmark first?", "canine");
+            yield return new PostLinkedInChanged(null, null);
+            yield return new PostReviewApproved(null, 4, "e32ca9e3653bb5adc50c1901415438988ba26fea4ba1e410120aa731991fadca",
+                "0c9ab8bdbf6bd4b3a3ff1c4e1e4b3cbe57f7d25b6a8a33f3d3b8e5c3f1a2b4c6");
 
             yield return new PostDeleted();
         }

@@ -47,13 +47,18 @@ using SetHeaderLogoCmd = Imprint.Authoring.Features.Sites.SetHeaderLogo.SetHeade
 using ChangePostBodyCmd = Imprint.Authoring.Features.Posts.ChangePostBody.ChangePostBody;
 using ChangePostMetaCmd = Imprint.Authoring.Features.Posts.ChangePostMeta.ChangePostMeta;
 using CreatePostCmd = Imprint.Authoring.Features.Posts.CreatePost.CreatePost;
+using ClassifyPostCmd = Imprint.Authoring.Features.Posts.ClassifyPost.ClassifyPost;
+using SetPostControlNotesCmd = Imprint.Authoring.Features.Posts.SetPostControlNotes.SetPostControlNotes;
 using SetSiteReviewerCmd = Imprint.Authoring.Features.Sites.SetSiteReviewer.SetSiteReviewer;
 using SubmitPostForReviewCmd = Imprint.Authoring.Features.Posts.SubmitPostForReview.SubmitPostForReview;
+using RequestPostChangesCmd = Imprint.Authoring.Features.Posts.RequestPostChanges.RequestPostChanges;
 using DeleteAssetCmd = Imprint.Authoring.Features.Assets.DeleteAsset.DeleteAsset;
 using TagAssetCmd = Imprint.Authoring.Features.Assets.TagAsset.TagAsset;
 using UntagAssetCmd = Imprint.Authoring.Features.Assets.UntagAsset.UntagAsset;
 using UploadAssetCmd = Imprint.Authoring.Features.Assets.UploadAsset.UploadAsset;
 using UploadAssetDarkVariantCmd = Imprint.Authoring.Features.Assets.UploadAssetDarkVariant.UploadAssetDarkVariant;
+using SetPostLinkedInCmd = Imprint.Authoring.Features.Posts.SetPostLinkedIn.SetPostLinkedIn;
+using SetSiteLinkedInSendersCmd = Imprint.Authoring.Features.Sites.SetSiteLinkedInSenders.SetSiteLinkedInSenders;
 
 namespace Imprint.Editor.Mcp;
 
@@ -262,6 +267,57 @@ public sealed class ImprintAuthoringMcpTools
             () => new { ok = true, siteId = siteId.Compact });
     }
 
+    [McpServerTool(Name = "create_blog")]
+    [Description("Create a post-stream site and return its id: a blog (kind 'blog', the default) or a resource center (kind 'resource-center': articles with a kind, the grouped index and the article template). Optionally give the publish folder and the public URL of its Production environment (a URL needs a folder). Posts sit at the site's root.")]
+    public static Task<object> CreateBlog(
+        [Description("The site name (1–100 chars).")] string name,
+        [Description("Default locale tag, e.g. 'en'. Defaults to 'en'.")] string? defaultLocale,
+        [Description("'blog' (default) or 'resource-center'.")] string? kind,
+        [Description("Optional publish folder of the Production environment.")] string? publishFolder,
+        [Description("Optional public URL of the Production environment, e.g. https://resourcecenter.canine.dev.")] string? publicUrl,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return Task.FromResult(Fail("name is required"));
+        var siteKind = (kind ?? "blog").Trim().ToLowerInvariant() switch
+        {
+            "blog" or "" => (Imprint.Authoring.Domain.Sites.SiteKind?)Imprint.Authoring.Domain.Sites.SiteKind.Blog,
+            "resource-center" or "resourcecenter" => Imprint.Authoring.Domain.Sites.SiteKind.ResourceCenter,
+            _ => null,
+        };
+        if (siteKind is null) return Task.FromResult(Fail("kind must be 'blog' or 'resource-center'"));
+        var siteId = SiteId.New();
+        return Dispatch(dispatcher, config,
+            new Imprint.Authoring.Features.Sites.CreateBlog.CreateBlog(
+                siteId, name, string.IsNullOrWhiteSpace(defaultLocale) ? "en" : defaultLocale, publishFolder, publicUrl, siteKind.Value),
+            ct, () => new { ok = true, siteId = siteId.Compact, kind = siteKind.Value.ToString() });
+    }
+
+    [McpServerTool(Name = "set_site_redirects")]
+    [Description("Replace a site's redirect table: old addresses on this site and where each now lives. 'redirects' is a JSON array of {from, to}: from = a path on this site (stored as /a/b/, never the root), to = an https URL or a path on this site. The publisher writes a small redirect page (immediate refresh, canonical, noindex) at each old address where NO published page lives, so a redirect retires an unpublished page and can never hide a live one. An empty array clears the table. Returns the normalized table.")]
+    public static async Task<object> SetSiteRedirects(
+        [Description("The site id.")] string siteId,
+        [Description("JSON array of {\"from\": \"/old/\", \"to\": \"https://…\" or \"/new/\"}.")] string redirects,
+        ICommandDispatcher dispatcher, IConfiguration config, SiteOverview sites, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        if (sites.Get(sid) is null) return Fail("unknown site");
+        List<Imprint.Authoring.Domain.Sites.SiteRedirect> table;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(string.IsNullOrWhiteSpace(redirects) ? "[]" : redirects);
+            table = [.. doc.RootElement.EnumerateArray().Select(e => new Imprint.Authoring.Domain.Sites.SiteRedirect(
+                e.TryGetProperty("from", out var f) ? f.GetString() ?? "" : "",
+                e.TryGetProperty("to", out var t) ? t.GetString() ?? "" : ""))];
+        }
+        catch (Exception ex) when (ex is System.Text.Json.JsonException or InvalidOperationException)
+        {
+            return Fail("redirects must be a JSON array of {from, to}");
+        }
+
+        return await Dispatch(dispatcher, config, new Imprint.Authoring.Features.Sites.SetSiteRedirects.SetSiteRedirects(sid, table), ct,
+            () => new { ok = true, siteId = sid.Compact, redirects = sites.Get(sid)?.Redirects.Select(r => new { from = r.From, to = r.To }).ToList() });
+    }
+
     [McpServerTool(Name = "create_page")]
     [Description("Create a page on a site and return its id. Slug defaults to a slugified title; locale defaults to 'en'.")]
     public static Task<object> CreatePage(
@@ -324,7 +380,7 @@ public sealed class ImprintAuthoringMcpTools
     }
 
     [McpServerTool(Name = "add_node")]
-    [Description("Add a node — and its whole subtree in one call — to a page. The node spec is a JSON object: {\"type\":\"section|stack|columns|grid|heading|richtext|code|table|button|image|video|svg|divider|spacer|widget\", ...props, \"children\":[...]}. Text props (text/html/label/alt) take a plain string (default locale) or a {\"en\":\"…\"} object; rich-text html must be the canonical inline subset (<p>, <ul>/<ol>/<li>, <strong>, <em>, <a href>, <br>). A table takes {\"head\":[\"…\"],\"rows\":[[\"…\"]]} (cells: string or locale object); code takes {\"text\":…,\"language\":…}. parentId omitted ⇒ the page root, which accepts sections only. Ids are minted server-side.")]
+    [Description("Add a node — and its whole subtree in one call — to a page. The node spec is a JSON object: {\"type\":\"section|stack|columns|grid|heading|richtext|code|table|button|image|video|svg|divider|spacer|widget\", ...props, \"children\":[...]}. Text props (text/html/label/alt) take a plain string (default locale) or a {\"en\":\"…\"} object; rich-text html must be the canonical inline subset (<p>, <ul>/<ol>/<li>, <strong>, <em>, <a href>, <br>). A table takes {\"head\":[\"…\"],\"rows\":[[\"…\"]]} (cells: string or locale object) and an optional \"cellMarkup\": \"Text\" (default; cells are plain text) or \"Inline\" (cells are the canonical inline subset: <strong>, <em>, <a href>, <br>, no <p>); code takes {\"text\":…,\"language\":…}. parentId omitted ⇒ the page root, which accepts sections only. Ids are minted server-side.")]
     public static async Task<object> AddNode(
         [Description("The page id.")] string pageId,
         [Description("The node spec as JSON, e.g. {\"type\":\"heading\",\"level\":2,\"text\":\"The loop\"}.")] string nodeJson,
@@ -919,13 +975,16 @@ public sealed class ImprintAuthoringMcpTools
     }
 
     [McpServerTool(Name = "create_post")]
-    [Description("Create a blog post and return its id. The body is markdown, set separately with set_post_body. The slug is derived from the title unless given.")]
+    [Description("Create a post (an article) and return its id. The body is markdown, set separately with set_post_body. The slug is derived from the title unless given. Give a kind (essay, guide, whitepaper, documentation) and products (canine, assert, assure, assay, cca, cai) for a resource-center article; both can be changed later with classify_post.")]
     public static async Task<object> CreatePost(
         [Description("The site id the post belongs to.")] string siteId,
         [Description("The post title.")] string title,
         [Description("Optional URL slug; derived from the title when omitted.")] string? slug,
         [Description("Optional locale tag; the site's default when omitted.")] string? locale,
-        ICommandDispatcher dispatcher, IConfiguration config, SiteOverview sites, CancellationToken ct = default)
+        ICommandDispatcher dispatcher, IConfiguration config, SiteOverview sites,
+        [Description("Optional article kind: essay, guide, whitepaper or documentation.")] string? kind = null,
+        [Description("Optional products the article is about: any of canine, assert, assure, assay, cca, cai.")] IReadOnlyList<string>? products = null,
+        CancellationToken ct = default)
     {
         if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
         if (sites.Get(sid) is not { } site) return Fail("unknown site");
@@ -934,12 +993,69 @@ public sealed class ImprintAuthoringMcpTools
         var postId = PostId.New();
         var tag = locale is { Length: > 0 } given ? given : site.DefaultLocale.Value;
         var address = slug is { Length: > 0 } chosen ? chosen : Slug.Suggest(title);
-        return await Dispatch(dispatcher, config, new CreatePostCmd(postId, sid, title, address, tag), ct,
+        return await Dispatch(dispatcher, config, new CreatePostCmd(postId, sid, title, address, tag, kind, products), ct,
             () => new { ok = true, postId = postId.Compact, slug = address, locale = tag });
     }
 
+    [McpServerTool(Name = "set_post_control_notes")]
+    [Description("Set (or clear, with blank) a post's private publication-control notes: where each figure comes from, what was checked and by whom. Never published. The reviewer signs them with the words (their sha256 is in the approval), so changing them on an approved post withdraws the approval. Read them back with get_post (controlNotes).")]
+    public static async Task<object> SetPostControlNotes(
+        [Description("The post id.")] string postId,
+        [Description("The notes, markdown or plain text; blank to clear.")] string? notes,
+        ICommandDispatcher dispatcher, IConfiguration config, PostList posts, CancellationToken ct = default)
+    {
+        if (!AuthoringApi.TryPostIdPublic(postId, out var pid)) return Fail("invalid postId");
+        if (posts.Get(pid) is null) return Fail("unknown post");
+        return await Dispatch(dispatcher, config, new SetPostControlNotesCmd(pid, notes), ct,
+            () => new { ok = true, postId = pid.Compact, length = notes?.Trim().Length ?? 0 });
+    }
+
+    [McpServerTool(Name = "set_post_linkedin")]
+    [Description("Set (or clear, with blank text) the LinkedIn post that goes out with an article: the text (at most 3,000 characters, plain; a link card to the article is added) and the sender, a key from the site's LinkedIn senders (see set_site_linkedin_senders). It is posted once, automatically, when the article is published with a signed approval; the reviewer signs the text with the words, so setting it on an approved post withdraws the approval.")]
+    public static async Task<object> SetPostLinkedIn(
+        [Description("The post id.")] string postId,
+        [Description("The LinkedIn text; blank to clear.")] string? text,
+        [Description("The sender's key, e.g. 'canine' or 'assert'; required with a text.")] string? sender,
+        ICommandDispatcher dispatcher, IConfiguration config, PostList posts, CancellationToken ct = default)
+    {
+        if (!AuthoringApi.TryPostIdPublic(postId, out var pid)) return Fail("invalid postId");
+        if (posts.Get(pid) is null) return Fail("unknown post");
+        return await Dispatch(dispatcher, config, new SetPostLinkedInCmd(pid, text, sender), ct,
+            () => new { ok = true, postId = pid.Compact, length = text?.Trim().Length ?? 0, sender = sender?.Trim().ToLowerInvariant() });
+    }
+
+    [McpServerTool(Name = "set_site_linkedin_senders")]
+    [Description("Replace the LinkedIn organization pages a site's articles may post as. Each sender has a key (lowercase letters, digits, hyphens; what an article names), a display name, and the page's organization URN (urn:li:organization:{id}; a showcase page is one too). An empty list removes them all.")]
+    public static async Task<object> SetSiteLinkedInSenders(
+        [Description("The site id.")] string siteId,
+        [Description("The senders: objects with key, name and organizationUrn.")] IReadOnlyList<AuthoringApi.SiteLinkedInSenderRequest>? senders,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        var list = (senders ?? [])
+            .Select(s => new Imprint.Authoring.Domain.Sites.LinkedInSender(s.Key ?? "", s.Name ?? "", s.OrganizationUrn ?? ""))
+            .ToList();
+        return await Dispatch(dispatcher, config, new SetSiteLinkedInSendersCmd(sid, list), ct,
+            () => new { ok = true, siteId = sid.Compact, senders = list.Select(s => s.Key).ToList() });
+    }
+
+    [McpServerTool(Name = "classify_post")]
+    [Description("Set what kind of article a post is (essay, guide, whitepaper, documentation) and which products it is about (any of canine, assert, assure, assay, cca, cai; may be empty). The resource center's template and index follow the kind. Changing it on an approved post withdraws the approval, as an edit does.")]
+    public static async Task<object> ClassifyPost(
+        [Description("The post id.")] string postId,
+        [Description("essay, guide, whitepaper or documentation.")] string kind,
+        [Description("The products the article is about; empty or omitted for none.")] IReadOnlyList<string>? products,
+        ICommandDispatcher dispatcher, IConfiguration config, PostList posts, CancellationToken ct = default)
+    {
+        if (!AuthoringApi.TryPostIdPublic(postId, out var pid)) return Fail("invalid postId");
+        if (posts.Get(pid) is null) return Fail("unknown post");
+        if (string.IsNullOrWhiteSpace(kind)) return Fail("a kind is required");
+        return await Dispatch(dispatcher, config, new ClassifyPostCmd(pid, kind, products ?? []), ct,
+            () => new { ok = true, postId = pid.Compact, kind = kind.Trim().ToLowerInvariant() });
+    }
+
     [McpServerTool(Name = "set_post_body")]
-    [Description("Replace a post's markdown body for one locale. Markdown is the authored truth — the node tree is rebuilt from it at publish, so a later converter fix reaches posts already written. Images are referenced as ![alt](media:{assetId}) and must stand alone in their paragraph.")]
+    [Description("Replace a post's markdown body for one locale. Markdown is the authored truth — the node tree is rebuilt from it at publish, so a later converter fix reaches posts already written. Images are referenced as ![alt](media:{assetId}) and must stand alone in their paragraph. GitHub pipe tables convert (a header row, a |---| delimiter row, then exactly one cell per column in every row; \\| for a pipe inside a cell; bold, italic and links work in cells; column alignment is ignored); a ragged row or a missing delimiter row is refused at its line. A blockquote (lines starting '> ') is a callout; a first line '> [!NOTE]' or '> [!WARNING]' labels it; no callout inside a callout.")]
     public static async Task<object> SetPostBody(
         [Description("The post id.")] string postId,
         [Description("The markdown body.")] string markdown,
@@ -983,6 +1099,23 @@ public sealed class ImprintAuthoringMcpTools
         var tag = sites.Get(post.SiteId)?.DefaultLocale.Value ?? "en";
         return await Dispatch(dispatcher, config, new SubmitPostForReviewCmd(pid, tag, at, note), ct,
             () => new { ok = true, postId = pid.Compact, status = "InReview", proposedPublishAt = at });
+    }
+
+    // Sending back is the half of a review a service may do: it can only STOP a post going live, so the
+    // reason the owner's tooling can act on its own instruction ("reject the merged stubs") is safe here.
+    // Approving is not offered over MCP and never will be: that is a person's signature.
+    [McpServerTool(Name = "send_post_back")]
+    [Description("Send a post that is waiting for review back to its author, with the reason (required). The post leaves review as 'Changes requested' and cannot be published until it is submitted and approved again. Use it to reject a post, e.g. a merged-away duplicate. There is no approve tool: approving is done by a person in the editor.")]
+    public static async Task<object> SendPostBack(
+        [Description("The post id.")] string postId,
+        [Description("What needs changing, or why it is rejected. Required: the author has to be able to act on it.")] string reason,
+        ICommandDispatcher dispatcher, IConfiguration config, PostList posts, CancellationToken ct = default)
+    {
+        if (!AuthoringApi.TryPostIdPublic(postId, out var pid)) return Fail("invalid postId");
+        if (posts.Get(pid) is null) return Fail("unknown post");
+        if (string.IsNullOrWhiteSpace(reason)) return Fail("a reason is required");
+        return await Dispatch(dispatcher, config, new RequestPostChangesCmd(pid, reason), ct,
+            () => new { ok = true, postId = pid.Compact, status = "ChangesRequested", reason = reason.Trim() });
     }
 
     [McpServerTool(Name = "set_site_reviewer")]
@@ -1156,6 +1289,19 @@ public sealed class ImprintAuthoringMcpTools
     {
         if (!TryPageId(pageId, out var pid)) return Fail("invalid pageId");
         return await Dispatch(dispatcher, config, new PublishPageCmd(pid), ct, () => new { ok = true, pageId = pid.Compact, published = true });
+    }
+
+    [McpServerTool(Name = "schedule_page_publish")]
+    [Description("Schedule ONE page to go live at a date and time (ISO 8601 with offset, e.g. 2026-11-02T09:00:00+01:00), move an existing schedule, or cancel it by omitting the time. The scheduler publishes the page AS IT STANDS at that moment through the same command as publish_page, and records the outcome: state Published, or Failed with the reason (e.g. no changes to publish). Returns the schedule.")]
+    public static async Task<object> SchedulePagePublish(
+        [Description("The page id.")] string pageId,
+        [Description("When to publish, ISO 8601 with offset; omit to cancel the schedule.")] string? publishAt,
+        ICommandDispatcher dispatcher, IConfiguration config, ScheduledPages schedules, CancellationToken ct = default)
+    {
+        if (!TryPageId(pageId, out var pid)) return Fail("invalid pageId");
+        if (!TryInstant(publishAt, out var at)) return Fail($"'{publishAt}' is not an ISO 8601 instant");
+        return await Dispatch(dispatcher, config, new Imprint.Authoring.Features.Schedules.SchedulePagePublish(pid, at), ct,
+            () => new { ok = true, schedule = AuthoringApi.PageScheduleView(pid, schedules.Get(pid)) });
     }
 
     [McpServerTool(Name = "unpublish_page")]

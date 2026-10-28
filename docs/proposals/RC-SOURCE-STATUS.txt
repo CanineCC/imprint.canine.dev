@@ -1,0 +1,58 @@
+customers-and-engagements | documentation | page assay.canine.dev/documentation-customers-and-engagements | Published | v22/pub22 | 200
+how-a-bar-decides | documentation | page assay.canine.dev/documentation-how-a-bar-decides | Published | v22/pub22 | 200
+how-assay-works | documentation | page assay.canine.dev/documentation | Modified | v24/pub22 | 200
+how-assert-works | documentation | page watchdog.canine.dev/documentation | Published | v52/pub52 | 200
+how-we-measure | documentation | page watchdog.canine.dev/documentation-how-we-measure | Published | v42/pub42 | 200
+how-we-validate-ourselves | documentation | page watchdog.canine.dev/documentation-how-we-validate-ourselves | Published | v32/pub32 | 200
+products-portfolios-and-deliveries | documentation | page watchdog.canine.dev/documentation-products-and-portfolios | Published | v47/pub47 | 200
+quality-bars-and-acceptance-profiles | documentation | page watchdog.canine.dev/documentation-quality-bars | Published | v48/pub48 | 200
+the-evidence-contract | documentation | page assay.canine.dev/documentation-the-evidence-contract | Published | v14/pub14 | 200
+the-journey-of-a-report | documentation | page assay.canine.dev/documentation-the-journey-of-a-report | Published | v14/pub14 | 200
+the-journey-of-a-survey | documentation | page watchdog.canine.dev/documentation-the-journey-of-a-scan | Published | v35/pub35 | 200
+the-rubric-contract | documentation | page watchdog.canine.dev/documentation-the-rubric-contract | Published | v39/pub39 | 200
+what-a-decision-report-is | documentation | page assay.canine.dev/documentation-what-a-decision-report-is | Published | v26/pub26 | 200
+what-a-survey-is | documentation | page watchdog.canine.dev/documentation-what-a-scan-is | Published | v44/pub44 | 200
+where-the-code-runs | documentation | page watchdog.canine.dev/documentation-where-the-code-runs | Published | v44/pub44 | 200
+where-the-evidence-comes-from | documentation | page assay.canine.dev/documentation-where-the-evidence-comes-from | Modified | v27/pub26 | 200
+a-dependency-matrix-shows-cycles-not-layering | essay | blog post | InReview | review=Pending at=2026-12-15T09:00:00+01:00 pub=None | 404
+a-gate-an-agent-cannot-talk-its-way-past | essay | blog post | Draft | review=None at=None pub=None | 404
+a-number-you-can-re-derive | essay | blog post | InReview | review=Pending at=2027-05-04T09:00:00+02:00 pub=None | 404
+a-rebuild-range-is-not-a-valuation | essay | blog post | InReview | review=Pending at=2027-06-01T09:00:00+02:00 pub=None | 404
+architecture-you-cannot-draw-by-hand | essay | blog post | InReview | review=Pending at=2027-01-12T09:00:00+01:00 pub=None | 404
+autonomy-levels-are-the-wrong-question | essay | blog post | InReview | review=Pending at=2026-11-03T09:00:00+01:00 pub=None | 404
+does-a-maintainability-score-agree-with-experts | essay | blog post | Draft | review=None at=None pub=None | 404
+does-the-shape-of-a-codebase-change-what-an-agent-spends | essay | blog post | Draft | review=None at=None pub=None | 404
+findings-count-is-not-depth | essay | blog post | InReview | review=Pending at=2026-09-08T09:00:00+02:00 pub=None | 404
+read-only-by-design | essay | blog post | InReview | review=Pending at=2026-10-20T09:00:00+02:00 pub=None | 404
+survey-clarity-is-not-language-quality | essay | blog post | InReview | review=Pending at=2027-02-09T09:00:00+01:00 pub=None | 404
+ten-questions-for-any-code-benchmark | essay | blog post | Draft | review=None at=None pub=None | 404
+ten-repositories-wrote-half-the-result | essay | blog post | Draft | review=None at=None pub=None | 404
+the-fix-you-should-do-first-is-not-the-biggest-one | essay | blog post | InReview | review=Pending at=2027-03-23T09:00:00+01:00 pub=None | 404
+what-a-false-positive-actually-is | essay | blog post | InReview | review=Pending at=2026-09-22T09:00:00+02:00 pub=None | 404
+what-a-score-is-for | essay | blog post | InReview | review=Pending at=2027-04-06T09:00:00+02:00 pub=None | 404
+what-not-fixing-it-costs | essay | blog post | InReview | review=Pending at=2027-03-09T09:00:00+01:00 pub=None | 404
+what-technical-due-diligence-misses | essay | blog post | InReview | review=Pending at=2027-05-18T09:00:00+02:00 pub=None | 404
+which-scanner-should-i-buy-first | essay | blog post | InReview | review=Pending at=2026-12-01T09:00:00+01:00 pub=None | 404
+your-agent-says-it-is-fixed | essay | blog post | Draft | review=None at=None pub=None | 404
+answers-for-your-security-reviewer | guide | page watchdog.canine.dev/guide-read-only-by-design | Modified | v91/pub84 | 200
+architecture-drawn-from-the-code | guide | page watchdog.canine.dev/guide-architecture-from-code | Published | v49/pub49 | 200
+from-code-host-to-your-first-baseline | guide | page watchdog.canine.dev/guide-first-baseline | Published | v73/pub73 | 200
+from-finding-to-fix | guide | page watchdog.canine.dev/guide-actionable-findings | Published | v56/pub56 | 200
+gate-your-backstage-scorecards-on-the-cai | guide | page watchdog.canine.dev/guide-scorecards-on-cai | Published | v58/pub58 | 200
+security-is-not-a-cve-list | guide | page watchdog.canine.dev/guide-security-not-a-cve-list | Published | v48/pub48 | 200
+set-your-survey-cadence | guide | page watchdog.canine.dev/guide-code-rots | Published | v59/pub59 | 200
+the-cyber-resilience-act-and-the-evidence | guide | page watchdog.canine.dev/guide-cra-evidence | Published | v56/pub56 | 200
+the-european-accessibility-act-and-the-evidence | guide | page watchdog.canine.dev/guide-accessibility-evidence | Published | v15/pub15 | 200
+which-gate-to-add-first | guide | page watchdog.canine.dev/guide-which-gate-first | Published | v54/pub54 | 200
+a-different-unit-of-judgement | whitepaper | manuscript w6-a-different-unit-of-judgement | ** [ ] Open  [ ] Closed |  | 404
+assessing-ai-assisted-code | whitepaper | manuscript w8-assessing-ai-assisted-code | ** Pre-sign-off control record |  | 404
+beyond-the-language-logo | whitepaper | manuscript w2-beyond-the-language-logo | ** Open: catalogue publication control remains unresolved |  | 404
+from-alert-volume-to-evidence | whitepaper | manuscript w1-from-alert-volume-to-evidence | ** Internal release-control document |  | 404
+from-measurement-to-verifiable-delivery | whitepaper | manuscript w3-from-measurement-to-verifiable-delivery | ** Open: verification receipt, immutable source anchors and human signoff remain |  | 404
+how-the-code-assurance-index-is-constructed | whitepaper | manuscript w7-how-the-cai-is-constructed | ** [ ] Open  [ ] Closed |  | 404
+noise-is-two-dimensional | whitepaper | manuscript w10-noise-is-two-dimensional | ** [ ] Open  [ ] Closed |  | 404
+paid-to-measure-never-to-move-the-number | whitepaper | page watchdog.canine.dev/whitepaper-paid-to-measure | Published | v77/pub77 | 200
+paid-to-measure-never-to-move-the-number | whitepaper | manuscript w5-paid-to-measure | # W5 Publication Control  ## Paid to measure, never to move the number  **Companion to:** `w5-paid-to-measure.md` **Docu |  | 404
+the-code-remembers | whitepaper | manuscript w4-the-code-remembers | ** Draft publication control. Human sign-off required before version 1.0. |  | 404
+the-engine-measured | whitepaper | manuscript w9-watchdog-measured | ** [ ] Open  [ ] Closed   **Reviewer:**   **Date:** |  | 404
+57 rows; rc posts 56

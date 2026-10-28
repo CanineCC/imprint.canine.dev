@@ -119,6 +119,9 @@ public sealed class AuthoringPostApiTests(AuthoringPostApiHost host) : IClassFix
             : view.GetProperty("publishAt").GetDateTimeOffset();
     }
 
+    private async Task<string> StatusOf(string post) =>
+        (await Send(HttpMethod.Get, $"/api/authoring/posts/{post}")).GetProperty("status").GetString()!;
+
     // The same defect one step earlier: post.submitted-for-review also carries the resulting date,
     // so submitting with no proposal unscheduled the post before the reviewer ever saw it.
     [Fact]
@@ -143,59 +146,78 @@ public sealed class AuthoringPostApiTests(AuthoringPostApiHost host) : IClassFix
         Assert.Equal(GoLive, await PublishAtOf(post));
     }
 
-    // The bug: approve passed the request's null straight through, raising post.review-approved
-    // with no date — so saying yes silently unscheduled a post the author had already dated.
+    // Approving is a signature by a signed-in person, so the API (which only ever holds the key)
+    // has no approve route. A caller that tries is told nothing happened, and the post stays with
+    // the reviewer.
     [Fact]
-    public async Task Approving_without_a_date_keeps_the_one_the_post_already_had()
+    public async Task The_api_cannot_approve_a_post()
     {
         var post = await ASubmittedPost(GoLive);
 
-        await Send(HttpMethod.Post, $"/api/authoring/posts/{post}/approve", new { });
-
-        Assert.Equal(GoLive, await PublishAtOf(post));
-    }
-
-    [Fact]
-    public async Task Approving_with_no_body_at_all_also_keeps_the_date()
-    {
-        var post = await ASubmittedPost(GoLive);
-
-        await Send(HttpMethod.Post, $"/api/authoring/posts/{post}/approve");
-
-        Assert.Equal(GoLive, await PublishAtOf(post));
-    }
-
-    [Fact]
-    public async Task The_reviewer_can_still_overrule_the_date_while_approving()
-    {
-        var post = await ASubmittedPost(GoLive);
-        var moved = GoLive.AddDays(14);
-
-        var result = await Send(HttpMethod.Post, $"/api/authoring/posts/{post}/approve", new { PublishAt = moved });
-
-        Assert.Equal(moved, result.GetProperty("publishAt").GetDateTimeOffset());
-        Assert.Equal(moved, await PublishAtOf(post));
-    }
-
-    // "Approving without a date keeps it waiting until someone sets one" — the mail's promise, and
-    // the case that must NOT be mistaken for "keep the date" when there is no date to keep.
-    [Fact]
-    public async Task A_post_with_no_date_is_approved_and_stays_undated()
-    {
-        var post = await ASubmittedPost(null);
-
-        await Send(HttpMethod.Post, $"/api/authoring/posts/{post}/approve", new { });
-
-        Assert.Null(await PublishAtOf(post));
-    }
-
-    [Fact]
-    public async Task Approving_an_unknown_post_is_a_not_found_rather_than_a_dispatch()
-    {
         using var response = await host.Client.PostAsync(
-            $"/api/authoring/posts/{Guid.NewGuid():N}/approve", JsonContent.Create(new { }));
+            $"/api/authoring/posts/{post}/approve", JsonContent.Create(new { }));
 
-        Assert.Equal(System.Net.HttpStatusCode.NotFound, response.StatusCode);
+        Assert.False(response.IsSuccessStatusCode);
+        Assert.Equal("InReview", await StatusOf(post));
+    }
+
+    // A script may hold a post (it can only stop one going live), and the hold reads back.
+    [Fact]
+    public async Task The_api_can_hold_a_post_and_lift_the_hold()
+    {
+        var post = await APost(GoLive);
+
+        var held = await Send(HttpMethod.Put, $"/api/authoring/posts/{post}/hold", new { Reason = "Waits for E7." });
+        Assert.Equal("Waits for E7.", held.GetProperty("hold").GetString());
+        Assert.Equal("Waits for E7.", (await Send(HttpMethod.Get, $"/api/authoring/posts/{post}")).GetProperty("hold").GetString());
+
+        await Send(HttpMethod.Put, $"/api/authoring/posts/{post}/hold", new { Reason = (string?)null });
+        Assert.Equal(JsonValueKind.Null, (await Send(HttpMethod.Get, $"/api/authoring/posts/{post}")).GetProperty("hold").ValueKind);
+    }
+
+    // An article's kind and products are set at creation or afterwards, and read back on the post.
+    [Fact]
+    public async Task The_api_creates_a_post_with_a_kind_and_reclassifies_it()
+    {
+        var site = (await Send(HttpMethod.Post, "/api/authoring/sites",
+            new { Name = $"Center {Guid.NewGuid():N}" })).GetProperty("siteId").GetString()!;
+        var post = (await Send(HttpMethod.Post, $"/api/authoring/sites/{site}/posts",
+            new { Title = "Read-only by design", Kind = "guide", Products = new[] { "assert" } })).GetProperty("postId").GetString()!;
+
+        var created = await Send(HttpMethod.Get, $"/api/authoring/posts/{post}");
+        Assert.Equal("guide", created.GetProperty("kind").GetString());
+        Assert.Equal(["assert"], created.GetProperty("products").EnumerateArray().Select(p => p.GetString()));
+
+        var changed = await Send(HttpMethod.Put, $"/api/authoring/posts/{post}/classification",
+            new { Kind = "Whitepaper", Products = new[] { "assay", "canine" } });
+        Assert.Equal("whitepaper", changed.GetProperty("kind").GetString());
+        var read = await Send(HttpMethod.Get, $"/api/authoring/posts/{post}");
+        Assert.Equal(["canine", "assay"], read.GetProperty("products").EnumerateArray().Select(p => p.GetString()));
+    }
+
+    // Control notes are private: readable on the authoring API's post detail, absent from the list view.
+    [Fact]
+    public async Task The_api_sets_control_notes_and_reads_them_back_on_the_detail_only()
+    {
+        var post = await APost(GoLive);
+
+        await Send(HttpMethod.Put, $"/api/authoring/posts/{post}/control-notes", new { Notes = "  Figure 1: §4a.  " });
+
+        var detail = await Send(HttpMethod.Get, $"/api/authoring/posts/{post}");
+        Assert.Equal("Figure 1: §4a.", detail.GetProperty("controlNotes").GetString());
+    }
+
+    [Fact]
+    public async Task The_api_refuses_an_unknown_kind_with_the_kinds_named()
+    {
+        var site = (await Send(HttpMethod.Post, "/api/authoring/sites",
+            new { Name = $"Center {Guid.NewGuid():N}" })).GetProperty("siteId").GetString()!;
+
+        using var response = await host.Client.PostAsync($"/api/authoring/sites/{site}/posts",
+            JsonContent.Create(new { Title = "A tutorial", Kind = "tutorial" }));
+
+        Assert.False(response.IsSuccessStatusCode);
+        Assert.Contains("essay, guide, whitepaper, documentation", await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
     }
 
     // The history endpoint that made the blanked-post recovery possible.

@@ -19,10 +19,16 @@ public sealed record CreateBlog(
     string Name,
     string DefaultLocale,
     string? PublishFolder = null,
-    string? PublicUrl = null) : IValidatableCommand
+    string? PublicUrl = null,
+    SiteKind Kind = SiteKind.Blog) : IValidatableCommand
 {
     public IEnumerable<string> Validate()
     {
+        if (!Kind.IsPostStream())
+        {
+            yield return "CreateBlog makes a blog or a resource center; a page-tree site is created with CreateSite.";
+        }
+
         if (string.IsNullOrWhiteSpace(Name))
         {
             yield return "The blog name cannot be empty.";

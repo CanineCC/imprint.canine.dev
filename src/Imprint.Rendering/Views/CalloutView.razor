@@ -1,0 +1,20 @@
+@namespace Imprint.Rendering
+@inherits NodeViewBase<CalloutNode>
+@* A set-apart passage. role="note" so assistive technology announces it as an aside to the main
+   text; the label is real text, not decoration, so a screen reader says "Note" as a sighted reader sees it. *@
+<aside class="@CssClass" role="note" @attributes="NodeAttributes">
+  @if (Node.Tone is not CalloutTone.Plain)
+  {
+    <p class="ip-callout-label">@(Node.Tone is CalloutTone.Note ? "Note" : "Warning")</p>
+  }
+  @foreach (var child in Node.Children)
+  {
+    <NodeView Node="child" @key="child.Id" />
+  }
+</aside>
+
+@code {
+  private string CssClass => Classes(
+    "ip-callout",
+    Node.Tone switch { CalloutTone.Note => "ip-callout-note", CalloutTone.Warning => "ip-callout-warning", _ => null });
+}

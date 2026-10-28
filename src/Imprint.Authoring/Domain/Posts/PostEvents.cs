@@ -24,8 +24,13 @@ public sealed record PostBodyChanged(Locale Locale, string Markdown);
 
 // The instant a reader sorts and cites by. Raised once: re-publishing after an edit is an
 // update, not a new post, so the date does not move because a typo was fixed.
+/// <summary>A publish, and WHICH text it published: <paramref name="Version"/> moves only when the
+/// words do (1 for the first text, +1 for each changed text published), and <paramref name="Sha256"/>
+/// is <see cref="Post.BodySha256"/> of those words, the same hash a sign-off records, so the published
+/// text can be checked against the approved one. The event's actor is who published. Both are null on
+/// publishes recorded before 2026-10-27.</summary>
 [EventType("post.published")]
-public sealed record PostPublished(DateTimeOffset PublishedAt);
+public sealed record PostPublished(DateTimeOffset PublishedAt, int? Version = null, string? Sha256 = null);
 
 [EventType("post.unpublished")]
 public sealed record PostUnpublished;
@@ -44,9 +49,27 @@ public sealed record PostPublishDateSet(DateTimeOffset? PublishAt);
 public sealed record PostSubmittedForReview(DateTimeOffset? ProposedPublishAt, string? Note);
 
 /// <summary>Sign-off. Carries the date the reviewer settled on, which may be neither the proposed
-/// one nor any date at all.</summary>
+/// one nor any date at all, and the signature: <paramref name="Revision"/> is the body revision the
+/// approval covers (how many body edits the post had) and <paramref name="Sha256"/> the hash of
+/// exactly those words (<see cref="Post.BodySha256"/>). The event's actor is WHO approved; these two
+/// say WHICH text. Both are null on approvals recorded before 2026-10-25.
+/// <paramref name="ControlNotesSha256"/> is the sha256 of the private control notes the signer signed
+/// with the words (null when the post has none, and on approvals before 2026-10-27).</summary>
 [EventType("post.review-approved")]
-public sealed record PostReviewApproved(DateTimeOffset? PublishAt);
+public sealed record PostReviewApproved(
+    DateTimeOffset? PublishAt, int? Revision = null, string? Sha256 = null, string? ControlNotesSha256 = null,
+    string? LinkedInSha256 = null);
+
+/// <summary>The LinkedIn post that goes out with the article: its text and the key of the site's sender that posts
+/// it (see <c>Site.LinkedInSenders</c>), or both null for no post. Signed with the words
+/// (<see cref="PostReviewApproved.LinkedInSha256"/>).</summary>
+[EventType("post.linkedin-changed")]
+public sealed record PostLinkedInChanged(string? Text, string? Sender);
+
+/// <summary>The private publication-control notes (sources, checks, who checked), or null to clear
+/// them. Never published; signed with the words (see <see cref="PostReviewApproved"/>).</summary>
+[EventType("post.control-notes-changed")]
+public sealed record PostControlNotesChanged(string? Notes);
 
 [EventType("post.changes-requested")]
 public sealed record PostChangesRequested(string Reason);
@@ -55,6 +78,36 @@ public sealed record PostChangesRequested(string Reason);
 /// the page, so the sign-off cannot still stand.</summary>
 [EventType("post.approval-lapsed")]
 public sealed record PostApprovalLapsed;
+
+/// <summary>A publish hold: a reason the post must not go live yet (figures awaiting a measurement, a
+/// claim awaiting its source), or null to lift it. While held, nothing publishes the post, the
+/// schedule included. It is the blocker field the resource-center review asked for.</summary>
+[EventType("post.hold-set")]
+public sealed record PostHoldSet(string? Reason);
+
+/// <summary>What kind of article the post is and which products it is about (see
+/// <see cref="ArticleClassification"/>). Both are already normalized: a known kind, and the products
+/// de-duplicated in canonical order, so an equal classification compares equal.</summary>
+[EventType("post.classified")]
+public sealed record PostClassified(string Kind, IReadOnlyList<string> Products)
+{
+    // A list-typed positional member defeats synthesized record equality (reference compare), and
+    // events must compare by value for Given/When/Then and round-trip tests: equality is by sequence.
+    public bool Equals(PostClassified? other) =>
+        other is not null && Kind == other.Kind && Products.SequenceEqual(other.Products);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(Kind);
+        foreach (var product in Products)
+        {
+            hash.Add(product);
+        }
+
+        return hash.ToHashCode();
+    }
+}
 
 [EventType("post.deleted")]
 public sealed record PostDeleted;

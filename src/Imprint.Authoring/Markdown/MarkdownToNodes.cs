@@ -23,9 +23,8 @@ public sealed record MarkdownConversion(NodeList Nodes, IReadOnlyList<MarkdownPr
 ///
 /// <para><b>Why a subset, and why hand-written.</b> The node union is closed and the inline
 /// grammar (<see cref="CanonicalHtml"/>) is closed with it, so most of CommonMark has nowhere
-/// to land: there is no node for a table, a blockquote or a nested list, and no inline element
-/// for code. A general parser would therefore spend its time producing constructs this system
-/// must then drop — and silently dropping an author's table is worse than refusing it. So the
+/// to land: there is no node for a blockquote or a nested list, and no inline element for code. A general parser would therefore spend its time producing constructs this system
+/// must then drop — and silently dropping an author's blockquote is worse than refusing it. So the
 /// grammar here is exactly what the vocabulary can hold, and everything else is REPORTED at its
 /// line rather than fixed or discarded. That is the same rule <see cref="CanonicalHtml"/>
 /// follows, for the same reason: a converter that rewrites is a parser differential waiting to
@@ -34,7 +33,7 @@ public sealed record MarkdownConversion(NodeList Nodes, IReadOnlyList<MarkdownPr
 /// <para><b>The grammar.</b> ATX headings <c>#</c>–<c>######</c>; paragraphs; unordered
 /// (<c>- * +</c>) and ordered (<c>1.</c>) lists, one level; fenced code with an optional
 /// language; thematic breaks (<c>---</c>, <c>***</c>, <c>___</c>); an image as its own
-/// paragraph. Inline: <c>**strong**</c>, <c>*em*</c>, <c>[text](href)</c>, a hard break from
+/// paragraph; GitHub pipe tables (see <see cref="ReadTable"/>). Inline: <c>**strong**</c>, <c>*em*</c>, <c>[text](href)</c>, a hard break from
 /// two trailing spaces or a trailing backslash, and <c>\</c> escapes.</para>
 ///
 /// <para><b>Links and images are addresses, not URLs.</b> An internal link is written
@@ -51,7 +50,15 @@ public static class MarkdownToNodes
     public static MarkdownConversion Convert(string markdown, Locale locale, Func<NodeId>? newId = null)
     {
         ArgumentNullException.ThrowIfNull(markdown);
-        var id = newId ?? NodeId.New;
+        return ConvertBlocks(markdown, locale, newId ?? NodeId.New, lineOffset: 0, insideCallout: false);
+    }
+
+    /// <summary>The block loop. A callout's inside comes back through here with its quote markers
+    /// stripped, so it obeys exactly the same grammar; <paramref name="lineOffset"/> maps its lines back
+    /// to the source, so a problem names the line the author sees.</summary>
+    private static MarkdownConversion ConvertBlocks(
+        string markdown, Locale locale, Func<NodeId> id, int lineOffset, bool insideCallout)
+    {
         var problems = new List<MarkdownProblem>();
         var nodes = new List<Node>();
         var lines = markdown.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
@@ -109,6 +116,27 @@ public static class MarkdownToNodes
                 continue;
             }
 
+            // A line that opens a table — or starts with '|' and so can only be a broken one — goes
+            // to the table reader, which converts it or refuses it at the offending line.
+            if (IsTableStart(lines, i))
+            {
+                i = ReadTable(lines, i, locale, id, nodes, problems);
+                continue;
+            }
+
+            if (line.TrimStart().StartsWith('>'))
+            {
+                if (insideCallout)
+                {
+                    problems.Add(new MarkdownProblem(i + 1, "A callout cannot hold another callout inside a callout: use one level of '>'."));
+                    i = SkipWhile(lines, i, l => l.TrimStart().StartsWith('>'));
+                    continue;
+                }
+
+                i = ReadCallout(lines, i, locale, id, nodes, problems);
+                continue;
+            }
+
             if (RejectedBlockPrefix(line) is { } rejection)
             {
                 problems.Add(new MarkdownProblem(i + 1, rejection));
@@ -125,10 +153,63 @@ public static class MarkdownToNodes
             i = ReadParagraph(lines, i, locale, id, nodes, problems);
         }
 
-        return new MarkdownConversion(NodeList.Of(nodes), problems);
+        return new MarkdownConversion(
+            NodeList.Of(nodes),
+            lineOffset == 0 ? problems : [.. problems.Select(p => p with { Line = p.Line + lineOffset })]);
     }
 
     // ------------------------------------------------------------------ block readers
+
+    /// <summary>
+    /// <c>&gt; [!NOTE]</c> / <c>&gt; [!WARNING]</c> (GitHub's alert line, optional) and then quoted
+    /// prose, up to the first line without a <c>&gt;</c>. One marker and one optional space are
+    /// stripped from each line and the rest is converted by the same rules as the post itself.
+    /// </summary>
+    private static int ReadCallout(
+        string[] lines, int start, Locale locale, Func<NodeId> id, List<Node> nodes, List<MarkdownProblem> problems)
+    {
+        var end = SkipWhile(lines, start, l => l.TrimStart().StartsWith('>'));
+        var inner = lines[start..end].Select(StripQuoteMarker).ToList();
+
+        var tone = CalloutTone.Plain;
+        var first = inner[0].Trim();
+        var bodyStart = 0;
+        if (first.StartsWith("[!", StringComparison.Ordinal) && first.EndsWith(']'))
+        {
+            var label = first[2..^1].ToUpperInvariant();
+            if (label is not ("NOTE" or "WARNING"))
+            {
+                problems.Add(new MarkdownProblem(start + 1, $"'{first}' is not a callout label: a callout is labelled NOTE or WARNING ([!NOTE], [!WARNING]), or not at all."));
+                return end;
+            }
+
+            tone = label == "NOTE" ? CalloutTone.Note : CalloutTone.Warning;
+            bodyStart = 1;
+        }
+
+        var body = string.Join("\n", inner.Skip(bodyStart));
+        if (body.Trim().Length == 0)
+        {
+            problems.Add(new MarkdownProblem(start + 1, "This callout is empty: put the text it sets apart on the lines after '>'."));
+            return end;
+        }
+
+        // The inside's first line is source line start + bodyStart + 1.
+        var converted = ConvertBlocks(body, locale, id, lineOffset: start + bodyStart, insideCallout: true);
+        problems.AddRange(converted.Problems);
+        if (converted.Ok)
+        {
+            nodes.Add(new CalloutNode { Id = id(), Tone = tone, Children = converted.Nodes });
+        }
+
+        return end;
+    }
+
+    private static string StripQuoteMarker(string line)
+    {
+        var rest = line.TrimStart()[1..];
+        return rest.StartsWith(' ') ? rest[1..] : rest;
+    }
 
     /// <summary>
     /// <c>::: widget cai-score-card repo=acme/api :::</c> — the escape hatch from prose into an
@@ -318,8 +399,13 @@ public static class MarkdownToNodes
         for (; i < lines.Length; i++)
         {
             var line = lines[i];
+            // A table may start directly under a paragraph line, as on GitHub — only when the next
+            // line really is a delimiter row, so a paragraph that merely contains a '|' (or a line
+            // starting with one) reads exactly as it always did.
+            // A '>' line opens a callout even straight under a paragraph line, as in CommonMark.
             if (line.Trim().Length == 0 || IsThematicBreak(line) || IsListItem(line, out _) ||
-                TryHeading(line, out _, out _) || TryFence(line, out _, out _))
+                TryHeading(line, out _, out _) || TryFence(line, out _, out _) || line.TrimStart().StartsWith('>') ||
+                (i > start && IsDelimitedHeader(lines, i)))
             {
                 break;
             }
@@ -351,6 +437,187 @@ public static class MarkdownToNodes
 
         AddRichText("<p>" + Inline(source, start + 1, problems) + "</p>", locale, start + 1, id, nodes, problems);
         return i;
+    }
+
+    /// <summary>
+    /// A GitHub pipe table: a header row, a delimiter row (<c>|---|:--:|</c>), then body rows up
+    /// to a blank line or the start of another block. Outer pipes are optional; <c>\|</c> is a
+    /// pipe inside a cell; each cell goes through the same <see cref="Inline"/> conversion a
+    /// paragraph does, so bold, italic and links survive and inline code is refused as anywhere.
+    ///
+    /// <para><b>Refused, never repaired.</b> GitHub pads a short row, drops a long row's extra
+    /// cells, and treats a header with no delimiter row as a paragraph. Each of those invents or
+    /// loses a cell the author did not mean, so here each is a problem at its own line: the header
+    /// line for a missing delimiter row, the delimiter line for a column-count mismatch, every
+    /// ragged row's own line. A table with a structural problem produces no node — there is no
+    /// faithful partial table — while the text around it still converts.</para>
+    ///
+    /// <para><b>Column alignment is ignored.</b> The delimiter row's colons are parsed (they have to
+    /// be, to recognise the row) and then dropped: <see cref="TableNode"/> has no alignment, and a
+    /// node prop added for markdown alone would be one the props API, the editor and the renderer
+    /// all have to carry. The stylesheet left-aligns every column, which reads correctly for the
+    /// documentation tables this exists for.</para>
+    /// </summary>
+    private static int ReadTable(
+        string[] lines, int start, Locale locale, Func<NodeId> id,
+        List<Node> nodes, List<MarkdownProblem> problems)
+    {
+        var header = SplitRow(lines[start]);
+        if (start + 1 >= lines.Length || !IsDelimiterRow(lines[start + 1]))
+        {
+            problems.Add(new MarkdownProblem(start + 1,
+                "This table has no delimiter row — put a line like |---|---| directly under the header, one --- per column."));
+            return SkipWhile(lines, start, l => l.Trim().Length > 0);
+        }
+
+        var columns = header.Count;
+        var delimiter = SplitRow(lines[start + 1]);
+        if (delimiter.Count != columns)
+        {
+            problems.Add(new MarkdownProblem(start + 2,
+                $"The delimiter row has {Count(delimiter.Count, "column")} but the header has {Count(columns, "column")} — they must match."));
+            return SkipWhile(lines, start, l => l.Trim().Length > 0);
+        }
+
+        var rows = new List<(List<string> Cells, int Line)>();
+        var ragged = false;
+        var i = start + 2;
+        for (; i < lines.Length && !EndsTable(lines[i]); i++)
+        {
+            var cells = SplitRow(lines[i]);
+            if (cells.Count != columns)
+            {
+                problems.Add(new MarkdownProblem(i + 1,
+                    $"This row has {Count(cells.Count, "cell")} but the table has {Count(columns, "column")} — every row needs one cell per column (an empty cell is written | |)."));
+                ragged = true;
+                continue;
+            }
+
+            rows.Add((cells, i + 1));
+        }
+
+        if (ragged)
+        {
+            return i;
+        }
+
+        var valid = true;
+        LocalizedText Cell(string source, int line)
+        {
+            var html = Inline(source, line, problems);
+            if (!CanonicalHtml.TryValidateInline(html, out var error))
+            {
+                problems.Add(new MarkdownProblem(line, $"This cell could not be represented: {error}"));
+                valid = false;
+            }
+
+            return LocalizedText.Empty.With(locale, html);
+        }
+
+        var head = header.Select(cell => Cell(cell, start + 1)).ToList();
+        var body = rows.Select(row => (IReadOnlyList<LocalizedText>)[.. row.Cells.Select(cell => Cell(cell, row.Line))]).ToList();
+
+        // A cell problem (inline code, a bad link) still leaves well-formed cells, so the preview
+        // shows the table beside the error — the same courtesy a paragraph gets. Only html that
+        // fails the grammar is kept out: that is content the aggregate would refuse to store.
+        if (valid)
+        {
+            nodes.Add(new TableNode { Id = id(), Head = head, Rows = body, CellMarkup = TableCellMarkup.Inline });
+        }
+
+        return i;
+    }
+
+    private static string Count(int n, string noun) => n == 1 ? $"1 {noun}" : $"{n} {noun}s";
+
+    /// <summary>Where a table's body stops: a blank line, or a line that opens another block. Any
+    /// other line is a row — as on GitHub — so a sentence run into a table is a ragged row, not a
+    /// paragraph quietly rendered somewhere GitHub never would.</summary>
+    private static bool EndsTable(string line) =>
+        line.Trim().Length == 0 || TryHeading(line, out _, out _) || TryFence(line, out _, out _) ||
+        IsListItem(line, out _) || IsWidgetDirective(line) || line.TrimStart().StartsWith('>') ||
+        (IsThematicBreak(line) && !HasUnescapedPipe(line));
+
+    /// <summary>A table starts at a line that begins with a pipe (a table, or a refusal saying why
+    /// not), or at any line with a cell boundary when a delimiter row follows it.</summary>
+    private static bool IsTableStart(string[] lines, int i) =>
+        lines[i].TrimStart().StartsWith('|') || IsDelimitedHeader(lines, i);
+
+    private static bool IsDelimitedHeader(string[] lines, int i) =>
+        HasUnescapedPipe(lines[i]) && i + 1 < lines.Length && IsDelimiterRow(lines[i + 1]);
+
+    /// <summary><c>|---|:--:|--:|</c>: at least one cell boundary, and every cell dashes with an
+    /// optional colon at either end.</summary>
+    private static bool IsDelimiterRow(string line) =>
+        HasUnescapedPipe(line) &&
+        SplitRow(line) is { Count: > 0 } cells &&
+        cells.All(cell =>
+        {
+            var dashes = cell.TrimStart(':').TrimEnd(':');
+            return dashes.Length > 0 && dashes.All(c => c == '-') && cell.Length - dashes.Length <= 2;
+        });
+
+    private static bool HasUnescapedPipe(string line)
+    {
+        for (var i = 0; i < line.Length; i++)
+        {
+            if (line[i] == '\\' && i + 1 < line.Length && IsEscapable(line[i + 1]))
+            {
+                i++;
+                continue;
+            }
+
+            if (line[i] == '|')
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>The trimmed cell sources of one row. Escapes are KEPT (<c>\|</c> stays two
+    /// characters) so the cell's own <see cref="Inline"/> pass turns them into text exactly once;
+    /// only an unescaped pipe is a boundary. The leading and trailing pipe are optional.</summary>
+    private static List<string> SplitRow(string line)
+    {
+        var trimmed = line.Trim();
+        var cells = new List<string>();
+        var current = new StringBuilder();
+        var endedOnPipe = false;
+
+        for (var i = 0; i < trimmed.Length; i++)
+        {
+            var c = trimmed[i];
+            endedOnPipe = false;
+            if (c == '\\' && i + 1 < trimmed.Length && IsEscapable(trimmed[i + 1]))
+            {
+                current.Append(c).Append(trimmed[++i]);
+                continue;
+            }
+
+            if (c == '|')
+            {
+                cells.Add(current.ToString().Trim());
+                current.Clear();
+                endedOnPipe = true;
+                continue;
+            }
+
+            current.Append(c);
+        }
+
+        if (!endedOnPipe)
+        {
+            cells.Add(current.ToString().Trim());
+        }
+
+        if (trimmed.StartsWith('|') && cells.Count > 0)
+        {
+            cells.RemoveAt(0);
+        }
+
+        return cells;
     }
 
     private static void AddImage(
@@ -392,6 +659,90 @@ public static class MarkdownToNodes
 
     // ----------------------------------------------------------------- inline conversion
 
+    /// <summary>The start of the next run of EXACTLY <paramref name="length"/> backticks at or after
+    /// <paramref name="from"/>, or -1. A longer or shorter run does not close the span.</summary>
+    private static int FindBacktickRun(string source, int from, int length)
+    {
+        for (var j = from; j < source.Length; j++)
+        {
+            if (source[j] != '`')
+            {
+                continue;
+            }
+
+            var end = j;
+            while (end < source.Length && source[end] == '`')
+            {
+                end++;
+            }
+
+            if (end - j == length)
+            {
+                return j;
+            }
+
+            j = end - 1;
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// A backtick run at <paramref name="i"/>: CommonMark's code span (a run of n backticks opens a span
+    /// that the next run of exactly n closes; one space each side is stripped when both are there), or,
+    /// with no closing run, literal backticks. Appends to <paramref name="html"/> and returns the index of
+    /// the last character consumed.
+    /// </summary>
+    private static int CodeSpan(string source, int i, StringBuilder html)
+    {
+        var run = 1;
+        while (i + run < source.Length && source[i + run] == '`')
+        {
+            run++;
+        }
+
+        var close = FindBacktickRun(source, i + run, run);
+        if (close < 0)
+        {
+            html.Append('`', run);
+            return i + run - 1;
+        }
+
+        var code = source[(i + run)..close];
+        if (code.Length >= 2 && code[0] == ' ' && code[^1] == ' ' && code.Trim().Length > 0)
+        {
+            code = code[1..^1];
+        }
+
+        html.Append("<code>");
+        foreach (var ch in code)
+        {
+            Append(html, ch);
+        }
+
+        html.Append("</code>");
+        return close + run - 1;
+    }
+
+    /// <summary>A link's words: text, with code spans (a link to a file or a commit is often one).
+    /// Nothing else is markdown inside a link, as before.</summary>
+    private static string LinkWords(string text)
+    {
+        var html = new StringBuilder();
+        for (var i = 0; i < text.Length; i++)
+        {
+            if (text[i] == '`')
+            {
+                i = CodeSpan(text, i, html);
+                continue;
+            }
+
+            html.Append(EscapeAll(text[i].ToString()));
+        }
+
+        return html.ToString();
+    }
+
     private static string Inline(string source, int line, List<MarkdownProblem> problems)
     {
         var html = new StringBuilder();
@@ -410,8 +761,8 @@ public static class MarkdownToNodes
 
             if (c == '`')
             {
-                problems.Add(new MarkdownProblem(line, "Inline code is not supported — use a fenced ``` block."));
-                return html.ToString();
+                i = CodeSpan(source, i, html);
+                continue;
             }
 
             // Checked BEFORE the raw-HTML guard below, which would otherwise reject it: this <br>
@@ -444,7 +795,7 @@ public static class MarkdownToNodes
                     return html.ToString();
                 }
 
-                html.Append("<a href=\"").Append(href).Append("\">").Append(EscapeAll(text)).Append("</a>");
+                html.Append("<a href=\"").Append(href).Append("\">").Append(LinkWords(text)).Append("</a>");
                 i += length - 1;
                 continue;
             }
@@ -574,9 +925,7 @@ public static class MarkdownToNodes
     private static string? RejectedBlockPrefix(string line)
     {
         var trimmed = line.TrimStart();
-        return trimmed.StartsWith('>') ? "Blockquotes are not supported."
-            : trimmed.StartsWith('|') ? "Tables are not supported — a table needs a node type this vocabulary does not have."
-            : null;
+        return trimmed.StartsWith('>') ? "Blockquotes are not supported." : null;
     }
 
     private static bool IsListItem(string line, out bool ordered)
@@ -661,7 +1010,9 @@ public static class MarkdownToNodes
         return i;
     }
 
-    private static bool IsEscapable(char c) => c is '\\' or '`' or '*' or '_' or '[' or ']' or '(' or ')' or '#' or '!' or '<' or '>' or '&' or '"' or '\'';
+    // '|' is escapable so a table cell can hold one (\|); in a paragraph it means the same thing,
+    // as in CommonMark, where every ASCII punctuation character is.
+    private static bool IsEscapable(char c) => c is '\\' or '`' or '*' or '_' or '[' or ']' or '(' or ')' or '#' or '!' or '<' or '>' or '&' or '"' or '\'' or '|';
 
     private static void Append(StringBuilder html, char c)
     {

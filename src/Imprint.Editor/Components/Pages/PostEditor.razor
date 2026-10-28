@@ -4,12 +4,18 @@
 @using Imprint.Authoring.Domain.Posts
 @using Imprint.Authoring.Domain.Sites
 @using Imprint.Authoring.Features.Posts.ApprovePostReview
+@using Imprint.Authoring.Features.Posts.HoldPost
 @using Imprint.Authoring.Features.Posts.ChangePostBody
 @using Imprint.Authoring.Features.Posts.RequestPostChanges
 @using Imprint.Authoring.Features.Posts.SchedulePost
 @using Imprint.Authoring.Features.Posts.SubmitPostForReview
 @using Imprint.Authoring.Features.Posts.PublishPost
 @using Imprint.Authoring.Features.Posts.UnpublishPost
+@using Imprint.Authoring.Features.Posts.ClassifyPost
+@using Imprint.Authoring.Features.Posts.SetPostControlNotes
+@using Imprint.Authoring.Features.Posts.SetPostLinkedIn
+@using Imprint.Authoring.Features.LinkedIn
+@using Imprint.Authoring.Domain.LinkedIn
 @using Imprint.Authoring.Markdown
 @using Imprint.Authoring.Projections
 @using Imprint.Editor.Auth
@@ -23,6 +29,7 @@
 @inject IAggregateStore Store
 @inject PostList Posts
 @inject SiteOverview Sites
+@inject LinkedInPosts LinkedInOutcomes
 @inject SiteAccess Access
 @inject CommandRunner Commands
 @inject EditorRenderContextFactory ContextFactory
@@ -104,11 +111,20 @@ else
                             title="@($"Send to {reviewer} for public relations review")"
                             @onclick="SubmitForReview">Send for review</button>
                 }
-                else
+                else if (_hold is null)
                 {
                     <button type="button" class="ed-btn ed-btn-primary" data-testid="post-publish"
                             title="@(IsFuture ? "Publish now, ignoring the scheduled date" : "Publish this post")"
                             @onclick="Publish">@(IsFuture ? "Publish now" : "Publish")</button>
+                }
+
+                @* A hold stops the post going live, the schedule included, until it is lifted. It is
+                   offered to anyone who can edit, at any stage before publication. *@
+                @if (CanEdit && _hold is null && _status != PostStatus.Published)
+                {
+                    <button type="button" class="ed-btn ed-btn-ghost" data-testid="post-hold"
+                            title="Stop this post going live until the hold is lifted"
+                            @onclick="() => _askingHold = !_askingHold">Hold…</button>
                 }
             </span>
         </header>
@@ -116,6 +132,39 @@ else
         @if (StatusLine is { Length: > 0 } line)
         {
             <p class="post-review-line" data-testid="post-review-line">@line</p>
+        }
+
+        @* The signature: who approved which exact words. It is what makes an approval evidence
+           rather than a status, so it is shown wherever the approval still stands. *@
+        @if (SignatureLine is { Length: > 0 } signed)
+        {
+            <p class="post-review-line post-signature-line" data-testid="post-signature-line"
+               title="@(_signature?.Sha256 is { } sha ? $"sha256 {sha}" : null)">@signed</p>
+        }
+
+        @if (_hold is { } held)
+        {
+            <p class="post-review-line post-hold-line" data-testid="post-hold-line">
+                On hold: @Sentence(held) Nothing publishes it, the schedule included, until the hold is lifted.
+                @if (CanEdit)
+                {
+                    <button type="button" class="ed-btn ed-btn-ghost" data-testid="post-hold-lift"
+                            @onclick="() => SetHold(null)">Lift hold</button>
+                }
+            </p>
+        }
+
+        @if (_askingHold)
+        {
+            <div class="post-sendback" data-testid="post-hold-form">
+                <label for="post-hold-reason">Why is it held?</label>
+                <textarea id="post-hold-reason" class="ed-input" rows="1" data-testid="post-hold-reason"
+                          @bind="_holdReason" @bind:event="oninput"
+                          placeholder="For example: figures wait for a measurement."></textarea>
+                <button type="button" class="ed-btn ed-btn-primary" data-testid="post-hold-set"
+                        disabled="@(_holdReason.Trim().Length == 0)" @onclick="() => SetHold(_holdReason)">Hold</button>
+                <button type="button" class="ed-btn ed-btn-ghost" @onclick="() => _askingHold = false">Cancel</button>
+            </div>
         }
 
         @if (_askingChanges)
@@ -145,7 +194,7 @@ else
             <section class="post-pane post-pane-source" aria-label="Markdown" @ref="_sourcePane">
                 <textarea class="post-source" data-testid="post-body" spellcheck="true" @ref="_sourceBox"
                           @bind="Body" @bind:event="oninput" readonly="@(!CanEdit)"
-                          placeholder="# Your post&#10;&#10;Write in markdown."></textarea>
+                          placeholder="@SourcePlaceholder"></textarea>
 
                 @* file-drop.js hands a drop to the first file input inside the element it was
                    wired to, and the shelf's input now lives in the other pane — so dropping on
@@ -180,6 +229,10 @@ else
                                 aria-selected="@(_view == SideView.Media ? "true" : "false")"
                                 data-testid="post-view-media"
                                 @onclick="() => _view = SideView.Media">Media</button>
+                        <button type="button" role="tab" class="post-view @(_view == SideView.Details ? "is-on" : null)"
+                                aria-selected="@(_view == SideView.Details ? "true" : "false")"
+                                data-testid="post-view-details"
+                                @onclick="() => _view = SideView.Details">Details</button>
                     </div>
 
                     @* The pane's own drop input, outside the view switch: dropping a file while the
@@ -211,6 +264,100 @@ else
                         <CascadingValue Value="PreviewContext">
                             <PageView Roots="_preview" />
                         </CascadingValue>
+                    </div>
+                }
+                else if (_view == SideView.Details)
+                {
+                    @* What kind of article this is and what it is about (the resource center's
+                       template and index follow the kind), and the private control notes the
+                       signer signs with the words. Changing either on an approved post withdraws
+                       the approval, as an edit to the words does. *@
+                    <div class="post-details" data-testid="post-details">
+                        <fieldset class="post-details-group">
+                            <legend>Kind</legend>
+                            <select class="ed-input" data-testid="post-kind" @bind="_kind">
+                                <option value="">Not classified</option>
+                                @foreach (var kind in ArticleClassification.Kinds)
+                                {
+                                    <option value="@kind">@KindLabel(kind)</option>
+                                }
+                            </select>
+                        </fieldset>
+                        <fieldset class="post-details-group">
+                            <legend>Products it is about</legend>
+                            @foreach (var product in ArticleClassification.Products)
+                            {
+                                <label class="post-details-check">
+                                    <input type="checkbox" data-testid="post-product-@product"
+                                           checked="@_products.Contains(product)"
+                                           @onchange="e => ToggleProduct(product, e.Value is true)" />
+                                    @ProductLabel(product)
+                                </label>
+                            }
+                        </fieldset>
+                        <button type="button" class="ed-btn ed-btn-primary" data-testid="post-classify"
+                                disabled="@(_kind.Length == 0 || !ClassificationChanged)" @onclick="Classify">Save kind and products</button>
+
+                        <fieldset class="post-details-group">
+                            <legend>Control notes (private, never published)</legend>
+                            <textarea class="ed-input post-details-notes" rows="8" data-testid="post-control-notes"
+                                      @bind="_notes" @bind:event="oninput"
+                                      placeholder="Where each figure comes from, what was checked, and by whom."></textarea>
+                        </fieldset>
+                        <button type="button" class="ed-btn" data-testid="post-control-notes-save"
+                                disabled="@(_notes.Trim() == (_post?.ControlNotes ?? ""))" @onclick="SaveNotes">Save notes</button>
+
+                        @* The LinkedIn post that goes out once, automatically, when the article is published
+                           with a signed approval. The reviewer signs it with the words. *@
+                        <fieldset class="post-details-group" data-testid="post-linkedin">
+                            <legend>LinkedIn post</legend>
+                            @if (LinkedInSenders.Count == 0)
+                            {
+                                <p class="post-details-hint">This site has no LinkedIn senders yet: add them in the site's settings.</p>
+                            }
+                            else
+                            {
+                                <select class="ed-input" data-testid="post-linkedin-sender" aria-label="Post as" @bind="_linkedInSender">
+                                    <option value="">Post as…</option>
+                                    @foreach (var sender in LinkedInSenders)
+                                    {
+                                        <option value="@sender.Key">@sender.Name</option>
+                                    }
+                                </select>
+                                <textarea class="ed-input post-details-linkedin" rows="6" data-testid="post-linkedin-text"
+                                          aria-label="LinkedIn text" maxlength="@Post.MaxLinkedInLength"
+                                          @bind="_linkedInText" @bind:event="oninput"
+                                          placeholder="What the post says. A card linking to the article is added."></textarea>
+                                <p class="post-details-hint">
+                                    @_linkedInText.Trim().Length / @Post.MaxLinkedInLength.ToString("N0") characters.
+                                    Posted once, when the article is published with a signed approval.
+                                </p>
+                            }
+                            @if (LinkedInOutcomes.Get(_id) is { } outcome)
+                            {
+                                <p class="post-details-hint" data-testid="post-linkedin-outcome">
+                                    @LinkedInOutcomeText(outcome)
+                                </p>
+                                @if (outcome.State is LinkedInPostState.Unknown or LinkedInPostState.Attempting)
+                                {
+                                    <input class="ed-input" data-testid="post-linkedin-urn" aria-label="The post's URN, if it is on LinkedIn"
+                                           placeholder="urn:li:share:… (if it is on the page)" @bind="_linkedInUrn" @bind:event="oninput" />
+                                    <div class="settings-row">
+                                        <button type="button" class="ed-btn" data-testid="post-linkedin-found"
+                                                disabled="@(_linkedInUrn.Trim().Length == 0)" @onclick="() => ResolveLinkedIn(_linkedInUrn)">It is on LinkedIn</button>
+                                        <button type="button" class="ed-btn" data-testid="post-linkedin-missing"
+                                                @onclick="() => ResolveLinkedIn(null)">It is not: send it again</button>
+                                    </div>
+                                }
+                            }
+                        </fieldset>
+                        @if (LinkedInSenders.Count > 0)
+                        {
+                            <button type="button" class="ed-btn" data-testid="post-linkedin-save"
+                                    disabled="@(!LinkedInChanged)" @onclick="SaveLinkedIn">
+                                @(_linkedInText.Trim().Length == 0 ? "Clear LinkedIn post" : "Save LinkedIn post")
+                            </button>
+                        }
                     </div>
                 }
                 else
@@ -309,6 +456,23 @@ else
         _ => null,
     };
 
+    private PostSignature? _signature;
+    private string? _hold;
+
+    /// <summary>The reason as a sentence: authors end theirs with a full stop or they do not.</summary>
+    private static string Sentence(string text) => text.EndsWith('.') || text.EndsWith('!') || text.EndsWith('?') ? text : text + ".";
+    private bool _askingHold;
+    private string _holdReason = "";
+
+    private string? SignatureLine => _signature is { } signed
+        && _status is PostStatus.Approved or PostStatus.Scheduled or PostStatus.Published or PostStatus.Modified
+        ? $"Signed by {signed.SignedBy}, {EditorialTime.ForAuthor(signed.SignedAt)} ({EditorialTime.Zone.Id})"
+          + (signed.Revision is { } revision && signed.Sha256 is { } sha
+              ? $": revision {revision}, sha256 {sha[..12]}"
+              : ": signed before revisions were recorded")
+          + (_status == PostStatus.Modified ? ". The changes since are not signed." : ".")
+        : null;
+
     private string Scheduled(string prefix = " on ") =>
         _publishAt is { } at ? $"{prefix}{EditorialTime.ForAuthor(at)} ({EditorialTime.Zone.Id})" : "";
 
@@ -362,6 +526,16 @@ else
         }
     }
 
+    private async Task SetHold(string? reason)
+    {
+        if (await Commands.Run(new HoldPost(_id, reason)))
+        {
+            _askingHold = false;
+            _holdReason = "";
+            ApplyPost(await Store.LoadOrDefault<Post>(_id.Stream) ?? _post!);
+        }
+    }
+
     private async Task RequestChanges()
     {
         if (await Commands.Run(new RequestPostChanges(_id, _changesReason)))
@@ -402,7 +576,104 @@ else
 
     private const long MaxUploadBytes = 500L * 1024 * 1024;
 
-    private enum SideView { Preview, Media }
+    private enum SideView { Preview, Media, Details }
+
+    // A C# string, not attribute text: Blazor writes attribute literals as-is, so "&#10;" reached the
+    // browser as the five characters and the placeholder read "# Your post&#10;&#10;Write in markdown."
+    private const string SourcePlaceholder = "# Your post\n\nWrite in markdown.";
+
+    private string _kind = "";
+    private HashSet<string> _products = [];
+    private string _notes = "";
+    private string _linkedInText = "";
+    private string _linkedInSender = "";
+    private string _linkedInUrn = "";
+
+    private IReadOnlyList<Imprint.Authoring.Domain.Sites.LinkedInSender> LinkedInSenders =>
+        _post is { } current && Sites.Get(current.SiteId) is { } site ? site.LinkedInSenders : [];
+
+    private bool LinkedInChanged =>
+        _linkedInText.Trim() != (_post?.LinkedInText ?? "")
+        || (_linkedInText.Trim().Length > 0 && _linkedInSender != (_post?.LinkedInSender ?? ""));
+
+    private static string LinkedInOutcomeText(LinkedInPostRow row) => row.State switch
+    {
+        LinkedInPostState.Posted => $"Posted to LinkedIn ({row.Urn}).",
+        LinkedInPostState.Failed when row.Retryable => $"LinkedIn asked us to wait ({row.Reason}); it is sent again after {row.RetryAfter:g} UTC.",
+        LinkedInPostState.Failed => $"LinkedIn refused the post: {row.Reason}",
+        LinkedInPostState.Unknown or LinkedInPostState.Attempting =>
+            $"Not known whether it posted ({row.Reason ?? "the attempt did not finish"}). Look at the page, then say which.",
+        _ => "Not posted yet.",
+    };
+
+    private async Task SaveLinkedIn()
+    {
+        var text = _linkedInText.Trim();
+        if (await Commands.Run(new SetPostLinkedIn(_id, text, text.Length == 0 ? null : _linkedInSender)))
+        {
+            ApplyPost(await Store.LoadOrDefault<Post>(_id.Stream) ?? _post!);
+            Toasts.Show(text.Length == 0 ? "LinkedIn post cleared." : "LinkedIn post saved.");
+        }
+    }
+
+    private async Task ResolveLinkedIn(string? urn)
+    {
+        if (await Commands.Run(new ResolveLinkedInPost(_id, urn, DateTimeOffset.UtcNow)))
+        {
+            _linkedInUrn = "";
+            Toasts.Show(urn is null ? "It will be sent again." : "Recorded as posted.");
+        }
+    }
+
+    private bool ClassificationChanged =>
+        _kind != (_post?.Kind ?? "") || !_products.SetEquals(_post?.Products ?? []);
+
+    private static string KindLabel(string kind) => kind switch
+    {
+        "essay" => "Essay (thought leadership)",
+        "guide" => "Guide",
+        "whitepaper" => "Whitepaper",
+        "documentation" => "Documentation",
+        _ => kind,
+    };
+
+    private static string ProductLabel(string product) => product switch
+    {
+        "canine" => "Canine Development",
+        "cca" => "Canine Code Analyzer",
+        "cai" => "Code Assurance Index",
+        _ => char.ToUpperInvariant(product[0]) + product[1..],
+    };
+
+    private void ToggleProduct(string product, bool on)
+    {
+        if (on)
+        {
+            _products.Add(product);
+        }
+        else
+        {
+            _products.Remove(product);
+        }
+    }
+
+    private async Task Classify()
+    {
+        if (await Commands.Run(new ClassifyPost(_id, _kind, [.. _products])))
+        {
+            ApplyPost(await Store.LoadOrDefault<Post>(_id.Stream) ?? _post!);
+            Toasts.Show("Kind and products saved.");
+        }
+    }
+
+    private async Task SaveNotes()
+    {
+        if (await Commands.Run(new SetPostControlNotes(_id, _notes)))
+        {
+            ApplyPost(await Store.LoadOrDefault<Post>(_id.Stream) ?? _post!);
+            Toasts.Show("Control notes saved.");
+        }
+    }
 
     private SideView _view = SideView.Preview;
 
@@ -658,6 +929,11 @@ else
         _review = post.Review;
         _reviewNote = post.ReviewNote;
         _publishAt = post.PublishAt;
+        _kind = post.Kind ?? "";
+        _products = [.. post.Products];
+        _notes = post.ControlNotes ?? "";
+        _linkedInText = post.LinkedInText ?? "";
+        _linkedInSender = post.LinkedInSender ?? LinkedInSenders.FirstOrDefault()?.Key ?? "";
         _publishAtLocal = post.PublishAt is { } at
             ? EditorialTime.ToLocal(at).ToString("yyyy-MM-dd'T'HH:mm", System.Globalization.CultureInfo.InvariantCulture)
             : "";
@@ -743,8 +1019,13 @@ else
         Refresh();
     }
 
-    private void Refresh() =>
-        _status = Posts.Get(_id)?.StatusAt(DateTimeOffset.UtcNow, Reviewer is not null) ?? PostStatus.Draft;
+    private void Refresh()
+    {
+        var summary = Posts.Get(_id);
+        _status = summary?.StatusAt(DateTimeOffset.UtcNow, Reviewer is not null) ?? PostStatus.Draft;
+        _signature = summary?.Signature;
+        _hold = summary?.Hold;
+    }
 
     private void OnChanged() => _ = InvokeAsync(() =>
     {

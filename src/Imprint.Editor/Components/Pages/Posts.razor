@@ -2,6 +2,7 @@
 @using Imprint.Authoring.Domain
 @using Imprint.Authoring.Domain.Pages
 @using Imprint.Authoring.Domain.Posts
+@using Imprint.Authoring.Domain.Sites
 @using Imprint.Authoring.Features.Posts.CreatePost
 @using Imprint.Authoring.Projections
 @using Imprint.Editor.Auth
@@ -14,12 +15,12 @@
 @inject CommandRunner Commands
 @inject NavigationManager Navigation
 
-<PageTitle>Posts · Imprint</PageTitle>
+<PageTitle>@Plural · Imprint</PageTitle>
 
 <main class="dash">
     <Breadcrumbs Trail="@Trail" />
     <header class="dash-head">
-        <h1>Posts</h1>
+        <h1>@Plural</h1>
         <p class="dash-sub">
             Written in markdown, published as static pages like everything else.
             Drafts are yours alone until you publish them.
@@ -27,16 +28,31 @@
     </header>
 
     <form class="post-new" @onsubmit="Create" @onsubmit:preventDefault>
-        <label class="post-new-label" for="new-post-title">New post</label>
+        <label class="post-new-label" for="new-post-title">New @Singular.ToLowerInvariant()</label>
         <input id="new-post-title" class="ed-input" @bind="_title" @bind:event="oninput"
-               placeholder="Post title" data-testid="new-post-title" />
-        <button type="submit" class="ed-btn ed-btn-primary" disabled="@(_title.Trim().Length == 0)"
+               placeholder="@($"{Singular} title")" data-testid="new-post-title" />
+        @* A resource center lists and lays out articles by kind, so an article starts with one. *@
+        @if (IsCenter)
+        {
+            <span class="post-new-kind">
+                <label for="new-post-kind" class="ed-visually-hidden">Kind</label>
+                <select id="new-post-kind" class="ed-input" data-testid="new-post-kind" @bind="_kind">
+                    <option value="">Kind…</option>
+                    <option value="essay">Essay</option>
+                    <option value="guide">Guide</option>
+                    <option value="whitepaper">Whitepaper</option>
+                    <option value="documentation">Documentation</option>
+                </select>
+            </span>
+        }
+        <button type="submit" class="ed-btn ed-btn-primary"
+                disabled="@(_title.Trim().Length == 0 || (IsCenter && _kind.Length == 0))"
                 data-testid="new-post-create">Create</button>
     </form>
 
     @if (_posts.Count == 0)
     {
-        <p class="dash-sub" data-testid="posts-empty">No posts yet. The first one starts above.</p>
+        <p class="dash-sub" data-testid="posts-empty">No @Plural.ToLowerInvariant() yet. The first one starts above.</p>
     }
     else
     {
@@ -50,6 +66,10 @@
                         <span class="dash-meta">
                             <span class="post-status post-status-@post.Status.ToString().ToLowerInvariant()"
                                   data-testid="post-status">@Label(post.Status)</span>
+                            @if (IsCenter && post.Kind is { } kind)
+                            {
+                                <text> · @kind</text>
+                            }
                             · /@post.Slug.Value
                             @if (post.PublishedAt is { } at)
                             {
@@ -75,6 +95,14 @@
             ? [Breadcrumbs.Sites, Breadcrumbs.Of(site, Pages.HomeOf(site.Id)?.Id), new Breadcrumbs.Crumb("Posts")]
             : [Breadcrumbs.Sites, new Breadcrumbs.Crumb("Posts")];
     private string _title = "";
+    private string _kind = "";
+
+    private bool IsCenter => Sites.Get(_site)?.Kind == SiteKind.ResourceCenter;
+
+    // A resource center holds articles; a blog holds posts. Labels only: the model keeps "post".
+    private string Singular => IsCenter ? "Article" : "Post";
+
+    private string Plural => IsCenter ? "Articles" : "Posts";
     private IReadOnlyList<PostSummary> _posts = [];
 
     protected override void OnInitialized() => Index.Changed += OnChanged;
@@ -129,9 +157,10 @@
         var slug = UniqueSlug(Slug.Suggest(title));
         var locale = Sites.Get(_site)?.DefaultLocale.Value ?? "en";
 
-        if (await Commands.Run(new CreatePost(id, _site, title, slug, locale)))
+        if (await Commands.Run(new CreatePost(id, _site, title, slug, locale, IsCenter ? _kind : null, IsCenter ? [] : null)))
         {
             _title = "";
+            _kind = "";
             Navigation.NavigateTo($"/posts/{id.Compact}");
         }
     }

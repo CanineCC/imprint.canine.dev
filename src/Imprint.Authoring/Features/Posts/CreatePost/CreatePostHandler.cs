@@ -20,6 +20,13 @@ public sealed class CreatePostHandler(IAggregateStore store, SiteOverview sites,
             return Result.Fail("The site no longer exists.");
         }
 
+        // A resource center's index and template are driven by the kind, so an article without one
+        // would have nowhere to be listed and no header to be shown with.
+        if (site.Kind is Domain.Sites.SiteKind.ResourceCenter && cmd.Kind is null)
+        {
+            return Result.Fail("An article on a resource center needs a kind: essay, guide, whitepaper or documentation.");
+        }
+
         if (!site.Locales.Contains(locale))
         {
             return Result.Fail($"'{locale}' is not one of this site's locales.");
@@ -34,6 +41,12 @@ public sealed class CreatePostHandler(IAggregateStore store, SiteOverview sites,
         }
 
         var post = Post.Create(cmd.PostId, cmd.SiteId, slug, locale, cmd.Title);
+        if (cmd.Kind is not null)
+        {
+            // Classified before the first save, so a refused kind leaves no post behind.
+            post.Classify(cmd.Kind, cmd.Products ?? []);
+        }
+
         await store.Save(post, ct);
         return Result.Ok();
     }

@@ -115,7 +115,7 @@ public sealed class PostTests
         AggregateSpec.For<Post>()
             .Given(Created(), new PostBodyChanged(En, "Real prose."))
             .When(p => p.Publish(En, Noon))
-            .ThenRaised(new PostPublished(Noon));
+            .ThenRaised(new PostPublished(Noon, 1, Post.BodySha256(LocalizedText.Of(En, "Real prose."))));
     }
 
     [Fact]
@@ -124,11 +124,11 @@ public sealed class PostTests
         // The whole point of the aggregate: a post that cannot be rendered must not be
         // publishable, and the author must be told which line is the problem.
         var outcome = AggregateSpec.For<Post>()
-            .Given(Created(), new PostBodyChanged(En, "Fine.\n\n> a blockquote"))
+            .Given(Created(), new PostBodyChanged(En, "Fine.\n\n    indented code"))
             .When(p => p.Publish(En, Noon));
 
         outcome.ThenFails("line 3");
-        outcome.ThenFails("blockquote");
+        outcome.ThenFails("Indented code");
     }
 
     [Fact]
@@ -147,7 +147,9 @@ public sealed class PostTests
 
         post.Publish(En, Noon.AddDays(3));
 
-        Assert.Equal(new PostPublished(Noon.AddDays(3)), Assert.Single(post.UncommittedEvents));
+        // A publish recorded before versions existed counts as version one, so this is version two.
+        Assert.Equal(new PostPublished(Noon.AddDays(3), 2, Post.BodySha256(LocalizedText.Of(En, "Prose."))),
+            Assert.Single(post.UncommittedEvents));
         Assert.Equal(Noon, post.PublishedAt);
     }
 

@@ -22,6 +22,9 @@ public sealed class PostReviewTests
 
     private static PostBodyChanged Body(string markdown = "# Hello\n\nProse.\n") => new(En, markdown);
 
+    /// <summary>sha256 of "en\n# Hello\n\nProse.\n\0": the default body, in the canonical form.</summary>
+    private const string BodySha = "e32ca9e3653bb5adc50c1901415438988ba26fea4ba1e410120aa731991fadca";
+
     // ------------------------------------------------------------------- submit
 
     [Fact]
@@ -50,7 +53,7 @@ public sealed class PostReviewTests
     [Fact]
     public void SubmitForReview_refuses_prose_that_cannot_be_rendered() =>
         AggregateSpec.For<Post>()
-            .Given(Created(), Body("Fine.\n\n> a blockquote\n"))
+            .Given(Created(), Body("Fine.\n\n    indented code\n"))
             .When(post => post.SubmitForReview(En, null))
             .ThenFails("line 3");
 
@@ -77,7 +80,7 @@ public sealed class PostReviewTests
             .Given(Created(), Body(), new PostSubmittedForReview(September, null))
             .When(post => post.ApproveReview(October));
 
-        outcome.ThenRaised(new PostReviewApproved(October));
+        outcome.ThenRaised(new PostReviewApproved(October, 1, BodySha));
         Assert.Equal(PostReview.Approved, outcome.Aggregate.Review);
         Assert.Equal(October, outcome.Aggregate.PublishAt);
     }
@@ -89,9 +92,36 @@ public sealed class PostReviewTests
             .Given(Created(), Body(), new PostSubmittedForReview(September, null))
             .When(post => post.ApproveReview(null));
 
-        outcome.ThenRaised(new PostReviewApproved(null));
+        outcome.ThenRaised(new PostReviewApproved(null, 1, BodySha));
         Assert.True(outcome.Aggregate.IsApproved);
         Assert.Null(outcome.Aggregate.PublishAt);
+    }
+
+    // The signature documents WHICH words were cleared: the body revision and a sha256 of exactly
+    // those words, so anyone holding the log can show the published text is the approved text.
+    // The hash is pinned as a literal on purpose: a change to its canonical form would make every
+    // recorded approval unverifiable, and that must fail here rather than be discovered later.
+    [Fact]
+    public void ApproveReview_signs_the_revision_and_the_hash_of_the_words_it_cleared()
+    {
+        var outcome = AggregateSpec.For<Post>()
+            .Given(Created(), Body("# Draft\n"), Body(), new PostSubmittedForReview(September, null))
+            .When(post => post.ApproveReview(null));
+
+        outcome.ThenRaised(new PostReviewApproved(null, 2, BodySha));
+        Assert.Equal(2, outcome.Aggregate.ApprovedRevision);
+        Assert.Equal(BodySha, outcome.Aggregate.ApprovedSha256);
+    }
+
+    [Fact]
+    public void An_edit_after_approval_clears_the_signature_with_the_approval()
+    {
+        var outcome = AggregateSpec.For<Post>()
+            .Given(Created(), Body(), new PostSubmittedForReview(September, null), new PostReviewApproved(null, 1, BodySha))
+            .When(post => post.ChangeBody(En, "# Hello\n\nOther words.\n"));
+
+        Assert.Null(outcome.Aggregate.ApprovedRevision);
+        Assert.Null(outcome.Aggregate.ApprovedSha256);
     }
 
     [Fact]
@@ -180,7 +210,7 @@ public sealed class PostReviewTests
         AggregateSpec.For<Post>()
             .Given(Created(), Body(), new PostPublishDateSet(September))
             .When(post => post.Publish(En, wokeUpLate))
-            .ThenRaised(new PostPublished(September));
+            .ThenRaised(new PostPublished(September, 1, BodySha));
     }
 
     [Fact]
@@ -193,7 +223,7 @@ public sealed class PostReviewTests
         AggregateSpec.For<Post>()
             .Given(Created(), Body(), new PostPublishDateSet(October))
             .When(post => post.Publish(En, now))
-            .ThenRaised(new PostPublished(now));
+            .ThenRaised(new PostPublished(now, 1, BodySha));
     }
 
     // -------------------------------------------------------------------- date
@@ -216,4 +246,41 @@ public sealed class PostReviewTests
         Assert.Null(outcome.Aggregate.PublishAt);
         Assert.False(outcome.Aggregate.IsScheduled(September.AddDays(-1)));
     }
+
+    // ------------------------------------------------------------------- hold
+
+    [Fact]
+    public void A_held_post_cannot_be_published_and_says_why() =>
+        AggregateSpec.For<Post>()
+            .Given(Created(), Body(), new PostHoldSet("Figures wait for a measurement."))
+            .When(post => post.Publish(En, September))
+            .ThenFails("Figures wait for a measurement.");
+
+    [Fact]
+    public void Lifting_the_hold_lets_it_publish()
+    {
+        var outcome = AggregateSpec.For<Post>()
+            .Given(Created(), Body(), new PostHoldSet("Figures wait."), new PostHoldSet(null))
+            .When(post => post.Publish(En, September));
+
+        Assert.True(outcome.Aggregate.IsPublished);
+    }
+
+    [Fact]
+    public void A_hold_neither_needs_nor_lapses_an_approval()
+    {
+        var outcome = AggregateSpec.For<Post>()
+            .Given(Created(), Body(), new PostSubmittedForReview(September, null), new PostReviewApproved(September, 1, BodySha))
+            .When(post => post.SetHold("  Waits for E7.  "));
+
+        outcome.ThenRaised(new PostHoldSet("Waits for E7."));
+        Assert.True(outcome.Aggregate.IsApproved);
+    }
+
+    [Fact]
+    public void Holding_again_for_the_same_reason_records_nothing() =>
+        AggregateSpec.For<Post>()
+            .Given(Created(), Body(), new PostHoldSet("Waits."))
+            .When(post => post.SetHold("Waits."))
+            .ThenNothing();
 }

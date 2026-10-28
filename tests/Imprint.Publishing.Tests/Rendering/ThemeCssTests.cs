@@ -128,6 +128,38 @@ public sealed class ThemeCssTests
         Assert.Contains(":focus-visible", css);
     }
 
+    /// <summary>
+    /// ★ A product's own look ships to its own site only. Every site used to carry every product's rules in
+    /// the marketing sheet, so each new look spent the stylesheet budget of all the others.
+    /// </summary>
+    [Fact]
+    public void A_product_sites_own_rules_ship_only_to_that_site()
+    {
+        Assert.Contains(".ip-site-assure", ThemeCss.SiteCss("Assure"));
+        Assert.Contains(".ip-site-assert", ThemeCss.SiteCss("Assert"));
+        Assert.Equal(string.Empty, ThemeCss.SiteCss("Watchdog"));
+        Assert.DoesNotContain(".ip-site-assure", ThemeCss.MarketingCss);
+        Assert.DoesNotContain(".ip-site-assert", ThemeCss.MarketingCss);
+        Assert.Equal("caninecodeanalyzer", ThemeCss.SiteSlug("Canine Code Analyzer"));
+    }
+
+    /// <summary>
+    /// ★ The new Assay site is built as "Assay Preview" beside the live "Assay" site, and the live site must
+    /// read and look exactly as it does until the owner moves the new one onto its address. Its look and its
+    /// faces are keyed to the preview's name, so neither can reach the live site's sheet or folder.
+    /// </summary>
+    [Fact]
+    public void The_new_assay_look_reaches_the_preview_site_and_never_the_live_one()
+    {
+        Assert.Contains(".ip-site-assaypreview", ThemeCss.SiteCss("Assay Preview"));
+        Assert.Equal(string.Empty, ThemeCss.SiteCss("Assay"));
+        Assert.DoesNotContain(".ip-site-assaypreview", ThemeCss.MarketingCss);
+
+        Assert.Equal(3, FontAssets.ForSite(ThemeCss.SiteSlug("Assay Preview")).Count);
+        Assert.Empty(FontAssets.ForSite(ThemeCss.SiteSlug("Assay")));
+        Assert.All(FontAssets.ForSite("assaypreview"), font => Assert.NotEmpty(font.Bytes));
+    }
+
     [Fact]
     public void Structural_css_stays_within_the_size_budget()
     {

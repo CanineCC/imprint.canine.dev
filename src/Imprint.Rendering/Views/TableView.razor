@@ -1,8 +1,12 @@
 @namespace Imprint.Rendering
 @inherits NodeViewBase<TableNode>
-@* Cells are CONTENT (Blazor-escaped), never markup. The wrapper owns horizontal
-   overflow so a wide table scrolls inside its own box and the page body never
-   scrolls sideways for it. *@
+@* A plain-text table's cells are CONTENT (Blazor-escaped), never markup. An inline table's
+   cells are the canonical inline subset, validated on write exactly like rich text, so
+   MarkupString is safe here for the same reason it is in RichTextView — and the hrefs go
+   through the same resolver, so a page: link reaches the reader's own locale. The wrapper owns
+   horizontal overflow so a wide table scrolls inside its own box and the page body never
+   scrolls sideways for it. scope="col" because every header cell heads a column: a screen
+   reader then announces it with each cell under it. *@
 <div class="ip-table-wrap" @attributes="NodeAttributes">
   <table class="ip-table">
     @if (Node.Head.Count > 0)
@@ -10,7 +14,7 @@
       <thead><tr>
         @foreach (var cell in Node.Head)
         {
-          <th>@Resolve(cell)</th>
+          <th scope="col">@Cell(cell)</th>
         }
       </tr></thead>
     }
@@ -20,10 +24,25 @@
         <tr>
           @foreach (var cell in row)
           {
-            <td>@Resolve(cell)</td>
+            <td>@Cell(cell)</td>
           }
         </tr>
       }
     </tbody>
   </table>
 </div>
+
+@code {
+  private RenderFragment Cell(LocalizedText cell) => builder =>
+  {
+    if (Node.CellMarkup == TableCellMarkup.Inline)
+    {
+      builder.AddMarkupContent(0, RichTextHtml.ResolveLinks(
+        Resolve(cell), Ctx.ResolvePagePath, id => Ctx.ResolveAsset(id)?.Url is { Length: > 0 } url ? url : null));
+    }
+    else
+    {
+      builder.AddContent(1, Resolve(cell));
+    }
+  };
+}

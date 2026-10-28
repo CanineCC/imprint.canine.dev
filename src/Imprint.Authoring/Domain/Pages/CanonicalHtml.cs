@@ -16,6 +16,7 @@ namespace Imprint.Authoring.Domain.Pages;
 ///   item     := &lt;li&gt; inline* &lt;/li&gt;
 ///   inline   := text | entity | &lt;br&gt; | &lt;strong&gt; inline* &lt;/strong&gt;
 ///             | &lt;em&gt; inline* &lt;/em&gt; | &lt;a href="url"&gt; inline-no-a* &lt;/a&gt;
+///             | &lt;code&gt; (text | entity)* &lt;/code&gt;
 ///   entity   := &amp;amp; | &amp;lt; | &amp;gt; | &amp;quot; | &amp;#39;
 ///   text     := any chars except '&lt;' and '&amp;'
 /// Anchors: no nesting; href scheme ∈ { https, http, mailto, page:{guid} }.
@@ -30,6 +31,21 @@ public static partial class CanonicalHtml
     public static bool TryValidate(string html, out string? error)
     {
         error = Validate(html);
+        return error is null;
+    }
+
+    /// <summary>
+    /// The INLINE production on its own — what one table cell may hold: text, entities,
+    /// <c>&lt;br&gt;</c>, strong, em and anchors, with no block wrapper. Not the same as wrapping
+    /// the value in <c>&lt;p&gt;</c> and calling <see cref="TryValidate"/>: <c>a&lt;/p&gt;&lt;p&gt;b</c>
+    /// would pass that as two paragraphs and smuggle block structure into a cell.
+    /// </summary>
+    public static bool TryValidateInline(string html, out string? error)
+    {
+        var pos = 0;
+        error = html.Length > MaxLength
+            ? $"Text is longer than {MaxLength} characters."
+            : ParseInlineUntil(html, ref pos, closing: null, allowAnchor: true, depth: 0);
         return error is null;
     }
 
@@ -102,7 +118,9 @@ public static partial class CanonicalHtml
         }
     }
 
-    private static string? ParseInlineUntil(string html, ref int pos, string closing, bool allowAnchor, int depth)
+    /// <param name="closing">The tag that ends this run, or null for "the end of the input"
+    /// (a table cell, which has no wrapper of its own).</param>
+    private static string? ParseInlineUntil(string html, ref int pos, string? closing, bool allowAnchor, int depth)
     {
         if (depth > MaxInlineDepth)
         {
@@ -113,13 +131,13 @@ public static partial class CanonicalHtml
         {
             if (pos >= html.Length)
             {
-                return $"Missing {closing}.";
+                return closing is null ? null : $"Missing {closing}.";
             }
 
             var current = html[pos];
             if (current == '<')
             {
-                if (Consume(html, ref pos, closing))
+                if (closing is not null && Consume(html, ref pos, closing))
                 {
                     return null;
                 }
@@ -135,6 +153,42 @@ public static partial class CanonicalHtml
                     if (nested is not null)
                     {
                         return nested;
+                    }
+
+                    continue;
+                }
+
+                // Code holds TEXT: no tag inside it, so it can never carry a link or markup.
+                if (Consume(html, ref pos, "<code>"))
+                {
+                    while (true)
+                    {
+                        if (pos >= html.Length)
+                        {
+                            return "Missing </code>.";
+                        }
+
+                        if (Consume(html, ref pos, "</code>"))
+                        {
+                            break;
+                        }
+
+                        if (html[pos] == '<')
+                        {
+                            return "Code holds text only.";
+                        }
+
+                        if (html[pos] == '&')
+                        {
+                            if (!ConsumeAnyEntity(html, ref pos, out _))
+                            {
+                                return $"Disallowed entity at position {pos} (only &amp; &lt; &gt; &quot; &#39;).";
+                            }
+
+                            continue;
+                        }
+
+                        pos++;
                     }
 
                     continue;

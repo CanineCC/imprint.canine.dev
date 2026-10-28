@@ -48,12 +48,17 @@ using CreatePostCmd = Imprint.Authoring.Features.Posts.CreatePost.CreatePost;
 using PublishPostCmd = Imprint.Authoring.Features.Posts.PublishPost.PublishPost;
 using RequestPostChangesCmd = Imprint.Authoring.Features.Posts.RequestPostChanges.RequestPostChanges;
 using SchedulePostCmd = Imprint.Authoring.Features.Posts.SchedulePost.SchedulePost;
+using HoldPostCmd = Imprint.Authoring.Features.Posts.HoldPost.HoldPost;
+using ClassifyPostCmd = Imprint.Authoring.Features.Posts.ClassifyPost.ClassifyPost;
+using SetPostControlNotesCmd = Imprint.Authoring.Features.Posts.SetPostControlNotes.SetPostControlNotes;
 using SetSiteReviewerCmd = Imprint.Authoring.Features.Sites.SetSiteReviewer.SetSiteReviewer;
 using SubmitPostForReviewCmd = Imprint.Authoring.Features.Posts.SubmitPostForReview.SubmitPostForReview;
 using TagAssetCmd = Imprint.Authoring.Features.Assets.TagAsset.TagAsset;
 using UntagAssetCmd = Imprint.Authoring.Features.Assets.UntagAsset.UntagAsset;
 using UploadAssetCmd = Imprint.Authoring.Features.Assets.UploadAsset.UploadAsset;
 using UploadAssetDarkVariantCmd = Imprint.Authoring.Features.Assets.UploadAssetDarkVariant.UploadAssetDarkVariant;
+using SetPostLinkedInCmd = Imprint.Authoring.Features.Posts.SetPostLinkedIn.SetPostLinkedIn;
+using SetSiteLinkedInSendersCmd = Imprint.Authoring.Features.Sites.SetSiteLinkedInSenders.SetSiteLinkedInSenders;
 
 namespace Imprint.Editor.Api;
 
@@ -218,6 +223,10 @@ public static class AuthoringApi
                 reviewer = site.ReviewerEmail is { Length: > 0 }
                     ? (object)new { name = site.ReviewerName, email = site.ReviewerEmail }
                     : null,
+                // Who the site's articles may post to LinkedIn as (a LinkedIn organization page each).
+                linkedInSenders = site.LinkedInSenders
+                    .Select(sender => (object)new { key = sender.Key, name = sender.Name, organizationUrn = sender.OrganizationUrn })
+                    .ToList(),
                 // The read a caller needs before PUTting /environments back, and the one place the
                 // site's canonical origin is visible to a machine.
                 environments = site.Environments.Select(environment => (object)new
@@ -549,6 +558,24 @@ public static class AuthoringApi
                 ? Results.Ok(new { pageId = pid.Compact, published = true })
                 : Results.BadRequest(new { error = "publish failed", details = result.Errors });
         });
+
+        // Schedule ONE page to go live at a date and time (ISO 8601 with offset); null cancels. The
+        // scheduler publishes it through the same command as the route above, then records the outcome.
+        api.MapPut("/pages/{pageId}/schedule", async (
+            string pageId, PageScheduleRequest? body, ICommandDispatcher dispatcher, ScheduledPages schedules, CancellationToken ct) =>
+        {
+            if (!TryPageId(pageId, out var pid)) return Results.BadRequest(new { error = "invalid pageId" });
+            var result = await DispatchAs(dispatcher, actor,
+                new Imprint.Authoring.Features.Schedules.SchedulePagePublish(pid, body?.PublishAt), ct);
+            return result.Succeeded
+                ? Results.Ok(PageScheduleView(pid, schedules.Get(pid)))
+                : Results.BadRequest(new { error = "schedule failed", details = result.Errors });
+        });
+
+        api.MapGet("/pages/{pageId}/schedule", (string pageId, ScheduledPages schedules) =>
+            TryPageId(pageId, out var pid)
+                ? Results.Ok(PageScheduleView(pid, schedules.Get(pid)))
+                : Results.BadRequest(new { error = "invalid pageId" }));
 
         // ── site chrome ─────────────────────────────────────────────────────────────────────────
         // Navigation travels as the whole list (mirroring the command and the editor's reorder-as-a-
@@ -933,7 +960,8 @@ public static class AuthoringApi
             // A slug is derived from the title when none is given — the same courtesy the editor's
             // "New post" box does, so a caller does not have to know the slug rules to create one.
             var slug = body.Slug is { Length: > 0 } given ? given : Slug.Suggest(body.Title);
-            var result = await DispatchAs(dispatcher, actor, new CreatePostCmd(postId, sid, body.Title, slug, locale), ct);
+            var result = await DispatchAs(dispatcher, actor,
+                new CreatePostCmd(postId, sid, body.Title, slug, locale, body.Kind, body.Products), ct);
             return result.Succeeded
                 ? Results.Ok(new { postId = postId.Compact, slug, locale })
                 : Results.BadRequest(new { error = "create post failed", details = result.Errors });
@@ -992,6 +1020,53 @@ public static class AuthoringApi
                 : Results.BadRequest(new { error = "schedule failed", details = result.Errors });
         });
 
+        // A hold is safe to set from a script: it can only stop a post going live, never send one.
+        // A null or empty reason lifts it.
+        api.MapPut("/posts/{postId}/hold", async (
+            string postId, PostHoldRequest? body, ICommandDispatcher dispatcher, CancellationToken ct) =>
+        {
+            if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
+            var result = await DispatchAs(dispatcher, actor, new HoldPostCmd(pid, body?.Reason), ct);
+            return result.Succeeded
+                ? Results.Ok(new { postId = pid.Compact, hold = string.IsNullOrWhiteSpace(body?.Reason) ? null : body.Reason.Trim() })
+                : Results.BadRequest(new { error = "hold failed", details = result.Errors });
+        });
+
+        // The private publication-control notes: signed with the words, never published.
+        api.MapPut("/posts/{postId}/control-notes", async (
+            string postId, PostControlNotesRequest? body, ICommandDispatcher dispatcher, CancellationToken ct) =>
+        {
+            if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
+            var result = await DispatchAs(dispatcher, actor, new SetPostControlNotesCmd(pid, body?.Notes), ct);
+            return result.Succeeded
+                ? Results.Ok(new { postId = pid.Compact, length = body?.Notes?.Trim().Length ?? 0 })
+                : Results.BadRequest(new { error = "control notes failed", details = result.Errors });
+        });
+
+        // The LinkedIn post that goes out with the article once it is published and signed. Setting it on an
+        // approved post withdraws the approval: the reviewer signs the text with the words.
+        api.MapPut("/posts/{postId}/linkedin", async (
+            string postId, PostLinkedInRequest? body, ICommandDispatcher dispatcher, PostList posts, CancellationToken ct) =>
+        {
+            if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
+            var result = await DispatchAs(dispatcher, actor, new SetPostLinkedInCmd(pid, body?.Text, body?.Sender), ct);
+            return result.Succeeded && posts.Get(pid) is { } post
+                ? Results.Ok(new { postId = pid.Compact, text = post.LinkedInText, sender = post.LinkedInSender })
+                : Results.BadRequest(new { error = "linkedin failed", details = result.Errors });
+        });
+
+        // An article's kind (essay, guide, whitepaper, documentation) and the products it is about.
+        api.MapPut("/posts/{postId}/classification", async (
+            string postId, PostClassificationRequest? body, ICommandDispatcher dispatcher, PostList posts, CancellationToken ct) =>
+        {
+            if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
+            if (body is null || string.IsNullOrWhiteSpace(body.Kind)) return Results.BadRequest(new { error = "kind is required" });
+            var result = await DispatchAs(dispatcher, actor, new ClassifyPostCmd(pid, body.Kind, body.Products ?? []), ct);
+            return result.Succeeded && posts.Get(pid) is { } post
+                ? Results.Ok(new { postId = pid.Compact, kind = post.Kind, products = post.Products })
+                : Results.BadRequest(new { error = "classify failed", details = result.Errors });
+        });
+
         api.MapPost("/posts/{postId}/submit-review", async (
             string postId, PostSubmitRequest? body, ICommandDispatcher dispatcher, PostList posts, SiteOverview sites, CancellationToken ct) =>
         {
@@ -1012,23 +1087,10 @@ public static class AuthoringApi
                 : Results.BadRequest(new { error = "submit failed", details = result.Errors });
         });
 
-        api.MapPost("/posts/{postId}/approve", async (
-            string postId, PostApproveRequest? body, ICommandDispatcher dispatcher, PostList posts,
-            CancellationToken ct) =>
-        {
-            if (!TryPostId(postId, out var pid)) return Results.BadRequest(new { error = "invalid postId" });
-            if (posts.Get(pid) is not { } post) return Results.NotFound(new { error = "unknown post" });
-
-            // An omitted date means "approve it as it stands", never "unschedule it" — the same
-            // rule submit-review follows above, and for the same reason. Approving used to pass
-            // the request's null straight through, so saying yes silently dropped a go-live the
-            // author had already set.
-            var publishAt = body?.PublishAt ?? post.PublishAt;
-            var result = await DispatchAs(dispatcher, actor, new ApprovePostReviewCmd(pid, publishAt), ct);
-            return result.Succeeded
-                ? Results.Ok(new { postId = pid.Compact, publishAt })
-                : Results.BadRequest(new { error = "approve failed", details = result.Errors });
-        });
+        // There is no approve route, on purpose. Approving is a signature (the approval event's actor
+        // is the login that cleared the words), so it happens in the editor, signed in. Everything
+        // reaching this API holds the API key, and an approval a key can produce documents nothing.
+        // ApprovePostReviewHandler refuses a service identity as well, for any surface added later.
 
         api.MapPost("/posts/{postId}/request-changes", async (
             string postId, PostChangesRequest? body, ICommandDispatcher dispatcher, CancellationToken ct) =>
@@ -1054,6 +1116,21 @@ public static class AuthoringApi
         // Naming the reviewer is what turns publishing on this site into a two-person job, so it
         // is reachable here too — a script that prepares posts for review should be able to say
         // who they are for.
+        // The LinkedIn organization pages the site's articles may post as: a key the article names, a display
+        // name, and the page's urn:li:organization:{id}. Replaces the whole list.
+        api.MapPut("/sites/{siteId}/linkedin-senders", async (
+            string siteId, SiteLinkedInSendersRequest? body, ICommandDispatcher dispatcher, CancellationToken ct) =>
+        {
+            if (!TrySiteId(siteId, out var sid)) return Results.BadRequest(new { error = "invalid siteId" });
+            var senders = (body?.Senders ?? [])
+                .Select(sender => new LinkedInSender(sender.Key ?? "", sender.Name ?? "", sender.OrganizationUrn ?? ""))
+                .ToList();
+            var result = await DispatchAs(dispatcher, actor, new SetSiteLinkedInSendersCmd(sid, senders), ct);
+            return result.Succeeded
+                ? Results.Ok(new { siteId = sid.Compact, senders = senders.Count })
+                : Results.BadRequest(new { error = "linkedin senders failed", details = result.Errors });
+        });
+
         api.MapPut("/sites/{siteId}/reviewer", async (
             string siteId, SiteReviewerRequest? body, ICommandDispatcher dispatcher, CancellationToken ct) =>
         {
@@ -1256,6 +1333,18 @@ public static class AuthoringApi
         ["status"] = post.StatusAt(DateTimeOffset.UtcNow, site?.HasReviewer ?? false).ToString(),
         ["review"] = post.Review.ToString(),
         ["reviewNote"] = post.ReviewNote,
+        // Who approved which words. Read-only here: the API can show a signature, never make one.
+        ["signature"] = post.Signature is { } signed
+            ? new
+            {
+                signedBy = signed.SignedBy, signedAt = signed.SignedAt, revision = signed.Revision, sha256 = signed.Sha256,
+                controlNotesSha256 = signed.ControlNotesSha256,
+            }
+            : null,
+        ["hold"] = post.Hold,
+        ["kind"] = post.Kind,
+        ["products"] = post.Products,
+        ["linkedIn"] = post.LinkedInText is { Length: > 0 } ? new { text = post.LinkedInText, sender = post.LinkedInSender } : null,
         ["publishAt"] = post.PublishAt,
         ["publishedAt"] = post.PublishedAt,
         ["updatedAt"] = post.UpdatedAt,
@@ -1272,6 +1361,8 @@ public static class AuthoringApi
         view["body"] = Localized(post.Body);
         view["metaTitle"] = Localized(post.MetaTitle);
         view["metaDescription"] = Localized(post.MetaDescription);
+        // Private: the authoring API is behind the key, and nothing published ever reads this field.
+        view["controlNotes"] = post.ControlNotes;
         return view;
     }
 
@@ -1372,10 +1463,14 @@ public static class AuthoringApi
                 : (object)new { locale = e.Locale.Value, length = e.Markdown.Length }),
             PostPublishDateSet e => Entry("scheduled", new { publishAt = e.PublishAt }),
             PostSubmittedForReview e => Entry("submitted", new { proposedPublishAt = e.ProposedPublishAt, note = e.Note }),
-            PostReviewApproved e => Entry("approved", new { publishAt = e.PublishAt }),
+            PostReviewApproved e => Entry("approved", new { publishAt = e.PublishAt, revision = e.Revision, sha256 = e.Sha256 }),
+            PostHoldSet e => Entry("hold", new { reason = e.Reason }),
+            PostClassified e => Entry("classification", new { kind = e.Kind, products = e.Products }),
+            PostControlNotesChanged e => Entry("control-notes", new { length = e.Notes?.Length ?? 0 }),
+            PostLinkedInChanged e => Entry("linkedin", new { sender = e.Sender, length = e.Text?.Length ?? 0 }),
             PostChangesRequested e => Entry("changes-requested", new { reason = e.Reason }),
             PostApprovalLapsed => Entry("approval-lapsed"),
-            PostPublished e => Entry("published", new { publishedAt = e.PublishedAt }),
+            PostPublished e => Entry("published", new { publishedAt = e.PublishedAt, version = e.Version, sha256 = e.Sha256 }),
             PostUnpublished => Entry("unpublished"),
             PostDeleted => Entry("deleted"),
             _ => Entry(stored.StableId),
@@ -1858,7 +1953,8 @@ public static class AuthoringApi
     public sealed record SetAssetRefRequest(string? AssetId);
 
     /// <summary>Create a post. The slug is derived from the title when absent; locale defaults to the site's.</summary>
-    public sealed record CreatePostRequest(string Title, string? Slug, string? Locale);
+    public sealed record CreatePostRequest(
+        string Title, string? Slug, string? Locale, string? Kind = null, IReadOnlyList<string>? Products = null);
 
     /// <summary>The post's markdown for one locale — the authored truth, converted at publish.</summary>
     public sealed record PostBodyRequest(string? Locale, string Markdown);
@@ -1871,12 +1967,34 @@ public static class AuthoringApi
 
     /// <summary>The go-live instant, or null for "to be decided".</summary>
     public sealed record PostScheduleRequest(DateTimeOffset? PublishAt);
+    public sealed record PostHoldRequest(string? Reason);
+
+    public sealed record PostClassificationRequest(string? Kind, IReadOnlyList<string>? Products);
+
+    public sealed record PostControlNotesRequest(string? Notes);
+
+    public sealed record PostLinkedInRequest(string? Text, string? Sender);
+
+    public sealed record SiteLinkedInSenderRequest(string? Key, string? Name, string? OrganizationUrn);
+
+    public sealed record SiteLinkedInSendersRequest(IReadOnlyList<SiteLinkedInSenderRequest>? Senders);
+
+    public sealed record PageScheduleRequest(DateTimeOffset? PublishAt);
+
+    /// <summary>A page's schedule as the API and MCP report it; state "None" when it was never scheduled.</summary>
+    internal static object PageScheduleView(PageId page, ScheduledPage? schedule) => new
+    {
+        pageId = page.Compact,
+        state = schedule?.State.ToString() ?? "None",
+        publishAt = schedule?.At,
+        publishedAt = schedule?.PublishedAt,
+        failureReason = schedule?.FailureReason,
+    };
 
     /// <summary>Hand a post to the site's reviewer, with a date they may overrule.</summary>
     public sealed record PostSubmitRequest(string? Locale, DateTimeOffset? ProposedPublishAt, string? Note);
 
     /// <summary>The reviewer's sign-off, carrying the date they settled on (null = still to be decided).</summary>
-    public sealed record PostApproveRequest(DateTimeOffset? PublishAt);
 
     /// <summary>Send a post back with a reason the author can act on.</summary>
     public sealed record PostChangesRequest(string Reason);

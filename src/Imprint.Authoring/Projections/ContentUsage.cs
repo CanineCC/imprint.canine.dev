@@ -61,6 +61,7 @@ public sealed class ContentUsage(PageDrafts drafts, BlockLibrary blocks)
             SvgNode svg => svg.AssetId == assetId,
             ButtonNode { LinkTo: AssetLink link } => link.AssetId == assetId,
             RichTextNode richText => LinksAsset(richText.Html, assetId),
+            TableNode table => table.InlineHtmlCells.Any(cell => LinksAsset(cell, assetId)),
             _ => false,
         });
 

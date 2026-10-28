@@ -140,6 +140,24 @@ public sealed class AuthoringNodeJsonTests
         Assert.Equal(original.Anchor, reparsed.Anchor);
     }
 
+    [Fact]
+    public void A_table_says_what_its_cells_are_and_the_answer_round_trips()
+    {
+        // A caller reading a converted post's table back must be told its cells are inline html,
+        // or it would write them back as text and the reader would see the tags.
+        var inline = Assert.IsType<TableNode>(Parse("""{ "type": "table", "cellMarkup": "Inline", "head": ["<strong>a</strong>"], "rows": [] }"""));
+        Assert.Equal(TableCellMarkup.Inline, inline.CellMarkup);
+        Assert.Equal("Inline", AuthoringNodeJson.Describe(inline)["cellMarkup"]);
+
+        // Absent means text — every table written before inline cells existed.
+        var text = Assert.IsType<TableNode>(Parse("""{ "type": "table", "head": ["a"], "rows": [["b"]] }"""));
+        Assert.Equal(TableCellMarkup.Text, text.CellMarkup);
+
+        // A patch that does not name it keeps it.
+        Assert.True(AuthoringNodeJson.TryApply(inline, Json("""{ "rows": [["<em>x</em>"]] }"""), En, out var patched, out var error), error);
+        Assert.Equal(TableCellMarkup.Inline, Assert.IsType<TableNode>(patched).CellMarkup);
+    }
+
     // ── patch ────────────────────────────────────────────────────────────────────────────────
 
     [Fact]

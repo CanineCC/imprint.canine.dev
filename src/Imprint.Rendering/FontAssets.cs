@@ -21,6 +21,11 @@ public static class FontAssets
     [
         Load("fonts/schibsted-var.woff2", "Imprint.Rendering.fonts.schibsted-var.woff2"),
         Load("fonts/jetbrains-var.woff2", "Imprint.Rendering.fonts.jetbrains-var.woff2"),
+        // Assure's faces, named only by imprint-site-assure.css, which ships to the Assure site alone.
+        Load("fonts/bricolage-var.woff2", "Imprint.Rendering.fonts.bricolage-var.woff2"),
+        Load("fonts/inter-var.woff2", "Imprint.Rendering.fonts.inter-var.woff2"),
+        // Assert's label face, named only by imprint-site-assert.css, which ships to the Assert site alone.
+        Load("fonts/martian-var.woff2", "Imprint.Rendering.fonts.martian-var.woff2"),
         // The brand mark. A FILE rather than a data URI in the stylesheet: the sheet is
         // render-blocking and on a strict size budget, and a mask image is neither — it also
         // caches once for the whole site instead of riding every stylesheet revision.
@@ -31,6 +36,41 @@ public static class FontAssets
         //    under a published site root — adding the file to wwwroot is not enough.
         Load("brand/cai-mark.svg", "Imprint.Rendering.brand.cai-mark.svg"),
     ];
+
+    private static IReadOnlyList<FontFile>? _resourceCenter;
+
+    /// <summary>
+    /// The resource center's reading serif, Source Serif 4 (SIL Open Font License 1.1, Adobe), roman
+    /// and italic: written only on a resource-center site, whose sheet is the only one that names it.
+    /// Instanced from the Google Fonts variable files with the optical-size axis pinned at 20 (reading
+    /// text) and weight kept at 400 to 700, then subset to Latin: 33 KB each instead of 122 and 130.
+    /// </summary>
+    public static IReadOnlyList<FontFile> ResourceCenter => _resourceCenter ??=
+    [
+        Load("fonts/sourceserif4-var.woff2", "Imprint.Rendering.fonts.sourceserif4-var.woff2"),
+        Load("fonts/sourceserif4-italic-var.woff2", "Imprint.Rendering.fonts.sourceserif4-italic-var.woff2"),
+    ];
+
+    private static IReadOnlyList<FontFile>? _assayPreview;
+
+    /// <summary>
+    /// The faces only one site's own sheet names, written only on that site: Assay's Source Serif 4 with
+    /// its full weight and optical-size axes (the brand sets headlines at 800, past the resource center's
+    /// 400 to 700 instance), the resource center's italic for interpretation lines, and Source Code Pro
+    /// for the measurement details. Keyed by <see cref="ThemeCss.SiteSlug"/>, as the site's sheet is.
+    /// ★ "assaypreview", never "assay": the Assay site is live, and its pages must not change until the
+    /// owner moves the new site onto its address.
+    /// </summary>
+    public static IReadOnlyList<FontFile> ForSite(string siteSlug) => siteSlug switch
+    {
+        "assaypreview" => _assayPreview ??=
+        [
+            Load("fonts/sourceserif4-opsz-var.woff2", "Imprint.Rendering.fonts.sourceserif4-opsz-var.woff2"),
+            Load("fonts/sourceserif4-italic-var.woff2", "Imprint.Rendering.fonts.sourceserif4-italic-var.woff2"),
+            Load("fonts/sourcecodepro-var.woff2", "Imprint.Rendering.fonts.sourcecodepro-var.woff2"),
+        ],
+        _ => [],
+    };
 
     private static FontFile Load(string relativePath, string resource)
     {

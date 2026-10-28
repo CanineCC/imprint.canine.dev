@@ -52,6 +52,12 @@ function serializeInline(container, allowAnchor, depth, marks) {
       out += inner === '' ? '' : `<em>${inner}</em>`;
       continue;
     }
+    // Code holds text only (the canonical grammar), so its text is taken and any markup inside it dropped.
+    if (tag === 'code') {
+      const text = node.textContent ?? '';
+      out += text === '' ? '' : `<code>${escapeText(text)}</code>`;
+      continue;
+    }
     if (tag === 'a' && allowAnchor && depth < MAX_INLINE_DEPTH) {
       const href = node.getAttribute('href') ?? '';
       const inner = serializeInline(node, false, depth + 1, marks);

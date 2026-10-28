@@ -85,6 +85,69 @@ public sealed class PostEditorTests(EditorFixture fixture)
         Assert.Contains($"blog/{slug}/", feed, StringComparison.Ordinal);
     }
 
+    private const string TableBody = """
+        # Tables in a post
+
+        | Kind | Where it lives | Status |
+        |:---|:--:|---:|
+        | **Essay** | [the guide](https://example.test/guide) | *draft* |
+        | Whitepaper | a \| b | signed |
+        """;
+
+    [Fact]
+    public async Task A_markdown_table_previews_as_a_real_table_and_publishes_as_one()
+    {
+        var page = await OpenPosts(fixture);
+        var title = $"Table {Guid.NewGuid():N}"[..12];
+        await page.FillAsync("[data-testid='new-post-title']", title);
+        await page.ClickAsync("[data-testid='new-post-create']");
+        await page.WaitForURLAsync("**/posts/**");
+        await page.WaitForInteractive();
+
+        await page.FillAsync("[data-testid='post-body']", TableBody);
+
+        var preview = page.Locator("[data-testid='post-preview']");
+        var table = preview.Locator("table.ip-table");
+        await table.WaitForAsync();
+        await Expect(page.Locator("[data-testid='post-problems']")).ToHaveCountAsync(0);
+
+        // Header cells are real column headers a screen reader can announce with each cell.
+        await Expect(table.Locator("thead th[scope='col']")).ToHaveCountAsync(3);
+        await Expect(table.Locator("tbody tr")).ToHaveCountAsync(2);
+        // The cells kept their inline formatting, and the escaped pipe is a character.
+        await Expect(table.Locator("tbody strong")).ToHaveTextAsync("Essay");
+        await Expect(table.Locator("tbody em")).ToHaveTextAsync("draft");
+        await Expect(table.Locator("tbody a[href='https://example.test/guide']")).ToHaveTextAsync("the guide");
+        await Expect(table.Locator("tbody tr").Nth(1).Locator("td").Nth(1)).ToHaveTextAsync("a | b");
+
+        if (Environment.GetEnvironmentVariable("IMPRINT_E2E_SHOTS") is { Length: > 0 } shots)
+        {
+            Directory.CreateDirectory(shots);
+            await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(shots, "post-editor-table-preview.png") });
+        }
+
+        // ---- a table ROUGH enough to refuse: a ragged row is named at its line
+        await page.FillAsync("[data-testid='post-body']", "Intro.\n\n| a | b |\n|---|---|\n| 1 |\n");
+        var problems = page.Locator("[data-testid='post-problems']");
+        await problems.WaitForAsync();
+        Assert.Contains("Line 5", await problems.InnerTextAsync(), StringComparison.OrdinalIgnoreCase);
+
+        // ---- and the good one publishes as a table, through the same renderer
+        await page.FillAsync("[data-testid='post-body']", TableBody);
+        await Expect(page.Locator("[data-testid='post-problems']")).ToHaveCountAsync(0);
+        await table.WaitForAsync();
+        await page.ClickAsync("[data-testid='post-publish']");
+        await page.WaitForSelectorAsync("[data-testid='post-status']:has-text('Published')");
+
+        var postPath = Path.Combine(fixture.PublishDirectory, "blog", SlugOf(title), "index.html");
+        await WaitForFile(postPath + ".br");
+        var html = await File.ReadAllTextAsync(postPath);
+        Assert.Contains("<table class=\"ip-table\">", html, StringComparison.Ordinal);
+        Assert.Contains("<th scope=\"col\">Kind</th>", html, StringComparison.Ordinal);
+        Assert.Contains("<td><strong>Essay</strong></td>", html, StringComparison.Ordinal);
+        Assert.Contains("<td>a | b</td>", html, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task A_body_that_cannot_convert_is_reported_and_blocks_publishing()
     {
@@ -94,7 +157,7 @@ public sealed class PostEditorTests(EditorFixture fixture)
         await page.WaitForURLAsync("**/posts/**");
         await page.WaitForInteractive();
 
-        await page.FillAsync("[data-testid='post-body']", "Fine paragraph.\n\n> a blockquote\n");
+        await page.FillAsync("[data-testid='post-body']", "Fine paragraph.\n\n    indented code\n");
 
         // The author is told at the line, while typing — not at the moment they wanted to finish.
         var problems = page.Locator("[data-testid='post-problems']");
@@ -151,11 +214,12 @@ public sealed class PostEditorTests(EditorFixture fixture)
 
         foreach (var (number, word) in new[] { (10, "ten"), (2, "two"), (1, "one") })
         {
-            await page.FillAsync("[data-testid='new-post-title']", $"({number}) {run} {word}");
+            await page.FillUntilEnabled("[data-testid='new-post-title']", $"({number}) {run} {word}", "[data-testid='new-post-create']");
             await page.ClickAsync("[data-testid='new-post-create']");
             await page.WaitForURLAsync("**/posts/**");
             await page.WaitForInteractive();
             await page.GoBackAsync();
+            await page.WaitForURLAsync("**/posts");
             await page.WaitForInteractive();
         }
 
@@ -229,10 +293,21 @@ public sealed class PostEditorTests(EditorFixture fixture)
         await Expect(page.Locator("[data-testid='post-status']")).ToHaveTextAsync("Scheduled");
         await Expect(page.Locator("[data-testid='post-review-line']")).ToContainTextAsync("15 Apr 2027, 08:30");
 
+        // The approval is a signature: who, and which exact words (revision and hash).
+        var signature = page.Locator("[data-testid='post-signature-line']");
+        await Expect(signature).ToContainTextAsync("Signed by ");
+        await Expect(signature).ToContainTextAsync(new Regex(@"revision \d+, sha256 [0-9a-f]{12}\."));
+        await Expect(signature).ToHaveAttributeAsync("title", new Regex("^sha256 [0-9a-f]{64}$"));
+        if (Environment.GetEnvironmentVariable("IMPRINT_E2E_SHOTS") is { Length: > 0 } shots)
+        {
+            await page.ScreenshotAsync(new() { Path = Path.Combine(shots, "post-signature.png") });
+        }
+
         // ---- and only now is publishing on offer at all
         await Expect(page.Locator("[data-testid='post-publish']")).ToHaveTextAsync("Publish now");
         await page.ClickAsync("[data-testid='post-publish']");
         await Expect(page.Locator("[data-testid='post-status']")).ToHaveTextAsync("Published");
+        await Expect(signature).ToContainTextAsync("Signed by ");
 
         // Leave the fixture's shared site as it was for every other test in the collection.
         await page.GotoAsync($"/sites/{siteId}/settings");
@@ -241,6 +316,71 @@ public sealed class PostEditorTests(EditorFixture fixture)
         await page.FillAsync("[data-testid='site-reviewer-name']", "");
         await page.ClickAsync("[data-testid='site-reviewer-save']");
         await Expect(page.Locator(".ed-toast").First).ToContainTextAsync("publish directly");
+    }
+
+    [Fact]
+    public async Task A_held_post_offers_no_publish_until_the_hold_is_lifted()
+    {
+        var page = await OpenPosts(fixture);
+        var title = $"Hold {Guid.NewGuid():N}"[..11];
+        await page.FillAsync("[data-testid='new-post-title']", title);
+        await page.ClickAsync("[data-testid='new-post-create']");
+        await page.WaitForURLAsync("**/posts/**");
+        await page.WaitForInteractive();
+        await page.FillAsync("[data-testid='post-body']", $"# {title}\n\nFigures still to come.\n");
+        await page.Locator("[data-testid='post-preview'] h1").WaitForAsync();
+        await Expect(page.Locator("[data-testid='post-publish']")).ToBeVisibleAsync();
+
+        await page.ClickAsync("[data-testid='post-hold']");
+        await page.FillAsync("[data-testid='post-hold-reason']", "Figures wait for a measurement.");
+        await page.ClickAsync("[data-testid='post-hold-set']");
+
+        await Expect(page.Locator("[data-testid='post-hold-line']")).ToContainTextAsync("On hold: Figures wait for a measurement.");
+        await Expect(page.Locator("[data-testid='post-publish']")).ToHaveCountAsync(0);
+        if (Environment.GetEnvironmentVariable("IMPRINT_E2E_SHOTS") is { Length: > 0 } shots)
+        {
+            await page.ScreenshotAsync(new() { Path = Path.Combine(shots, "post-hold.png") });
+        }
+
+        // It survives a reload: the hold is in the log, not in the page.
+        await page.ReloadAsync();
+        await page.WaitForInteractive();
+        await Expect(page.Locator("[data-testid='post-hold-line']")).ToContainTextAsync("Figures wait for a measurement.");
+
+        await page.ClickAsync("[data-testid='post-hold-lift']");
+        await Expect(page.Locator("[data-testid='post-hold-line']")).ToHaveCountAsync(0);
+        await Expect(page.Locator("[data-testid='post-publish']")).ToBeVisibleAsync();
+    }
+
+    // The Details view: what kind of article it is, what it is about, and the private control notes.
+    [Fact]
+    public async Task Kind_products_and_control_notes_are_set_in_the_details_view_and_survive_a_reload()
+    {
+        var page = await OpenPosts(fixture);
+        var title = $"Kind {Guid.NewGuid():N}"[..11];
+        await page.FillAsync("[data-testid='new-post-title']", title);
+        await page.ClickAsync("[data-testid='new-post-create']");
+        await page.WaitForURLAsync("**/posts/**");
+        await page.WaitForInteractive();
+
+        await page.ClickAsync("[data-testid='post-view-details']");
+        await page.SelectOptionAsync("[data-testid='post-kind']", "guide");
+        await page.CheckAsync("[data-testid='post-product-assert']");
+        await page.ClickAsync("[data-testid='post-classify']");
+        await page.FillAsync("[data-testid='post-control-notes']", "Figure 1: CYCLE-1-FINDINGS.md §4a.");
+        await page.ClickAsync("[data-testid='post-control-notes-save']");
+        await Expect(page.Locator("[data-testid='post-control-notes-save']")).ToBeDisabledAsync();
+        if (Environment.GetEnvironmentVariable("IMPRINT_E2E_SHOTS") is { Length: > 0 } shots)
+        {
+            await page.ScreenshotAsync(new() { Path = Path.Combine(shots, "post-details.png") });
+        }
+
+        await page.ReloadAsync();
+        await page.WaitForInteractive();
+        await page.ClickAsync("[data-testid='post-view-details']");
+        await Expect(page.Locator("[data-testid='post-kind']")).ToHaveValueAsync("guide");
+        await Expect(page.Locator("[data-testid='post-product-assert']")).ToBeCheckedAsync();
+        await Expect(page.Locator("[data-testid='post-control-notes']")).ToHaveValueAsync("Figure 1: CYCLE-1-FINDINGS.md §4a.");
     }
 
     [Fact]

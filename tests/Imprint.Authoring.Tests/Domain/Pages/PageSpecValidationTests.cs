@@ -53,6 +53,45 @@ public sealed class PageSpecValidationTests
         Spec().When(p => p.AddNode(NodeId.Root, 1, evil)).ThenFails("Expected");
     }
 
+    private static TableNode InlineTable(string cell) => new()
+    {
+        Id = NodeId.New(),
+        CellMarkup = TableCellMarkup.Inline,
+        Head = [LocalizedText.Of(En, "Head")],
+        Rows = [[LocalizedText.Of(En, cell)]],
+    };
+
+    [Theory]
+    [InlineData("<script>alert(1)</script>")]
+    // Block structure inside a cell: valid as a rich-text DOCUMENT, so a validator that wrapped
+    // the cell in <p> and reused the document grammar would let it through.
+    [InlineData("a</p><p>b")]
+    [InlineData("<p>a</p>")]
+    [InlineData("<a href=\"javascript:x\">x</a>")]
+    [InlineData("<strong>unclosed")]
+    public void AddNode_with_a_non_canonical_inline_table_cell_is_rejected(string cell)
+    {
+        Spec().When(p => p.AddNode(StackId, 0, InlineTable(cell))).ThenFails("Table cell");
+    }
+
+    [Fact]
+    public void AddNode_with_canonical_inline_table_cells_is_accepted()
+    {
+        var ok = InlineTable("<strong>a</strong> &amp; <a href=\"https://example.test/\">b</a><br><em>c</em>");
+
+        Assert.NotEmpty(Spec().When(p => p.AddNode(StackId, 0, ok)).Raised);
+    }
+
+    [Fact]
+    public void A_plain_text_table_cell_is_text_and_is_not_held_to_the_html_grammar()
+    {
+        // Every table stored before inline cells existed is plain text; "a < b" there is a
+        // sentence, not a broken tag, and must keep loading.
+        var text = InlineTable("a < b & <c>") with { CellMarkup = TableCellMarkup.Text };
+
+        Assert.NotEmpty(Spec().When(p => p.AddNode(StackId, 0, text)).Raised);
+    }
+
     [Fact]
     public void ChangeNodeProps_cannot_smuggle_non_canonical_richtext()
     {

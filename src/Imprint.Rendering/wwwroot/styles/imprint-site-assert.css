@@ -1,0 +1,113 @@
+/* imprint-site-assert.css: Assert's own rules, appended by the publisher to the Assert site's sheet
+   only (ThemeCss.SiteCss), so no other site downloads them or pays for them in its stylesheet budget. */
+
+/* Assert's label face, named only by the rules below. */
+@font-face {
+  font-family: "Martian Mono";
+  src: url("/fonts/martian-var.woff2") format("woff2-variations");
+  font-weight: 100 800;
+  font-display: swap;
+}
+
+/* ── ASSERT: the metallic look (owner, 2026-10-28) ─────────────────────────────
+   Assert's brand (brand document v0.3, kit v0.2) on its own site, every rule scoped to
+   .ip-site-assert so no other site changes; the steel itself comes from the site's theme tokens.
+   Where Assure is soft (pill buttons, rounded silver cards, a shadow), Assert is exact: 6px corners,
+   cards drawn with a 1px line and no shadow, the only shadow on the metal buttons, headlines in
+   Schibsted Grotesk 900 and labels in Martian Mono.
+   ★ THE METAL'S LIGHT END STOPS 14px ALONG THE DIAGONAL, as on Assure, so white lettering always sits
+   on the darker steel (6.1:1 or more). */
+.ip-site-assert {
+  --font-mono: "Martian Mono", ui-monospace, Menlo, Consolas, monospace;
+  --metal: linear-gradient(180deg, rgb(255 255 255 / 0.14) 0%, rgb(255 255 255 / 0) 48%),
+           linear-gradient(135deg, #8fb3d4 0px, #2f5d85 14px, #173450 100%);
+  --metal-fill: linear-gradient(135deg, #8fb3d4 0%, #2f5d85 50%, #173450 100%);
+  --graphite: linear-gradient(165deg, #29323c 0%, #161b21 45%, #0c1014 100%);
+}
+.ip-site-assert :is(h1, h2) { font-weight: 900; letter-spacing: -0.02em; }
+.ip-site-assert .ip-ap-hero h1 { letter-spacing: -0.03em; }
+
+/* The graphite top: the header and the hero, dark in both themes, with the light from the top left.
+   color-scheme flips the light-dark() tokens inside them, so their text takes the dark-theme ink.
+   The muted grey is lifted on graphite: #8694a1 measures 4.2:1 on its lighter top, #a3afbb 5.8:1. */
+.ip-site-assert .ip-site-header { background: #1b2128; border-bottom-color: rgb(255 255 255 / 0.08); color-scheme: dark; }
+.ip-site-assert .ip-ap-hero { background: var(--graphite); color-scheme: dark; --muted: #a3afbb; }
+
+/* The drawn logo carries the name, so the typed name the chrome adds after it is clipped out of
+   sight in a zero-width column. It stays in the page for screen readers (the logo is aria-hidden). */
+.ip-site-assert :is(.ip-brand, .ip-footer-brand) { display: inline-grid; grid-template-columns: auto 0; gap: 0; overflow: hidden; }
+.ip-site-assert .ip-brand span.ip-brand-logo svg { height: 30px; }
+.ip-site-assert .ip-footer-brand span.ip-brand-logo svg { height: 26px; }
+
+.ip-site-assert :is(.ip-btn-primary, .ip-header-cta),
+.ip-site-assert :is(.ip-btn-primary, .ip-header-cta):hover {
+  background: var(--metal); border-color: transparent; color: #ffffff; border-radius: 6px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 4px 14px rgb(18 19 24 / 0.22);
+}
+.ip-site-assert :is(.ip-site-header, .ip-ap-hero) :is(.ip-btn-primary, .ip-header-cta) {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 6px 18px rgb(0 0 0 / 0.35);
+}
+
+/* Section cards: the kit's surface with a 1px line and no shadow; their text at 16px, not 13px, and
+   their titles a step above it. */
+.ip-site-assert :is(.ip-ap-feature-grid, .ip-ap-steps) .ip-grid > .ip-stack {
+  background: light-dark(#ffffff, #1c2127); border-color: light-dark(#e2e6eb, #2b323a);
+  border-radius: 6px; box-shadow: none;
+}
+.ip-site-assert :is(.ip-ap-feature-grid, .ip-ap-steps) .ip-grid .ip-prose { font-size: var(--fs-lg); }
+.ip-site-assert :is(.ip-ap-feature-grid, .ip-ap-steps) .ip-grid h3 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em; }
+.ip-site-assert .ip-ap-steps .ip-grid > .ip-stack::before {
+  background: var(--metal); color: #ffffff; border-radius: 6px; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35);
+}
+
+/* Touch targets: the kit asks 44px for every control. */
+.ip-site-assert .ip-header-actions [data-theme-toggle],
+.ip-site-assert .ip-nav-burger { width: 44px; height: 44px; }
+.ip-site-assert .ip-header-cta { min-height: 44px; }
+.ip-site-assert .ip-btn { min-height: 46px; }
+
+/* Small text at the kit's 15px "ui" size: the menu, the footer links, tables and the hero's closing
+   line, which carries the strongest reasons to click. Same selector as the shared demotion rule. */
+.ip-site-assert .ip-nav a,
+.ip-site-assert .ip-footer-group a,
+.ip-site-assert .ip-table { font-size: 15px; }
+.ip-site-assert .ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker) ~ .ip-prose:last-of-type:not(.ip-prose-secondary) {
+  font-size: 15px; line-height: 1.5;
+}
+/* On a phone a solo hero centres its heading and button, so its paragraphs centre with them. */
+@media (max-width: 640px) {
+  .ip-site-assert .ip-ap-hero > .ip-stack:not(:has(> .ip-widget:not(contact-form))) > .ip-prose:not(.ip-kicker) { text-align: center; }
+}
+
+/* The last call: paragraphs after the button row are signposts for other readers, not a second
+   message, so they sit quietly under a line at the small size. */
+.ip-site-assert .ip-ap-cta > .ip-stack > .ip-stack ~ .ip-prose {
+  border-top: 1px solid var(--hairline); padding-top: 1.25rem; margin-top: 0.75rem;
+}
+.ip-site-assert .ip-ap-cta > .ip-stack > .ip-stack ~ .ip-prose,
+.ip-site-assert .ip-ap-cta > .ip-stack > .ip-stack ~ .ip-prose p { font-size: 15px; line-height: 1.6; color: var(--muted); }
+.ip-site-assert .ip-ap-cta > .ip-stack > .ip-stack ~ .ip-prose strong { font-weight: 600; color: var(--heading); }
+
+/* Headlines wrap balanced, as the kit asks, so none leaves a word or two alone on its last line. */
+.ip-site-assert :is(h1, h2),
+.ip-site-assert [class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-article):not(.ip-ap-resource-center):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > h2 {
+  text-wrap: balance;
+}
+
+/* Document pages (terms, privacy, the agreement, accessibility) use the Plain section, which has no
+   appearance class and fell back to the base type scale. They take the marketing sizes. */
+.ip-site-assert .ip-section:not([class*="ip-ap-"]) h1 {
+  font-size: var(--mk-display); line-height: 1.05; letter-spacing: -0.03em;
+}
+.ip-site-assert .ip-section:not([class*="ip-ap-"]) h2 {
+  font-size: var(--mk-h2); line-height: 1.12; letter-spacing: -0.02em;
+}
+
+/* Tables: column labels in the kit's mono label style. On a phone a table keeps a readable width and
+   slides sideways inside its own frame (.ip-table-wrap), so tool names and labels stay whole. */
+.ip-site-assert .ip-table th { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+@media (max-width: 640px) {
+  .ip-site-assert .ip-table { font-size: 14px; min-width: 34rem; }
+  .ip-site-assert .ip-table :is(th, td) { padding-inline: 0.5rem; }
+  .ip-site-assert .ip-table td:first-child { min-width: 11.5rem; }
+}
