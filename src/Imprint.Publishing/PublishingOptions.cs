@@ -39,11 +39,4 @@ public sealed record PublishingOptions
     /// republishes, so a theme-editing session doesn't re-render per keystroke.
     /// </summary>
     public int DebounceMilliseconds { get; init; } = 2000;
-
-    /// <summary>
-    /// How often the hosted service re-publishes with no event at all, so a page's baked data from another service (a price list) is
-    /// re-fetched even when that service's "look again" (<c>/api/authoring/notify</c>) was lost or blocked. Content-addressed, so a
-    /// pass where nothing moved rewrites nothing. 0 turns it off. Ten minutes: the signal is the fast path, this is the safety net.
-    /// </summary>
-    public int RefreshMilliseconds { get; init; } = 600_000;
 }

@@ -70,16 +70,9 @@ public sealed class PublisherHostedService(
                 // that could not reach the service it bakes from would otherwise hold the last good
                 // content forever and never try again: never blank, but permanently behind. Backing off
                 // 1, 2, 4 … to five minutes, this keeps asking until a publish comes back clean.
-                // ★ AND A QUIET SITE STILL LOOKS AGAIN. A page that renders another service's data (a price list) is told to
-                // re-fetch by that service's "look again" — and a signal can be lost, blocked by a guard, or never sent. With
-                // nothing else to wait for, the loop wakes every RefreshMilliseconds and publishes anyway: every bake is
-                // re-fetched and compared, and only a page whose data moved is rewritten. The signal is the fast path; this is
-                // the net under it, so a price is never stale for longer than one interval.
                 var waited = stale > 0
                     ? await pending.WaitAsync(RetryDelay(attempt), stoppingToken)
-                    : options.RefreshMilliseconds > 0
-                        ? await pending.WaitAsync(TimeSpan.FromMilliseconds(options.RefreshMilliseconds), stoppingToken)
-                        : await WaitForeverAsync(pending, stoppingToken);
+                    : await WaitForeverAsync(pending, stoppingToken);
 
                 if (waited)
                 {
