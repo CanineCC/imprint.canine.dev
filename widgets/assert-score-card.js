@@ -84,7 +84,7 @@ const STYLE = `
     display: block; height: 100%; border-radius: 3px;
     background: linear-gradient(90deg, var(--asc-chart-lo), var(--asc-chart) 60%, var(--asc-chart-hi));
   }
-  assert-score-card .asc-value { width: 1%; padding-left: 0.9rem; text-align: right; font-family: var(--asc-mono); font-size: 13px; color: var(--asc-ink); }
+  assert-score-card .asc-areas td.asc-value { width: 1%; padding-left: 0.9rem; text-align: right; font-family: var(--asc-mono); font-size: 13px; color: var(--asc-ink); }
   assert-score-card .asc-facts { margin: 1.1rem 0 0; border-top: 1px solid var(--asc-line); font-size: 15px; }
   assert-score-card .asc-facts div {
     display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0 1rem; padding: 0.55rem 0;
