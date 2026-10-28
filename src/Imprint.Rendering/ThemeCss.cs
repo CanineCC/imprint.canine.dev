@@ -65,6 +65,30 @@ public static class ThemeCss
     /// </summary>
     public static string ResourceCenterCss => _resourceCenterCss ??= LoadEmbedded("imprint-resource-center.css");
 
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> SiteSheets = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// One product site's own brand rules (imprint-site-{slug}.css: Assure's and Assert's metallic looks
+    /// and faces), appended only to that site's sheet; a site without a sheet of its own gets nothing.
+    /// ★ Every site used to carry every product's rules in the marketing sheet, so each new product look
+    /// spent the stylesheet budget of every other site, and Assert's tipped it over.
+    /// </summary>
+    public static string SiteCss(string siteName) => SiteSheets.GetOrAdd(SiteSlug(siteName), slug =>
+    {
+        using var stream = typeof(ThemeCss).Assembly.GetManifestResourceStream($"Imprint.Rendering.styles.imprint-site-{slug}.css");
+        if (stream is null)
+        {
+            return string.Empty;
+        }
+
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+        return reader.ReadToEnd();
+    });
+
+    /// <summary>The site as a CSS hook and file name: "Canine Code Analyzer" becomes <c>caninecodeanalyzer</c>.</summary>
+    public static string SiteSlug(string siteName) =>
+        new([.. siteName.ToLowerInvariant().Where(c => char.IsAsciiLetterOrDigit(c) || c == '-')]);
+
     private static string EmitFor(Theme theme, string selector)
     {
         var props = new SortedDictionary<string, string>(StringComparer.Ordinal);

@@ -21,10 +21,10 @@ public static class FontAssets
     [
         Load("fonts/schibsted-var.woff2", "Imprint.Rendering.fonts.schibsted-var.woff2"),
         Load("fonts/jetbrains-var.woff2", "Imprint.Rendering.fonts.jetbrains-var.woff2"),
-        // Assure's faces, used only by the .ip-site-assure rules in the marketing sheet.
+        // Assure's faces, named only by imprint-site-assure.css, which ships to the Assure site alone.
         Load("fonts/bricolage-var.woff2", "Imprint.Rendering.fonts.bricolage-var.woff2"),
         Load("fonts/inter-var.woff2", "Imprint.Rendering.fonts.inter-var.woff2"),
-        // Assert's label face, used only by the .ip-site-assert rules in the marketing sheet.
+        // Assert's label face, named only by imprint-site-assert.css, which ships to the Assert site alone.
         Load("fonts/martian-var.woff2", "Imprint.Rendering.fonts.martian-var.woff2"),
         // The brand mark. A FILE rather than a data URI in the stylesheet: the sheet is
         // render-blocking and on a strict size budget, and a mask image is neither — it also

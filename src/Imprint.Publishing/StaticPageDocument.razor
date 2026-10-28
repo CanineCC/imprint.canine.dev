@@ -267,6 +267,5 @@
     /// per property — canine.dev's mark is ink where every product's is its accent — and a class on
     /// the body is the smallest way to say so without a stylesheet per site.
     /// </summary>
-    private string SiteSlug =>
-        new string([.. Chrome.SiteName.ToLowerInvariant().Where(c => char.IsAsciiLetterOrDigit(c) || c == '-')]);
+    private string SiteSlug => ThemeCss.SiteSlug(Chrome.SiteName);
 }

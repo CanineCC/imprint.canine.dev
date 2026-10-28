@@ -128,6 +128,21 @@ public sealed class ThemeCssTests
         Assert.Contains(":focus-visible", css);
     }
 
+    /// <summary>
+    /// ★ A product's own look ships to its own site only. Every site used to carry every product's rules in
+    /// the marketing sheet, so each new look spent the stylesheet budget of all the others.
+    /// </summary>
+    [Fact]
+    public void A_product_sites_own_rules_ship_only_to_that_site()
+    {
+        Assert.Contains(".ip-site-assure", ThemeCss.SiteCss("Assure"));
+        Assert.Contains(".ip-site-assert", ThemeCss.SiteCss("Assert"));
+        Assert.Equal(string.Empty, ThemeCss.SiteCss("Watchdog"));
+        Assert.DoesNotContain(".ip-site-assure", ThemeCss.MarketingCss);
+        Assert.DoesNotContain(".ip-site-assert", ThemeCss.MarketingCss);
+        Assert.Equal("caninecodeanalyzer", ThemeCss.SiteSlug("Canine Code Analyzer"));
+    }
+
     [Fact]
     public void Structural_css_stays_within_the_size_budget()
     {

@@ -360,6 +360,7 @@ public sealed class SitePublisher(
             //      order against the screen rules they are correcting.
             var cssText = CssSlim.Strip(
                 ThemeCss.Emit(theme) + "\n" + ThemeCss.StructuralCss + "\n" + ThemeCss.MarketingCss
+                + "\n" + ThemeCss.SiteCss(site.Name)
                 + (site.Kind == SiteKind.ResourceCenter ? "\n" + ThemeCss.ResourceCenterCss : "")
                 + "\n" + ThemeCss.PrintCss);
             var cssBytes = Encoding.UTF8.GetBytes(cssText);
