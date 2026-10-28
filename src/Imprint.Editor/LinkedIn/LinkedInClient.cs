@@ -16,7 +16,6 @@ public sealed class LinkedInClient(
     HttpClient http, LinkedInOptions options, LinkedInTokenStore tokens, ILogger<LinkedInClient> logger, TimeProvider? clock = null)
     : ILinkedInPoster
 {
-    private static readonly TimeSpan DefaultRetryAfter = TimeSpan.FromMinutes(15);
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
 
     public bool IsConfigured => options.HasApp && tokens.Read() is not null;
@@ -102,50 +101,8 @@ public sealed class LinkedInClient(
         return builder.ToString();
     }
 
-    private async Task<LinkedInSendResult> Interpret(HttpResponseMessage response, CancellationToken ct)
-    {
-        var status = (int)response.StatusCode;
-        if (status == 201)
-        {
-            var urn = response.Headers.TryGetValues("x-restli-id", out var ids) ? ids.FirstOrDefault() : null;
-            return new LinkedInSendResult(LinkedInSendStatus.Posted, Urn: urn);
-        }
-
-        var detail = await Detail(response, ct);
-        if (status is 429 or 503)
-        {
-            var wait = response.Headers.RetryAfter is { } after
-                ? after.Delta ?? (after.Date is { } date ? date - _clock.GetUtcNow() : null)
-                : null;
-            return new LinkedInSendResult(LinkedInSendStatus.Refused, Reason: $"{status}: {detail}", Retryable: true,
-                RetryAfter: wait is { } w && w > TimeSpan.Zero ? w : DefaultRetryAfter);
-        }
-
-        if (status is >= 400 and < 500 and not 408 and not 409)
-        {
-            return Refused($"{status}: {detail}");
-        }
-
-        // A timeout, a conflict, a server error: the post may exist. A person checks the page.
-        return new LinkedInSendResult(LinkedInSendStatus.Unknown, Reason: $"{status}: {detail}");
-    }
-
-    private static async Task<string> Detail(HttpResponseMessage response, CancellationToken ct)
-    {
-        var body = await response.Content.ReadAsStringAsync(ct);
-        try
-        {
-            if (JsonNode.Parse(body) is JsonObject json && json["message"]?.GetValue<string>() is { Length: > 0 } message)
-            {
-                return message.Length > 300 ? message[..300] : message;
-            }
-        }
-        catch (JsonException)
-        {
-        }
-
-        return response.ReasonPhrase ?? "no detail";
-    }
+    private Task<LinkedInSendResult> Interpret(HttpResponseMessage response, CancellationToken ct) =>
+        LinkedInAnswers.Interpret(response, _clock.GetUtcNow(), ct);
 
     private static LinkedInSendResult Refused(string reason) => new(LinkedInSendStatus.Refused, Reason: reason);
 
