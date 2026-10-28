@@ -69,7 +69,7 @@ public sealed class DueLinkedInPoster(
         await projections.CatchUp(ct);
         var now = _clock.GetUtcNow();
 
-        foreach (var site in sites.All)
+        foreach (var site in sites.Active)
         {
             var baseUrl = ProductionBaseUrl(site);
             if (baseUrl is null)

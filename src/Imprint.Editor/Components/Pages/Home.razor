@@ -14,7 +14,7 @@
 
 <PageTitle>Your sites · Imprint</PageTitle>
 
-@if (_sites.Count == 0 && _blogs.Count == 0)
+@if (_sites.Count == 0 && _blogs.Count == 0 && _archived.Count == 0)
 {
     @* First run — or a signed-in user with nothing yet: create one, then drop
        straight into its editor. *@
@@ -133,12 +133,28 @@ else
                 </a>
             </li>
         </ul>
+
+        @* Retired sites stay reachable (their history, their settings, a Restore button) but out of the way:
+           a closed shelf, never mixed in with the sites in use. *@
+        @if (_archived.Count > 0)
+        {
+            <details class="dash-archived" data-testid="archived-sites">
+                <summary>Archived (@_archived.Count)</summary>
+                <ul>
+                    @foreach (var site in _archived)
+                    {
+                        <li><a href="@SettingsHref(site.Id)">@site.Name</a></li>
+                    }
+                </ul>
+            </details>
+        }
     </main>
 }
 
 @code {
     private IReadOnlyList<Site> _sites = [];
     private IReadOnlyList<Site> _blogs = [];
+    private IReadOnlyList<Site> _archived = [];
     private string? _user;
 
     protected override async Task OnInitializedAsync()
@@ -160,8 +176,9 @@ else
     private async Task LoadAsync()
     {
         var accessible = await Access.SitesAsync();
-        _sites = [.. accessible.Where(s => s.Kind == SiteKind.Site)];
-        _blogs = [.. accessible.Where(s => s.Kind.IsPostStream())];
+        _sites = [.. accessible.Where(s => !s.IsArchived && s.Kind == SiteKind.Site)];
+        _blogs = [.. accessible.Where(s => !s.IsArchived && s.Kind.IsPostStream())];
+        _archived = [.. accessible.Where(s => s.IsArchived)];
     }
 
     private int PageCount(SiteId id) => Pages.All(id).Count;

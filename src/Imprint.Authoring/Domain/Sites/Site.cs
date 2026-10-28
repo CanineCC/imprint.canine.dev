@@ -162,6 +162,9 @@ public sealed class Site : AggregateRoot
     /// <summary>Whether posts on this site need a sign-off at all.</summary>
     public bool HasReviewer => ReviewerEmail is { Length: > 0 };
 
+    /// <summary>A retired site: out of the lists, and nothing of it may be published until it is restored.</summary>
+    public bool IsArchived { get; private set; }
+
     // The site's deploy targets, in promotion order (e.g. Test → Staging → Production).
     // A site with none has never been given a publish destination; the dashboard's gear
     // is where they are configured.
@@ -823,6 +826,31 @@ public sealed class Site : AggregateRoot
     /// </summary>
     public void ClaimOwnership() => Raise(new SiteOwnershipClaimed());
 
+    public void Archive()
+    {
+        if (!IsArchived)
+        {
+            Raise(new SiteArchived());
+        }
+    }
+
+    public void Restore()
+    {
+        if (IsArchived)
+        {
+            Raise(new SiteRestored());
+        }
+    }
+
+    /// <summary>The site half of every publish: pages, posts and their schedules all pass through it.</summary>
+    public void EnsureMayPublish()
+    {
+        if (IsArchived)
+        {
+            throw new DomainException($"'{Name}' is archived: restore it in its settings before anything of it is published.");
+        }
+    }
+
     /// <summary>
     /// Grant another person edit access by the email they sign in with. The aggregate
     /// validates shape only — whether the address belongs to a real, reachable person is
@@ -981,6 +1009,12 @@ public sealed class Site : AggregateRoot
                 break;
             case SiteOwnershipClaimed:
                 break; // ownership lives in the envelope actor; no aggregate state changes
+            case SiteArchived:
+                IsArchived = true;
+                break;
+            case SiteRestored:
+                IsArchived = false;
+                break;
             case SiteReviewerSet e:
                 ReviewerName = e.Name;
                 ReviewerEmail = e.Email;

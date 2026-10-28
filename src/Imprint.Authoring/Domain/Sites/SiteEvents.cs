@@ -205,6 +205,14 @@ public sealed record SiteRedirectsChanged(IReadOnlyList<SiteRedirect> Redirects)
 [EventType("site.ownership-claimed", 1)]
 public sealed record SiteOwnershipClaimed;
 
+// A retired site is archived rather than deleted: its streams are history, and other sites' redirects and copies may
+// point at it. Archived, it leaves the lists and nothing of it can be published until it is restored.
+[EventType("site.archived", 1)]
+public sealed record SiteArchived;
+
+[EventType("site.restored", 1)]
+public sealed record SiteRestored;
+
 // The person who has to clear a post before it reaches the public — "Public Relations Review".
 // Per site, because one blog's reviewer is not another's. Null clears the role, and with no
 // reviewer a site publishes exactly as it always did.

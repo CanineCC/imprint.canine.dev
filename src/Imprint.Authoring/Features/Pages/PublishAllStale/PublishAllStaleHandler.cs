@@ -1,4 +1,5 @@
 using Imprint.Authoring.Domain.Pages;
+using Imprint.Authoring.Domain.Sites;
 using Imprint.Authoring.Projections;
 using Imprint.EventSourcing;
 
@@ -14,6 +15,7 @@ public sealed class PublishAllStaleHandler(IAggregateStore store, PageList pageL
 {
     public async Task<Result> Handle(PublishAllStale command, CancellationToken ct)
     {
+        (await store.Load<Site>(command.SiteId.Stream, ct)).EnsureMayPublish();
         var failures = new List<string>();
 
         // The stale set comes from the PageList read model, scoped to the command's site

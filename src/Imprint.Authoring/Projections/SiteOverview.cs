@@ -27,8 +27,14 @@ public sealed class SiteOverview : ReadModel
 
     public Site? Get(SiteId id) => _sites.GetValueOrDefault(id);
 
-    /// <summary>Every site, in creation order.</summary>
+    /// <summary>Every site, in creation order, archived ones included.</summary>
     public IReadOnlyList<Site> All => [.. _order.Select(id => _sites[id])];
+
+    /// <summary>The sites in use, in creation order: what people and agents pick from.</summary>
+    public IReadOnlyList<Site> Active => [.. All.Where(s => !s.IsArchived)];
+
+    /// <summary>Retired sites, kept for their history.</summary>
+    public IReadOnlyList<Site> Archived => [.. All.Where(s => s.IsArchived)];
 
     /// <summary>The actor who created the site (empty string when unknown / legacy).</summary>
     public string OwnerOf(SiteId id) => _owners.GetValueOrDefault(id, string.Empty);

@@ -65,7 +65,7 @@ public sealed class DuePostPublisher(
         await projections.CatchUp(ct);
         var now = _clock.GetUtcNow();
 
-        foreach (var site in sites.All)
+        foreach (var site in sites.Active)
         {
             foreach (var post in posts.All(site.Id))
             {

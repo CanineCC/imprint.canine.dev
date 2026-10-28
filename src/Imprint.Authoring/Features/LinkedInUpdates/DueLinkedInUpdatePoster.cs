@@ -66,8 +66,11 @@ public sealed class DueLinkedInUpdatePoster(
         var now = _clock.GetUtcNow();
         foreach (var update in updates.All().Where(u => u.MaySendAt(now)))
         {
-            var sender = sites.Get(update.SiteId)?.LinkedInSenders.FirstOrDefault(s => s.Key == update.Sender);
-            var problem = sender is null
+            var site = sites.Get(update.SiteId);
+            var sender = site?.LinkedInSenders.FirstOrDefault(s => s.Key == update.Sender);
+            var problem = site is { IsArchived: true }
+                ? $"The site '{site.Name}' is archived: restore it, or cancel the update."
+                : sender is null
                 ? $"Sender '{update.Sender}' is no longer one of the site's LinkedIn senders."
                 : !linkedIn.IsConfiguredFor(sender.OrganizationUrn)
                     ? $"Sender '{update.Sender}' is not connected to LinkedIn (or the connection has expired): connect it in the editor."

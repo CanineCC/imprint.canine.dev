@@ -26,6 +26,7 @@ public sealed class PublishPostHandler(IAggregateStore store, IWidgetCatalog wid
         // remedy is the Unpublish button — the alternative, a lock across two aggregates, buys
         // less than it costs.
         var site = await store.Load<Site>(post.SiteId.Stream, ct);
+        site.EnsureMayPublish();
         if (site.HasReviewer && !post.IsApproved && !post.IsPublished)
         {
             return Result.Fail(

@@ -3,6 +3,7 @@
 @using Imprint.Authoring.Domain.Sites
 @using Imprint.Authoring.Projections
 @using Imprint.Authoring.Domain.Pages
+@using Imprint.Authoring.Features.Sites.ArchiveSite
 @using Imprint.Authoring.Features.Sites.RenameSite
 @using Imprint.Authoring.Features.Sites.ConfigureEnvironments
 @using Imprint.Authoring.Features.Sites.AddCollaborator
@@ -58,6 +59,21 @@
                 @(site.Kind.IsPostStream() ? "Open posts →" : "Open editor →")
             </a>
         </div>
+
+        @if (site.IsArchived)
+        {
+            <section class="settings-card settings-archived" data-testid="site-archived">
+                <p>
+                    <strong>This site is archived.</strong> It is out of the site lists, and nothing of it can be
+                    published. Its pages, posts and history are kept.
+                </p>
+                @if (_isOwner)
+                {
+                    <button type="button" class="ed-btn" disabled="@(!_interactive)" data-testid="site-restore"
+                            @onclick="() => Commands.Run(new RestoreSite(site.Id))">Restore site</button>
+                }
+            </section>
+        }
 
         @* ---- Name (owner-only: site identity is administration, not content) ---- *@
         @if (_isOwner)
@@ -576,6 +592,32 @@
             }
         </section>
         }
+
+        @* ---- Archive (owner-only). Archiving is reversible on purpose: a site's streams are history, and other
+           sites' redirects and copies may point at it, so it is never deleted. ---- *@
+        @if (_isOwner && !site.IsArchived)
+        {
+            <section class="settings-card" aria-labelledby="set-archive">
+                <h2 id="set-archive">Archive</h2>
+                <p class="settings-hint">
+                    For a site that is retired. It leaves the site lists and can no longer be published; its pages,
+                    posts and history are kept, and it can be restored here.
+                </p>
+                @if (_confirmArchive)
+                {
+                    <div class="settings-row">
+                        <button type="button" class="ed-btn ed-btn-danger" disabled="@(!_interactive)" data-testid="site-archive-confirm"
+                                @onclick="() => Archive(site)">Archive @site.Name</button>
+                        <button type="button" class="ed-btn" @onclick="() => _confirmArchive = false">Keep it</button>
+                    </div>
+                }
+                else
+                {
+                    <button type="button" class="ed-btn" disabled="@(!_interactive)" data-testid="site-archive"
+                            @onclick="() => _confirmArchive = true">Archive site…</button>
+                }
+            </section>
+        }
     }
 </div>
 
@@ -799,6 +841,14 @@
         }
 
         (_envs[index], _envs[target]) = (_envs[target], _envs[index]);
+    }
+
+    private bool _confirmArchive;
+
+    private async Task Archive(Site site)
+    {
+        _confirmArchive = false;
+        await Commands.Run(new ArchiveSite(site.Id));
     }
 
     private async Task SaveName()

@@ -96,6 +96,8 @@ public sealed class SiteEventSamples : IEventSampleProvider
             yield return new SiteLlmsExcludedPathsChanged([]);
 
             yield return new SiteOwnershipClaimed();
+            yield return new SiteArchived();
+            yield return new SiteRestored();
             yield return new SiteCollaboratorAdded("colleague@example.com");
             yield return new SiteCollaboratorRemoved("colleague@example.com");
 

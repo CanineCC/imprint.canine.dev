@@ -130,7 +130,7 @@ public static class AuthoringApi
 
         // ── reads ────────────────────────────────────────────────────────────────────────────
         api.MapGet("/sites", (SiteOverview sites) => Results.Ok(
-            sites.All.Select(s => new { id = s.Id.Compact, name = s.Name, defaultLocale = s.DefaultLocale.Value })));
+            sites.Active.Select(s => new { id = s.Id.Compact, name = s.Name, defaultLocale = s.DefaultLocale.Value })));
 
         api.MapGet("/sites/{siteId}/pages", (string siteId, SiteOverview sites, PageList pages) =>
         {

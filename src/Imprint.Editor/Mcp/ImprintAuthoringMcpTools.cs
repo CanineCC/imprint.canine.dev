@@ -25,6 +25,8 @@ using CreatePageCmd = Imprint.Authoring.Features.Pages.CreatePage.CreatePage;
 using DeletePageCmd = Imprint.Authoring.Features.Pages.DeletePage.DeletePage;
 using RestorePageToRevisionCmd = Imprint.Authoring.Features.Pages.RestorePageToRevision.RestorePageToRevision;
 using CreateSiteCmd = Imprint.Authoring.Features.Sites.CreateSite.CreateSite;
+using ArchiveSiteCmd = Imprint.Authoring.Features.Sites.ArchiveSite.ArchiveSite;
+using RestoreSiteCmd = Imprint.Authoring.Features.Sites.ArchiveSite.RestoreSite;
 using DuplicateNodeCmd = Imprint.Authoring.Features.Pages.DuplicateNode.DuplicateNode;
 using EditTextCmd = Imprint.Authoring.Features.Pages.EditText.EditText;
 using MoveNodeCmd = Imprint.Authoring.Features.Pages.MoveNode.MoveNode;
@@ -81,9 +83,11 @@ public sealed class ImprintAuthoringMcpTools
     // ── reads ────────────────────────────────────────────────────────────────────────────────────
 
     [McpServerTool(Name = "list_sites")]
-    [Description("List every site: its id (compact GUID), name and default locale. Start here to find the site id the other tools take.")]
-    public static IReadOnlyList<SiteInfo> ListSites(SiteOverview sites) =>
-        [.. sites.All.Select(s => new SiteInfo(s.Id.Compact, s.Name, s.DefaultLocale.Value))];
+    [Description("List every site in use: its id (compact GUID), name and default locale. Start here to find the site id the other tools take. Archived sites are left out unless asked for.")]
+    public static IReadOnlyList<SiteInfo> ListSites(
+        SiteOverview sites,
+        [Description("Also list archived (retired) sites. Default false.")] bool? includeArchived = null) =>
+        [.. (includeArchived == true ? sites.All : sites.Active).Select(s => new SiteInfo(s.Id.Compact, s.Name, s.DefaultLocale.Value))];
 
     [McpServerTool(Name = "list_pages")]
     [Description("List a site's pages: id, slug, title, publish status, whether it is the home page / in navigation, and its draft vs published version.")]
@@ -258,8 +262,10 @@ public sealed class ImprintAuthoringMcpTools
     [Description("Create a new site and return its id. The default locale (e.g. 'en', 'de-AT') is the language pages fall back to; defaults to 'en'.")]
     public static Task<object> CreateSite(
         [Description("The site name (1–100 chars).")] string name,
-        [Description("Default locale tag, e.g. 'en' or 'de-AT'. Defaults to 'en'.")] string? defaultLocale,
-        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+        ICommandDispatcher dispatcher, IConfiguration config,
+        // Optional parameters need a default to be optional to an MCP client: a bare string? is listed as required.
+        [Description("Default locale tag, e.g. 'en' or 'de-AT'. Defaults to 'en'.")] string? defaultLocale = null,
+        CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(name)) return Task.FromResult(Fail("name is required"));
         var siteId = SiteId.New();
@@ -267,15 +273,34 @@ public sealed class ImprintAuthoringMcpTools
             () => new { ok = true, siteId = siteId.Compact });
     }
 
+    [McpServerTool(Name = "archive_site")]
+    [Description("Archive a retired site: it leaves list_sites and the editor's site lists, and nothing of it can be published (pages, posts, schedules and LinkedIn updates all refuse). Its pages, posts and history are kept; restore_site undoes it. Nothing is deleted.")]
+    public static Task<object> ArchiveSite(
+        [Description("The site id.")] string siteId,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default) =>
+        !TrySiteId(siteId, out var sid)
+            ? Task.FromResult(Fail("invalid siteId"))
+            : Dispatch(dispatcher, config, new ArchiveSiteCmd(sid), ct, () => new { ok = true, siteId = sid.Compact, archived = true });
+
+    [McpServerTool(Name = "restore_site")]
+    [Description("Bring an archived site back into use: it returns to the lists and may be published again.")]
+    public static Task<object> RestoreSite(
+        [Description("The site id.")] string siteId,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default) =>
+        !TrySiteId(siteId, out var sid)
+            ? Task.FromResult(Fail("invalid siteId"))
+            : Dispatch(dispatcher, config, new RestoreSiteCmd(sid), ct, () => new { ok = true, siteId = sid.Compact, archived = false });
+
     [McpServerTool(Name = "create_blog")]
     [Description("Create a post-stream site and return its id: a blog (kind 'blog', the default) or a resource center (kind 'resource-center': articles with a kind, the grouped index and the article template). Optionally give the publish folder and the public URL of its Production environment (a URL needs a folder). Posts sit at the site's root.")]
     public static Task<object> CreateBlog(
         [Description("The site name (1–100 chars).")] string name,
-        [Description("Default locale tag, e.g. 'en'. Defaults to 'en'.")] string? defaultLocale,
-        [Description("'blog' (default) or 'resource-center'.")] string? kind,
-        [Description("Optional publish folder of the Production environment.")] string? publishFolder,
-        [Description("Optional public URL of the Production environment, e.g. https://resourcecenter.canine.dev.")] string? publicUrl,
-        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+        ICommandDispatcher dispatcher, IConfiguration config,
+        [Description("Default locale tag, e.g. 'en'. Defaults to 'en'.")] string? defaultLocale = null,
+        [Description("'blog' (default) or 'resource-center'.")] string? kind = null,
+        [Description("Optional publish folder of the Production environment.")] string? publishFolder = null,
+        [Description("Optional public URL of the Production environment, e.g. https://resourcecenter.canine.dev.")] string? publicUrl = null,
+        CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(name)) return Task.FromResult(Fail("name is required"));
         var siteKind = (kind ?? "blog").Trim().ToLowerInvariant() switch
