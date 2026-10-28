@@ -181,6 +181,7 @@ public sealed class PostList : ReadModel
             return;
         }
 
+        var liveWasCurrent = entry.PublishedVersion is { } live && live == entry.Version;
         entry = entry with { Version = @event.StreamVersion, UpdatedAt = @event.Metadata.TimestampUtc };
         entry = @event.Event switch
         {
@@ -205,9 +206,12 @@ public sealed class PostList : ReadModel
                 ReviewNote = submitted.Note,
                 Signature = null,
             },
-            // The signer is the event's actor: the projection, not the aggregate, sees metadata.
+            // The signer is the event's actor: the projection, not the aggregate, sees metadata. A signature on a
+            // live article whose words are current (Post.SignPublished) changes nothing that is live, so it does
+            // not make the article Modified.
             PostReviewApproved approved => entry with
             {
+                PublishedVersion = liveWasCurrent ? @event.StreamVersion : entry.PublishedVersion,
                 Review = PostReview.Approved,
                 PublishAt = approved.PublishAt,
                 ReviewNote = null,

@@ -657,6 +657,7 @@ button { font: inherit; color: inherit; }
 /* A second shelf on the dashboard (blogs, under sites): enough air above it that the two
    grids read as separate collections rather than one grid that wrapped. */
 .dash-head-section { margin-top: 44px; }
+.post-sign-all { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; margin: 14px 0 0; }
 .dash-archived { margin-top: 44px; color: var(--ed-text-muted); }
 .dash-archived summary { cursor: pointer; font-weight: 600; }
 .dash-archived ul { margin: 8px 0 0; padding-left: 1.2rem; }

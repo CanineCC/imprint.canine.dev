@@ -4,6 +4,7 @@
 @using Imprint.Authoring.Domain.Posts
 @using Imprint.Authoring.Domain.Sites
 @using Imprint.Authoring.Features.Posts.ApprovePostReview
+@using Imprint.Authoring.Features.Posts.SignPublishedPost
 @using Imprint.Authoring.Features.Posts.HoldPost
 @using Imprint.Authoring.Features.Posts.ChangePostBody
 @using Imprint.Authoring.Features.Posts.RequestPostChanges
@@ -97,6 +98,13 @@ else
                 }
                 else if (_status == PostStatus.Published)
                 {
+                    @* Live without a signature (published before signatures, or a copy of words approved
+                       elsewhere): the reviewer signs the live words where they stand. *@
+                    @if (_isReviewer && _signature is null)
+                    {
+                        <button type="button" class="ed-btn ed-btn-primary" data-testid="post-sign"
+                                title="Sign the words that are live, with your login" @onclick="Sign">Sign</button>
+                    }
                     <button type="button" class="ed-btn" data-testid="post-unpublish"
                             @onclick="Unpublish">Unpublish</button>
                 }
@@ -1005,6 +1013,16 @@ else
 
         await FlushBody();
         await Commands.Run(new PublishPost(_id, _locale.Value));
+        Refresh();
+    }
+
+    private async Task Sign()
+    {
+        if (await Commands.Run(new SignPublishedPost(_id)))
+        {
+            Toasts.Show("Signed. The live article now shows your signature.");
+        }
+
         Refresh();
     }
 

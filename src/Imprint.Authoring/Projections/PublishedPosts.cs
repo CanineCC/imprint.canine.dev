@@ -35,7 +35,8 @@ public sealed record PublishedPost(
     string? LinkedInText = null,
     string? LinkedInSender = null,
     PostReview? Review = null,
-    IReadOnlyList<PublishedVersion>? Versions = null)
+    IReadOnlyList<PublishedVersion>? Versions = null,
+    bool SignedAfterGoingLive = false)
 {
     /// <summary>Every version this post has been published at, newest first; empty, never null.
     /// A version is a set of words (see <c>post.published</c>), so a republish of the same words
@@ -74,6 +75,9 @@ public sealed class PublishedPosts : ReadModel
     // Who signed the words the post now holds, and when: the approving event's actor (a login) and
     // instant. The aggregate does not see metadata, so the projection keeps it beside the draft.
     private readonly Dictionary<PostId, (string By, DateTimeOffset At)> _signatures = [];
+
+    // Articles whose standing signature was given after they went live (Post.SignPublished): not announced.
+    private readonly HashSet<PostId> _signedAfterGoingLive = [];
 
     // Every version each post has been published at, newest first (the document record's history).
     private readonly Dictionary<PostId, List<PublishedVersion>> _versions = [];
@@ -133,12 +137,26 @@ public sealed class PublishedPosts : ReadModel
 
         switch (@event.Event)
         {
-            case PostReviewApproved:
+            case PostReviewApproved approved:
                 _signatures[id] = (@event.Metadata.Actor, @event.Metadata.TimestampUtc);
+
+                // A signature over the words already live (Post.SignPublished) reaches the live article at once;
+                // it is marked, because an article signed after it went live is not news to announce.
+                if (_published.TryGetValue(id, out var live) && approved.Sha256 is { } signedSha && signedSha == live.Sha256)
+                {
+                    _signedAfterGoingLive.Add(id);
+                    _published[id] = live with
+                    {
+                        SignedBy = @event.Metadata.Actor, SignedAt = @event.Metadata.TimestampUtc, SignedAfterGoingLive = true,
+                    };
+                    NotifyChanged();
+                }
+
                 break;
 
             case PostApprovalLapsed or PostChangesRequested or PostSubmittedForReview:
                 _signatures.Remove(id);
+                _signedAfterGoingLive.Remove(id);
                 break;
 
             case PostPublished published:
@@ -151,7 +169,7 @@ public sealed class PublishedPosts : ReadModel
 
                 _published[id] = (Snapshot(draft, @event.Metadata.TimestampUtc) with { Versions = [.. versions] }) is var snapshot
                     && _signatures.TryGetValue(id, out var signed)
-                    ? snapshot with { SignedBy = signed.By, SignedAt = signed.At }
+                    ? snapshot with { SignedBy = signed.By, SignedAt = signed.At, SignedAfterGoingLive = _signedAfterGoingLive.Contains(id) }
                     : snapshot;
                 NotifyChanged();
                 break;
@@ -168,6 +186,7 @@ public sealed class PublishedPosts : ReadModel
                 {
                     _drafts.Remove(id);
                     _signatures.Remove(id);
+                    _signedAfterGoingLive.Remove(id);
                     _versions.Remove(id);
                 }
 
@@ -180,6 +199,7 @@ public sealed class PublishedPosts : ReadModel
         _drafts.Clear();
         _published.Clear();
         _signatures.Clear();
+        _signedAfterGoingLive.Clear();
         _versions.Clear();
     }
 

@@ -80,6 +80,7 @@ public sealed class DueLinkedInPoster(
             var room = options.MaxPerSitePerHour - linkedInPosts.AttemptsSince(site.Id, now - TimeSpan.FromHours(1));
             var due = published.AllForSite(site.Id)
                 .Where(post => post.SignedBy is not null
+                    && !post.SignedAfterGoingLive
                     && post.LinkedInText is { Length: > 0 }
                     && post.PublishedAt <= now
                     && now - post.PublishedAt <= options.MaxAge

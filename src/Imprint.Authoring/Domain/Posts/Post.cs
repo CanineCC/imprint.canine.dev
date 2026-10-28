@@ -235,6 +235,40 @@ public sealed class Post : AggregateRoot
             publishAt, BodyRevision, BodySha256(Body), ControlNotesSha256(ControlNotes), LinkedInSha256(LinkedInSender, LinkedInText)));
     }
 
+    /// <summary>
+    /// Signs the words that are LIVE, for an article that went out without a signature (published before
+    /// signatures existed, or a copy of words approved elsewhere). It is the same signature an approval gives,
+    /// over the published words; a draft that differs from them has nothing live to sign until it is published.
+    /// Signing an article whose live words are already signed changes nothing.
+    /// </summary>
+    public void SignPublished()
+    {
+        EnsureNotDeleted();
+        if (!IsPublished)
+        {
+            throw new DomainException("Only a live article can be signed where it stands: one not yet published is signed through review.");
+        }
+
+        if (Review is PostReview.Pending)
+        {
+            throw new DomainException("This article is with the reviewer: answer the review instead.");
+        }
+
+        var sha = BodySha256(Body);
+        if (sha != PublishedSha256)
+        {
+            throw new DomainException("The draft has changes that are not what is live: publish or undo them before signing.");
+        }
+
+        if (IsApproved && ApprovedSha256 == sha)
+        {
+            return;
+        }
+
+        Raise(new PostReviewApproved(
+            PublishAt, BodyRevision, sha, ControlNotesSha256(ControlNotes), LinkedInSha256(LinkedInSender, LinkedInText)));
+    }
+
     /// <summary>Sends it back. The reason is required — a rejection nobody can act on is not a review.</summary>
     public void RequestChanges(string reason)
     {

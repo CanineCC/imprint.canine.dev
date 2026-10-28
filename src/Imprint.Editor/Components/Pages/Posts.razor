@@ -4,6 +4,7 @@
 @using Imprint.Authoring.Domain.Posts
 @using Imprint.Authoring.Domain.Sites
 @using Imprint.Authoring.Features.Posts.CreatePost
+@using Imprint.Authoring.Features.Posts.SignPublishedPost
 @using Imprint.Authoring.Projections
 @using Imprint.Editor.Auth
 @using Imprint.Editor.Services
@@ -14,6 +15,7 @@
 @inject SiteAccess Access
 @inject CommandRunner Commands
 @inject NavigationManager Navigation
+@inject ToastService Toasts
 
 <PageTitle>@Plural · Imprint</PageTitle>
 
@@ -25,6 +27,17 @@
             Written in markdown, published as static pages like everything else.
             Drafts are yours alone until you publish them.
         </p>
+        @* Live articles nobody has signed (published before signatures, or copies of words approved
+           elsewhere): the reviewer signs them all with their own login, in one go. *@
+        @if (_isReviewer && Unsigned > 0)
+        {
+            <p class="post-sign-all">
+                <button type="button" class="ed-btn ed-btn-primary" data-testid="posts-sign-all" @onclick="SignAll">
+                    Sign all @Unsigned live @(Unsigned == 1 ? Singular.ToLowerInvariant() : Plural.ToLowerInvariant())
+                </button>
+                <span class="dash-sub">They are live without a signature. Signing records your login over the words that are live.</span>
+            </p>
+        }
     </header>
 
     <form class="post-new" @onsubmit="Create" @onsubmit:preventDefault>
@@ -125,6 +138,10 @@
             return;
         }
 
+        // Signing is the reviewer's, as approving is (see PostEditor); with auth off there is nobody to be.
+        var me = await Access.UserAsync();
+        _isReviewer = Sites.Get(_site) is { ReviewerEmail: { Length: > 0 } reviewer }
+            && (me is null || string.Equals(me, reviewer, StringComparison.OrdinalIgnoreCase));
         Reload();
     }
 
@@ -136,6 +153,19 @@
     /// </summary>
     private void Reload() =>
         _posts = [.. Index.All(_site).OrderBy(post => PostSequence.SortKey(Title(post)))];
+
+    private bool _isReviewer;
+
+    private int Unsigned => _posts.Count(post => post.Status == PostStatus.Published && post.Signature is null);
+
+    private async Task SignAll()
+    {
+        var count = Unsigned;
+        if (await Commands.Run(new SignPublishedPosts(_site)))
+        {
+            Toasts.Show($"Signed {count} live {(count == 1 ? Singular.ToLowerInvariant() : Plural.ToLowerInvariant())}.");
+        }
+    }
 
     private void OnChanged() => _ = InvokeAsync(() =>
     {
