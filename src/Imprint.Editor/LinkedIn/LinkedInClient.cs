@@ -8,26 +8,42 @@ using Imprint.Authoring.Features.LinkedIn;
 namespace Imprint.Editor.LinkedIn;
 
 /// <summary>
-/// LinkedIn's Posts API (<c>POST /rest/posts</c>), as the organization page the article names. What each answer
+/// LinkedIn's Posts API (<c>POST /rest/posts</c>), as the author the article names: an organization page through the
+/// page app and its connection, or a person (urn:li:person:) through their own member connection. What each answer
 /// means for a second attempt is the point of this class: only an answer that proves nothing was posted may be
 /// sent again, because the API has no idempotency key.
 /// </summary>
 public sealed class LinkedInClient(
-    HttpClient http, LinkedInOptions options, LinkedInTokenStore tokens, ILogger<LinkedInClient> logger, TimeProvider? clock = null)
+    HttpClient http, LinkedInOptions options, LinkedInTokenStore tokens, ILogger<LinkedInClient> logger, TimeProvider? clock = null,
+    LinkedInOptions? memberApp = null, LinkedInMemberTokenStore? members = null)
     : ILinkedInPoster
 {
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
 
     public bool IsConfigured => options.HasApp && tokens.Read() is not null;
 
+    public bool IsConfiguredFor(string authorUrn) => IsPerson(authorUrn) ? MemberToken(authorUrn) is not null : IsConfigured;
+
     public async Task<LinkedInSendResult> PostAsync(LinkedInPostRequest request, CancellationToken ct)
     {
+        if (IsPerson(request.AuthorUrn))
+        {
+            // A member's connection has no refresh token: an expired one is connected again by the person.
+            if (MemberToken(request.AuthorUrn) is not { } memberToken)
+            {
+                return Refused("This member is not connected to LinkedIn, or the connection has expired: connect again in the editor.");
+            }
+
+            using var answer = await Send(request, memberToken, memberApp!, ct);
+            return await Interpret(answer, ct);
+        }
+
         if (await AccessToken(forceRefresh: false, ct) is not { } token)
         {
             return Refused("LinkedIn is not connected, or its authorization has expired: connect it again in the editor.");
         }
 
-        var response = await Send(request, token, ct);
+        var response = await Send(request, token, options, ct);
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             // A 401 proves nothing was posted, so one refresh and one more try is safe.
@@ -37,7 +53,7 @@ public sealed class LinkedInClient(
                 return Refused("LinkedIn refused the authorization and it could not be refreshed: connect it again in the editor.");
             }
 
-            response = await Send(request, fresh, ct);
+            response = await Send(request, fresh, options, ct);
         }
 
         using (response)
@@ -46,14 +62,24 @@ public sealed class LinkedInClient(
         }
     }
 
-    private async Task<HttpResponseMessage> Send(LinkedInPostRequest request, string token, CancellationToken ct)
+    private static bool IsPerson(string authorUrn) => authorUrn.StartsWith("urn:li:person:", StringComparison.Ordinal);
+
+    /// <summary>The member's access token while it has a minute left; null when the member app or the person's
+    /// connection is missing or expired.</summary>
+    private string? MemberToken(string authorUrn) =>
+        memberApp is { HasApp: true } && members?.Read(authorUrn) is { } member
+        && member.Tokens.AccessExpiresAt > _clock.GetUtcNow().AddMinutes(1)
+            ? member.Tokens.AccessToken
+            : null;
+
+    private async Task<HttpResponseMessage> Send(LinkedInPostRequest request, string token, LinkedInOptions app, CancellationToken ct)
     {
-        using var message = new HttpRequestMessage(HttpMethod.Post, $"{options.ApiBase.TrimEnd('/')}/rest/posts")
+        using var message = new HttpRequestMessage(HttpMethod.Post, $"{app.ApiBase.TrimEnd('/')}/rest/posts")
         {
             Content = new StringContent(Body(request).ToJsonString(), Encoding.UTF8, "application/json"),
         };
         message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        message.Headers.Add("Linkedin-Version", options.Version);
+        message.Headers.Add("Linkedin-Version", app.Version);
         message.Headers.Add("X-Restli-Protocol-Version", "2.0.0");
         return await http.SendAsync(message, ct);
     }

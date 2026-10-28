@@ -41,6 +41,11 @@ public sealed class DueLinkedInPosterTests
         public List<LinkedInPostRequest> Sent { get; } = [];
         public Queue<LinkedInSendResult> Answers { get; } = [];
         public bool IsConfigured { get; set; } = true;
+        public HashSet<string> ConnectedMembers { get; } = [];
+
+        public bool IsConfiguredFor(string authorUrn) => authorUrn.StartsWith("urn:li:person:", StringComparison.Ordinal)
+            ? ConnectedMembers.Contains(authorUrn)
+            : IsConfigured;
 
         public Task<LinkedInSendResult> PostAsync(LinkedInPostRequest request, CancellationToken ct)
         {
@@ -190,6 +195,35 @@ public sealed class DueLinkedInPosterTests
 
         Assert.Empty(linkedIn.Sent);
         Assert.Null(host.Get<LinkedInPosts>().Get(id));
+    }
+
+    // A person posts with their own connection, so an article as a member goes out while the page is not set up,
+    // and one as the page waits unrecorded (for the day the page is connected, within the window).
+    [Fact]
+    public async Task An_article_as_a_connected_member_goes_out_while_the_page_is_not_set_up()
+    {
+        await using var host = NewHost();
+        var site = await ASite(host);
+        await host.Ok(new SetSiteLinkedInSenders(site,
+            [new LinkedInSender("canine", "Canine", Org), new LinkedInSender("jimmy", "Jimmy Borch", "urn:li:person:Ab3")]));
+        var asPage = await AnArticle(host, site, "as-page");
+        var asMember = PostId.New();
+        await host.Ok(new CreatePost(asMember, site, "Hello as-member", "as-member", En, "essay", []));
+        await host.Ok(new Imprint.Authoring.Features.Posts.ChangePostBody.ChangePostBody(asMember, En, Body));
+        await host.Ok(new SetPostLinkedIn(asMember, "Mine.", "jimmy"));
+        await host.Ok(new SubmitPostForReview(asMember, En, null, null));
+        await host.Ok(new ApprovePostReview(asMember, null));
+        await host.Ok(new PublishPost(asMember, En));
+        await host.CatchUp();
+        var linkedIn = new FakeLinkedIn { IsConfigured = false };
+        linkedIn.ConnectedMembers.Add("urn:li:person:Ab3");
+
+        await Poster(host, linkedIn, Soon()).PostDueAsync(CancellationToken.None);
+
+        var sent = Assert.Single(linkedIn.Sent);
+        Assert.Equal("urn:li:person:Ab3", sent.AuthorUrn);
+        Assert.Equal(LinkedInPostState.Posted, host.Get<LinkedInPosts>().Get(asMember)!.State);
+        Assert.Null(host.Get<LinkedInPosts>().Get(asPage));
     }
 
     [Fact]

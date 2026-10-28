@@ -22,10 +22,14 @@ public sealed record LinkedInSendResult(
     LinkedInSendStatus Status, string? Urn = null, string? Reason = null, bool Retryable = false, TimeSpan? RetryAfter = null);
 
 /// <summary>Sends one post to LinkedIn. The real client lives in the editor host (it holds the tokens); tests use
-/// a fake. <see cref="IsConfigured"/> false means nothing is sent and nothing is recorded.</summary>
+/// a fake. <see cref="IsConfiguredFor"/> false for an author means nothing is sent as them and nothing is recorded.</summary>
 public interface ILinkedInPoster
 {
     bool IsConfigured { get; }
+
+    /// <summary>Whether a post as this author can be sent: a page needs the page app and its connection, a person
+    /// (urn:li:person:) their own member connection.</summary>
+    bool IsConfiguredFor(string authorUrn) => IsConfigured;
 
     Task<LinkedInSendResult> PostAsync(LinkedInPostRequest request, CancellationToken ct);
 }

@@ -61,11 +61,6 @@ public sealed class DueLinkedInPoster(
 
     public async Task PostDueAsync(CancellationToken ct)
     {
-        if (!linkedIn.IsConfigured)
-        {
-            return;
-        }
-
         await projections.CatchUp(ct);
         var now = _clock.GetUtcNow();
 
@@ -100,6 +95,13 @@ public sealed class DueLinkedInPoster(
                 {
                     logger.LogWarning("'{Slug}' names LinkedIn sender '{Sender}', which the site no longer has.",
                         post.Slug.Value, post.LinkedInSender);
+                    continue;
+                }
+
+                // Not set up for this author (the page app, or this person's connection): nothing is sent and
+                // nothing recorded, so it goes out once they are connected, within the window.
+                if (!linkedIn.IsConfiguredFor(sender.OrganizationUrn))
+                {
                     continue;
                 }
 
