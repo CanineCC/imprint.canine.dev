@@ -195,4 +195,30 @@ public sealed class AuthoringLocaleMergeTests
 
         Assert.Equal("Uvildighed", merged[0].Links[0].Label!.Get(Da));
     }
+
+    // --------------------------------------------------------------- header actions
+
+    [Fact]
+    public void Labelling_the_header_button_in_one_locale_keeps_the_others()
+    {
+        var existing = new HeaderAction(LocalizedText.Of(En, "Scan your project free"), new ExternalLink("https://app.example.test/"));
+        var incoming = new HeaderAction(LocalizedText.Of(Da, "Scan dit projekt gratis"), new ExternalLink("https://app.example.test/"));
+
+        var merged = AuthoringApi.CarryOtherLocales(incoming, existing, Da)!;
+
+        Assert.Equal("Scan your project free", merged.Label.Get(En));
+        Assert.Equal("Scan dit projekt gratis", merged.Label.Get(Da));
+    }
+
+    [Fact]
+    public void A_header_button_pointing_somewhere_else_starts_its_labels_afresh()
+    {
+        var existing = new HeaderAction(LocalizedText.Of(En, "Sign in"), new ExternalLink("https://app.example.test/login"));
+        var incoming = new HeaderAction(LocalizedText.Of(Da, "Kom i gang"), new ExternalLink("https://app.example.test/start"));
+
+        var merged = AuthoringApi.CarryOtherLocales(incoming, existing, Da)!;
+
+        Assert.Null(merged.Label.Get(En));
+        Assert.Null(AuthoringApi.CarryOtherLocales(null, existing, Da));
+    }
 }

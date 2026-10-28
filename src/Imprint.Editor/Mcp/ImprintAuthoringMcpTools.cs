@@ -697,8 +697,8 @@ public sealed class ImprintAuthoringMcpTools
         HeaderAction? cta, quiet;
         try
         {
-            cta = ParseAction(ctaJson, "cta", labelLocale);
-            quiet = ParseAction(quietJson, "quiet", labelLocale);
+            cta = AuthoringApi.CarryOtherLocales(ParseAction(ctaJson, "cta", labelLocale), site.HeaderCta, labelLocale);
+            quiet = AuthoringApi.CarryOtherLocales(ParseAction(quietJson, "quiet", labelLocale), site.HeaderQuiet, labelLocale);
         }
         catch (JsonException)
         {

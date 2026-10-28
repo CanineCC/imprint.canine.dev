@@ -804,8 +804,8 @@ public static class AuthoringApi
             HeaderAction? cta, quiet;
             try
             {
-                cta = ParseHeaderAction(body, "cta", locale);
-                quiet = ParseHeaderAction(body, "quiet", locale);
+                cta = CarryOtherLocales(ParseHeaderAction(body, "cta", locale), site.HeaderCta, locale);
+                quiet = CarryOtherLocales(ParseHeaderAction(body, "quiet", locale), site.HeaderQuiet, locale);
             }
             catch (ArgumentException ex)
             {
@@ -1584,6 +1584,17 @@ public static class AuthoringApi
         return new HeaderAction(label, ParseNavigationLink(element)
             ?? throw new ArgumentException($"A header '{property}' action needs a pageId or a url."));
     }
+
+    /// <summary>
+    /// The incoming header action with the other locales' labels kept from the action it replaces, when both
+    /// point at the same place. A request carries one locale's label, so without this, labelling the Danish
+    /// button deleted the English one and every language showed whichever was set last.
+    /// </summary>
+    internal static HeaderAction? CarryOtherLocales(HeaderAction? incoming, HeaderAction? existing, Locale locale) =>
+        incoming is not null && existing is not null && incoming.Link == existing.Link
+            && incoming.Label.Get(locale) is { } label
+            ? incoming with { Label = existing.Label.With(locale, label) }
+            : incoming;
 
     /// <summary>One footer column: a heading plus its links. Reuses the navigation link parser, so a footer
     /// link accepts exactly the same <c>pageId</c> / <c>url</c> forms and the same href allow-list.</summary>
