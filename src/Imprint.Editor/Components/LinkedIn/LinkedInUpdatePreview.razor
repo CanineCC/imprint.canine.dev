@@ -1,0 +1,110 @@
+@* An update as it will look in the LinkedIn feed: the sender, the text cut where the feed cuts it with "…more" to
+   open the rest, and the images laid out as the feed lays them out (one wide; two side by side; three or more as one
+   wide over a row). An image that is no longer in the library is said out loud: the update would fail to send. *@
+@using System.Text.RegularExpressions
+@using Imprint.Authoring.Domain.Assets
+@using Imprint.Authoring.Domain.LinkedIn
+@using Imprint.Authoring.Projections
+
+<article class="li-preview" data-testid="linkedin-update-preview" aria-label="Preview as it will look on LinkedIn">
+    <header class="li-preview-head">
+        <span class="li-avatar" aria-hidden="true">@Initials</span>
+        <span><strong>@SenderName</strong><small>@When</small></span>
+    </header>
+    <p class="li-preview-text">
+        @foreach (var (part, isTag) in Parts(_open ? Text : Cut(Text)))
+        {
+            if (isTag)
+            {
+                <span class="li-tag">@part</span>
+            }
+            else
+            {
+                @part
+            }
+        }
+        @if (!_open && Cut(Text).Length < Text.Length)
+        {
+            <button type="button" class="li-more" data-testid="linkedin-update-more" @onclick="() => _open = true">…more</button>
+        }
+    </p>
+    @if (Images.Count > 0)
+    {
+        <div class="li-images li-images-@Math.Min(Images.Count, 3)">
+            @foreach (var image in Images)
+            {
+                if (Library.Get(image.AssetId) is { } asset)
+                {
+                    <a href="@($"/media/{asset.OriginalStorageKey}")" target="_blank" rel="noopener">
+                        <img src="@Src(asset)" alt="@image.Alt" loading="lazy" />
+                    </a>
+                }
+                else
+                {
+                    <p class="li-image-missing" data-testid="linkedin-update-image-missing">
+                        Image @image.AssetId.Compact is not in the media library: this update cannot be sent with it.
+                    </p>
+                }
+            }
+        </div>
+    }
+</article>
+
+@code {
+    /// <summary>Where LinkedIn's feed cuts a post on a desktop: about three lines, or about 210 characters.</summary>
+    private const int CutLines = 3;
+    private const int CutChars = 210;
+
+    [Parameter, EditorRequired] public string SenderName { get; set; } = "";
+    [Parameter, EditorRequired] public string Text { get; set; } = "";
+    [Parameter, EditorRequired] public IReadOnlyList<LinkedInUpdateImage> Images { get; set; } = [];
+    [Parameter, EditorRequired] public DateTimeOffset PublishAt { get; set; }
+    [Parameter, EditorRequired] public AssetLibrary Library { get; set; } = null!;
+
+    private bool _open;
+
+    private string Initials => string.Concat(SenderName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => w[0]));
+
+    private string When => PublishAt.ToString("ddd d MMM, HH:mm");
+
+    /// <summary>The text up to the feed's cut: the first <see cref="CutLines"/> lines, at most <see cref="CutChars"/> characters.</summary>
+    public static string Cut(string text)
+    {
+        var end = 0;
+        for (var line = 0; line < CutLines && end < text.Length; line++)
+        {
+            var next = text.IndexOf('\n', end);
+            end = next < 0 ? text.Length : next + 1;
+        }
+
+        if (end > CutChars)
+        {
+            // The feed cuts between words, not inside one.
+            var space = text.LastIndexOf(' ', CutChars);
+            end = space > 0 ? space : CutChars;
+        }
+
+        return text[..end].TrimEnd();
+    }
+
+    private static IEnumerable<(string Part, bool IsTag)> Parts(string text)
+    {
+        var at = 0;
+        foreach (Match tag in Regex.Matches(text, @"#[\p{L}\p{N}_]+"))
+        {
+            yield return (text[at..tag.Index], false);
+            yield return (tag.Value, true);
+            at = tag.Index + tag.Length;
+        }
+
+        yield return (text[at..], false);
+    }
+
+    /// <summary>The smallest variant at least as wide as the preview, else the largest, else the original.</summary>
+    private static string Src(Asset asset)
+    {
+        var widths = asset.Variants.OrderBy(v => v.Width).ToList();
+        var variant = widths.FirstOrDefault(v => v.Width >= 640) ?? widths.LastOrDefault();
+        return $"/media/{variant?.StorageKey ?? asset.OriginalStorageKey}";
+    }
+}

@@ -4,9 +4,11 @@
 @using Imprint.Authoring.Features.LinkedInUpdates
 @using Imprint.Authoring.Projections
 @using Imprint.Editor.Auth
+@using Imprint.Editor.Components.LinkedIn
 @using Imprint.Editor.Services
 @implements IDisposable
 @inject LinkedInUpdateList Updates
+@inject AssetLibrary Library
 @inject SiteOverview Sites
 @inject PageList Pages
 @inject SiteAccess Access
@@ -40,14 +42,12 @@
                         <time datetime="@row.PublishAt.ToString("O")">@row.PublishAt.ToString("ddd d MMM yyyy, HH:mm") <span class="li-offset">UTC@(row.PublishAt.Offset < TimeSpan.Zero ? "−" : "+")@row.PublishAt.Offset.ToString(@"h\:mm")</span></time>
                         <span class="post-status li-state li-state-@row.State.ToString().ToLowerInvariant()" data-testid="linkedin-update-state">@Label(row.State)</span>
                     </div>
-                    <p class="li-text">@FirstLine(row.Text)</p>
-                    <p class="li-meta">
-                        As <strong>@row.Sender</strong> · @(row.Images.Count == 1 ? "1 image" : $"{row.Images.Count} images")
-                        @if (row.Urn is { } urn)
-                        {
-                            <text> · </text><a href="@($"https://www.linkedin.com/feed/update/{urn}/")" target="_blank" rel="noopener">See it on LinkedIn</a>
-                        }
-                    </p>
+                    <LinkedInUpdatePreview SenderName="@SenderName(row)" Text="@row.Text" Images="@row.Images"
+                                           PublishAt="@row.PublishAt" Library="@Library" />
+                    @if (row.Urn is { } urn)
+                    {
+                        <p class="li-meta"><a href="@($"https://www.linkedin.com/feed/update/{urn}/")" target="_blank" rel="noopener">See it on LinkedIn</a></p>
+                    }
                     @if (row.Reason is { Length: > 0 } reason)
                     {
                         <p class="li-reason" data-testid="linkedin-update-reason">@reason</p>
@@ -90,7 +90,11 @@
             ? [Breadcrumbs.Sites, Breadcrumbs.Of(site, Pages.HomeOf(site.Id)?.Id), new Breadcrumbs.Crumb("LinkedIn")]
             : [Breadcrumbs.Sites, new Breadcrumbs.Crumb("LinkedIn")];
 
-    protected override void OnInitialized() => Updates.Changed += OnChanged;
+    protected override void OnInitialized()
+    {
+        Updates.Changed += OnChanged;
+        Library.Changed += OnChanged;
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -132,7 +136,8 @@
 
     private async Task Resolve(LinkedInUpdateRow row, string? urn) => await Commands.Run(new ResolveLinkedInUpdate(row.Id, urn));
 
-    private static string FirstLine(string text) => text.Split('\n')[0];
+    private string SenderName(LinkedInUpdateRow row) =>
+        Sites.Get(_site)?.LinkedInSenders.FirstOrDefault(s => s.Key == row.Sender)?.Name ?? row.Sender;
 
     private static string Label(LinkedInUpdateState state) => state switch
     {
@@ -145,5 +150,9 @@
         _ => "Cancelled",
     };
 
-    public void Dispose() => Updates.Changed -= OnChanged;
+    public void Dispose()
+    {
+        Updates.Changed -= OnChanged;
+        Library.Changed -= OnChanged;
+    }
 }

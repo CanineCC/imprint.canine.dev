@@ -9,7 +9,8 @@ namespace Imprint.E2E;
 /// <summary>
 /// An update planned through the MCP tools, as an agent plans one, appears on the site's LinkedIn page with its
 /// time, sender and state, and can be cancelled there. Site settings offer "Connect my LinkedIn" and say when the
-/// member app is not set up, as it is not here: nothing in this fixture can reach LinkedIn.
+/// member app is not set up, as it is not here: nothing in this fixture can reach LinkedIn. Each update is shown as it
+/// will look in the feed: the sender's name, the text cut where LinkedIn cuts it with "…more" to open it, and its images.
 /// </summary>
 [Collection("editor")]
 public sealed class LinkedInUpdatesTests(EditorFixture fixture)
@@ -34,10 +35,23 @@ public sealed class LinkedInUpdatesTests(EditorFixture fixture)
                 new JsonObject { ["key"] = "canine", ["name"] = "Canine Development", ["organizationUrn"] = "urn:li:organization:12345" },
                 new JsonObject { ["key"] = "jimmy", ["name"] = "Jimmy Borch", ["organizationUrn"] = "urn:li:person:Ab3" }),
         });
+        var uploaded = await mcp.Call("upload_asset", new JsonObject
+        {
+            ["base64"] = OnePixelPng, ["fileName"] = "levels.png", ["contentType"] = "image/png",
+        });
+        var assetId = uploaded["assetId"]!.GetValue<string>();
+        for (var tries = 0; tries < 100; tries++)
+        {
+            var asset = await mcp.Call("get_asset", new JsonObject { ["assetId"] = assetId });
+            if (asset.ToJsonString().Contains("\"Ready\"", StringComparison.Ordinal)) break;
+            await Task.Delay(100);
+        }
+
         var text = $"Review cannot keep up {Guid.NewGuid():N}"[..30];
         var scheduled = await mcp.Call("schedule_linkedin_update", new JsonObject
         {
-            ["siteId"] = siteId, ["sender"] = "jimmy", ["text"] = text + "\nSecond line. #AI", ["images"] = new JsonArray(),
+            ["siteId"] = siteId, ["sender"] = "jimmy", ["text"] = text + "\n\nLine two.\n\nLine three.\n\nThe hidden part. #AI",
+            ["images"] = new JsonArray(new JsonObject { ["assetId"] = assetId, ["alt"] = "The five levels" }),
             ["publishAt"] = DateTimeOffset.UtcNow.AddDays(3).ToOffset(TimeSpan.FromHours(1)).ToString("yyyy-MM-ddTHH:mm:sszzz"),
         });
         Assert.True(scheduled["ok"]!.GetValue<bool>(), scheduled.ToJsonString());
@@ -46,8 +60,12 @@ public sealed class LinkedInUpdatesTests(EditorFixture fixture)
         await page.WaitForInteractive();
         var row = page.Locator("[data-testid='linkedin-update']", new() { HasText = text });
         await Expect(row.Locator("[data-testid='linkedin-update-state']")).ToHaveTextAsync("Scheduled");
-        await Expect(row).ToContainTextAsync("As jimmy · 0 images");
-        await Expect(row).Not.ToContainTextAsync("Second line");
+        var preview = row.Locator("[data-testid='linkedin-update-preview']");
+        await Expect(preview).ToContainTextAsync("Jimmy Borch");
+        await Expect(preview.GetByRole(AriaRole.Img, new() { Name = "The five levels" })).ToBeVisibleAsync();
+        await Expect(preview.GetByText("The hidden part.")).Not.ToBeVisibleAsync();
+        await preview.Locator("[data-testid='linkedin-update-more']").ClickAsync();
+        await Expect(preview.GetByText("The hidden part.")).ToBeVisibleAsync();
         await Shot(page, "linkedin-updates.png", "main");
 
         await row.Locator("[data-testid='linkedin-update-cancel']").ClickAsync();
@@ -61,6 +79,9 @@ public sealed class LinkedInUpdatesTests(EditorFixture fixture)
         await page.WaitForInteractive();
         await Expect(page.Locator("[data-testid='site-linkedin']").First).ToBeVisibleAsync();
     }
+
+    private const string OnePixelPng =
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkaPhfDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
     private static async Task Shot(IPage page, string name, string selector)
     {
