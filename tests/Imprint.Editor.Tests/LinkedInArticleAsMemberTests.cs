@@ -93,3 +93,36 @@ public sealed class LinkedInArticleAsMemberTests : IDisposable
         Assert.Empty(http.Seen);
     }
 }
+
+/// <summary>Connecting your LinkedIn from a site's settings makes you one of its senders, under your first name.</summary>
+public sealed class LinkedInConnectAddsSenderTests
+{
+    private static readonly Imprint.Authoring.Domain.Sites.LinkedInSender Page = new("canine", "Canine Development", "urn:li:organization:1");
+
+    [Fact]
+    public void A_newly_connected_member_is_added_under_their_first_name()
+    {
+        var senders = LinkedInMemberOAuth.WithMember([Page], "urn:li:person:L1", "Lasse Overgaard");
+
+        Assert.Equal([Page, new("lasse", "Lasse Overgaard", "urn:li:person:L1")], senders);
+    }
+
+    [Fact]
+    public void A_member_already_a_sender_changes_nothing()
+    {
+        var jimmy = new Imprint.Authoring.Domain.Sites.LinkedInSender("jimmy", "Jimmy Borch", "urn:li:person:J1");
+
+        Assert.Null(LinkedInMemberOAuth.WithMember([Page, jimmy], "urn:li:person:J1", "Jimmy Borch"));
+    }
+
+    [Fact]
+    public void A_taken_key_or_a_name_with_no_plain_letters_still_gets_a_usable_key()
+    {
+        var jimmy = new Imprint.Authoring.Domain.Sites.LinkedInSender("jimmy", "Jimmy Borch", "urn:li:person:J1");
+
+        Assert.Equal("jimmy-2", LinkedInMemberOAuth.WithMember([jimmy], "urn:li:person:J2", "Jimmy Hansen")![1].Key);
+        Assert.Equal("soeren", LinkedInMemberOAuth.WithMember([], "urn:li:person:S1", "Søren Ålund")![0].Key);
+        Assert.Equal("rene", LinkedInMemberOAuth.WithMember([], "urn:li:person:R1", "René Hansen")![0].Key);
+        Assert.Equal("member", LinkedInMemberOAuth.WithMember([], "urn:li:person:X1", "李")![0].Key);
+    }
+}
