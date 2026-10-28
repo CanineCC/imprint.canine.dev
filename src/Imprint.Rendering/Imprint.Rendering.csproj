@@ -34,6 +34,8 @@
          never downloaded. -->
     <EmbeddedResource Include="wwwroot/fonts/bricolage-var.woff2" LogicalName="Imprint.Rendering.fonts.bricolage-var.woff2" />
     <EmbeddedResource Include="wwwroot/fonts/inter-var.woff2" LogicalName="Imprint.Rendering.fonts.inter-var.woff2" />
+    <!-- Assert's label face (Martian Mono, SIL Open Font License 1.1), read only under .ip-site-assert. -->
+    <EmbeddedResource Include="wwwroot/fonts/martian-var.woff2" LogicalName="Imprint.Rendering.fonts.martian-var.woff2" />
     <EmbeddedResource Include="wwwroot/fonts/sourceserif4-var.woff2" LogicalName="Imprint.Rendering.fonts.sourceserif4-var.woff2" />
     <EmbeddedResource Include="wwwroot/fonts/sourceserif4-italic-var.woff2" LogicalName="Imprint.Rendering.fonts.sourceserif4-italic-var.woff2" />
     <EmbeddedResource Include="wwwroot/brand/canine-badge.svg" LogicalName="Imprint.Rendering.brand.canine-badge.svg" />
