@@ -106,6 +106,20 @@ var y=`
   --accent-strong: #1c4f41;
   --on-accent: #ffffff;
 }
+:host([data-brand="assert"]) {
+  --accent: #b6b6d6;
+  --accent-ink: #cbcbe5;
+  --accent-wash: #262635;
+  --accent-strong: #dfdff1;
+  --on-accent: #15191e;
+}
+:host([data-brand="assert"][data-theme="light"]) {
+  --accent: #56557a;
+  --accent-ink: #444367;
+  --accent-wash: #efeff9;
+  --accent-strong: #3d3b5d;
+  --on-accent: #ffffff;
+}
 `;function s(a){return String(a??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function b(a){if(a==null||a==="")return"";let r=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,e="",n=0,i;for(;(i=r.exec(a))!==null;){i.index>n&&(e+=s(a.slice(n,i.index)));let c=i[0];if(c.startsWith("**"))e+=`<strong>${s(c.slice(2,-2))}</strong>`;else if(c.startsWith("`"))e+=`<code>${s(c.slice(1,-1))}</code>`;else{let t=/^\[([^\]]+)\]\(([^)]+)\)$/.exec(c);t?e+=`<a href="${s(t[2])}">${s(t[1])}</a>`:e+=s(c)}n=i.index+c.length}return n<a.length&&(e+=s(a.slice(n))),e}var w=`
 :host { display: block; color: var(--ink); font: 400 var(--fs-md)/1.5 var(--font-ui); }
 * { box-sizing: border-box; }
@@ -119,7 +133,7 @@ strong { font-weight: 600; }
 .mk-section-head h2 { font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.1rem); line-height: 1.2; margin: 0.3rem 0 0; color: var(--heading); font-weight: 600; letter-spacing: -0.01em; }
 .mk-section-head p { color: var(--muted); font-size: var(--fs-lg); line-height: 1.6; margin: 0.55rem 0 0; }
 .mk-kicker { display: inline-flex; align-items: center; gap: 0.55rem; font-size: var(--fs-2xs); font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
-`,g=class extends HTMLElement{#e;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#t(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#e=new MutationObserver(()=>{let r=this.dataset.theme;this.#t(),this.dataset.theme!==r&&this.render(this.shadowRoot)}),this.#e.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#e?.disconnect()}#t(){let r=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=r;let e=(this.getAttribute("brand")||"").trim().toLowerCase();e==="assay"||e==="cai"||e==="watchdog"?this.dataset.brand=e:delete this.dataset.brand}json(r,e){let n=this.getAttribute(r);if(n==null||n.trim()==="")return e;try{return JSON.parse(n)}catch{return e}}};var C={sales:["sales"],demo:["demo"],onprem:["on-prem","self-hosted"],compliance:["compliance"],general:["something else"],security:["security"],appraisal:["appraisal"],attestation:["attestation"],consequences:["consequences"],dd:["due-diligence","due diligence"],portfolio:["portfolio"],tender:["tender"]};function A(a,r){if(!a)return null;let e=String(a).trim().toLowerCase();if(!e)return null;let n=r.find(i=>i.trim().toLowerCase()===e);if(n)return n;for(let i of C[e]||[]){let c=r.find(t=>t.toLowerCase().includes(i));if(c)return c}return null}var L=y+w+E+`
+`,g=class extends HTMLElement{#e;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#t(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#e=new MutationObserver(()=>{let r=this.dataset.theme;this.#t(),this.dataset.theme!==r&&this.render(this.shadowRoot)}),this.#e.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#e?.disconnect()}#t(){let r=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=r;let e=(this.getAttribute("brand")||"").trim().toLowerCase();e==="assay"||e==="cai"||e==="watchdog"||e==="assert"?this.dataset.brand=e:delete this.dataset.brand}json(r,e){let n=this.getAttribute(r);if(n==null||n.trim()==="")return e;try{return JSON.parse(n)}catch{return e}}};var C={sales:["sales"],demo:["demo"],onprem:["on-prem","self-hosted"],compliance:["compliance"],general:["something else"],security:["security"],appraisal:["appraisal"],attestation:["attestation"],consequences:["consequences"],dd:["due-diligence","due diligence"],portfolio:["portfolio"],tender:["tender"]};function A(a,r){if(!a)return null;let e=String(a).trim().toLowerCase();if(!e)return null;let n=r.find(i=>i.trim().toLowerCase()===e);if(n)return n;for(let i of C[e]||[]){let c=r.find(t=>t.toLowerCase().includes(i));if(c)return c}return null}var L=y+w+E+`
 .mk-form { display: grid; gap: 1rem; max-width: 40rem; margin: 0 auto; }
 .mk-form label { display: grid; gap: 0.35rem; font-size: var(--fs-sm); font-weight: 500; color: var(--heading); }
 .mk-form input, .mk-form select, .mk-form textarea {

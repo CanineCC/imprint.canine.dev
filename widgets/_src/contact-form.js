@@ -1,7 +1,7 @@
 // <contact-form topics='["Book an appraisal","Sales & pricing",…]'
 //               action="https://app.imprint.canine.dev/api/contact"
 //               kicker="…" heading="…" lede="…" privacy-note="…"
-//               brand="watchdog|assay|cai">
+//               brand="watchdog|assay|cai|assert">
 //
 // Port of packages/ui/src/ContactForm.tsx markup: the topic <select> (with the
 // ?topic= prefill and the same TOPIC_KEY_MATCHERS), name / email / org /

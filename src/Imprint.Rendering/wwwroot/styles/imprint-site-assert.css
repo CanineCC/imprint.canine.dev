@@ -126,6 +126,10 @@
    light-dark() follows each section's color-scheme, so a dark top gets the dark run in both themes. Print and
    forced colours get plain text colour: they drop the clipped background and would leave the words with no ink. */
 .ip-site-assert .ip-h-accent { color: light-dark(#56557a, #b6b6d6); }
+/* The payoff wraps as one piece: when a heading runs to two lines, the break comes before the payoff, never inside
+   it with its first word left on the line above ("Your agents fix. The / next scan checks."). A payoff wider than
+   the line still wraps inside itself, so a phone never scrolls sideways. */
+.ip-site-assert :is(h1, h2) .ip-h-accent { display: inline-block; }
 @supports (background-clip: text) or (-webkit-background-clip: text) {
   .ip-site-assert .ip-h-accent {
     background-image: linear-gradient(160deg, light-dark(#76769d, #9b9bbe) 0%, light-dark(#626187, #cbcbe5) 45%, light-dark(#56557a, #9b9bbe) 75%, light-dark(#2d2c4c, #8282a4) 100%);

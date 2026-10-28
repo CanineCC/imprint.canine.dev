@@ -119,6 +119,20 @@ export const TOKENS_CSS = `
   --accent-strong: #1c4f41;
   --on-accent: #ffffff;
 }
+:host([data-brand="assert"]) {
+  --accent: #b6b6d6;
+  --accent-ink: #cbcbe5;
+  --accent-wash: #262635;
+  --accent-strong: #dfdff1;
+  --on-accent: #15191e;
+}
+:host([data-brand="assert"][data-theme="light"]) {
+  --accent: #56557a;
+  --accent-ink: #444367;
+  --accent-wash: #efeff9;
+  --accent-strong: #3d3b5d;
+  --on-accent: #ffffff;
+}
 `;
 
 // The tiny inline-markup subset from packages/ui/src/inline.tsx — **bold**,
@@ -242,7 +256,7 @@ export class CaiIsland extends HTMLElement {
       (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
     this.dataset.theme = theme;
     const brand = (this.getAttribute("brand") || "").trim().toLowerCase();
-    if (brand === "assay" || brand === "cai" || brand === "watchdog") {
+    if (brand === "assay" || brand === "cai" || brand === "watchdog" || brand === "assert") {
       this.dataset.brand = brand;
     } else {
       delete this.dataset.brand;

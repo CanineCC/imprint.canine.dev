@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace Imprint.Publishing;
 
 /// <summary>
@@ -7,7 +9,7 @@ namespace Imprint.Publishing;
 /// page × locale — every href is already resolved to a concrete URL for this locale and
 /// every label to a concrete string — so the component stays a dumb template.
 /// </summary>
-public sealed record StaticPageChrome
+public sealed partial record StaticPageChrome
 {
     public required string Lang { get; init; }
 
@@ -96,6 +98,29 @@ public sealed record StaticPageChrome
     /// rendition; a raster logo can only ever be one colour.
     /// </summary>
     public string? LogoSvg { get; init; }
+
+    /// <summary>
+    /// <see cref="LogoSvg"/> again for the footer, with every id given a suffix. The logo is inlined twice on a page,
+    /// and of two elements with the same id only the first counts: the footer's <c>url(#…)</c> painted with the
+    /// header's gradient, whose stops follow the header's colour scheme, so a mark lifted for a dark header came out
+    /// pale on a light footer.
+    /// </summary>
+    public string? FooterLogoSvg => LogoSvg is null ? null : SuffixSvgIds(LogoSvg, "-footer");
+
+    internal static string SuffixSvgIds(string svg, string suffix)
+    {
+        foreach (var id in SvgId().Matches(svg).Select(m => m.Groups[1].Value).Distinct().ToList())
+        {
+            svg = svg.Replace($"id=\"{id}\"", $"id=\"{id}{suffix}\"", StringComparison.Ordinal)
+                .Replace($"url(#{id})", $"url(#{id}{suffix})", StringComparison.Ordinal)
+                .Replace($"href=\"#{id}\"", $"href=\"#{id}{suffix}\"", StringComparison.Ordinal);
+        }
+
+        return svg;
+    }
+
+    [GeneratedRegex("(?<![\\w-])id=\"([^\"]+)\"")]
+    private static partial Regex SvgId();
 
     /// <summary>
     /// The resource center's own header pieces (its mark, "by Canine Development" and the product links;

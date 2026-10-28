@@ -78,6 +78,29 @@ public sealed class BrandImagePublishTests
         Assert.DoesNotContain("<img class=\"ip-brand-logo\"", html);
         Assert.DoesNotContain("ip-brand-dot", html);
     }
+
+    // The logo is inlined in the header and again in the footer. Only the first of two equal ids counts, so the
+    // footer's copy gets its own: otherwise its gradient fill resolves to the header's, which follows the header's
+    // colour scheme, not the footer's.
+    [Fact]
+    public async Task The_footer_logo_paints_with_its_own_gradient_not_the_headers()
+    {
+        await using var host = new PublishingTestHost();
+        var siteId = await host.CreateSite("Acme Studio", "en");
+        var homeId = await host.CreatePage(siteId, "home", "Home");
+        await host.SetNavigation(siteId, homeId);
+        await host.Publish(homeId);
+        var svgId = await host.CreateSvgAsset(
+            "<svg viewBox=\"0 0 10 10\"><defs><linearGradient id=\"metal\"><stop offset=\"0\" stop-color=\"#56557a\"/></linearGradient></defs><path d=\"M0 0h10v10z\" fill=\"url(#metal)\"/></svg>");
+        await host.SetHeaderLogo(siteId, svgId);
+
+        await host.Publisher.Synchronize();
+
+        var html = host.ReadText("index.html");
+        Assert.Single(Regex.Matches(html, "id=\"metal\""));
+        Assert.Single(Regex.Matches(html, "id=\"metal-footer\""));
+        Assert.Contains("fill=\"url(#metal-footer)\"", html);
+    }
     // A mark drawn as a vector is the favicon as it is: one favicon.svg holding both renditions, and the browser's
     // own colour scheme picks one (the dark ink on light tab bars, the light ink on dark), like the header's mark.
     [Fact]

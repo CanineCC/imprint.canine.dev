@@ -1105,7 +1105,8 @@
         "options": [
           "watchdog",
           "assay",
-          "cai"
+          "cai",
+          "assert"
         ]
       }
     ]
