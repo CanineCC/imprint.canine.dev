@@ -1039,6 +1039,83 @@ public sealed class ImprintAuthoringMcpTools
             () => new { ok = true, siteId = sid.Compact, senders = list.Select(s => s.Key).ToList() });
     }
 
+    [McpServerTool(Name = "schedule_linkedin_update")]
+    [Description("Plan a LinkedIn post of its own (not an article's announcement) to go out at a date and time, as one of the site's LinkedIn senders (see set_site_linkedin_senders; a member sender, urn:li:person:{id}, posts under that person's name once they have connected LinkedIn in the editor's site settings). Text at most 3,000 characters (hashtags written as #word stay hashtags); 0 to 9 images, each a media asset id (upload_asset first) with alt text. The scheduler sends it once at its time; one more than two hours late is held back as missed. Returns the update id.")]
+    public static async Task<object> ScheduleLinkedInUpdate(
+        [Description("The site id.")] string siteId,
+        [Description("The sender's key, e.g. 'jimmy'.")] string sender,
+        [Description("The post text.")] string text,
+        [Description("The images in order: objects with assetId and alt.")] IReadOnlyList<LinkedInUpdateImageRequest>? images,
+        [Description("When it goes out, ISO 8601 with offset, e.g. 2026-11-03T08:15:00+01:00.")] string publishAt,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        if (!DateTimeOffset.TryParse(publishAt, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var at)) return Fail("publishAt is not an ISO 8601 time with offset");
+        if (UpdateImages(images) is not { } pictures) return Fail("every image needs an assetId (a GUID)");
+        var id = Imprint.Authoring.Domain.LinkedInUpdateId.New();
+        return await Dispatch(dispatcher, config, new Imprint.Authoring.Features.LinkedInUpdates.ScheduleLinkedInUpdate(id, sid, sender, text, pictures, at), ct,
+            () => new { ok = true, updateId = id.Compact, publishAt = at, images = pictures.Count });
+    }
+
+    [McpServerTool(Name = "edit_linkedin_update")]
+    [Description("Change a LinkedIn update that has not gone out (or was missed, or refused for good): the sender, text, images and time, all restated. It is scheduled again for the given time.")]
+    public static async Task<object> EditLinkedInUpdate(
+        [Description("The update id.")] string updateId,
+        [Description("The sender's key.")] string sender,
+        [Description("The post text.")] string text,
+        [Description("The images in order: objects with assetId and alt.")] IReadOnlyList<LinkedInUpdateImageRequest>? images,
+        [Description("When it goes out, ISO 8601 with offset.")] string publishAt,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+    {
+        if (!TryUpdateId(updateId, out var id)) return Fail("invalid updateId");
+        if (!DateTimeOffset.TryParse(publishAt, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var at)) return Fail("publishAt is not an ISO 8601 time with offset");
+        if (UpdateImages(images) is not { } pictures) return Fail("every image needs an assetId (a GUID)");
+        return await Dispatch(dispatcher, config, new Imprint.Authoring.Features.LinkedInUpdates.EditLinkedInUpdate(id, sender, text, pictures, at), ct,
+            () => new { ok = true, updateId = id.Compact, publishAt = at });
+    }
+
+    [McpServerTool(Name = "cancel_linkedin_update")]
+    [Description("Cancel a LinkedIn update that has not gone out. It is kept, cancelled, and never sent.")]
+    public static async Task<object> CancelLinkedInUpdate(
+        [Description("The update id.")] string updateId,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+    {
+        if (!TryUpdateId(updateId, out var id)) return Fail("invalid updateId");
+        return await Dispatch(dispatcher, config, new Imprint.Authoring.Features.LinkedInUpdates.CancelLinkedInUpdate(id), ct,
+            () => new { ok = true, updateId = id.Compact, state = "Cancelled" });
+    }
+
+    [McpServerTool(Name = "resolve_linkedin_update")]
+    [Description("After an update's result is Unknown (it may have posted), say what is on LinkedIn: the post's URN if it is there, or blank if it is not (it then waits for a new time via edit_linkedin_update). Never guess: look at the profile first.")]
+    public static async Task<object> ResolveLinkedInUpdate(
+        [Description("The update id.")] string updateId,
+        [Description("The post's URN (urn:li:share:… or urn:li:ugcPost:…), or blank if it did not post.")] string? urn,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+    {
+        if (!TryUpdateId(updateId, out var id)) return Fail("invalid updateId");
+        return await Dispatch(dispatcher, config, new Imprint.Authoring.Features.LinkedInUpdates.ResolveLinkedInUpdate(id, urn), ct,
+            () => new { ok = true, updateId = id.Compact, posted = !string.IsNullOrWhiteSpace(urn) });
+    }
+
+    [McpServerTool(Name = "list_linkedin_updates")]
+    [Description("A site's LinkedIn updates, soonest first: id, sender, publish time, state (Scheduled, Attempting, Posted, Failed, Unknown, Missed, Cancelled), the post's URN once posted, the reason when it failed or was missed, the image count and the first line of the text.")]
+    public static object ListLinkedInUpdates(
+        [Description("The site id.")] string siteId,
+        SiteOverview sites, Imprint.Authoring.Projections.LinkedInUpdateList updates)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        if (sites.Get(sid) is null) return Fail("unknown site");
+        return new
+        {
+            ok = true,
+            updates = updates.ForSite(sid).Select(u => new
+            {
+                updateId = u.Id.Compact, u.Sender, u.PublishAt, state = u.State.ToString(), u.Urn, u.Reason,
+                images = u.Images.Count, firstLine = u.Text.Split('\n')[0],
+            }).ToList(),
+        };
+    }
+
     [McpServerTool(Name = "classify_post")]
     [Description("Set what kind of article a post is (essay, guide, whitepaper, documentation) and which products it is about (any of canine, assert, assure, assay, cca, cai; may be empty). The resource center's template and index follow the kind. Changing it on an approved post withdraws the approval, as an edit does.")]
     public static async Task<object> ClassifyPost(
@@ -1448,6 +1525,29 @@ public sealed class ImprintAuthoringMcpTools
         }
     }
 
+    private static bool TryUpdateId(string? s, out Imprint.Authoring.Domain.LinkedInUpdateId id)
+    {
+        var ok = Guid.TryParse(s, out var guid);
+        id = Imprint.Authoring.Domain.LinkedInUpdateId.From(guid);
+        return ok;
+    }
+
+    private static IReadOnlyList<Imprint.Authoring.Domain.LinkedIn.LinkedInUpdateImage>? UpdateImages(IReadOnlyList<LinkedInUpdateImageRequest>? images)
+    {
+        var list = new List<Imprint.Authoring.Domain.LinkedIn.LinkedInUpdateImage>();
+        foreach (var image in images ?? [])
+        {
+            if (!Guid.TryParse(image.AssetId, out var guid))
+            {
+                return null;
+            }
+
+            list.Add(new(AssetId.From(guid), image.Alt ?? ""));
+        }
+
+        return list;
+    }
+
     private static bool TrySiteId(string? s, out SiteId id)
     {
         if (Guid.TryParseExact(s, "N", out var g) || Guid.TryParse(s, out g)) { id = SiteId.From(g); return true; }
@@ -1510,3 +1610,6 @@ public sealed class ImprintAuthoringMcpTools
     /// <summary>A site row for <c>list_sites</c>.</summary>
     public sealed record SiteInfo(string Id, string Name, string DefaultLocale);
 }
+
+/// <summary>One image on a LinkedIn update, as an MCP caller gives it.</summary>
+public sealed record LinkedInUpdateImageRequest(string? AssetId, string? Alt);

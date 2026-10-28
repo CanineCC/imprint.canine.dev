@@ -180,4 +180,24 @@ public sealed class LinkedInUpdateClientTests : IDisposable
 
         Assert.Equal("Jimmy Borch", new LinkedInMemberTokenStore(_data).Read(Person)!.Name);
     }
+
+    [Fact]
+    public async Task The_member_is_known_by_the_id_and_name_openid_connect_gives()
+    {
+        var handler = new FakeHandler();
+        handler.Answers.Enqueue(() => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"sub\":\"Ab3\",\"name\":\"Jimmy Borch\"}") });
+        handler.Answers.Enqueue(() => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"sub\":\"../x\"}") });
+
+        Assert.Equal(("urn:li:person:Ab3", "Jimmy Borch"), await LinkedInMemberOAuth.Who(new HttpClient(handler), App, "t", CancellationToken.None));
+        Assert.Null(await LinkedInMemberOAuth.Who(new HttpClient(handler), App, "t", CancellationToken.None));
+        Assert.Equal("https://api.test/v2/userinfo", handler.Seen[0].Request.RequestUri!.ToString());
+    }
+
+    [Fact]
+    public void The_member_app_asks_for_openid_and_member_sharing_and_returns_to_its_own_callback()
+    {
+        var url = LinkedInOAuth.AuthorizeUrl(App, "s");
+        Assert.Contains("scope=openid%20profile%20w_member_social", url);
+        Assert.Contains(Uri.EscapeDataString("https://imprint.example.com/linkedin/member-callback"), url);
+    }
 }
