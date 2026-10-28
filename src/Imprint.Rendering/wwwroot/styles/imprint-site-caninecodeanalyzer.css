@@ -19,6 +19,9 @@
 @media print, (forced-colors: active) {
   .ip-site-caninecodeanalyzer .ip-h-accent { background: none; color: inherit; }
 }
+/* The closing band's ground is the accent itself, so the shine would vanish into it (about 1.1:1); there the payoff
+   takes the band's own ink, as the rest of the heading does. */
+.ip-site-caninecodeanalyzer .ip-ap-cta.ip-bg-primary .ip-h-accent { background: none; color: inherit; }
 
 /* ★ QUIET METAL ON BUTTONS (owner, 2026-10-28; brand document 5.3), as on Assure, Assert and Assay: a short
    titanium run with no shine, a faint light line along the top edge and a small, close shadow, 4px corners.
