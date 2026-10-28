@@ -128,6 +128,11 @@ row-rect drag in the panel is a natural extension left to contributors.
   edit node; overlay ring tracks it).
 - Enter in heading/button commits (single-line); Enter in richtext makes a new `<p>`,
   Shift+Enter a `<br>`.
+- **Heading accent**: a heading stores its accent part as `<em>…</em>` and renders it as
+  `<span class="ip-h-accent">` (the product sites draw it as a shine in their metal). In
+  place, the span stays in the edited text, and commit writes it back as the `<em>` mark,
+  so editing a word never drops the accent. To add or move the mark, edit the heading's
+  text in the inspector (or with `edit_text`).
 
 ## 5. Insertion
 

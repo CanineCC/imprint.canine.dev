@@ -81,7 +81,8 @@ compares it to the site. These go stale only if the site does.
   every page as title + URL + meta description. Capped at 200 pages; past that it
   states how many it left out and points at `sitemap.xml`.
 - **`llms-full.txt`** — the corpus. The same header, then every page's body prose:
-  headings as Markdown, rich text as plain text, buttons as resolved links, images
+  headings as Markdown (as plain words: a heading's `<em>` accent mark is removed, as it is
+  for anchors and the contents list), rich text as plain text, buttons as resolved links, images
   as their alt text. Sourced from the page **tree**, not the rendered HTML — pages
   that are not stale are never rendered, so their HTML is not in memory, and block
   instances are resolved through `OverrideApplier` so the file quotes what the page
