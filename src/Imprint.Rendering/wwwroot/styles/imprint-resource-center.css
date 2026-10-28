@@ -34,7 +34,7 @@
   --rc-ok: light-dark(#1f6f43, #6fd39a); --rc-warn: light-dark(#8a5a00, #f2c063); --rc-warn-wash: light-dark(#fff4dc, #2e2410);
   /* the product family, from docs/design/brand/tools/build.py */
   --assert: light-dark(#2f5d85, #9bbedb); --assert-wash: light-dark(#eaf1f7, #1e2c39);
-  --assure: light-dark(#d4157a, #ff4fa3); --assure-wash: light-dark(#fce4f0, #3a1028);
+  --assure: light-dark(#c2410c, #fb923c); --assure-wash: light-dark(#fdeee3, #3b1d0e);
   --assay: light-dark(#8a5d33, #c99a6a); --assay-wash: light-dark(#f3eadf, #2e2115);
   --cca: light-dark(#0b7a5e, #38d9a9); --cca-wash: light-dark(#e6f6f1, #173229);
   --company: var(--rc-ink); --company-wash: light-dark(#eef0f3, #1c2027);
