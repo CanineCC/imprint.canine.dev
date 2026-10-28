@@ -280,3 +280,10 @@
 @media print, (forced-colors: active) {
   .ip-site-assaypreview .ip-h-accent { background: none; color: inherit; }
 }
+
+/* ★ THE LOGO'S METAL (owner, 2026-10-28; brand document 5.6): the drawn lens lifts on dark grounds and the graphite
+   top. The logo is inlined with the brand run on its stops; light-dark() follows the colour scheme of the place it
+   sits, so the header and footer pick the right run in both themes without a second file. */
+.ip-site-assaypreview .ip-brand-logo stop:nth-of-type(1) { stop-color: light-dark(#d2a776, #ead2b4); }
+.ip-site-assaypreview .ip-brand-logo stop:nth-of-type(2) { stop-color: light-dark(#8a5d33, #c99a6a); }
+.ip-site-assaypreview .ip-brand-logo stop:nth-of-type(3) { stop-color: light-dark(#4a2f16, #9a6e44); }

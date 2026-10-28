@@ -23,7 +23,7 @@
 /* ★ QUIET METAL ON BUTTONS (owner, 2026-10-28; brand document 5.3), as on Assure, Assert and Assay: a short
    teal run with no shine, a faint light line along the top edge and a small, close shadow, 4px corners.
    Its lightest point, #178166, still carries white lettering at 4.8:1, so the letters can sit anywhere on
-   the button. The logo's gauge keeps the full metal run. Lettering 16px semibold, 15px in the header. */
+   the button. The logo's radar keeps the full metal run. Lettering 16px semibold, 15px in the header. */
 .ip-site-caninecodeanalyzer {
   --metal: linear-gradient(135deg, #178166 0%, #0b7a5e 40%, #085c47 100%);
   --metal-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 2px rgb(18 19 24 / 0.25);
@@ -40,3 +40,10 @@
 .ip-site-caninecodeanalyzer .ip-btn { font-size: 16px; font-weight: 600; padding: 12px 22px; border-radius: 4px; min-height: 46px; }
 .ip-site-caninecodeanalyzer .ip-btn-secondary { font-weight: 600; }
 .ip-site-caninecodeanalyzer .ip-header-cta { font-size: 15px; font-weight: 600; padding: 10px 18px; min-height: 44px; }
+
+/* ★ THE LOGO'S METAL (owner, 2026-10-28; brand document 5.6): the drawn radar lifts on dark grounds and the graphite
+   top. The logo is inlined with the brand run on its stops; light-dark() follows the colour scheme of the place it
+   sits, so the header and footer pick the right run in both themes without a second file. */
+.ip-site-caninecodeanalyzer .ip-brand-logo stop:nth-of-type(1) { stop-color: light-dark(#5fd0ae, #a6f0d8); }
+.ip-site-caninecodeanalyzer .ip-brand-logo stop:nth-of-type(2) { stop-color: light-dark(#0b7a5e, #38d9a9); }
+.ip-site-caninecodeanalyzer .ip-brand-logo stop:nth-of-type(3) { stop-color: light-dark(#04402f, #12a37b); }

@@ -19,7 +19,7 @@
    ★ QUIET METAL ON BUTTONS (owner, 2026-10-28; brand document 5.3). A short run with no shine on its
    top half, a faint light line along the top edge and a small, close shadow: the full sweep with its
    shine read as a 2008 glossy button. Its lightest point, #c8460e, still carries white lettering at
-   4.8:1, so the letters can sit anywhere on the button. The logo dot keeps the full metal run. */
+   4.8:1, so the letters can sit anywhere on the button. The logo's check keeps the full metal run. */
 .ip-site-assure {
   --font-display: "Figtree", system-ui, sans-serif;
   --font-ui: "Figtree", system-ui, "Segoe UI", Roboto, sans-serif;
@@ -164,3 +164,10 @@
 @media print, (forced-colors: active) {
   .ip-site-assure .ip-h-accent { background: none; color: inherit; }
 }
+
+/* ★ THE LOGO'S METAL (owner, 2026-10-28; brand document 5.6): the drawn check lifts on dark grounds and the graphite
+   top. The logo is inlined with the brand run on its stops; light-dark() follows the colour scheme of the place it
+   sits, so the header and footer pick the right run in both themes without a second file. */
+.ip-site-assure .ip-brand-logo stop:nth-of-type(1) { stop-color: light-dark(#f59a5c, #ffc39a); }
+.ip-site-assure .ip-brand-logo stop:nth-of-type(2) { stop-color: light-dark(#c2410c, #fb923c); }
+.ip-site-assure .ip-brand-logo stop:nth-of-type(3) { stop-color: light-dark(#7a2508, #d9661f); }
