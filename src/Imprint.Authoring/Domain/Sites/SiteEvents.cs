@@ -213,6 +213,25 @@ public sealed record SiteArchived;
 [EventType("site.restored", 1)]
 public sealed record SiteRestored;
 
+// The site's posts in the order its editors put them (the list and the publishing plan); the whole order each time.
+[EventType("site.post-order-changed", 1)]
+public sealed record SitePostOrderChanged(IReadOnlyList<PostId> Posts)
+{
+    // Same list-equality reasoning as SiteNavigationChanged.
+    public bool Equals(SitePostOrderChanged? other) => other is not null && Posts.SequenceEqual(other.Posts);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        foreach (var post in Posts)
+        {
+            hash.Add(post);
+        }
+
+        return hash.ToHashCode();
+    }
+}
+
 // The person who has to clear a post before it reaches the public — "Public Relations Review".
 // Per site, because one blog's reviewer is not another's. Null clears the role, and with no
 // reviewer a site publishes exactly as it always did.

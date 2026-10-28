@@ -98,6 +98,7 @@ public sealed class SiteEventSamples : IEventSampleProvider
             yield return new SiteOwnershipClaimed();
             yield return new SiteArchived();
             yield return new SiteRestored();
+            yield return new SitePostOrderChanged([PostId.New(), PostId.New()]);
             yield return new SiteCollaboratorAdded("colleague@example.com");
             yield return new SiteCollaboratorRemoved("colleague@example.com");
 

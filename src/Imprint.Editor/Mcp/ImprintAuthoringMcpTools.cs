@@ -27,6 +27,7 @@ using RestorePageToRevisionCmd = Imprint.Authoring.Features.Pages.RestorePageToR
 using CreateSiteCmd = Imprint.Authoring.Features.Sites.CreateSite.CreateSite;
 using ArchiveSiteCmd = Imprint.Authoring.Features.Sites.ArchiveSite.ArchiveSite;
 using RestoreSiteCmd = Imprint.Authoring.Features.Sites.ArchiveSite.RestoreSite;
+using SetPostOrderCmd = Imprint.Authoring.Features.Sites.SetPostOrder.SetPostOrder;
 using DuplicateNodeCmd = Imprint.Authoring.Features.Pages.DuplicateNode.DuplicateNode;
 using EditTextCmd = Imprint.Authoring.Features.Pages.EditText.EditText;
 using MoveNodeCmd = Imprint.Authoring.Features.Pages.MoveNode.MoveNode;
@@ -290,6 +291,24 @@ public sealed class ImprintAuthoringMcpTools
         !TrySiteId(siteId, out var sid)
             ? Task.FromResult(Fail("invalid siteId"))
             : Dispatch(dispatcher, config, new RestoreSiteCmd(sid), ct, () => new { ok = true, siteId = sid.Compact, archived = false });
+
+    [McpServerTool(Name = "set_post_order")]
+    [Description("Put a blog's or resource center's posts in an order: the order the editor's list shows them in, and the plan they are published by. Give the whole order, each post id once; posts left out follow after it, newest first. Editors change it by dragging in the list.")]
+    public static Task<object> SetPostOrder(
+        [Description("The site id.")] string siteId,
+        [Description("Every post id in order, first to last.")] IReadOnlyList<string> postIds,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Task.FromResult(Fail("invalid siteId"));
+        var ids = new List<PostId>();
+        foreach (var raw in postIds ?? [])
+        {
+            if (!AuthoringApi.TryPostIdPublic(raw, out var pid)) return Task.FromResult(Fail($"'{raw}' is not a post id"));
+            ids.Add(pid);
+        }
+
+        return Dispatch(dispatcher, config, new SetPostOrderCmd(sid, ids), ct, () => new { ok = true, siteId = sid.Compact, posts = ids.Count });
+    }
 
     [McpServerTool(Name = "create_blog")]
     [Description("Create a post-stream site and return its id: a blog (kind 'blog', the default) or a resource center (kind 'resource-center': articles with a kind, the grouped index and the article template). Optionally give the publish folder and the public URL of its Production environment (a URL needs a folder). Posts sit at the site's root.")]

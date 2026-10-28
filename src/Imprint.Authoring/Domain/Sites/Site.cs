@@ -162,6 +162,9 @@ public sealed class Site : AggregateRoot
     /// <summary>Whether posts on this site need a sign-off at all.</summary>
     public bool HasReviewer => ReviewerEmail is { Length: > 0 };
 
+    /// <summary>The site's posts in the order its editors put them; posts not in it come after, newest first.</summary>
+    public IReadOnlyList<PostId> PostOrder { get; private set; } = [];
+
     /// <summary>A retired site: out of the lists, and nothing of it may be published until it is restored.</summary>
     public bool IsArchived { get; private set; }
 
@@ -842,6 +845,21 @@ public sealed class Site : AggregateRoot
         }
     }
 
+    /// <summary>Puts the site's posts in an order (the whole order, each post once). That each is a post of this site
+    /// is the slice's check: the aggregate does not see posts.</summary>
+    public void SetPostOrder(IReadOnlyList<PostId> posts)
+    {
+        if (posts.Distinct().Count() != posts.Count)
+        {
+            throw new DomainException("A post is in the order more than once.");
+        }
+
+        if (!posts.SequenceEqual(PostOrder))
+        {
+            Raise(new SitePostOrderChanged([.. posts]));
+        }
+    }
+
     /// <summary>The site half of every publish: pages, posts and their schedules all pass through it.</summary>
     public void EnsureMayPublish()
     {
@@ -1014,6 +1032,9 @@ public sealed class Site : AggregateRoot
                 break;
             case SiteRestored:
                 IsArchived = false;
+                break;
+            case SitePostOrderChanged e:
+                PostOrder = [.. e.Posts];
                 break;
             case SiteReviewerSet e:
                 ReviewerName = e.Name;

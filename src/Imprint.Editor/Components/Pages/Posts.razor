@@ -5,6 +5,7 @@
 @using Imprint.Authoring.Domain.Sites
 @using Imprint.Authoring.Features.Posts.CreatePost
 @using Imprint.Authoring.Features.Posts.SignPublishedPost
+@using Imprint.Authoring.Features.Sites.SetPostOrder
 @using Imprint.Authoring.Projections
 @using Imprint.Editor.Auth
 @using Imprint.Editor.Services
@@ -69,30 +70,79 @@
     }
     else
     {
-        <ul class="dash-grid" aria-label="Posts" data-testid="post-list">
-            @foreach (var post in _posts)
-            {
-                <li class="dash-card">
-                    <button type="button" class="dash-open" data-testid="post-open"
-                            data-slug="@post.Slug.Value" @onclick="() => Open(post.Id)">
-                        <span class="dash-name">@Title(post)</span>
-                        <span class="dash-meta">
-                            <span class="post-status post-status-@post.Status.ToString().ToLowerInvariant()"
-                                  data-testid="post-status">@Label(post.Status)</span>
-                            @if (IsCenter && post.Kind is { } kind)
+        @* Two shelves: what is still to go out, in the order it should go, and what is live. The order is one list for
+           the whole site (the plan); each tab shows its part of it. Drag a row, or use its arrows, to move it. *@
+        <div class="post-tabs" role="tablist" aria-label="@Plural">
+            <button type="button" role="tab" class="post-tab @(_tab == Tab.Unpublished ? "is-on" : null)"
+                    aria-selected="@(_tab == Tab.Unpublished)" data-testid="posts-tab-unpublished"
+                    @onclick="() => _tab = Tab.Unpublished">Unpublished <span>@Unpublished.Count</span></button>
+            <button type="button" role="tab" class="post-tab @(_tab == Tab.Published ? "is-on" : null)"
+                    aria-selected="@(_tab == Tab.Published)" data-testid="posts-tab-published"
+                    @onclick="() => _tab = Tab.Published">Published <span>@Published.Count</span></button>
+        </div>
+
+        var shown = _tab == Tab.Published ? Published : Unpublished;
+        @if (shown.Count == 0)
+        {
+            <p class="dash-sub">@(_tab == Tab.Published ? "Nothing is live yet." : "Everything is live.")</p>
+        }
+        else
+        {
+            <ol class="post-rows" aria-label="Posts" data-testid="post-list">
+                @for (var i = 0; i < shown.Count; i++)
+                {
+                    var post = shown[i];
+                    var index = i;
+                    <li class="post-row @(_dragging == post.Id ? "is-dragging" : null) @(_over == post.Id ? "is-over" : null)"
+                        draggable="true" data-testid="post-row" data-slug="@post.Slug.Value"
+                        @ondragstart="() => _dragging = post.Id"
+                        @ondragend="() => { _dragging = null; _over = null; }"
+                        @ondragenter="() => _over = post.Id"
+                        @ondragover:preventDefault="true"
+                        @ondrop="() => Drop(post.Id)" @ondrop:preventDefault="true">
+                        <span class="post-grip" aria-hidden="true">⠿</span>
+                        <span class="post-rank">@(index + 1)</span>
+                        <button type="button" class="dash-open post-row-open" data-testid="post-open"
+                                data-slug="@post.Slug.Value" @onclick="() => Open(post.Id)">
+                            <span class="dash-name">@Title(post)</span>
+                            <span class="dash-meta">
+                                <span class="post-status post-status-@post.Status.ToString().ToLowerInvariant()"
+                                      data-testid="post-status">@Label(post.Status)</span>
+                                @if (post.Hold is { } hold)
+                                {
+                                    <span class="post-held" title="@hold" data-testid="post-held">On hold</span>
+                                }
+                                @if (IsCenter && post.Kind is { } kind)
+                                {
+                                    <text> · @kind</text>
+                                }
+                                · /@post.Slug.Value
+                                @if (post.PublishedAt is { } at)
+                                {
+                                    <text> · @at.UtcDateTime.ToString("yyyy-MM-dd")</text>
+                                }
+                            </span>
+                            @if (post.Hold is { } why)
                             {
-                                <text> · @kind</text>
+                                <span class="post-held-why">@why</span>
                             }
-                            · /@post.Slug.Value
-                            @if (post.PublishedAt is { } at)
+                        </button>
+                        <span class="post-products" data-testid="post-products">
+                            @foreach (var product in post.Products)
                             {
-                                <text> · @at.UtcDateTime.ToString("yyyy-MM-dd")</text>
+                                <span class="post-product post-product-@product">@ProductName(product)</span>
                             }
                         </span>
-                    </button>
-                </li>
-            }
-        </ul>
+                        <span class="post-move">
+                            <button type="button" class="ed-btn ed-btn-ghost" disabled="@(index == 0)" data-testid="post-up"
+                                    aria-label="@($"Move {Title(post)} up")" @onclick="() => Move(shown, index, -1)">↑</button>
+                            <button type="button" class="ed-btn ed-btn-ghost" disabled="@(index == shown.Count - 1)" data-testid="post-down"
+                                    aria-label="@($"Move {Title(post)} down")" @onclick="() => Move(shown, index, +1)">↓</button>
+                        </span>
+                    </li>
+                }
+            </ol>
+        }
     }
 </main>
 
@@ -118,7 +168,12 @@
     private string Plural => IsCenter ? "Articles" : "Posts";
     private IReadOnlyList<PostSummary> _posts = [];
 
-    protected override void OnInitialized() => Index.Changed += OnChanged;
+    // The order lives on the site, so a reorder (here or in another window) arrives as a site change.
+    protected override void OnInitialized()
+    {
+        Index.Changed += OnChanged;
+        Sites.Changed += OnChanged;
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -151,8 +206,73 @@
     /// published index and the feed — scatters that completely. Posts with no number keep the
     /// projection's order, after the numbered ones.
     /// </summary>
-    private void Reload() =>
-        _posts = [.. Index.All(_site).OrderBy(post => PostSequence.SortKey(Title(post)))];
+    // The site's order first (the plan its editors set); a post not in it yet comes after, by its title's own
+    // sequence number, as before there was an order.
+    private void Reload()
+    {
+        var order = Sites.Get(_site)?.PostOrder ?? [];
+        var rank = order.Select((id, i) => (id, i)).ToDictionary(x => x.id, x => x.i);
+        _posts = [.. Index.All(_site)
+            .OrderBy(post => rank.GetValueOrDefault(post.Id, int.MaxValue))
+            .ThenBy(post => PostSequence.SortKey(Title(post)))];
+    }
+
+    private enum Tab { Unpublished, Published }
+
+    private Tab _tab = Tab.Unpublished;
+    private PostId? _dragging;
+    private PostId? _over;
+
+    // Live is live: a published post with edits not yet out (Modified) is still on the published shelf.
+    private static bool IsLive(PostSummary post) => post.Status is PostStatus.Published or PostStatus.Modified;
+
+    private IReadOnlyList<PostSummary> Unpublished => [.. _posts.Where(post => !IsLive(post))];
+
+    private IReadOnlyList<PostSummary> Published => [.. _posts.Where(IsLive)];
+
+    private static string ProductName(string product) => product switch
+    {
+        "cca" => "CCA",
+        "cai" => "CAI",
+        _ => char.ToUpperInvariant(product[0]) + product[1..],
+    };
+
+    private async Task Drop(PostId target)
+    {
+        var moving = _dragging;
+        _dragging = null;
+        _over = null;
+        if (moving is { } id && id != target)
+        {
+            await Place(id, target);
+        }
+    }
+
+    private async Task Move(IReadOnlyList<PostSummary> shown, int index, int step)
+    {
+        var to = index + step;
+        if (to >= 0 && to < shown.Count)
+        {
+            await Place(shown[index].Id, shown[to].Id);
+        }
+    }
+
+    // Moves a post to where another one stands in the whole order: after it when moving down, before it when moving
+    // up, so a drop lands where the row was dropped and each arrow is one step.
+    private async Task Place(PostId moving, PostId target)
+    {
+        var order = _posts.Select(post => post.Id).ToList();
+        var from = order.IndexOf(moving);
+        var at = order.IndexOf(target);
+        if (from < 0 || at < 0)
+        {
+            return;
+        }
+
+        order.RemoveAt(from);
+        order.Insert(order.IndexOf(target) + (from < at ? 1 : 0), moving);
+        await Commands.Run(new SetPostOrder(_site, order));
+    }
 
     private bool _isReviewer;
 
@@ -237,5 +357,9 @@
         _ => "Draft",
     };
 
-    public void Dispose() => Index.Changed -= OnChanged;
+    public void Dispose()
+    {
+        Index.Changed -= OnChanged;
+        Sites.Changed -= OnChanged;
+    }
 }
