@@ -64,6 +64,11 @@ else
                        is a feature nobody has. *@
                     <a class="dash-posts" href="/site/@site.Id.Compact/posts" data-testid="site-posts"
                        title="Posts" aria-label="@($"Posts for {site.Name}")">Posts</a>
+                    @if (site.LinkedInSenders.Count > 0)
+                    {
+                        <a class="dash-posts dash-linkedin" href="/site/@site.Id.Compact/linkedin" data-testid="site-linkedin"
+                           title="LinkedIn updates" aria-label="@($"LinkedIn updates for {site.Name}")">LinkedIn</a>
+                    }
                     <a class="dash-gear" href="@SettingsHref(site.Id)"
                        title="Site settings" aria-label="@($"Settings for {site.Name}")">⚙</a>
                 </li>

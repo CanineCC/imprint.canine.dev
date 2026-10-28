@@ -91,7 +91,7 @@ public static class LinkedInOAuth
         $"&client_id={Uri.EscapeDataString(options.ClientId!)}" +
         $"&redirect_uri={Uri.EscapeDataString(options.RedirectUri)}" +
         $"&state={state}" +
-        $"&scope={Uri.EscapeDataString(LinkedInOptions.Scope)}";
+        $"&scope={Uri.EscapeDataString(options.Scopes)}";
 
     internal static bool StateMatches(string? expected, string? given) =>
         expected is { Length: > 0 } && given is { Length: > 0 }

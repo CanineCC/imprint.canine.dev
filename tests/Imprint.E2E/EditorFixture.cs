@@ -21,6 +21,9 @@ public sealed class EditorFixture : IAsyncLifetime
     public string AppLogPath { get; private set; } = "";
     public string PublishDirectory => Path.Combine(_dataDirectory!, "publish");
 
+    /// <summary>The bearer token for <c>/mcp</c> in this fixture's editor (never a real one).</summary>
+    public const string AuthoringToken = "e2e-authoring-token";
+
     public async ValueTask InitializeAsync()
     {
         // Expect() keeps its OWN budget and ignores the context default set in NewPage(), so
@@ -45,6 +48,8 @@ public sealed class EditorFixture : IAsyncLifetime
         // would otherwise default to Production — where the editor refuses to start without
         // Keycloak configured. The E2E suite exercises the app with auth off.
         startInfo.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
+        // The authoring MCP surface is mounted only with a token: the tests that drive it (as an agent would) use this one.
+        startInfo.Environment["Imprint__Authoring__Token"] = AuthoringToken;
         // Circuit-level detail: a dead circuit is invisible at Information level, and
         // "the click did nothing" bugs live exactly there.
         startInfo.Environment["Logging__LogLevel__Microsoft.AspNetCore.Components"] = "Debug";

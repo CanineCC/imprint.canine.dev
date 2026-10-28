@@ -1026,3 +1026,22 @@ button { font: inherit; color: inherit; }
 .post-sendback label { font-size: .78rem; color: var(--ed-text-muted); }
 .post-sendback textarea { flex: 1 1 18rem; font-size: .85rem; }
 
+
+/* LinkedIn updates: the plan, soonest first. The state badge carries a word as well as a colour. */
+.dash-linkedin { inset-inline-end: 100px; }
+.li-updates { list-style: none; margin: 0; padding: 0; display: grid; gap: .75rem; max-width: 52rem; }
+.li-update { background: var(--ed-surface); border: 1px solid var(--ed-border); border-radius: var(--ed-radius); padding: .85rem 1rem; }
+.li-when { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; font-weight: 600; }
+.li-offset { font-weight: 400; color: var(--ed-text-muted); font-size: .85rem; }
+.li-text { margin: .4rem 0 .25rem; }
+.li-meta { margin: 0; color: var(--ed-text-muted); font-size: .85rem; }
+.li-reason { margin: .4rem 0 0; font-size: .85rem; color: var(--ed-text); border-inline-start: 3px solid var(--ed-warn); padding-inline-start: .5rem; }
+.li-actions { display: flex; gap: .5rem; margin-top: .6rem; flex-wrap: wrap; align-items: center; }
+.li-urn { min-width: 16rem; }
+.li-state-scheduled { background: light-dark(#dbeafe, #1e3a5f); color: light-dark(#1e3a8a, #dbeafe); }
+.li-state-attempting, .li-state-unknown { background: light-dark(#fef3c7, #5a3d05); color: light-dark(#78350f, #fef3c7); }
+.li-state-posted { background: #0e5c3a; color: #fff; }
+.li-state-failed, .li-state-missed { background: light-dark(#fee2e2, #5f1d1d); color: light-dark(#7f1d1d, #fee2e2); }
+.li-state-cancelled { background: var(--ed-surface-2); color: var(--ed-text-muted); }
+.li-member { display: flex; gap: .5rem; align-items: baseline; flex-wrap: wrap; }
+.li-member code { font-size: .8rem; }

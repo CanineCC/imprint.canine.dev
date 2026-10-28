@@ -34,6 +34,8 @@
 @inject NavigationManager Navigation
 @inject LinkedInOptions LinkedInApp
 @inject LinkedInTokenStore LinkedInTokens
+@inject LinkedInMemberApp MemberApp
+@inject LinkedInMemberTokenStore Members
 
 <PageTitle>@(_site?.Name ?? "Site") · Settings</PageTitle>
 
@@ -423,9 +425,9 @@
             <h2 id="set-linkedin">LinkedIn</h2>
             <p class="settings-hint">
                 An article with a LinkedIn text is posted once, as the sender it names, when it is published with a
-                signed approval. Each sender is a LinkedIn page (the company page or a product's showcase page):
-                a short key the article names, a display name, and the page's organization URN
-                (<code>urn:li:organization:</code> and the page id).
+                signed approval. Each sender is a LinkedIn page (the company page or a product's showcase page) or a
+                member posting under their own name: a short key, a display name, and the author URN
+                (<code>urn:li:organization:</code> and the page id, or <code>urn:li:person:</code> and the member id).
             </p>
             <p class="settings-hint" data-testid="linkedin-connection">
                 @if (!LinkedInApp.HasApp)
@@ -468,7 +470,7 @@
                                    disabled="@(!_interactive)" @bind="_senders[idx].Key" @bind:event="oninput" />
                             <input class="ed-input sender-name" placeholder="Canine Development" aria-label="Sender name"
                                    disabled="@(!_interactive)" @bind="_senders[idx].Name" @bind:event="oninput" />
-                            <input class="ed-input env-baseurl" placeholder="urn:li:organization:123456" aria-label="Organization URN"
+                            <input class="ed-input env-baseurl" placeholder="urn:li:organization:123456" aria-label="Author URN"
                                    disabled="@(!_interactive)" @bind="_senders[idx].Urn" @bind:event="oninput" />
                             <button type="button" class="ed-btn ed-btn-ghost ed-btn-danger" title="Remove" aria-label="Remove sender"
                                     disabled="@(!_interactive)" @onclick="() => _senders.RemoveAt(idx)">✕</button>
@@ -485,6 +487,41 @@
                 @if (SendersDirty)
                 {
                     <span class="settings-dirty">Unsaved changes</span>
+                }
+            </div>
+
+            @* ---- A member posting under their own name (LinkedIn updates) ---- *@
+            <h3 id="set-linkedin-members">Post under your own name</h3>
+            <p class="settings-hint">
+                A LinkedIn update can go out as a person instead of a page. Connect your LinkedIn here, then add a sender
+                with your person URN (shown below once connected). LinkedIn lets a member's connection last about two
+                months; an update due after it expires is held back with that reason until you connect again.
+            </p>
+            <div data-testid="linkedin-members">
+                @if (!MemberApp.Options.HasApp)
+                {
+                    <p class="settings-hint">LinkedIn for members is not set up on this install: no update is sent as a person.</p>
+                }
+                else
+                {
+                    @foreach (var member in Members.All())
+                    {
+                        <p class="li-member" data-testid="linkedin-member">
+                            <strong>@member.Name</strong> <code>@member.PersonUrn</code>
+                            <span class="settings-hint">@(member.Tokens.AccessExpiresAt > DateTimeOffset.UtcNow
+                                ? $"connected until {member.Tokens.AccessExpiresAt:d MMM yyyy}"
+                                : "connection expired: connect again")</span>
+                        </p>
+                    }
+
+                    <div class="settings-row">
+                        <a class="ed-btn" data-testid="linkedin-member-connect" data-enhance-nav="false"
+                           href="@($"/linkedin/connect-member?site={site.Id.Compact}")">Connect my LinkedIn</a>
+                        @if (site.LinkedInSenders.Count > 0)
+                        {
+                            <a class="ed-btn ed-btn-ghost" href="@($"/site/{site.Id.Compact}/linkedin")">See the planned updates</a>
+                        }
+                    </div>
                 }
             </div>
         </section>

@@ -11,6 +11,7 @@ using Imprint.Editor.Components;
 using Imprint.Editor.Contact;
 using Imprint.Editor.LinkedIn;
 using Imprint.Authoring.Features.LinkedIn;
+using Imprint.Authoring.Features.LinkedInUpdates;
 using Imprint.Editor.Mcp;
 using Imprint.Editor.Notifications;
 using Imprint.Editor.Services;
@@ -72,6 +73,20 @@ builder.Services.AddSingleton<ILinkedInPoster>(provider => new LinkedInClient(
     provider.GetRequiredService<LinkedInTokenStore>(),
     provider.GetRequiredService<ILogger<LinkedInClient>>()));
 builder.Services.AddHostedService<DueLinkedInPoster>();
+
+// LinkedIn updates: standalone posts (text, images, a time) sent by the scheduler as a member under their own
+// name. A separate app (Imprint:LinkedInMember) because the page product may have to sit alone on its app; each
+// member connects once, and their token lives in secrets/linkedin-members/, never in the event stream.
+builder.Services.AddSingleton(new LinkedInMemberApp(LinkedInOptions.ForMembers(
+    builder.Configuration.GetSection("Imprint:LinkedInMember").Get<LinkedInOptions>() ?? new LinkedInOptions())));
+builder.Services.AddSingleton(new LinkedInMemberTokenStore(dataDirectory));
+builder.Services.AddSingleton(new LinkedInUpdateOptions());
+builder.Services.AddSingleton<ILinkedInUpdatePoster>(provider => new LinkedInUpdateClient(
+    provider.GetRequiredService<IHttpClientFactory>().CreateClient("linkedin"),
+    provider.GetRequiredService<LinkedInMemberApp>().Options,
+    provider.GetRequiredService<LinkedInMemberTokenStore>(),
+    provider.GetRequiredService<ILogger<LinkedInUpdateClient>>()));
+builder.Services.AddHostedService<DueLinkedInUpdatePoster>();
 builder.Services.AddHostedService<ReviewMailer>();
 builder.Services.AddImprintPublishing(new PublishingOptions
 {
@@ -329,6 +344,7 @@ app.MapGet("/preview/{site}/{**path}", (string site, string? path, SitePreview p
 
 // Connecting LinkedIn (OAuth): an editor login is required whenever the editor itself requires one.
 app.MapLinkedInConnect(authOptions.Enabled);
+app.MapLinkedInMemberConnect(authOptions.Enabled);
 
 // Headless, token-authenticated authoring API (off-network content authoring via the same command
 // path as the editor). Fail-closed: mapped ONLY when Imprint:Authoring:Token is configured.
