@@ -45,14 +45,14 @@ public sealed class ProductPricingTemplateTests
     }
 
     [Fact]
-    public void Assert_renders_each_plan_per_author_with_its_fair_use_and_features()
+    public void Assert_renders_each_plan_per_developer_with_its_fair_use_and_features()
     {
         var html = ProductPricingTemplate.RenderAssert(AssertJson);
         Assert.NotNull(html);
         Assert.Contains("<h3>Standard</h3>", html);
-        Assert.Contains("€20<span class=\"ip-price-unit\">per author a month</span>", html);
+        Assert.Contains("€20<span class=\"ip-price-unit\">per developer a month</span>", html);
         Assert.Contains("€30", html);
-        Assert.Contains("1,000,000 lines scanned a month per paid author", html);
+        Assert.Contains("1,000,000 lines scanned a month for each developer you pay for, shared across your organisation", html);
         Assert.Contains("<li>Agent-fix loop</li>", html);
     }
 

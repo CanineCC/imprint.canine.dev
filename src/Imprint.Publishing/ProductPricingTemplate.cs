@@ -20,7 +20,7 @@ namespace Imprint.Publishing;
 /// </remarks>
 public static class ProductPricingTemplate
 {
-    /// <summary>Assert: the plans, priced per author a month.</summary>
+    /// <summary>Assert: the plans, priced per developer a month (each person who committed in the last 90 days).</summary>
     public const string AssertName = "assert-pricing";
 
     /// <summary>Assure: one price per repository a month.</summary>
@@ -51,11 +51,11 @@ public static class ProductPricingTemplate
         {
             html.Append("<div class=\"ip-stack\"><h3>").Append(Esc(Str(plan, "name"))).Append("</h3>");
             html.Append("<p class=\"ip-price\">").Append(Esc(Str(plan, "price")))
-                .Append("<span class=\"ip-price-unit\">per author a month</span>");
+                .Append("<span class=\"ip-price-unit\">per developer a month</span>");
             if (Long(plan, "linesPerAuthorPerMonth") is { } lines and > 0)
             {
                 html.Append("<span class=\"ip-price-allowance\">Fair use: ").Append(Esc(Lines(lines)))
-                    .Append(" lines scanned a month per paid author, pooled across the organisation</span>");
+                    .Append(" lines scanned a month for each developer you pay for, shared across your organisation</span>");
             }
 
             html.Append("</p>");
