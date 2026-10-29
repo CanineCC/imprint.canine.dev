@@ -214,3 +214,10 @@
 .ip-site-caninecodeanalyzer .ip-brand-logo stop:nth-of-type(1) { stop-color: light-dark(#cdaebe, #ead8e2); }
 .ip-site-caninecodeanalyzer .ip-brand-logo stop:nth-of-type(2) { stop-color: light-dark(#7f5b6f, #d0b2c1); }
 .ip-site-caninecodeanalyzer .ip-brand-logo stop:nth-of-type(3) { stop-color: light-dark(#492a3c, #a37f92); }
+
+/* Cards that open with an example scene share their rows across the grid, so the scenes are one height and the
+   labels, headings and texts beside them start on one line, whatever each scene holds. */
+.ip-site-caninecodeanalyzer .ip-ap-feature-grid .ip-grid:has(> .ip-stack > .ip-widget:first-child) > .ip-stack {
+  display: grid; grid-row: span 4; grid-template-rows: subgrid; row-gap: 0.6rem; align-content: start;
+}
+.ip-site-caninecodeanalyzer .ip-grid > .ip-stack > .ip-widget:first-child :is(cca-scene-card, .csc-card) { height: 100%; box-sizing: border-box; }
