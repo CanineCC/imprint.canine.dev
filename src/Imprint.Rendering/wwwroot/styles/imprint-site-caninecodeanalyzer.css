@@ -157,7 +157,14 @@
 .ip-site-caninecodeanalyzer .ip-section:not([class*="ip-ap-"]) h2 {
   font-size: clamp(1.3rem, 1.1rem + 0.7vw, 1.6rem); line-height: 1.2; letter-spacing: -0.01em; margin-top: 1rem;
 }
-.ip-site-caninecodeanalyzer .ip-section:not([class*="ip-ap-"]) > .ip-stack { max-width: 48rem; }
+/* The document column sits in the middle of the page, like every other section, with its text set left for reading. */
+.ip-site-caninecodeanalyzer .ip-section:not([class*="ip-ap-"]) > .ip-stack { max-width: 48rem; margin-inline: auto; }
+/* A page title opening a marketing section (Pricing, Security and data, Licence) is centred with its kicker and lead.
+   The shared sheet centres h2 and h3 there but not h1, so a title that wrapped to two lines sat at the left edge. */
+.ip-site-caninecodeanalyzer [class*="ip-ap-"]:not(.ip-ap-hero) > .ip-stack > h1 {
+  text-align: center; align-self: center; margin-inline: auto; max-width: var(--mk-measure-head);
+}
+.ip-site-caninecodeanalyzer [class*="ip-ap-"]:not(.ip-ap-hero) > .ip-stack > h1 + .ip-prose { text-align: center; }
 .ip-site-caninecodeanalyzer .ip-section:not([class*="ip-ap-"]) .ip-prose { font-size: var(--fs-lg); line-height: 1.6; }
 .ip-site-caninecodeanalyzer .ip-section:not([class*="ip-ap-"]) .ip-prose.ip-prose-fine { font-size: 14px; color: var(--muted); }
 
