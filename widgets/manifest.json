@@ -2033,5 +2033,52 @@
     "bundle": "rc-search.js",
     "placeholder": "",
     "eager": true
+  },
+  {
+    "tag": "cca-loop-card",
+    "name": "CCA example agent task",
+    "description": "One agent task in CCA's kit, always tagged as an example inside the card: the repository and the task, the first push with the problems CCA found (each with its file and line), the agent fixing them and pushing again, the second push with no open problems and the score before and after with its band in words, and the outcome. Shows what CCA gives (an agent that finishes its own work), not how it is called. DATA ONLY: everything comes from the props, nothing is fetched.",
+    "bundle": "cca-loop-card.js",
+    "placeholder": "Example agent task",
+    "props": [
+      { "name": "repo", "label": "Repository name", "type": "text", "default": "acme/payments-api" },
+      { "name": "task", "label": "The agent's task", "type": "text", "default": "Add a refund endpoint" },
+      { "name": "example-label", "label": "The example tag", "type": "text", "default": "Example" },
+      { "name": "first-label", "label": "Label of the first step", "type": "text", "default": "First push" },
+      { "name": "findings", "label": "Problems found (JSON array of {title, where})", "type": "text", "default": "[]" },
+      { "name": "fix-label", "label": "Label of the second step", "type": "text", "default": "The agent" },
+      { "name": "fix-note", "label": "What the agent did", "type": "text", "default": "Fixed them and pushed again" },
+      { "name": "second-label", "label": "Label of the third step", "type": "text", "default": "Second push" },
+      { "name": "second-note", "label": "Result of the second push", "type": "text", "default": "No open problems" },
+      { "name": "before", "label": "Score before (0 to 100)", "type": "text", "default": "71" },
+      { "name": "after", "label": "Score after (0 to 100)", "type": "text", "default": "78" },
+      { "name": "band", "label": "Band word of the score after", "type": "text", "default": "Strong" },
+      { "name": "outcome", "label": "The outcome", "type": "text", "default": "Ready for review" },
+      { "name": "outcome-note", "label": "Line beside the outcome", "type": "text", "default": "" }
+    ]
+  },
+  {
+    "tag": "cca-scene-card",
+    "name": "CCA example scene",
+    "description": "A small example scene in CCA's kit for a card on the home page, always tagged as an example inside the card. scene=review: pull requests that reach the reviewer already checked (items: {title, note}). scene=fleet: every repository on the same 0 to 100 scale (items: {label, value, band}). scene=product: the score inside the customer's own product (brand, section, label, score, band, caption). scene=reuse: a day of checks, the few that scanned changed code charged and the rest reused at no charge (checks, scans). DATA ONLY: everything comes from the props, nothing is fetched.",
+    "bundle": "cca-scene-card.js",
+    "placeholder": "Example",
+    "props": [
+      { "name": "scene", "label": "Scene: review, fleet, product or reuse", "type": "text", "default": "review" },
+      { "name": "heading", "label": "Small heading inside the card", "type": "text", "default": "" },
+      { "name": "example-label", "label": "The example tag", "type": "text", "default": "Example" },
+      { "name": "items", "label": "Rows (JSON array; review: {title, note}; fleet: {label, value, band})", "type": "text", "default": "[]" },
+      { "name": "note", "label": "Line under the scene", "type": "text", "default": "" },
+      { "name": "brand", "label": "product: the customer's product name", "type": "text", "default": "Your product" },
+      { "name": "section", "label": "product: the page inside the product", "type": "text", "default": "" },
+      { "name": "label", "label": "product: label above the score", "type": "text", "default": "" },
+      { "name": "score", "label": "product: score (0 to 100)", "type": "text", "default": "78" },
+      { "name": "band", "label": "product: band word", "type": "text", "default": "" },
+      { "name": "caption", "label": "product: line under the score", "type": "text", "default": "" },
+      { "name": "checks", "label": "reuse: checks in the day", "type": "text", "default": "24" },
+      { "name": "scans", "label": "reuse: checks that scanned changed code", "type": "text", "default": "3" },
+      { "name": "scans-label", "label": "reuse: words after the scans count", "type": "text", "default": "new scans, charged" },
+      { "name": "reused-label", "label": "reuse: words after the reused count", "type": "text", "default": "reused, no charge" }
+    ]
   }
 ]
