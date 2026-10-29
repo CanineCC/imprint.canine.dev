@@ -113,14 +113,14 @@
 .ip-site-caninecodeanalyzer .ip-header-actions [data-theme-toggle],
 .ip-site-caninecodeanalyzer .ip-nav-burger { width: 44px; height: 44px; }
 
-/* Section cards: white on light, the surface on dark, a 1px line and no shadow; their text at 16px, not 13px, and
-   their titles a step above it. A code panel inside a card takes the card grey, so it still reads as a panel. */
+/* Section cards: the card grey with a 1px line and no shadow (kit Card); their text at 16px, not 13px, and their
+   titles a step above it. A code panel inside a card takes the page colour, so it still reads as a panel. */
 .ip-site-caninecodeanalyzer :is(.ip-ap-feature-grid, .ip-ap-steps) .ip-grid > .ip-stack {
-  background: light-dark(#ffffff, #171a21); border: 1px solid light-dark(#e3e6eb, #262a33); border-radius: 4px; box-shadow: none;
+  background: light-dark(#f6f7f9, #171a21); border: 1px solid light-dark(#e3e6eb, #262a33); border-radius: 4px; box-shadow: none;
 }
 .ip-site-caninecodeanalyzer :is(.ip-ap-feature-grid, .ip-ap-steps) .ip-grid .ip-prose { font-size: var(--fs-lg); }
 .ip-site-caninecodeanalyzer :is(.ip-ap-feature-grid, .ip-ap-steps) .ip-grid h3 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em; }
-.ip-site-caninecodeanalyzer .ip-grid .ip-code { background: light-dark(#f6f7f9, #0f1115); }
+.ip-site-caninecodeanalyzer .ip-grid .ip-code { background: light-dark(#ffffff, #0f1115); }
 .ip-site-caninecodeanalyzer .ip-columns h2 { font-size: var(--mk-h2); line-height: 1.12; }
 
 /* Small text at the kit's sizes: the menu, the footer links and tables at 15px. */
