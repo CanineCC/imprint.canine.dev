@@ -156,6 +156,8 @@
 /* Cells hold scopes, field names and values that are read and copied, so a word never breaks inside itself
    ("findings:writ e"); the frame slides sideways instead. */
 .ip-site-caninecodeanalyzer .ip-table td { overflow-wrap: normal; }
+/* A link in a cell (Limits points to Pricing and the rubric archive) reads like a link in the text, not browser blue. */
+.ip-site-caninecodeanalyzer .ip-table a { color: var(--accent-ink); text-decoration: underline; text-underline-offset: 0.15em; }
 @media (max-width: 640px) {
   .ip-site-caninecodeanalyzer .ip-table { font-size: 14px; min-width: 32rem; }
   .ip-site-caninecodeanalyzer .ip-table :is(th, td) { padding-inline: 0.5rem; }
