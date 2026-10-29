@@ -167,7 +167,8 @@
 .ip-site-caninecodeanalyzer [class*="ip-ap-"]:not(.ip-ap-hero) > .ip-stack > h1 + .ip-prose { text-align: center; }
 .ip-site-caninecodeanalyzer .ip-section:not([class*="ip-ap-"]) .ip-prose { font-size: var(--fs-lg); line-height: 1.6; }
 /* Small print (Example notes, VAT and reuse terms) is 14px and muted in every section, so it never competes with a lead. */
-.ip-site-caninecodeanalyzer .ip-section .ip-stack > .ip-prose.ip-prose-fine { font-size: 14px; line-height: 1.55; color: var(--muted); }
+.ip-site-caninecodeanalyzer .ip-section .ip-stack > .ip-prose.ip-prose-fine,
+.ip-site-caninecodeanalyzer [class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-article):not(.ip-ap-resource-center):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > .ip-prose.ip-prose-fine { font-size: 14px; line-height: 1.55; color: var(--muted); }
 
 /* Tables: column labels in the mono label style, and the first column in the mono, since it names values. On a phone
    a table keeps a readable width and slides sideways inside its own frame (.ip-table-wrap), so the page never widens. */
