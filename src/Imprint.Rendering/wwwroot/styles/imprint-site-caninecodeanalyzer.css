@@ -1,14 +1,174 @@
 /* imprint-site-caninecodeanalyzer.css: the Canine Code Analyzer site's own rules, appended by the publisher to the
    sheet of the site named "Canine Code Analyzer" only (ThemeCss.SiteCss), so no other site downloads them. */
 
+/* CCA's faces (brand document 5.4): Atkinson Hyperlegible Next for headlines and text, Atkinson Hyperlegible Mono for
+   code, values, IDs and labels. Both keep 0 and O, and 1, l and I, apart, and the mono has no ligatures, so code shows
+   exactly what a reader would type. Written only on this site (FontAssets.ForSite). */
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("/fonts/atkinson-next-var.woff2") format("woff2-variations");
+  font-weight: 200 800;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Atkinson Hyperlegible Mono";
+  src: url("/fonts/atkinson-mono-var.woff2") format("woff2-variations");
+  font-weight: 200 800;
+  font-display: swap;
+}
+
+/* ── CCA: the metallic look (owner, 2026-10-26 and 2026-10-28; brand document 5.3 to 5.5) ──────────────────────────
+   Dry and exact: 4px corners, cards and code panels drawn with a 1px line and no shadow, the only shadow on the metal
+   buttons, a graphite header and first section in both themes, and the titanium itself from the site's theme tokens.
+   ★ QUIET METAL ON BUTTONS (owner, 2026-10-28), as on Assure, Assert and Assay: a short titanium run with no shine, a
+   faint light line along the top edge and a small, close shadow. Its lightest point, #866276, still carries white
+   lettering at 5.2:1, so the letters can sit anywhere on the button. The logo's radar keeps the full metal run. */
+.ip-site-caninecodeanalyzer {
+  --font-display: "Atkinson Hyperlegible Next", system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-ui: "Atkinson Hyperlegible Next", system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Atkinson Hyperlegible Mono", ui-monospace, Menlo, Consolas, monospace;
+  --ip-radius: 4px; --r-sm: 4px; --r-md: 4px; --r-lg: 4px;
+  --metal: linear-gradient(135deg, #866276 0%, #7f5b6f 40%, #644255 100%);
+  --metal-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 2px rgb(18 19 24 / 0.25);
+  --graphite: linear-gradient(165deg, #262a31 0%, #13161b 45%, #0a0c0f 100%);
+  /* The silver code panels on the graphite top follow the THEME, not the top's own dark scheme, so they are set
+     here by theme rather than with light-dark(), which would read the top's scheme. */
+  --cca-panel-hi: #ffffff; --cca-panel-lo: #f4f5f8; --cca-panel-edge: #c9ccd4; --cca-panel-ink: #16181d;
+}
+:root[data-theme=dark] .ip-site-caninecodeanalyzer {
+  --metal-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 3px rgb(0 0 0 / 0.5);
+  --cca-panel-hi: #1d2129; --cca-panel-lo: #15181e; --cca-panel-edge: #3a404c; --cca-panel-ink: #e8eaf0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme=light]) .ip-site-caninecodeanalyzer {
+    --metal-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 3px rgb(0 0 0 / 0.5);
+    --cca-panel-hi: #1d2129; --cca-panel-lo: #15181e; --cca-panel-edge: #3a404c; --cca-panel-ink: #e8eaf0;
+  }
+}
+.ip-site-caninecodeanalyzer :is(h1, h2) { font-weight: 800; letter-spacing: -0.02em; }
+.ip-site-caninecodeanalyzer :is(h1, h2),
+.ip-site-caninecodeanalyzer [class*="ip-ap-"]:not(.ip-ap-hero) > .ip-stack > h2 { text-wrap: balance; }
+
+/* The graphite top: the header and the first section, dark in both themes, with the light from the top left.
+   color-scheme flips the light-dark() tokens inside them, so their text takes the dark-theme ink; muted text is
+   #9aa3b2 (5.7:1 at the lightest point) and labels take lifted titanium (7.4:1). */
+.ip-site-caninecodeanalyzer .ip-site-header { background: #181b21; border-bottom-color: rgb(255 255 255 / 0.08); color-scheme: dark; }
+.ip-site-caninecodeanalyzer .ip-ap-hero { background: var(--graphite); color-scheme: dark; --muted: #9aa3b2; }
+.ip-site-caninecodeanalyzer .ip-ap-hero .ip-kicker > p > strong { text-transform: none; letter-spacing: 0.02em; }
+
+/* The first section shows a real request and its response beside the headline (brand document 7.1). The panels sit
+   in their own stack, so the hero is laid out here as two columns: the copy on the left, the panels on the right
+   across all the copy rows. Row gap stays 0, as in the shared two-up hero, and the copy keeps its rhythm as margins. */
+.ip-site-caninecodeanalyzer .ip-ap-hero > .ip-stack:has(> .ip-stack > .ip-code) {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--mk-gap); row-gap: 0;
+  align-items: start; justify-items: start; text-align: left;
+}
+.ip-site-caninecodeanalyzer .ip-ap-hero > .ip-stack:has(> .ip-stack > .ip-code) > * { grid-column: 1; margin-inline: 0; }
+.ip-site-caninecodeanalyzer .ip-ap-hero > .ip-stack:has(> .ip-stack > .ip-code) > * + * { margin-top: 1.1rem; }
+.ip-site-caninecodeanalyzer .ip-ap-hero > .ip-stack:has(> .ip-stack > .ip-code) h1 { max-width: 14ch; }
+.ip-site-caninecodeanalyzer .ip-ap-hero > .ip-stack > .ip-stack:has(> .ip-code) {
+  grid-column: 2; grid-row: 1 / 99; margin-top: 0; justify-self: stretch; min-width: 0;
+}
+.ip-site-caninecodeanalyzer .ip-ap-hero > .ip-stack > .ip-stack:has(> .ip-btn) { justify-content: flex-start; }
+/* The hero's lead keeps the lede size; the line under the buttons is the small, muted note. */
+.ip-site-caninecodeanalyzer .ip-ap-hero > .ip-stack > .ip-stack:has(> .ip-btn) + .ip-prose:not(.ip-kicker):not(.ip-prose-secondary):not(.ip-prose-fine) {
+  font-size: 15px; line-height: 1.5; color: var(--muted);
+}
+.ip-site-caninecodeanalyzer .ip-ap-hero .ip-code {
+  background: linear-gradient(180deg, var(--cca-panel-hi), var(--cca-panel-lo)); border-color: var(--cca-panel-edge);
+  color: var(--cca-panel-ink);
+}
+@media (max-width: 900px) {
+  .ip-site-caninecodeanalyzer .ip-ap-hero > .ip-stack:has(> .ip-stack > .ip-code) { grid-template-columns: minmax(0, 1fr); }
+  .ip-site-caninecodeanalyzer .ip-ap-hero > .ip-stack > .ip-stack:has(> .ip-code) { grid-column: 1; grid-row: auto; margin-top: 2rem; }
+}
+
+/* The Example tag: a kicker set directly above a code panel is drawn as the outlined label the brand asks for on
+   every illustrative request and response. */
+.ip-site-caninecodeanalyzer .ip-kicker:has(+ .ip-code) { align-self: flex-end; }
+.ip-site-caninecodeanalyzer .ip-kicker:has(+ .ip-code) > p > strong {
+  font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+  border: 1px solid light-dark(#c9cdd4, #3a404c); border-radius: 4px; padding: 3px 8px;
+}
+
+/* Code panels: the card grey with a hairline, line height 1.6, 13px mono; long lines scroll sideways and keep their
+   exact form. */
+.ip-site-caninecodeanalyzer .ip-code {
+  background: light-dark(#f6f7f9, #171a21); border: 1px solid light-dark(#e3e6eb, #262a33); border-radius: 4px;
+  font-size: 13px; line-height: 1.6; padding: 14px 16px;
+}
+.ip-site-caninecodeanalyzer :is(.ip-prose, .ip-table) code { border-radius: 4px; font-size: 0.875em; }
+
+.ip-site-caninecodeanalyzer :is(.ip-btn-primary, .ip-header-cta),
+.ip-site-caninecodeanalyzer :is(.ip-btn-primary, .ip-header-cta):hover {
+  background: var(--metal); border-color: transparent; color: #ffffff; border-radius: 4px; box-shadow: var(--metal-shadow); opacity: 1;
+}
+.ip-site-caninecodeanalyzer :is(.ip-btn-primary, .ip-header-cta):hover { filter: brightness(1.08); }
+.ip-site-caninecodeanalyzer :is(.ip-site-header, .ip-ap-hero) :is(.ip-btn-primary, .ip-header-cta) {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 3px rgb(0 0 0 / 0.5);
+}
+.ip-site-caninecodeanalyzer .ip-btn { font-size: 16px; font-weight: 600; padding: 12px 22px; border-radius: 4px; min-height: 46px; }
+.ip-site-caninecodeanalyzer .ip-btn-secondary { font-weight: 600; }
+.ip-site-caninecodeanalyzer .ip-header-cta { font-size: 15px; font-weight: 600; padding: 10px 18px; min-height: 44px; }
+.ip-site-caninecodeanalyzer .ip-header-actions [data-theme-toggle],
+.ip-site-caninecodeanalyzer .ip-nav-burger { width: 44px; height: 44px; }
+
+/* Section cards: white on light, the surface on dark, a 1px line and no shadow; their text at 16px, not 13px, and
+   their titles a step above it. A code panel inside a card takes the card grey, so it still reads as a panel. */
+.ip-site-caninecodeanalyzer :is(.ip-ap-feature-grid, .ip-ap-steps) .ip-grid > .ip-stack {
+  background: light-dark(#ffffff, #171a21); border: 1px solid light-dark(#e3e6eb, #262a33); border-radius: 4px; box-shadow: none;
+}
+.ip-site-caninecodeanalyzer :is(.ip-ap-feature-grid, .ip-ap-steps) .ip-grid .ip-prose { font-size: var(--fs-lg); }
+.ip-site-caninecodeanalyzer :is(.ip-ap-feature-grid, .ip-ap-steps) .ip-grid h3 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em; }
+.ip-site-caninecodeanalyzer .ip-grid .ip-code { background: light-dark(#f6f7f9, #0f1115); }
+.ip-site-caninecodeanalyzer .ip-columns h2 { font-size: var(--mk-h2); line-height: 1.12; }
+
+/* Small text at the kit's sizes: the menu, the footer links and tables at 15px. */
+.ip-site-caninecodeanalyzer .ip-nav a,
+.ip-site-caninecodeanalyzer .ip-footer-group a,
+.ip-site-caninecodeanalyzer .ip-table { font-size: 15px; }
+
+/* The last call: paragraphs after the button row are signposts for other readers, not a second message, so they sit
+   quietly under a line. */
+.ip-site-caninecodeanalyzer .ip-ap-cta > .ip-stack > .ip-stack ~ .ip-prose {
+  border-top: 1px solid var(--hairline); padding-top: 1.25rem; margin-top: 0.75rem;
+}
+.ip-site-caninecodeanalyzer .ip-ap-cta > .ip-stack > .ip-stack ~ .ip-prose,
+.ip-site-caninecodeanalyzer .ip-ap-cta > .ip-stack > .ip-stack ~ .ip-prose p { font-size: 15px; line-height: 1.6; color: var(--muted); }
+.ip-site-caninecodeanalyzer .ip-ap-cta > .ip-stack > .ip-stack ~ .ip-prose strong { font-weight: 600; color: var(--heading); }
+
+/* Document pages (quickstart, limits, changelog, terms, privacy, the agreement, accessibility) use the Plain section,
+   which has no appearance class and fell back to the base type scale. They take the marketing sizes: the docs title
+   at 40px, section headings a step down. */
+.ip-site-caninecodeanalyzer .ip-section:not([class*="ip-ap-"]) h1 {
+  font-size: clamp(2.2rem, 1.6rem + 1.8vw, 2.5rem); line-height: 1.08; letter-spacing: -0.02em;
+}
+.ip-site-caninecodeanalyzer .ip-section:not([class*="ip-ap-"]) h2 {
+  font-size: clamp(1.3rem, 1.1rem + 0.7vw, 1.6rem); line-height: 1.2; letter-spacing: -0.01em; margin-top: 1rem;
+}
+.ip-site-caninecodeanalyzer .ip-section:not([class*="ip-ap-"]) > .ip-stack { max-width: 48rem; }
+.ip-site-caninecodeanalyzer .ip-section:not([class*="ip-ap-"]) .ip-prose { font-size: var(--fs-lg); line-height: 1.6; }
+.ip-site-caninecodeanalyzer .ip-section:not([class*="ip-ap-"]) .ip-prose.ip-prose-fine { font-size: 14px; color: var(--muted); }
+
+/* Tables: column labels in the mono label style, and the first column in the mono, since it names values. On a phone
+   a table keeps a readable width and slides sideways inside its own frame (.ip-table-wrap), so the page never widens. */
+.ip-site-caninecodeanalyzer .ip-table th { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+@media (max-width: 640px) {
+  .ip-site-caninecodeanalyzer .ip-table { font-size: 14px; min-width: 32rem; }
+  .ip-site-caninecodeanalyzer .ip-table :is(th, td) { padding-inline: 0.5rem; }
+  .ip-site-caninecodeanalyzer .ip-table td:first-child { min-width: 9rem; }
+}
+
 /* ★ TWO-TONE HEADINGS (owner, 2026-10-28): the part of a heading marked <em>…</em> (HeadingText) is drawn in
    the accent metal and the rest stays in text colour, so a long heading reads as a line and its payoff.
    The run is the titanium metal, started one step darker on white, where #cdaebe falls to 2.0:1; on dark it starts
    on lifted titanium with the shine in the middle. Its weakest points are #8e697d, 4.4:1 on the code panel grey, and
    #a37f92, 5.0:1 on the dark surface.
    light-dark() follows each section's color-scheme, so a dark top gets the dark run in both themes. Print and
-   forced colours get plain text colour: they drop the clipped background and would leave the words with no ink. */
+   forced colours get plain text colour: they drop the clipped background and would leave the words with no ink.
+   The payoff wraps as one piece, so a two-line heading breaks before it, never inside it. */
 .ip-site-caninecodeanalyzer .ip-h-accent { color: light-dark(#7f5b6f, #d0b2c1); }
+.ip-site-caninecodeanalyzer :is(h1, h2) .ip-h-accent { display: inline-block; }
 @supports (background-clip: text) or (-webkit-background-clip: text) {
   .ip-site-caninecodeanalyzer .ip-h-accent {
     background-image: linear-gradient(160deg, light-dark(#8e697d, #d0b2c1) 0%, light-dark(#7f5b6f, #ead8e2) 45%, light-dark(#7f5b6f, #d0b2c1) 75%, light-dark(#492a3c, #a37f92) 100%);
@@ -22,27 +182,6 @@
 /* The closing band's ground is the accent itself, so the shine would vanish into it (about 1.1:1); there the payoff
    takes the band's own ink, as the rest of the heading does. */
 .ip-site-caninecodeanalyzer .ip-ap-cta.ip-bg-primary .ip-h-accent { background: none; color: inherit; }
-
-/* ★ QUIET METAL ON BUTTONS (owner, 2026-10-28; brand document 5.3), as on Assure, Assert and Assay: a short
-   titanium run with no shine, a faint light line along the top edge and a small, close shadow, 4px corners.
-   Its lightest point, #866276, still carries white lettering at 5.2:1, so the letters can sit anywhere on
-   the button. The logo's radar keeps the full metal run. Lettering 16px semibold, 15px in the header. */
-.ip-site-caninecodeanalyzer {
-  --metal: linear-gradient(135deg, #866276 0%, #7f5b6f 40%, #644255 100%);
-  --metal-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 2px rgb(18 19 24 / 0.25);
-}
-:root[data-theme=dark] .ip-site-caninecodeanalyzer { --metal-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 3px rgb(0 0 0 / 0.5); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme=light]) .ip-site-caninecodeanalyzer { --metal-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 3px rgb(0 0 0 / 0.5); }
-}
-.ip-site-caninecodeanalyzer :is(.ip-btn-primary, .ip-header-cta),
-.ip-site-caninecodeanalyzer :is(.ip-btn-primary, .ip-header-cta):hover {
-  background: var(--metal); border-color: transparent; color: #ffffff; border-radius: 4px; box-shadow: var(--metal-shadow); opacity: 1;
-}
-.ip-site-caninecodeanalyzer :is(.ip-btn-primary, .ip-header-cta):hover { filter: brightness(1.08); }
-.ip-site-caninecodeanalyzer .ip-btn { font-size: 16px; font-weight: 600; padding: 12px 22px; border-radius: 4px; min-height: 46px; }
-.ip-site-caninecodeanalyzer .ip-btn-secondary { font-weight: 600; }
-.ip-site-caninecodeanalyzer .ip-header-cta { font-size: 15px; font-weight: 600; padding: 10px 18px; min-height: 44px; }
 
 /* ★ THE LOGO'S METAL (owner, 2026-10-28; brand document 5.6): the drawn radar lifts on dark grounds and the graphite
    top. The logo is inlined with the brand run on its stops; light-dark() follows the colour scheme of the place it

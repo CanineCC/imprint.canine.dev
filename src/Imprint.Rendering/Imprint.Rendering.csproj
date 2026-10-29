@@ -48,6 +48,11 @@
          (FontAssets.ForSite). -->
     <EmbeddedResource Include="wwwroot/fonts/sourceserif4-opsz-var.woff2" LogicalName="Imprint.Rendering.fonts.sourceserif4-opsz-var.woff2" />
     <EmbeddedResource Include="wwwroot/fonts/sourcecodepro-var.woff2" LogicalName="Imprint.Rendering.fonts.sourcecodepro-var.woff2" />
+    <!-- CCA's faces from its brand kit (SIL Open Font License 1.1, Braille Institute): Atkinson Hyperlegible Next
+         and Atkinson Hyperlegible Mono, Latin, weights 200 to 800. Written only on the site that names them
+         (FontAssets.ForSite). -->
+    <EmbeddedResource Include="wwwroot/fonts/atkinson-next-var.woff2" LogicalName="Imprint.Rendering.fonts.atkinson-next-var.woff2" />
+    <EmbeddedResource Include="wwwroot/fonts/atkinson-mono-var.woff2" LogicalName="Imprint.Rendering.fonts.atkinson-mono-var.woff2" />
     <EmbeddedResource Include="wwwroot/brand/canine-badge.svg" LogicalName="Imprint.Rendering.brand.canine-badge.svg" />
     <EmbeddedResource Include="wwwroot/brand/cai-mark.svg" LogicalName="Imprint.Rendering.brand.cai-mark.svg" />
   </ItemGroup>

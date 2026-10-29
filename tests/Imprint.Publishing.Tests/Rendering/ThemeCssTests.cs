@@ -175,6 +175,21 @@ public sealed class ThemeCssTests
     }
 
     /// <summary>
+    /// CCA's Atkinson faces ship to the Canine Code Analyzer site alone, and its sheet names them for headings,
+    /// text and labels, so the editor's Theme panel can say which faces the site really uses.
+    /// </summary>
+    [Fact]
+    public void The_cca_faces_ship_only_to_the_cca_site()
+    {
+        Assert.Equal(
+            [("Headings", "Atkinson Hyperlegible Next"), ("Text", "Atkinson Hyperlegible Next"), ("Labels", "Atkinson Hyperlegible Mono")],
+            ThemeCss.SiteFaces("Canine Code Analyzer"));
+        Assert.Equal(2, FontAssets.ForSite(ThemeCss.SiteSlug("Canine Code Analyzer")).Count);
+        Assert.All(FontAssets.ForSite("caninecodeanalyzer"), font => Assert.NotEmpty(font.Bytes));
+        Assert.DoesNotContain(FontAssets.All, font => font.RelativePath.Contains("atkinson", StringComparison.Ordinal));
+    }
+
+    /// <summary>
     /// ★ Two-tone headings (owner, 2026-10-28): the four product sites draw a heading's marked part in their own
     /// metal, and every other site, the live Assay site included, leaves it in text colour.
     /// </summary>

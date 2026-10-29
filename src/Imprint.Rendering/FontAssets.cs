@@ -51,12 +51,14 @@ public static class FontAssets
     ];
 
     private static IReadOnlyList<FontFile>? _assayPreview;
+    private static IReadOnlyList<FontFile>? _canineCodeAnalyzer;
 
     /// <summary>
     /// The faces only one site's own sheet names, written only on that site: Assay's Source Serif 4 with
     /// its full weight and optical-size axes (the brand sets headlines at 800, past the resource center's
     /// 400 to 700 instance), the resource center's italic for interpretation lines, and Source Code Pro
-    /// for the measurement details. Keyed by <see cref="ThemeCss.SiteSlug"/>, as the site's sheet is.
+    /// for the measurement details; CCA's Atkinson Hyperlegible Next and Mono, for headlines, text and
+    /// code. Keyed by <see cref="ThemeCss.SiteSlug"/>, as the site's sheet is.
     /// ★ "assaypreview", never "assay": the Assay site is live, and its pages must not change until the
     /// owner moves the new site onto its address.
     /// </summary>
@@ -67,6 +69,11 @@ public static class FontAssets
             Load("fonts/sourceserif4-opsz-var.woff2", "Imprint.Rendering.fonts.sourceserif4-opsz-var.woff2"),
             Load("fonts/sourceserif4-italic-var.woff2", "Imprint.Rendering.fonts.sourceserif4-italic-var.woff2"),
             Load("fonts/sourcecodepro-var.woff2", "Imprint.Rendering.fonts.sourcecodepro-var.woff2"),
+        ],
+        "caninecodeanalyzer" => _canineCodeAnalyzer ??=
+        [
+            Load("fonts/atkinson-next-var.woff2", "Imprint.Rendering.fonts.atkinson-next-var.woff2"),
+            Load("fonts/atkinson-mono-var.woff2", "Imprint.Rendering.fonts.atkinson-mono-var.woff2"),
         ],
         _ => [],
     };
