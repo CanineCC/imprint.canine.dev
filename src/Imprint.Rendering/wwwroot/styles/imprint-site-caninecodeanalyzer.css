@@ -153,6 +153,9 @@
 /* Tables: column labels in the mono label style, and the first column in the mono, since it names values. On a phone
    a table keeps a readable width and slides sideways inside its own frame (.ip-table-wrap), so the page never widens. */
 .ip-site-caninecodeanalyzer .ip-table th { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+/* Cells hold scopes, field names and values that are read and copied, so a word never breaks inside itself
+   ("findings:writ e"); the frame slides sideways instead. */
+.ip-site-caninecodeanalyzer .ip-table td { overflow-wrap: normal; }
 @media (max-width: 640px) {
   .ip-site-caninecodeanalyzer .ip-table { font-size: 14px; min-width: 32rem; }
   .ip-site-caninecodeanalyzer .ip-table :is(th, td) { padding-inline: 0.5rem; }
