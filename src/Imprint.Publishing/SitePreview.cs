@@ -43,8 +43,11 @@ public sealed class SitePreview(
     /// token of the brand name lower-cased (watchdog / cai / assay), or the compact id as
     /// a stable fallback. A caller may address a site by either its slug or its compact id.
     /// </summary>
-    public IReadOnlyList<(string Slug, string Name)> Sites() =>
-        [.. siteOverview.All.Select(site => (SlugOf(site), site.Name))];
+    public IReadOnlyList<(string Slug, string Name)> Sites()
+    {
+        var slugs = Slugs();
+        return [.. siteOverview.All.Select(site => (slugs[site.Id.Compact], site.Name))];
+    }
 
     /// <summary>
     /// Resolve and serve one path under a site's preview. <paramref name="site"/> is the
@@ -160,26 +163,22 @@ public sealed class SitePreview(
 
     private (string Slug, SiteId Id)? Resolve(string site)
     {
+        var slugs = Slugs();
         foreach (var s in siteOverview.All)
         {
-            if (string.Equals(SlugOf(s), site, StringComparison.OrdinalIgnoreCase) ||
+            var slug = slugs[s.Id.Compact];
+            if (string.Equals(slug, site, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(s.Id.Compact, site, StringComparison.OrdinalIgnoreCase))
             {
-                return (SlugOf(s), s.Id);
+                return (slug, s.Id);
             }
         }
 
         return null;
     }
 
-    private static string SlugOf(Site site)
-    {
-        // The first word of the brand, kept to url-safe chars: "Watchdog" → "watchdog",
-        // "CAI" → "cai". Empty (unnamed) sites fall back to their compact id.
-        var first = site.Name.Split([' ', '\t', '—', '-', '·'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-        var slug = new string((first ?? "").Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
-        return slug.Length > 0 ? slug : site.Id.Compact;
-    }
+    private IReadOnlyDictionary<string, string> Slugs() =>
+        PreviewSlugs.Assign([.. siteOverview.All.Select(s => (s.Id.Compact, s.Name))]);
 
     private static string ContentTypeOf(string path) => Path.GetExtension(path).ToLowerInvariant() switch
     {
@@ -257,4 +256,39 @@ internal static partial class PreviewRewrite
     // touching the many data: url()s the theme inlines.
     [GeneratedRegex("""url\((?<q>["'])/(?!/)(?<url>[^"']*)\k<q>\)""", RegexOptions.IgnoreCase)]
     private static partial Regex CssRootUrl();
+}
+
+/// <summary>
+/// The preview folder and URL key of every site, unique across the roster.
+/// </summary>
+/// <remarks>
+/// ★ WHY UNIQUE. The key was the first word of the brand alone, so "Canine", "Canine Blog" and "Canine Code Analyzer"
+/// all rendered into <c>/preview/canine/</c>, and "Assay" and "Assay Preview" into <c>/preview/assay/</c>. Each
+/// render synchronised the shared folder to its own output, deleting the other site's files: the fonts only one
+/// site's sheet names (FontAssets.ForSite) answered 404, and a request under the shared key rendered whichever
+/// site came first. A site keeps its first word when no other site shares it, so the existing addresses stay.
+/// </remarks>
+public static class PreviewSlugs
+{
+    /// <summary>Each site's key by compact id: its first word, else its whole name, else its compact id.</summary>
+    public static IReadOnlyDictionary<string, string> Assign(IReadOnlyList<(string Id, string Name)> sites)
+    {
+        var first = sites.ToDictionary(s => s.Id, s => Clean(FirstWord(s.Name)), StringComparer.Ordinal);
+        var shared = Repeated(first.Values);
+        var named = sites.ToDictionary(
+            s => s.Id, s => shared.Contains(first[s.Id]) ? Clean(s.Name) : first[s.Id], StringComparer.Ordinal);
+        var clashing = Repeated(named.Values);
+        return sites.ToDictionary(
+            s => s.Id, s => named[s.Id].Length == 0 || clashing.Contains(named[s.Id]) ? s.Id : named[s.Id], StringComparer.Ordinal);
+    }
+
+    // The first word of the brand: "Watchdog" → "Watchdog", "Canine Code Analyzer" → "Canine".
+    private static string FirstWord(string name) =>
+        name.Split([' ', '\t', '—', '-', '·'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+
+    // Kept to url-safe chars, lower-cased: "Canine Code Analyzer" → "caninecodeanalyzer".
+    private static string Clean(string text) => new string(text.Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
+
+    private static HashSet<string> Repeated(IEnumerable<string> slugs) =>
+        [.. slugs.Where(s => s.Length > 0).GroupBy(s => s, StringComparer.Ordinal).Where(g => g.Count() > 1).Select(g => g.Key)];
 }

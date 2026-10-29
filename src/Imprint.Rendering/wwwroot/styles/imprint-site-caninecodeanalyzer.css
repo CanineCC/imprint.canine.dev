@@ -34,15 +34,18 @@
   /* The silver code panels on the graphite top follow the THEME, not the top's own dark scheme, so they are set
      here by theme rather than with light-dark(), which would read the top's scheme. */
   --cca-panel-hi: #ffffff; --cca-panel-lo: #f4f5f8; --cca-panel-edge: #c9ccd4; --cca-panel-ink: #16181d;
+  --cca-key: #7f5b6f; --cca-punct: #5c6370;
 }
 :root[data-theme=dark] .ip-site-caninecodeanalyzer {
   --metal-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 3px rgb(0 0 0 / 0.5);
   --cca-panel-hi: #1d2129; --cca-panel-lo: #15181e; --cca-panel-edge: #3a404c; --cca-panel-ink: #e8eaf0;
+  --cca-key: #d0b2c1; --cca-punct: #9aa3b2;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme=light]) .ip-site-caninecodeanalyzer {
     --metal-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 3px rgb(0 0 0 / 0.5);
     --cca-panel-hi: #1d2129; --cca-panel-lo: #15181e; --cca-panel-edge: #3a404c; --cca-panel-ink: #e8eaf0;
+    --cca-key: #d0b2c1; --cca-punct: #9aa3b2;
   }
 }
 .ip-site-caninecodeanalyzer :is(h1, h2) { font-weight: 800; letter-spacing: -0.02em; }
@@ -54,6 +57,11 @@
    #9aa3b2 (5.7:1 at the lightest point) and labels take lifted titanium (7.4:1). */
 .ip-site-caninecodeanalyzer .ip-site-header { background: #181b21; border-bottom-color: rgb(255 255 255 / 0.08); color-scheme: dark; }
 .ip-site-caninecodeanalyzer .ip-ap-hero { background: var(--graphite); color-scheme: dark; --muted: #9aa3b2; }
+/* The drawn logo carries the name "CCA" (kit: never retype the name next to the drawn mark), so the typed name the
+   chrome adds after it is clipped out of sight in a zero-width column. It stays in the page for screen readers. */
+.ip-site-caninecodeanalyzer :is(.ip-brand, .ip-footer-brand) { display: inline-grid; grid-template-columns: auto 0; gap: 0; overflow: hidden; }
+.ip-site-caninecodeanalyzer .ip-brand span.ip-brand-logo svg { height: 30px; }
+.ip-site-caninecodeanalyzer .ip-footer-brand span.ip-brand-logo svg { height: 26px; }
 .ip-site-caninecodeanalyzer .ip-ap-hero .ip-kicker > p > strong { text-transform: none; letter-spacing: 0.02em; }
 
 /* The first section shows a real request and its response beside the headline (brand document 7.1). The panels sit
@@ -98,6 +106,9 @@
   font-size: 13px; line-height: 1.6; padding: 14px 16px;
 }
 .ip-site-caninecodeanalyzer :is(.ip-prose, .ip-table) code { border-radius: 4px; font-size: 0.875em; }
+/* Keys in titanium, punctuation muted, values in the text colour (brand document 5.3); CodeMarks marks them. */
+.ip-site-caninecodeanalyzer .ip-code-key { color: var(--cca-key); }
+.ip-site-caninecodeanalyzer .ip-code-punct { color: var(--cca-punct); }
 
 .ip-site-caninecodeanalyzer :is(.ip-btn-primary, .ip-header-cta),
 .ip-site-caninecodeanalyzer :is(.ip-btn-primary, .ip-header-cta):hover {

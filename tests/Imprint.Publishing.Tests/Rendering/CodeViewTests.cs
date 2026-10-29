@@ -88,6 +88,52 @@ public sealed class CodeViewTests
         Assert.False(CodeNode.IsValidLanguage(language));
 
     [Fact]
+    public async Task Json_keys_and_punctuation_are_marked_and_values_are_not()
+    {
+        var html = await RenderHarness.RenderNode(Static, Code("{\n  \"cai\": 74.2,\n  \"band\": \"Strong\"\n}", "json"));
+
+        Assert.Contains("<span class=\"ip-code-key\">&quot;cai&quot;</span>", html, StringComparison.Ordinal);
+        Assert.Contains("<span class=\"ip-code-key\">&quot;band&quot;</span>", html, StringComparison.Ordinal);
+        Assert.Contains("<span class=\"ip-code-punct\">{</span>", html, StringComparison.Ordinal);
+        // A string that is a value, not a key, stays plain text.
+        Assert.DoesNotContain("<span class=\"ip-code-key\">&quot;Strong&quot;</span>", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Yaml_keys_are_marked()
+    {
+        var html = await RenderHarness.RenderNode(Static, Code("- name: Measure\n  run: >\n    curl -X POST", "yaml"));
+
+        Assert.Contains("<span class=\"ip-code-key\">name</span>", html, StringComparison.Ordinal);
+        Assert.Contains("<span class=\"ip-code-key\">run</span>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("<span class=\"ip-code-key\">curl", html, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("{\n  \"a\": \"<script>\",\n  \"b\": [1, 2]\n}", "json")]
+    [InlineData("- name: Measure\n  run: >\n    curl -H \"Authorization: Bearer $KEY\"", "yaml")]
+    [InlineData("{ \"unterminated\": \"value", "json")]
+    public async Task Marked_code_reads_back_as_exactly_the_authors_text(string source, string language)
+    {
+        var html = await RenderHarness.RenderNode(Static, Code(source, language));
+
+        // The marks are spans only: strip them and the author's sample is unchanged, character for character.
+        var start = html.IndexOf('>', html.IndexOf("<code", StringComparison.Ordinal)) + 1;
+        var inner = html[start..html.IndexOf("</code>", StringComparison.Ordinal)];
+        var text = System.Text.RegularExpressions.Regex.Replace(inner, "</?span[^>]*>", "");
+        Assert.Equal(source, System.Net.WebUtility.HtmlDecode(text));
+        Assert.DoesNotContain("<script>", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Other_languages_are_not_marked()
+    {
+        var html = await RenderHarness.RenderNode(Static, Code("curl -H \"Authorization: Bearer $KEY\"", "bash"));
+
+        Assert.DoesNotContain("<span", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Display_name_names_the_language_when_there_is_one()
     {
         Assert.Equal("Code (rust)", Code("fn main() {}", "rust").DisplayName);
