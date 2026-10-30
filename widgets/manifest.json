@@ -1703,7 +1703,7 @@
   {
     "tag": "assay-report-card",
     "name": "Assay example report",
-    "description": "An Assay report in the kit's design, always tagged as an example inside the card itself: the kind of report, the decision in the reader's words, the result against the bar one area per row (Pass, Fail, Not applicable, No usable evidence, said as words on small labels), the count of risks, unknowns and questions, and the measurement details in the mono face. Given evidence, risks, unknowns, questions or a record it draws a whole report page in the report's order, numbered 1 to 7. DATA ONLY: everything comes from the props, nothing is fetched.",
+    "description": "An Assay report in the kit's design, always tagged as an example inside the card itself: the kind of report, the decision in the reader's words, the result against the bar one area per row (Pass, Fail, Not applicable, No usable evidence, said as words on small labels), the count of risks, unknowns and questions, and the measurement details in the mono face. Given evidence, risks, unknowns, questions or a record it draws a whole report page in the report's order, numbered 1 to 7. With mode \"inside\" it draws the inside of a report for a value section: the decision, the evidence route, the score drawn against the bar with the areas that still fail it, the first risk opened, the unknowns beside the first questions, and the verification line. DATA ONLY: everything comes from the props, nothing is fetched.",
     "bundle": "assay-report-card.js",
     "placeholder": "Example report",
     "props": [
@@ -1719,7 +1719,15 @@
       { "name": "unknowns", "label": "Unknowns (JSON array of strings)", "type": "text", "default": "[]" },
       { "name": "questions", "label": "Questions for the seller or team (JSON array of strings)", "type": "text", "default": "[]" },
       { "name": "record", "label": "Measurement identity and verification record (JSON array of {key, value})", "type": "text", "default": "[]" },
-      { "name": "note", "label": "Note at the foot of the card", "type": "text", "default": "" }
+      { "name": "note", "label": "Note at the foot of the card", "type": "text", "default": "" },
+      { "name": "mode", "label": "Card mode: empty for the hero card or the whole page, inside for the inside of a report", "type": "text", "default": "" },
+      { "name": "evidence-line", "label": "Inside: how the evidence reached the report, in one line", "type": "text", "default": "" },
+      { "name": "score", "label": "Inside: the score, 0 to 100", "type": "text", "default": "" },
+      { "name": "bar", "label": "Inside: the reader's bar, 0 to 100", "type": "text", "default": "" },
+      { "name": "scale-caption", "label": "Inside: the line under the scale", "type": "text", "default": "" },
+      { "name": "risk-label", "label": "Inside: the label over the opened risk (for example Material risk 1 of 2)", "type": "text", "default": "" },
+      { "name": "questions-label", "label": "Inside: the label over the questions (for example Ask the seller)", "type": "text", "default": "" },
+      { "name": "more-questions", "label": "Inside: the line under the questions (for example and 3 more questions)", "type": "text", "default": "" }
     ]
   },
   {

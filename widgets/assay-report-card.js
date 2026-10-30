@@ -8,6 +8,9 @@
 // of its label, never by colour: Pass outlined, Fail inverted, Not applicable plain, No usable evidence
 // dashed so it cannot be read as a fail. Rendered into the element's LIGHT DOM with its own classes;
 // every prop is set as text, never as markup.
+// mode="inside" draws the inside of a report beside the value it gives (the home page): the decision, the route
+// the evidence took, the score drawn against the reader's bar with the area that still fails it, one risk
+// opened, the unknown beside the first questions, and the verification line.
 
 const STYLE_ID = 'assay-report-card-style';
 const STYLE = `
@@ -84,11 +87,46 @@ const STYLE = `
   assay-report-card .arc-sr {
     position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
   }
+  /* The inside of a report (mode="inside"): the score drawn against the reader's bar, the one area that fails it,
+     one risk opened, the unknown beside the questions, each part opened by the 2px ink rule. */
+  assay-report-card[data-inside] { max-width: 36rem; container-type: inline-size; }
+  assay-report-card[data-inside] .arc-scale-ends + .arc-score { margin-top: 0.35rem; }
+  assay-report-card[data-inside] .arc-decision { font-size: 20px; }
+  assay-report-card .arc-evidence { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 0.75rem; align-items: baseline; margin: 0; font-size: 15px; line-height: 1.5; color: var(--arc-ink-soft); }
+  assay-report-card .arc-scale { position: relative; height: 3.4rem; margin: 0.4rem 0 0; }
+  assay-report-card .arc-scale-track { position: absolute; left: 0; right: 0; top: 1.55rem; height: 6px; border-radius: 3px; background: var(--arc-line); }
+  assay-report-card .arc-scale-fill {
+    position: absolute; left: 0; top: 1.55rem; height: 6px; border-radius: 3px;
+    background: linear-gradient(90deg, light-dark(#d2a776, #ead2b4) 0%, light-dark(#8a5d33, #c99a6a) 70%, light-dark(#684626, #9a6e44) 100%);
+  }
+  assay-report-card .arc-scale-bar { position: absolute; top: 0.95rem; width: 2px; height: 1.6rem; margin-left: -1px; background: var(--arc-ink); }
+  assay-report-card .arc-scale-dot {
+    position: absolute; top: calc(1.55rem - 5px); width: 16px; height: 16px; margin-left: -8px; border-radius: 50%;
+    background: var(--arc-accent); border: 3px solid var(--arc-card); box-shadow: 0 0 0 1px var(--arc-accent);
+  }
+  assay-report-card .arc-scale-score { position: absolute; top: 0; transform: translateX(-50%); font-size: 15px; font-weight: 800; line-height: 1; color: var(--arc-accent); }
+  assay-report-card .arc-scale-barlabel { position: absolute; top: 2.7rem; transform: translateX(-50%); font-size: 12px; line-height: 1; color: var(--arc-ink-soft); white-space: nowrap; }
+  assay-report-card .arc-scale-ends { display: flex; justify-content: space-between; margin-top: 0.35rem; font-family: var(--arc-mono); font-size: 11px; color: var(--arc-muted); }
+  assay-report-card .arc-section { display: flex; flex-direction: column; gap: 0.55rem; padding-top: 0.85rem; border-top: 2px solid var(--arc-ink); }
+  assay-report-card .arc-section .arc-risk-title { font-size: 16px; }
+  assay-report-card .arc-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.25rem; }
+  assay-report-card .arc-pair > div { display: flex; flex-direction: column; gap: 0.4rem; font-size: 14px; line-height: 1.5; }
+  assay-report-card .arc-pair .arc-list { font-size: 14px; }
+  assay-report-card .arc-more { margin: 0; font-size: 13px; color: var(--arc-muted); }
+  assay-report-card .arc-unknown { margin: 0; color: var(--arc-ink); }
+  assay-report-card[data-inside] .arc-identity { padding-top: 0.75rem; border-top: 1px solid var(--arc-line); }
+  /* The inside card sits in a column, not across the page, so it stacks by its own width. */
+  @container (max-width: 30rem) {
+    assay-report-card[data-inside] .arc-card { padding: 1.25rem 1.1rem; }
+    assay-report-card[data-inside] .arc-layer, assay-report-card[data-inside] .arc-evidence { grid-template-columns: minmax(0, 1fr); gap: 0.25rem; }
+    assay-report-card[data-inside] .arc-pair { grid-template-columns: minmax(0, 1fr); }
+  }
   @media (max-width: 520px) {
     assay-report-card .arc-card { padding: 1.25rem 1.1rem; }
     assay-report-card .arc-decision { font-size: 20px; }
-    assay-report-card .arc-layer, assay-report-card .arc-pairs { grid-template-columns: minmax(0, 1fr); gap: 0.25rem; }
+    assay-report-card .arc-layer, assay-report-card .arc-pairs, assay-report-card .arc-evidence { grid-template-columns: minmax(0, 1fr); gap: 0.25rem; }
     assay-report-card .arc-pairs dd { margin-bottom: 0.4rem; }
+    assay-report-card .arc-pair { grid-template-columns: minmax(0, 1fr); }
   }
 `;
 
@@ -125,7 +163,10 @@ const pairList = (className, items, key, val) => {
 };
 
 customElements.define('assay-report-card', class extends HTMLElement {
-  static observedAttributes = ['kind', 'example-label', 'decision', 'score-line', 'rows', 'summary', 'identity', 'evidence', 'risks', 'unknowns', 'questions', 'record', 'note'];
+  static observedAttributes = [
+    'kind', 'example-label', 'decision', 'score-line', 'rows', 'summary', 'identity', 'evidence', 'risks', 'unknowns', 'questions', 'record', 'note',
+    'mode', 'evidence-line', 'score', 'bar', 'scale-caption', 'risk-label', 'questions-label', 'more-questions',
+  ];
 
   connectedCallback() {
     if (!document.getElementById(STYLE_ID)) {
@@ -143,6 +184,12 @@ customElements.define('assay-report-card', class extends HTMLElement {
 
   #render() {
     const text = (name) => (this.getAttribute(name) ?? '').trim();
+    const inside = text('mode') === 'inside';
+    this.toggleAttribute('data-inside', inside);
+    if (inside) {
+      this.#renderInside(text);
+      return;
+    }
     const label = text('example-label') || 'Example';
     const evidence = pairs(text('evidence'), 'label', 'value');
     const risks = parse(text('risks'), []).filter((r) => r && typeof r.title === 'string');
@@ -252,6 +299,113 @@ customElements.define('assay-report-card', class extends HTMLElement {
     }
     if (text('note')) card.append(el('p', 'arc-note', text('note')));
 
+    this.replaceChildren(card);
+  }
+
+  // The inside of a report, beside the value it gives (the home page's "Inside the report"): the decision, the
+  // route the evidence took, the score drawn against the reader's bar with the area that still fails it, one risk
+  // opened, the unknown beside the first questions, and the line that says it was verified.
+  #renderInside(text) {
+    this.removeAttribute('data-full');
+    const label = text('example-label') || 'Example';
+    const card = el('article', 'arc-card');
+    card.setAttribute('aria-label', `${label}: ${text('kind') || 'an Assay report'}`);
+
+    const head = el('div', 'arc-head');
+    head.append(el('span', 'arc-label', text('kind') || 'Report'), el('span', 'arc-tag', label));
+    card.append(head);
+
+    const decision = el('div', 'arc-block');
+    decision.append(el('span', 'arc-label', 'Decision'), el('p', 'arc-decision', text('decision')));
+    card.append(decision);
+
+    if (text('evidence-line')) {
+      const line = el('p', 'arc-evidence');
+      line.append(el('span', 'arc-label', 'Evidence used'), el('span', '', text('evidence-line')));
+      card.append(line);
+    }
+
+    // The score against the bar, on the 0 to 100 scale the score is measured on.
+    const clamp = (n) => Math.max(0, Math.min(100, n));
+    const score = Number.parseFloat(text('score'));
+    const bar = Number.parseFloat(text('bar'));
+    const rows = parse(text('rows'), []).filter((r) => r && typeof r.area === 'string');
+    if (Number.isFinite(score) && Number.isFinite(bar)) {
+      const block = el('div', 'arc-block');
+      block.append(el('span', 'arc-label', 'Against your bar'));
+      const scale = el('div', 'arc-scale');
+      scale.setAttribute('role', 'img');
+      scale.setAttribute('aria-label', `Score ${score} against your bar of ${bar}, on a scale from 0 to 100`);
+      const at = (node, n) => { node.style.left = `${clamp(n)}%`; return node; };
+      const fill = el('div', 'arc-scale-fill');
+      fill.style.width = `${clamp(score)}%`;
+      scale.append(
+        el('div', 'arc-scale-track'), fill, at(el('div', 'arc-scale-bar'), bar),
+        at(el('span', 'arc-scale-barlabel', `your bar ${bar}`), bar), at(el('div', 'arc-scale-dot'), score),
+        at(el('span', 'arc-scale-score', String(score)), score));
+      scale.querySelectorAll('span').forEach((s) => s.setAttribute('aria-hidden', 'true'));
+      const ends = el('div', 'arc-scale-ends');
+      ends.setAttribute('aria-hidden', 'true');
+      ends.append(el('span', '', '0'), el('span', '', '100'));
+      block.append(scale, ends);
+      if (text('scale-caption')) block.append(el('p', 'arc-score', text('scale-caption')));
+      if (rows.length) {
+        const table = el('table', 'arc-rows');
+        table.append(el('caption', 'arc-sr', 'Areas that fall short of the bar'));
+        const body = el('tbody');
+        rows.forEach((row) => {
+          const [word, className] = RESULTS[String(row.result ?? '').toLowerCase()] ?? [String(row.result ?? ''), 'arc-na'];
+          const tr = el('tr');
+          const th = el('th', '', row.area);
+          th.scope = 'row';
+          const td = el('td');
+          td.append(el('span', `arc-result ${className}`, word));
+          tr.append(th, td);
+          body.append(tr);
+        });
+        table.append(body);
+        block.append(table);
+      }
+      card.append(block);
+    }
+
+    // One risk, opened: what was measured, then what it means.
+    const risk = parse(text('risks'), []).find((r) => r && typeof r.title === 'string');
+    if (risk) {
+      const section = el('section', 'arc-section');
+      section.append(el('span', 'arc-label', text('risk-label') || 'Material risk'), el('h3', 'arc-risk-title', risk.title));
+      [['measured', 'Measured'], ['interpretation', 'Interpretation']].forEach(([key, name]) => {
+        if (typeof risk[key] !== 'string') return;
+        const line = el('p', `arc-layer arc-${key}`);
+        line.append(el('span', 'arc-layer-label', name), el('span', 'arc-layer-text', risk[key]));
+        section.append(line);
+      });
+      card.append(section);
+    }
+
+    // The unknown beside the first questions to put to the seller.
+    const unknowns = strings(text('unknowns'));
+    const questions = strings(text('questions'));
+    if (unknowns.length || questions.length) {
+      const section = el('section', 'arc-section arc-pair');
+      if (unknowns.length) {
+        const col = el('div');
+        col.append(el('span', 'arc-label', unknowns.length > 1 ? 'Unknowns' : 'Unknown'));
+        unknowns.forEach((u) => col.append(el('p', 'arc-unknown', u)));
+        section.append(col);
+      }
+      if (questions.length) {
+        const col = el('div');
+        const list = el('ol', 'arc-list');
+        questions.forEach((q) => list.append(el('li', '', q)));
+        col.append(el('span', 'arc-label', text('questions-label') || 'Questions to ask'), list);
+        if (text('more-questions')) col.append(el('p', 'arc-more', text('more-questions')));
+        section.append(col);
+      }
+      card.append(section);
+    }
+
+    if (text('identity')) card.append(el('p', 'arc-identity', text('identity')));
     this.replaceChildren(card);
   }
 });

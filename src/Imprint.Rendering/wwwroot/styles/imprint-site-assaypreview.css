@@ -158,6 +158,14 @@
 .ip-site-assaypreview .ip-ap-feature-grid .ip-grid .ip-prose { color: var(--ink-soft); font-size: 17px; line-height: 1.6; }
 .ip-site-assaypreview .ip-ap-feature-grid .ip-grid .ip-btn-ghost { padding-inline: 0; min-height: 44px; color: var(--accent-ink); font-size: 16px; font-weight: 600; text-decoration: underline; text-underline-offset: 0.15em; }
 
+/* ── INSIDE THE REPORT: the inside card on the left and the value it gives on the right, one point per part of
+   the card, as Assert and Assure set their example card beside their reasons. */
+.ip-site-assaypreview .ip-ap-feature-grid .ip-columns { column-gap: 56px; row-gap: 2.5rem; align-items: start; margin-top: 1rem; }
+.ip-site-assaypreview .ip-ap-feature-grid .ip-columns > .ip-stack + .ip-stack { row-gap: 1.5rem; }
+.ip-site-assaypreview .ip-ap-feature-grid .ip-columns > .ip-stack > .ip-stack { row-gap: 0.35rem; }
+.ip-site-assaypreview .ip-ap-feature-grid .ip-columns h3 { font-size: 19px; line-height: 1.3; margin: 0; }
+.ip-site-assaypreview .ip-ap-feature-grid .ip-columns .ip-prose { color: var(--ink-soft); font-size: 17px; line-height: 1.6; }
+
 /* ── PANELS: cards drawn with a 1px line on the card colour, no shadow. */
 .ip-site-assaypreview .ip-ap-panels :is(.ip-columns, .ip-grid) > .ip-stack {
   background: var(--ip-surface); border: 1px solid var(--hairline); border-radius: 2px; padding: 24px; box-shadow: none; row-gap: 0.6rem;
