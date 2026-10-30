@@ -60,7 +60,7 @@ const STYLE = `
   cca-loop-card .clc-finding { padding: 0.5rem 0.7rem; }
   cca-loop-card .clc-finding + .clc-finding { border-top: 1px solid var(--clc-line); }
   cca-loop-card .clc-title { display: block; font-size: 14px; line-height: 1.4; color: var(--clc-ink-soft); }
-  cca-loop-card .clc-where { display: block; margin-top: 0.1rem; font-family: var(--clc-mono); font-size: 12px; color: var(--clc-accent); overflow-wrap: anywhere; }
+  cca-loop-card .clc-where { display: block; margin-top: 0.1rem; font-family: var(--clc-mono); font-size: 12px; color: var(--clc-accent); }
   cca-loop-card .clc-result { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 0.6rem; margin-top: 0.35rem; }
   cca-loop-card .clc-score { font-family: var(--clc-display); font-weight: 800; font-size: 34px; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--clc-ink); }
   cca-loop-card .clc-from { font-size: 16px; color: var(--clc-muted); font-variant-numeric: tabular-nums; }
@@ -87,6 +87,16 @@ const el = (tag, className, text) => {
   if (className) node.className = className;
   if (text !== undefined) node.textContent = text;
   return node;
+};
+
+// A file and its line, allowed to break only after a slash, so "Charge.cs:88" never splits.
+const where = (path) => {
+  const span = el('span', 'clc-where');
+  path.split('/').forEach((part, i, parts) => {
+    span.append(document.createTextNode(i < parts.length - 1 ? `${part}/` : part));
+    if (i < parts.length - 1) span.append(document.createElement('wbr'));
+  });
+  return span;
 };
 
 const step = (number, when, what) => {
@@ -145,7 +155,7 @@ customElements.define('cca-loop-card', class extends HTMLElement {
       findings.forEach((f) => {
         const li = el('li', 'clc-finding');
         li.append(el('span', 'clc-title', f.title));
-        if (typeof f.where === 'string' && f.where) li.append(el('span', 'clc-where', f.where));
+        if (typeof f.where === 'string' && f.where) li.append(where(f.where));
         list.append(li);
       });
       first.append(list);

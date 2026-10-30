@@ -2080,5 +2080,24 @@
       { "name": "scans-label", "label": "reuse: words after the scans count", "type": "text", "default": "new scans, charged" },
       { "name": "reused-label", "label": "reuse: words after the reused count", "type": "text", "default": "reused, no charge" }
     ]
+  },
+  {
+    "tag": "cca-result-card",
+    "name": "CCA example result",
+    "description": "The result CCA returns from one call, drawn in the shape of the family's result cards (Assert, Assure) and always tagged as an example inside the card: the repository and the call, the CAI score out of 100 with its band in words, the ladder with a titanium marker, the score scan by scan, the five lenses, and the facts the result carries. It is the result, never a screen: CCA has no screen of its own. DATA ONLY: everything comes from the props, nothing is fetched.",
+    "bundle": "cca-result-card.js",
+    "placeholder": "Example result",
+    "props": [
+      { "name": "repo", "label": "Repository name", "type": "text", "default": "acme/payments-api" },
+      { "name": "call", "label": "The call that returns the result", "type": "text", "default": "GET /v1/repositories/{id}/scores" },
+      { "name": "example-label", "label": "The example tag", "type": "text", "default": "Example" },
+      { "name": "band", "label": "Band word on the chip (Critical, Weak, Adequate, Strong, Exemplary)", "type": "text", "default": "Strong" },
+      { "name": "score", "label": "CAI score (0 to 100)", "type": "text", "default": "78" },
+      { "name": "floors", "label": "Band floors, lowest first (from the CAI rubric)", "type": "text", "default": "0,25,50,70,90" },
+      { "name": "series", "label": "Score at each scan, oldest first, comma separated", "type": "text", "default": "64,67,70,73,75,78" },
+      { "name": "trend-note", "label": "Sentence beside the trend", "type": "text", "default": "up 14 in six weeks" },
+      { "name": "lenses", "label": "Lenses (JSON array of {label, value})", "type": "text", "default": "[]" },
+      { "name": "facts", "label": "Facts (JSON array of {label, value, mono?})", "type": "text", "default": "[]" }
+    ]
   }
 ]
