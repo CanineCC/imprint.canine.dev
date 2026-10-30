@@ -137,7 +137,7 @@ customElements.define(
         }
         html += `<input type="hidden" name="site" value="${escapeHtml(site)}">`;
       }
-      html += `<div class="mk-cta-row"><button class="btn btn-primary btn-lg" type="submit">Send message</button></div>`;
+      html += `<div class="mk-cta-row"><button class="btn btn-primary btn-lg" type="submit" part="submit">Send message</button></div>`;
       // The status line is the inline send-result — it NEVER mentions an address.
       html += `<p class="mk-form-status" aria-live="polite"></p>`;
       html += `<div class="mk-modal" role="dialog" aria-modal="true" aria-labelledby="mk-sent-h" hidden>

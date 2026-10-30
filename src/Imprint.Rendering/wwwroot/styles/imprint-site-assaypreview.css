@@ -202,10 +202,28 @@
   .ip-site-assaypreview .ip-ap-prose > .ip-stack > .ip-prose:has(> ul) {
     grid-column: 2; grid-row: 1 / 99; margin: 0; max-width: none; width: 100%;
   }
+  /* A Prose section with no list (the "Without it" statement of the problem): its text takes the right column
+     beside the heading. Left in the head's column, it filled a third of the row and left the rest of the page
+     empty. */
+  .ip-site-assaypreview .ip-ap-prose > .ip-stack:not(:has(> .ip-prose > ul)) > .ip-prose:not(.ip-kicker):last-child {
+    grid-column: 2; grid-row: 1 / 99; margin: 0; max-width: 40rem; font-size: 19px; line-height: 1.6;
+  }
 }
 
-/* ── LIVE CARD: the example report page, at its own width, left. */
+/* ── LIVE CARD: the example report page, at its own width, left. On a wide screen the head and its text sit
+   on the left and the page on the right, as in Steps and Prose, so the report does not stand alone at the
+   left with an empty column beside it. */
 .ip-site-assaypreview .ip-ap-live-card .ip-widget { max-width: 48rem; margin-inline: 0; }
+@media (min-width: 901px) {
+  .ip-site-assaypreview .ip-ap-live-card > .ip-stack {
+    display: grid; grid-template-columns: minmax(0, 30fr) minmax(0, 60fr); column-gap: 56px; row-gap: 0; align-items: start;
+  }
+  .ip-site-assaypreview .ip-ap-live-card > .ip-stack > * { grid-column: 1; margin: 0; }
+  .ip-site-assaypreview .ip-ap-live-card > .ip-stack > * + * { margin-top: 1rem; }
+  .ip-site-assaypreview .ip-ap-live-card > .ip-stack > .ip-widget {
+    grid-column: 2; grid-row: 1 / 99; margin: 0; max-width: none; width: 100%;
+  }
+}
 
 /* ── CTA: the closing call sits left, with no band; the lines after the button are signposts. */
 .ip-site-assaypreview .ip-ap-cta > .ip-stack { align-items: flex-start; text-align: left; }
@@ -302,3 +320,10 @@
 .ip-site-assaypreview contact-form[data-theme="light"] {
   --accent: #8a5d33; --accent-ink: #8a5d33; --accent-wash: #f3eadf; --accent-strong: #8a5d33; --on-accent: #ffffff;
 }
+/* Its send button is the page's main action, so it wears the same quiet metal as every other main button here. The
+   form names the button part="submit"; on the other sites nothing styles that part, so their forms are unchanged. */
+.ip-site-assaypreview contact-form::part(submit) {
+  background: var(--metal); border-color: transparent; color: #ffffff; border-radius: 2px; box-shadow: var(--metal-shadow);
+  font: 600 16px / 1.25 var(--font-ui);
+}
+.ip-site-assaypreview contact-form::part(submit):hover { filter: brightness(1.08); opacity: 1; }
