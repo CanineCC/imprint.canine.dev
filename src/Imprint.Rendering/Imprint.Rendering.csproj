@@ -27,7 +27,7 @@
     <EmbeddedResource Include="wwwroot/styles/imprint-site-assure.css" LogicalName="Imprint.Rendering.styles.imprint-site-assure.css" />
     <EmbeddedResource Include="wwwroot/styles/imprint-site-assert.css" LogicalName="Imprint.Rendering.styles.imprint-site-assert.css" />
     <!-- The new Assay site, built as "Assay Preview" beside the live "Assay" site, which takes nothing from it. -->
-    <EmbeddedResource Include="wwwroot/styles/imprint-site-assay.css" LogicalName="Imprint.Rendering.styles.imprint-site-assay.css" />
+    <EmbeddedResource Include="wwwroot/styles/imprint-site-assaypreview.css" LogicalName="Imprint.Rendering.styles.imprint-site-assaypreview.css" />
     <EmbeddedResource Include="wwwroot/styles/imprint-site-caninecodeanalyzer.css" LogicalName="Imprint.Rendering.styles.imprint-site-caninecodeanalyzer.css" />
     <!-- Self-hosted variable fonts referenced by imprint-marketing.css (@font-face).
          Embedded so the publisher writes them into every site's /fonts/ folder with no

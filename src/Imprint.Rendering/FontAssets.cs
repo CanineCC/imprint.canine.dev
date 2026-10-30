@@ -50,7 +50,7 @@ public static class FontAssets
         Load("fonts/sourceserif4-italic-var.woff2", "Imprint.Rendering.fonts.sourceserif4-italic-var.woff2"),
     ];
 
-    private static IReadOnlyList<FontFile>? _assay;
+    private static IReadOnlyList<FontFile>? _assayPreview;
     private static IReadOnlyList<FontFile>? _canineCodeAnalyzer;
 
     /// <summary>
@@ -59,12 +59,12 @@ public static class FontAssets
     /// 400 to 700 instance), the resource center's italic for interpretation lines, and Source Code Pro
     /// for the measurement details; CCA's Atkinson Hyperlegible Next and Mono, for headlines, text and
     /// code. Keyed by <see cref="ThemeCss.SiteSlug"/>, as the site's sheet is.
-    /// ★ Keyed "assay" since the new site took the Assay name and assay.canine.dev; it was built as
-    /// "assaypreview" so the old site's pages could not change before then.
+    /// ★ "assaypreview", never "assay": the Assay site is live, and its pages must not change until the
+    /// owner moves the new site onto its address.
     /// </summary>
     public static IReadOnlyList<FontFile> ForSite(string siteSlug) => siteSlug switch
     {
-        "assay" => _assay ??=
+        "assaypreview" => _assayPreview ??=
         [
             Load("fonts/sourceserif4-opsz-var.woff2", "Imprint.Rendering.fonts.sourceserif4-opsz-var.woff2"),
             Load("fonts/sourceserif4-italic-var.woff2", "Imprint.Rendering.fonts.sourceserif4-italic-var.woff2"),
