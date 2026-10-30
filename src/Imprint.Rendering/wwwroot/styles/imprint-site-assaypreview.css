@@ -291,3 +291,14 @@
 .ip-site-assaypreview .ip-brand-logo stop:nth-of-type(1) { stop-color: light-dark(#d2a776, #ead2b4); }
 .ip-site-assaypreview .ip-brand-logo stop:nth-of-type(2) { stop-color: light-dark(#8a5d33, #c99a6a); }
 .ip-site-assaypreview .ip-brand-logo stop:nth-of-type(3) { stop-color: light-dark(#4a2f16, #9a6e44); }
+
+/* The contact form draws inside its own shadow root with the widget's "assay" accent, which is still the old blue
+   the live Assay site uses. A rule on the host element outranks the form's own :host rules, so the bronze reaches
+   this site's form alone and the live site's form is left as it is. The form reflects the page theme onto the
+   host as data-theme; without it the form is in its dark look. */
+.ip-site-assaypreview contact-form {
+  --accent: #c99a6a; --accent-ink: #c99a6a; --accent-wash: #2e2115; --accent-strong: #8a5d33; --on-accent: #ffffff;
+}
+.ip-site-assaypreview contact-form[data-theme="light"] {
+  --accent: #8a5d33; --accent-ink: #8a5d33; --accent-wash: #f3eadf; --accent-strong: #8a5d33; --on-accent: #ffffff;
+}
