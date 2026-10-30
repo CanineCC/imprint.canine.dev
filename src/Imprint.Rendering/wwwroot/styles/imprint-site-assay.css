@@ -75,6 +75,10 @@
 .ip-site-assay :is(.ip-brand, .ip-footer-brand) { display: inline-grid; grid-template-columns: auto 0; gap: 0; overflow: hidden; }
 .ip-site-assay .ip-brand span.ip-brand-logo svg { height: 34px; }
 .ip-site-assay .ip-footer-brand span.ip-brand-logo svg { height: 26px; }
+/* The logo's box must be as tall as the drawing: the shared box is 24px, and the brand above clips what overflows,
+   which cut the descender of the "y" off the 34px header logo. */
+.ip-site-assay .ip-brand span.ip-brand-logo { height: 34px; }
+.ip-site-assay .ip-footer-brand span.ip-brand-logo { height: 26px; }
 
 /* Buttons: bronze foil for the one main action, an outline in the muted ink beside it. */
 .ip-site-assay .ip-btn { font: 600 16px / 1.25 var(--font-ui); border-radius: 2px; padding: 12px 20px; min-height: 46px; }
