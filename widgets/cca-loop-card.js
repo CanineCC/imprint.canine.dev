@@ -130,7 +130,7 @@ customElements.define('cca-loop-card', class extends HTMLElement {
     // The repository, the task and the Example tag.
     const head = el('div', 'clc-head');
     const id = el('div');
-    id.append(el('h3', 'clc-repo', repo));
+    id.append(el('p', 'clc-repo', repo));
     if (text('task')) id.append(el('span', 'clc-task', text('task')));
     head.append(id, el('span', 'clc-tag', label));
     card.append(head);
