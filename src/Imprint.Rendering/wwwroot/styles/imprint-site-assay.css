@@ -1,7 +1,7 @@
-/* imprint-site-assaypreview.css: Assay's own rules, appended by the publisher to the sheet of the site
-   named "Assay Preview" only (ThemeCss.SiteCss), so no other site downloads them or pays for them.
-   ★ NOT "assay": the Assay site at assay.canine.dev is live, and it keeps its current look until the
-   owner moves the new site onto that address. */
+/* imprint-site-assay.css: Assay's own rules, appended by the publisher to the sheet of the site named
+   "Assay" only (ThemeCss.SiteCss), so no other site downloads them or pays for them. Built as
+   "assaypreview" on a preview site beside the old Assay site, and moved onto the Assay name when the
+   new site took assay.canine.dev. */
 
 /* Assay's faces (brand kit v0.2), written only on this site (FontAssets.ForSite). */
 @font-face {
@@ -35,7 +35,7 @@
    bronze run with no shine, a faint light line along the top edge and a small, close shadow. Its
    lightest point, #8f633b, still carries white lettering at 5.2:1, so the letters can sit anywhere on
    the button. The logo's lens keeps the full foil run. */
-.ip-site-assaypreview {
+.ip-site-assay {
   --font-ui: "Source Serif 4", Georgia, "Times New Roman", serif;
   --font-display: "Source Serif 4", Georgia, "Times New Roman", serif;
   --font-mono: "Source Code Pro", ui-monospace, Menlo, Consolas, monospace;
@@ -53,189 +53,189 @@
   font-variant-numeric: lining-nums;
 }
 /* The metal's close shadow is a step deeper on the dark ground (the family standard). */
-:root[data-theme=dark] .ip-site-assaypreview { --metal-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 3px rgb(0 0 0 / 0.5); }
+:root[data-theme=dark] .ip-site-assay { --metal-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 3px rgb(0 0 0 / 0.5); }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme=light]) .ip-site-assaypreview { --metal-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 3px rgb(0 0 0 / 0.5); }
+  :root:not([data-theme=light]) .ip-site-assay { --metal-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 3px rgb(0 0 0 / 0.5); }
 }
-.ip-site-assaypreview :is(h1, h2, h3, h4) { font-family: var(--font-display); letter-spacing: -0.01em; }
-.ip-site-assaypreview :is(h1, h2) { font-weight: 800; text-wrap: balance; }
-.ip-site-assaypreview :is(h3, h4) { font-weight: 700; }
-.ip-site-assaypreview a:focus-visible,
-.ip-site-assaypreview .ip-btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.ip-site-assay :is(h1, h2, h3, h4) { font-family: var(--font-display); letter-spacing: -0.01em; }
+.ip-site-assay :is(h1, h2) { font-weight: 800; text-wrap: balance; }
+.ip-site-assay :is(h3, h4) { font-weight: 700; }
+.ip-site-assay a:focus-visible,
+.ip-site-assay .ip-btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 
 /* The paper top: the header and the first section, falling from paper to a deeper paper. In dark
    the top stays on the dark ground. */
-.ip-site-assaypreview .ip-site-header { background: light-dark(#fbfaf7, color-mix(in srgb, #1b1a17 97%, transparent)); }
-.ip-site-assaypreview .ip-ap-hero {
+.ip-site-assay .ip-site-header { background: light-dark(#fbfaf7, color-mix(in srgb, #1b1a17 97%, transparent)); }
+.ip-site-assay .ip-ap-hero {
   background: linear-gradient(180deg, light-dark(#fbfaf7, #1b1a17) 0%, light-dark(#f3efe7, #1b1a17) 100%);
 }
 
 /* The drawn logo carries the name, so the typed name the chrome adds after it is clipped out of
    sight in a zero-width column. It stays in the page for screen readers (the logo is aria-hidden). */
-.ip-site-assaypreview :is(.ip-brand, .ip-footer-brand) { display: inline-grid; grid-template-columns: auto 0; gap: 0; overflow: hidden; }
-.ip-site-assaypreview .ip-brand span.ip-brand-logo svg { height: 34px; }
-.ip-site-assaypreview .ip-footer-brand span.ip-brand-logo svg { height: 26px; }
+.ip-site-assay :is(.ip-brand, .ip-footer-brand) { display: inline-grid; grid-template-columns: auto 0; gap: 0; overflow: hidden; }
+.ip-site-assay .ip-brand span.ip-brand-logo svg { height: 34px; }
+.ip-site-assay .ip-footer-brand span.ip-brand-logo svg { height: 26px; }
 
 /* Buttons: bronze foil for the one main action, an outline in the muted ink beside it. */
-.ip-site-assaypreview .ip-btn { font: 600 16px / 1.25 var(--font-ui); border-radius: 2px; padding: 12px 20px; min-height: 46px; }
-.ip-site-assaypreview :is(.ip-btn-primary, .ip-header-cta),
-.ip-site-assaypreview :is(.ip-btn-primary, .ip-header-cta):hover {
+.ip-site-assay .ip-btn { font: 600 16px / 1.25 var(--font-ui); border-radius: 2px; padding: 12px 20px; min-height: 46px; }
+.ip-site-assay :is(.ip-btn-primary, .ip-header-cta),
+.ip-site-assay :is(.ip-btn-primary, .ip-header-cta):hover {
   background: var(--metal); border-color: transparent; color: #ffffff; border-radius: 2px; box-shadow: var(--metal-shadow); opacity: 1;
 }
-.ip-site-assaypreview :is(.ip-btn-primary, .ip-header-cta):hover { filter: brightness(1.08); }
-.ip-site-assaypreview .ip-btn-secondary { background: transparent; border-color: var(--muted); color: var(--ink); font-weight: 600; }
-.ip-site-assaypreview .ip-btn-secondary:hover { background: light-dark(#ffffff, #232120); border-color: var(--ink); }
-.ip-site-assaypreview .ip-header-cta { font: 600 15px / 1.2 var(--font-ui); min-height: 44px; display: inline-flex; align-items: center; }
-.ip-site-assaypreview .ip-header-actions [data-theme-toggle],
-.ip-site-assaypreview .ip-nav-burger { width: 44px; height: 44px; }
+.ip-site-assay :is(.ip-btn-primary, .ip-header-cta):hover { filter: brightness(1.08); }
+.ip-site-assay .ip-btn-secondary { background: transparent; border-color: var(--muted); color: var(--ink); font-weight: 600; }
+.ip-site-assay .ip-btn-secondary:hover { background: light-dark(#ffffff, #232120); border-color: var(--ink); }
+.ip-site-assay .ip-header-cta { font: 600 15px / 1.2 var(--font-ui); min-height: 44px; display: inline-flex; align-items: center; }
+.ip-site-assay .ip-header-actions [data-theme-toggle],
+.ip-site-assay .ip-nav-burger { width: 44px; height: 44px; }
 
 /* The menu, the footer and small print at the kit's 15px. */
-.ip-site-assaypreview .ip-nav a,
-.ip-site-assaypreview .ip-nav-trigger,
-.ip-site-assaypreview .ip-footer-group a { font-size: 15px; }
-.ip-site-assaypreview .ip-nav-card strong { font-size: 15px; }
-.ip-site-assaypreview .ip-nav-card span { font-size: 14px; }
-.ip-site-assaypreview .ip-footer-h { font-size: 12px; color: var(--muted); }
-.ip-site-assaypreview :is(.ip-footer-copy, .ip-footer-byline) { font-size: 14px; }
+.ip-site-assay .ip-nav a,
+.ip-site-assay .ip-nav-trigger,
+.ip-site-assay .ip-footer-group a { font-size: 15px; }
+.ip-site-assay .ip-nav-card strong { font-size: 15px; }
+.ip-site-assay .ip-nav-card span { font-size: 14px; }
+.ip-site-assay .ip-footer-h { font-size: 12px; color: var(--muted); }
+.ip-site-assay :is(.ip-footer-copy, .ip-footer-byline) { font-size: 14px; }
 
 /* Labels: the kicker over a section is a label in capitals in the serif, never the mono. */
-.ip-site-assaypreview .ip-prose.ip-kicker > p > strong,
-.ip-site-assaypreview [class*="ip-ap-"] .ip-prose.ip-kicker > p > strong {
+.ip-site-assay .ip-prose.ip-kicker > p > strong,
+.ip-site-assay [class*="ip-ap-"] .ip-prose.ip-kicker > p > strong {
   font-family: var(--font-ui); font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
 }
-.ip-site-assaypreview .ip-ap-hero .ip-prose.ip-kicker > p > strong {
+.ip-site-assay .ip-ap-hero .ip-prose.ip-kicker > p > strong {
   font-size: 15px; font-weight: 400; letter-spacing: 0; text-transform: none;
 }
 
 /* ── Section heads sit left, as in a printed report. The shared sheet centres the head of a grid
    section; these mirror its selectors so they outrank it. */
-.ip-site-assaypreview [class*="ip-ap-"]:not(.ip-ap-hero) > .ip-stack { align-items: flex-start; text-align: left; }
-.ip-site-assaypreview [class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-article):not(.ip-ap-resource-center):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > :is(h2, h3, .ip-prose) {
+.ip-site-assay [class*="ip-ap-"]:not(.ip-ap-hero) > .ip-stack { align-items: flex-start; text-align: left; }
+.ip-site-assay [class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-article):not(.ip-ap-resource-center):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > :is(h2, h3, .ip-prose) {
   text-align: left; margin-inline: 0;
 }
-.ip-site-assaypreview [class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-article):not(.ip-ap-resource-center):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > h2 {
+.ip-site-assay [class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-article):not(.ip-ap-resource-center):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > h2 {
   max-width: 24em;
 }
-.ip-site-assaypreview [class*="ip-ap-"] h2 { font-size: var(--mk-h2); line-height: 1.15; letter-spacing: -0.01em; }
-.ip-site-assaypreview [class*="ip-ap-"] > .ip-stack > .ip-prose:not(.ip-kicker) { color: var(--ink-soft); }
-.ip-site-assaypreview [class*="ip-ap-"] .ip-prose a { color: var(--accent-ink); text-decoration: underline; text-underline-offset: 0.15em; }
-.ip-site-assaypreview [class*="ip-ap-"] .ip-prose a:hover { color: var(--ink); }
+.ip-site-assay [class*="ip-ap-"] h2 { font-size: var(--mk-h2); line-height: 1.15; letter-spacing: -0.01em; }
+.ip-site-assay [class*="ip-ap-"] > .ip-stack > .ip-prose:not(.ip-kicker) { color: var(--ink-soft); }
+.ip-site-assay [class*="ip-ap-"] .ip-prose a { color: var(--accent-ink); text-decoration: underline; text-underline-offset: 0.15em; }
+.ip-site-assay [class*="ip-ap-"] .ip-prose a:hover { color: var(--ink); }
 /* A caption under a grid or a list keeps body size and a left edge here: it is a sentence with a link. */
-.ip-site-assaypreview [class*="ip-ap-"]:not(.ip-ap-hero) > .ip-stack > :not(:is(h1, h2, h3, h4, .ip-prose)) + .ip-prose:last-child:not(.ip-kicker):not(:has(ul)) {
+.ip-site-assay [class*="ip-ap-"]:not(.ip-ap-hero) > .ip-stack > :not(:is(h1, h2, h3, h4, .ip-prose)) + .ip-prose:last-child:not(.ip-kicker):not(:has(ul)) {
   font-size: 17px; text-align: left; margin-inline: 0; color: var(--ink-soft);
 }
 
 /* ── HERO: the copy beside the example report, the two nearly equal as in the kit. */
-.ip-site-assaypreview .ip-ap-hero > .ip-stack:has(> .ip-widget:not(contact-form)) {
+.ip-site-assay .ip-ap-hero > .ip-stack:has(> .ip-widget:not(contact-form)) {
   grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
 }
-.ip-site-assaypreview .ip-ap-hero > .ip-stack > .ip-widget:not(contact-form) { justify-self: end; width: 100%; }
+.ip-site-assay .ip-ap-hero > .ip-stack > .ip-widget:not(contact-form) { justify-self: end; width: 100%; }
 @media (max-width: 900px) {
-  .ip-site-assaypreview .ip-ap-hero > .ip-stack:has(> .ip-widget:not(contact-form)) { grid-template-columns: 1fr; }
-  .ip-site-assaypreview .ip-ap-hero > .ip-stack > .ip-widget:not(contact-form) { justify-self: stretch; margin-top: 2rem; }
+  .ip-site-assay .ip-ap-hero > .ip-stack:has(> .ip-widget:not(contact-form)) { grid-template-columns: 1fr; }
+  .ip-site-assay .ip-ap-hero > .ip-stack > .ip-widget:not(contact-form) { justify-self: stretch; margin-top: 2rem; }
 }
 /* A hero with no card keeps a left edge too: Assay reads like a document, not a poster. */
-.ip-site-assaypreview .ip-ap-hero > .ip-stack:not(:has(> .ip-widget:not(contact-form))) { align-items: flex-start; text-align: left; }
-.ip-site-assaypreview .ip-ap-hero > .ip-stack:not(:has(> .ip-widget:not(contact-form))) > :is(.ip-prose, h1, h2) { margin-inline: 0; }
-.ip-site-assaypreview .ip-ap-hero > .ip-stack:not(:has(> .ip-widget:not(contact-form))) h1 { max-width: 20ch; }
-.ip-site-assaypreview .ip-ap-hero h1 { font-size: var(--mk-display); line-height: 1.05; letter-spacing: -0.01em; }
-.ip-site-assaypreview .ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker),
-.ip-site-assaypreview .ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker):not(.ip-prose-secondary):not(.ip-prose-fine):has(~ .ip-prose:not(.ip-kicker)),
-.ip-site-assaypreview .ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker) ~ .ip-prose:not(.ip-kicker):not(:last-of-type):not(.ip-prose-secondary):not(.ip-prose-fine) {
+.ip-site-assay .ip-ap-hero > .ip-stack:not(:has(> .ip-widget:not(contact-form))) { align-items: flex-start; text-align: left; }
+.ip-site-assay .ip-ap-hero > .ip-stack:not(:has(> .ip-widget:not(contact-form))) > :is(.ip-prose, h1, h2) { margin-inline: 0; }
+.ip-site-assay .ip-ap-hero > .ip-stack:not(:has(> .ip-widget:not(contact-form))) h1 { max-width: 20ch; }
+.ip-site-assay .ip-ap-hero h1 { font-size: var(--mk-display); line-height: 1.05; letter-spacing: -0.01em; }
+.ip-site-assay .ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker),
+.ip-site-assay .ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker):not(.ip-prose-secondary):not(.ip-prose-fine):has(~ .ip-prose:not(.ip-kicker)),
+.ip-site-assay .ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker) ~ .ip-prose:not(.ip-kicker):not(:last-of-type):not(.ip-prose-secondary):not(.ip-prose-fine) {
   font-size: var(--fs-xl); line-height: 1.55; color: var(--ink-soft); max-width: 36rem;
 }
 /* the closing line under the buttons: the strongest reasons to write, at the small size */
-.ip-site-assaypreview .ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker) ~ .ip-prose:last-of-type:not(.ip-prose-secondary) {
+.ip-site-assay .ip-ap-hero > .ip-stack > .ip-prose:not(.ip-kicker) ~ .ip-prose:last-of-type:not(.ip-prose-secondary) {
   font-size: 15px; line-height: 1.5; color: var(--muted);
 }
 
 /* ── FEATURE GRID: columns opened by a 2px ink rule (the kit's "opening"), no box. */
-.ip-site-assaypreview .ip-ap-feature-grid .ip-grid { column-gap: 2rem; row-gap: 2.25rem; }
-.ip-site-assaypreview .ip-ap-feature-grid .ip-grid > .ip-stack {
+.ip-site-assay .ip-ap-feature-grid .ip-grid { column-gap: 2rem; row-gap: 2.25rem; }
+.ip-site-assay .ip-ap-feature-grid .ip-grid > .ip-stack {
   border: 0; border-top: 2px solid var(--ink); border-radius: 0; padding: 18px 0 0; background: none; box-shadow: none; row-gap: 0.6rem;
 }
-.ip-site-assaypreview .ip-ap-feature-grid .ip-grid h3 { font-size: 21px; line-height: 1.25; }
-.ip-site-assaypreview .ip-ap-feature-grid .ip-grid .ip-prose { color: var(--ink-soft); font-size: 17px; line-height: 1.6; }
-.ip-site-assaypreview .ip-ap-feature-grid .ip-grid .ip-btn-ghost { padding-inline: 0; min-height: 44px; color: var(--accent-ink); font-size: 16px; font-weight: 600; text-decoration: underline; text-underline-offset: 0.15em; }
+.ip-site-assay .ip-ap-feature-grid .ip-grid h3 { font-size: 21px; line-height: 1.25; }
+.ip-site-assay .ip-ap-feature-grid .ip-grid .ip-prose { color: var(--ink-soft); font-size: 17px; line-height: 1.6; }
+.ip-site-assay .ip-ap-feature-grid .ip-grid .ip-btn-ghost { padding-inline: 0; min-height: 44px; color: var(--accent-ink); font-size: 16px; font-weight: 600; text-decoration: underline; text-underline-offset: 0.15em; }
 
 /* ── PANELS: cards drawn with a 1px line on the card colour, no shadow. */
-.ip-site-assaypreview .ip-ap-panels :is(.ip-columns, .ip-grid) > .ip-stack {
+.ip-site-assay .ip-ap-panels :is(.ip-columns, .ip-grid) > .ip-stack {
   background: var(--ip-surface); border: 1px solid var(--hairline); border-radius: 2px; padding: 24px; box-shadow: none; row-gap: 0.6rem;
 }
-.ip-site-assaypreview .ip-ap-panels h3 { font-size: 21px; line-height: 1.25; margin: 0; }
-.ip-site-assaypreview .ip-ap-panels .ip-prose { color: var(--ink-soft); font-size: 17px; line-height: 1.6; }
+.ip-site-assay .ip-ap-panels h3 { font-size: 21px; line-height: 1.25; margin: 0; }
+.ip-site-assay .ip-ap-panels .ip-prose { color: var(--ink-soft); font-size: 17px; line-height: 1.6; }
 
 /* ── STEPS: a numbered list read top down, the number in bronze, rows parted by hairlines
    (the kit's "A report reads in the order a committee asks"). */
-.ip-site-assaypreview .ip-ap-steps .ip-grid { display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--hairline); }
-.ip-site-assaypreview .ip-ap-steps .ip-grid > .ip-stack {
+.ip-site-assay .ip-ap-steps .ip-grid { display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--hairline); }
+.ip-site-assay .ip-ap-steps .ip-grid > .ip-stack {
   display: grid; grid-template-columns: 44px minmax(0, 1fr); column-gap: 8px; row-gap: 2px; align-content: start;
   border: 0; border-bottom: 1px solid var(--hairline); border-radius: 0; padding: 14px 0; background: none; box-shadow: none;
 }
-.ip-site-assaypreview .ip-ap-steps .ip-grid > .ip-stack::before {
+.ip-site-assay .ip-ap-steps .ip-grid > .ip-stack::before {
   grid-column: 1; grid-row: 1 / span 9; display: block; width: auto; height: auto; margin: 0; border-radius: 0;
   background: none; box-shadow: none; color: var(--accent-ink); font: 600 20px / 1.3 var(--font-ui);
 }
-.ip-site-assaypreview .ip-ap-steps .ip-grid > .ip-stack > * { grid-column: 2; }
-.ip-site-assaypreview .ip-ap-steps .ip-grid h3 { font-size: 18px; line-height: 1.35; }
-.ip-site-assaypreview .ip-ap-steps .ip-grid .ip-prose { color: var(--ink-soft); font-size: 16px; line-height: 1.55; }
+.ip-site-assay .ip-ap-steps .ip-grid > .ip-stack > * { grid-column: 2; }
+.ip-site-assay .ip-ap-steps .ip-grid h3 { font-size: 18px; line-height: 1.35; }
+.ip-site-assay .ip-ap-steps .ip-grid .ip-prose { color: var(--ink-soft); font-size: 16px; line-height: 1.55; }
 
 /* ── PROSE: a plain list read as hairline rows (the kit's "What the report leaves to you"). */
-.ip-site-assaypreview .ip-ap-prose .ip-prose ul { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--hairline); }
-.ip-site-assaypreview .ip-ap-prose .ip-prose ul li,
-.ip-site-assaypreview .ip-ap-prose .ip-prose ul li + li {
+.ip-site-assay .ip-ap-prose .ip-prose ul { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--hairline); }
+.ip-site-assay .ip-ap-prose .ip-prose ul li,
+.ip-site-assay .ip-ap-prose .ip-prose ul li + li {
   margin: 0; padding: 14px 0; border-top: 0; border-bottom: 1px solid var(--hairline); color: var(--ink); font-size: 17px; line-height: 1.55;
 }
-.ip-site-assaypreview .ip-ap-prose .ip-prose ul li strong { color: var(--ink); }
-.ip-site-assaypreview .ip-ap-prose > .ip-stack > .ip-prose:not(.ip-kicker) { color: var(--ink-soft); font-size: 18px; }
+.ip-site-assay .ip-ap-prose .ip-prose ul li strong { color: var(--ink); }
+.ip-site-assay .ip-ap-prose > .ip-stack > .ip-prose:not(.ip-kicker) { color: var(--ink-soft); font-size: 18px; }
 
 /* Steps and Prose read as two columns on a wide screen: the head and its text on the left, the list on
    the right. Same grid trick as the hero, for the same reason: the list spans every row of the head,
    so the grid's row gap is zero and the head keeps its rhythm with margins. */
 @media (min-width: 901px) {
-  .ip-site-assaypreview :is(.ip-ap-steps, .ip-ap-prose) > .ip-stack {
+  .ip-site-assay :is(.ip-ap-steps, .ip-ap-prose) > .ip-stack {
     display: grid; grid-template-columns: minmax(0, 34fr) minmax(0, 56fr); column-gap: 56px; row-gap: 0; align-items: start;
   }
-  .ip-site-assaypreview :is(.ip-ap-steps, .ip-ap-prose) > .ip-stack > * { grid-column: 1; margin: 0; }
-  .ip-site-assaypreview :is(.ip-ap-steps, .ip-ap-prose) > .ip-stack > * + * { margin-top: 1rem; }
-  .ip-site-assaypreview .ip-ap-steps > .ip-stack > .ip-grid,
-  .ip-site-assaypreview .ip-ap-prose > .ip-stack > .ip-prose:has(> ul) {
+  .ip-site-assay :is(.ip-ap-steps, .ip-ap-prose) > .ip-stack > * { grid-column: 1; margin: 0; }
+  .ip-site-assay :is(.ip-ap-steps, .ip-ap-prose) > .ip-stack > * + * { margin-top: 1rem; }
+  .ip-site-assay .ip-ap-steps > .ip-stack > .ip-grid,
+  .ip-site-assay .ip-ap-prose > .ip-stack > .ip-prose:has(> ul) {
     grid-column: 2; grid-row: 1 / 99; margin: 0; max-width: none; width: 100%;
   }
 }
 
 /* ── LIVE CARD: the example report page, at its own width, left. */
-.ip-site-assaypreview .ip-ap-live-card .ip-widget { max-width: 48rem; margin-inline: 0; }
+.ip-site-assay .ip-ap-live-card .ip-widget { max-width: 48rem; margin-inline: 0; }
 
 /* ── CTA: the closing call sits left, with no band; the lines after the button are signposts. */
-.ip-site-assaypreview .ip-ap-cta > .ip-stack { align-items: flex-start; text-align: left; }
-.ip-site-assaypreview .ip-ap-cta h2 { font-size: var(--mk-h2); max-width: 22em; }
-.ip-site-assaypreview .ip-ap-cta .ip-prose { text-align: left; margin-inline: 0; }
-.ip-site-assaypreview .ip-ap-cta > .ip-stack > .ip-prose:first-of-type { font-size: 18px; color: var(--ink-soft); }
-.ip-site-assaypreview .ip-ap-cta > .ip-stack > .ip-stack ~ .ip-prose {
+.ip-site-assay .ip-ap-cta > .ip-stack { align-items: flex-start; text-align: left; }
+.ip-site-assay .ip-ap-cta h2 { font-size: var(--mk-h2); max-width: 22em; }
+.ip-site-assay .ip-ap-cta .ip-prose { text-align: left; margin-inline: 0; }
+.ip-site-assay .ip-ap-cta > .ip-stack > .ip-prose:first-of-type { font-size: 18px; color: var(--ink-soft); }
+.ip-site-assay .ip-ap-cta > .ip-stack > .ip-stack ~ .ip-prose {
   border-top: 1px solid var(--hairline); padding-top: 1.25rem; margin-top: 0.75rem; max-width: 42rem;
 }
-.ip-site-assaypreview .ip-ap-cta > .ip-stack > .ip-stack ~ .ip-prose,
-.ip-site-assaypreview .ip-ap-cta > .ip-stack > .ip-stack ~ .ip-prose p { font-size: 15px; line-height: 1.6; color: var(--muted); }
-.ip-site-assaypreview .ip-ap-cta > .ip-stack > .ip-stack ~ .ip-prose strong { font-weight: 600; color: var(--ink); }
+.ip-site-assay .ip-ap-cta > .ip-stack > .ip-stack ~ .ip-prose,
+.ip-site-assay .ip-ap-cta > .ip-stack > .ip-stack ~ .ip-prose p { font-size: 15px; line-height: 1.6; color: var(--muted); }
+.ip-site-assay .ip-ap-cta > .ip-stack > .ip-stack ~ .ip-prose strong { font-weight: 600; color: var(--ink); }
 
 /* ── DOC: the privacy notice and other long documents. */
-.ip-site-assaypreview .ip-ap-doc .ip-prose :is(p, li) { font-size: 17px; line-height: 1.65; }
-.ip-site-assaypreview .ip-ap-doc h1 { font-size: var(--mk-h2); }
-.ip-site-assaypreview .ip-ap-doc h2 { font-size: 22px; border-top: 2px solid var(--ink); padding-top: 0.9rem; align-self: stretch; width: 100%; }
+.ip-site-assay .ip-ap-doc .ip-prose :is(p, li) { font-size: 17px; line-height: 1.65; }
+.ip-site-assay .ip-ap-doc h1 { font-size: var(--mk-h2); }
+.ip-site-assay .ip-ap-doc h2 { font-size: 22px; border-top: 2px solid var(--ink); padding-top: 0.9rem; align-self: stretch; width: 100%; }
 
 /* Tables: headings in the muted serif over a rule, rows parted by hairlines; on a phone a table keeps a
    readable width and slides sideways in its own frame. */
-.ip-site-assaypreview .ip-table { font-size: 15px; font-variant-numeric: tabular-nums lining-nums; }
-.ip-site-assaypreview .ip-table th { font: 600 13px / 1.3 var(--font-ui); letter-spacing: 0; text-transform: none; color: var(--muted); border-bottom: 1px solid var(--rule); }
+.ip-site-assay .ip-table { font-size: 15px; font-variant-numeric: tabular-nums lining-nums; }
+.ip-site-assay .ip-table th { font: 600 13px / 1.3 var(--font-ui); letter-spacing: 0; text-transform: none; color: var(--muted); border-bottom: 1px solid var(--rule); }
 @media (max-width: 640px) {
-  .ip-site-assaypreview .ip-table { min-width: 34rem; }
-  .ip-site-assaypreview .ip-table td:first-child { min-width: 10rem; }
+  .ip-site-assay .ip-table { min-width: 34rem; }
+  .ip-site-assay .ip-table td:first-child { min-width: 10rem; }
 }
 
 /* The contact form is a shadow-DOM island with its own tokens; set on the host, these win over its
    :host defaults, so the form wears Assay's serif, bronze and 2px corners. */
-.ip-site-assaypreview contact-form {
+.ip-site-assay contact-form {
   --font-ui: "Source Serif 4", Georgia, serif;
   --font-mono: "Source Code Pro", ui-monospace, monospace;
   --r-sm: 2px; --r-md: 2px; --r-lg: 2px;
@@ -258,8 +258,8 @@
 
 /* On a phone the hero's two buttons stack at one width, so the main action is never the narrower one. */
 @media (max-width: 480px) {
-  .ip-site-assaypreview .ip-ap-hero .ip-stack > .ip-stack:has(> .ip-btn) { align-self: stretch; }
-  .ip-site-assaypreview .ip-ap-hero .ip-stack > .ip-stack > .ip-btn { width: 100%; justify-content: center; }
+  .ip-site-assay .ip-ap-hero .ip-stack > .ip-stack:has(> .ip-btn) { align-self: stretch; }
+  .ip-site-assay .ip-ap-hero .ip-stack > .ip-stack > .ip-btn { width: 100%; justify-content: center; }
 }
 
 /* ★ TWO-TONE HEADINGS (owner, 2026-10-28): the part of a heading marked <em>…</em> (HeadingText) is drawn in
@@ -269,36 +269,36 @@
    #9a6e44, 3.9:1 at the low end of the paper top and 3.9:1 on the dark ground: AA for large text, which these are.
    light-dark() follows each section's color-scheme, so a dark top gets the dark run in both themes. Print and
    forced colours get plain text colour: they drop the clipped background and would leave the words with no ink. */
-.ip-site-assaypreview .ip-h-accent { color: light-dark(#8a5d33, #c99a6a); }
+.ip-site-assay .ip-h-accent { color: light-dark(#8a5d33, #c99a6a); }
 /* The payoff wraps as one piece, as on Assert and CCA: when a heading runs to two lines, the break comes before the
    payoff, never inside it with its first words left on the line above ("decision, in the / order a committee").
    A payoff wider than the line still wraps inside itself, so a phone never scrolls sideways. */
-.ip-site-assaypreview :is(h1, h2) .ip-h-accent { display: inline-block; }
+.ip-site-assay :is(h1, h2) .ip-h-accent { display: inline-block; }
 @supports (background-clip: text) or (-webkit-background-clip: text) {
-  .ip-site-assaypreview .ip-h-accent {
+  .ip-site-assay .ip-h-accent {
     background-image: linear-gradient(160deg, light-dark(#9a6e44, #c99a6a) 0%, light-dark(#8a5d33, #e4c9a8) 45%, light-dark(#8a5d33, #c99a6a) 75%, light-dark(#5a3a1e, #9a6e44) 100%);
     -webkit-background-clip: text; background-clip: text; color: transparent;
     -webkit-box-decoration-break: clone; box-decoration-break: clone;
   }
 }
 @media print, (forced-colors: active) {
-  .ip-site-assaypreview .ip-h-accent { background: none; color: inherit; }
+  .ip-site-assay .ip-h-accent { background: none; color: inherit; }
 }
 
 /* ★ THE LOGO'S METAL (owner, 2026-10-28; brand document 5.6): the drawn lens lifts on dark grounds and the graphite
    top. The logo is inlined with the brand run on its stops; light-dark() follows the colour scheme of the place it
    sits, so the header and footer pick the right run in both themes without a second file. */
-.ip-site-assaypreview .ip-brand-logo stop:nth-of-type(1) { stop-color: light-dark(#d2a776, #ead2b4); }
-.ip-site-assaypreview .ip-brand-logo stop:nth-of-type(2) { stop-color: light-dark(#8a5d33, #c99a6a); }
-.ip-site-assaypreview .ip-brand-logo stop:nth-of-type(3) { stop-color: light-dark(#4a2f16, #9a6e44); }
+.ip-site-assay .ip-brand-logo stop:nth-of-type(1) { stop-color: light-dark(#d2a776, #ead2b4); }
+.ip-site-assay .ip-brand-logo stop:nth-of-type(2) { stop-color: light-dark(#8a5d33, #c99a6a); }
+.ip-site-assay .ip-brand-logo stop:nth-of-type(3) { stop-color: light-dark(#4a2f16, #9a6e44); }
 
 /* The contact form draws inside its own shadow root with the widget's "assay" accent, which is still the old blue
    the live Assay site uses. A rule on the host element outranks the form's own :host rules, so the bronze reaches
    this site's form alone and the live site's form is left as it is. The form reflects the page theme onto the
    host as data-theme; without it the form is in its dark look. */
-.ip-site-assaypreview contact-form {
+.ip-site-assay contact-form {
   --accent: #c99a6a; --accent-ink: #c99a6a; --accent-wash: #2e2115; --accent-strong: #8a5d33; --on-accent: #ffffff;
 }
-.ip-site-assaypreview contact-form[data-theme="light"] {
+.ip-site-assay contact-form[data-theme="light"] {
   --accent: #8a5d33; --accent-ink: #8a5d33; --accent-wash: #f3eadf; --accent-strong: #8a5d33; --on-accent: #ffffff;
 }

@@ -158,20 +158,20 @@ public sealed class ThemeCssTests
     }
 
     /// <summary>
-    /// ★ The new Assay site is built as "Assay Preview" beside the live "Assay" site, and the live site must
-    /// read and look exactly as it does until the owner moves the new one onto its address. Its look and its
-    /// faces are keyed to the preview's name, so neither can reach the live site's sheet or folder.
+    /// ★ The Assay look and its faces ship to the site named "Assay" and to no other: the old site, renamed
+    /// "Assay (old)" when the new one took its address, keeps the shared sheet only.
     /// </summary>
     [Fact]
-    public void The_new_assay_look_reaches_the_preview_site_and_never_the_live_one()
+    public void The_assay_look_reaches_the_assay_site_only()
     {
-        Assert.Contains(".ip-site-assaypreview", ThemeCss.SiteCss("Assay Preview"));
-        Assert.Equal(string.Empty, ThemeCss.SiteCss("Assay"));
-        Assert.DoesNotContain(".ip-site-assaypreview", ThemeCss.MarketingCss);
+        Assert.Contains(".ip-site-assay ", ThemeCss.SiteCss("Assay"));
+        Assert.Equal(string.Empty, ThemeCss.SiteCss("Assay (old)"));
+        Assert.Equal(string.Empty, ThemeCss.SiteCss("Assay Preview"));
+        Assert.DoesNotContain(".ip-site-assay ", ThemeCss.MarketingCss);
 
-        Assert.Equal(3, FontAssets.ForSite(ThemeCss.SiteSlug("Assay Preview")).Count);
-        Assert.Empty(FontAssets.ForSite(ThemeCss.SiteSlug("Assay")));
-        Assert.All(FontAssets.ForSite("assaypreview"), font => Assert.NotEmpty(font.Bytes));
+        Assert.Equal(3, FontAssets.ForSite(ThemeCss.SiteSlug("Assay")).Count);
+        Assert.Empty(FontAssets.ForSite(ThemeCss.SiteSlug("Assay (old)")));
+        Assert.All(FontAssets.ForSite("assay"), font => Assert.NotEmpty(font.Bytes));
     }
 
     /// <summary>
@@ -191,12 +191,12 @@ public sealed class ThemeCssTests
 
     /// <summary>
     /// ★ Two-tone headings (owner, 2026-10-28): the four product sites draw a heading's marked part in their own
-    /// metal, and every other site, the live Assay site included, leaves it in text colour.
+    /// metal, and every other site, the old Assay site included, leaves it in text colour.
     /// </summary>
     [Theory]
     [InlineData("Assure")]
     [InlineData("Assert")]
-    [InlineData("Assay Preview")]
+    [InlineData("Assay")]
     [InlineData("Canine Code Analyzer")]
     public void A_product_site_draws_the_heading_accent_in_its_own_metal(string site)
     {
@@ -206,7 +206,7 @@ public sealed class ThemeCssTests
         Assert.Contains("background-clip: text", css);
         Assert.Contains("forced-colors: active", css);
         Assert.DoesNotContain(".ip-h-accent", ThemeCss.MarketingCss);
-        Assert.Equal(string.Empty, ThemeCss.SiteCss("Assay"));
+        Assert.Equal(string.Empty, ThemeCss.SiteCss("Assay (old)"));
     }
 
     [Fact]
