@@ -27,6 +27,8 @@ using RestorePageToRevisionCmd = Imprint.Authoring.Features.Pages.RestorePageToR
 using CreateSiteCmd = Imprint.Authoring.Features.Sites.CreateSite.CreateSite;
 using ArchiveSiteCmd = Imprint.Authoring.Features.Sites.ArchiveSite.ArchiveSite;
 using RestoreSiteCmd = Imprint.Authoring.Features.Sites.ArchiveSite.RestoreSite;
+using RenameSiteCmd = Imprint.Authoring.Features.Sites.RenameSite.RenameSite;
+using ConfigureEnvironmentsCmd = Imprint.Authoring.Features.Sites.ConfigureEnvironments.ConfigureEnvironments;
 using SetPostOrderCmd = Imprint.Authoring.Features.Sites.SetPostOrder.SetPostOrder;
 using DuplicateNodeCmd = Imprint.Authoring.Features.Pages.DuplicateNode.DuplicateNode;
 using EditTextCmd = Imprint.Authoring.Features.Pages.EditText.EditText;
@@ -187,6 +189,9 @@ public sealed class ImprintAuthoringMcpTools
             // footer are returned whole — you edit what you read back.
             llmsPreamble = site.LlmsPreamble,
             llmsExcludedPaths = site.LlmsExcludedPaths.ToList(),
+            // Read back for the same reason: set_site_environments replaces the whole list, and moving a site
+            // to another address means reusing the folder the old site published into.
+            environments = site.Environments.Select(e => (object)new { name = e.Name, path = e.Path, baseUrl = e.BaseUrl }).ToList(),
             navigation = site.Navigation.Select(item => (object)new
             {
                 label = item.Label is null ? null : Localized(item.Label),
@@ -282,6 +287,40 @@ public sealed class ImprintAuthoringMcpTools
         !TrySiteId(siteId, out var sid)
             ? Task.FromResult(Fail("invalid siteId"))
             : Dispatch(dispatcher, config, new ArchiveSiteCmd(sid), ct, () => new { ok = true, siteId = sid.Compact, archived = true });
+
+    [McpServerTool(Name = "rename_site")]
+    [Description("Rename a site. The name is what page titles and link previews are suffixed with, and it keys the site's own style sheet and fonts, so a rename re-renders every page on the next publish pass.")]
+    public static Task<object> RenameSite(
+        [Description("The site id.")] string siteId,
+        [Description("The new name.")] string name,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default) =>
+        !TrySiteId(siteId, out var sid)
+            ? Task.FromResult(Fail("invalid siteId"))
+            : Dispatch(dispatcher, config, new RenameSiteCmd(sid, name), ct, () => new { ok = true, siteId = sid.Compact, name });
+
+    [McpServerTool(Name = "set_site_environments")]
+    [Description("Replace a site's deploy environments — the folders it publishes into and each one's public address (baseUrl, an origin such as https://assay.canine.dev). Moving a site to an address is this plus a republish. Read the current list with get_site first: this carries the whole list, and an empty array leaves the site publishing nowhere.")]
+    public static Task<object> SetSiteEnvironments(
+        [Description("The site id.")] string siteId,
+        [Description("JSON array of {\"name\":\"Production\",\"path\":\"/folder\",\"baseUrl\":\"https://…\"}; baseUrl optional.")] string environmentsJson,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Task.FromResult(Fail("invalid siteId"));
+        JsonElement environments;
+        try
+        {
+            environments = JsonDocument.Parse(environmentsJson).RootElement.Clone();
+        }
+        catch (JsonException e)
+        {
+            return Task.FromResult(Fail($"environmentsJson is not valid JSON: {e.Message}"));
+        }
+
+        if (environments.ValueKind != JsonValueKind.Array) return Task.FromResult(Fail("environmentsJson must be a JSON array"));
+        if (!AuthoringApi.TryParseEnvironments(environments, out var parsed, out var error)) return Task.FromResult(Fail(error!));
+        return Dispatch(dispatcher, config, new ConfigureEnvironmentsCmd(sid, parsed), ct,
+            () => new { ok = true, siteId = sid.Compact, environments = parsed.Select(e => new { name = e.Name, path = e.Path, baseUrl = e.BaseUrl }).ToList() });
+    }
 
     [McpServerTool(Name = "restore_site")]
     [Description("Bring an archived site back into use: it returns to the lists and may be published again.")]
