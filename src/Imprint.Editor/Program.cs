@@ -303,7 +303,7 @@ app.MapPost("/api/contact", async (HttpContext http, ContactIntake intake, Cance
 // Public preview: the founder reviews the real published page (chrome + marketing CSS +
 // hydrated live islands) at /preview/{site} and /preview/{site}/{slug}. Anonymous by
 // design — this is public marketing content, not the editor. /preview (no site) lists the
-// sites available to preview. The site is addressed by its slug (watchdog/cai/assay) or id.
+// sites available to preview. The site is served under its slug (watchdog/cai/assay); its id redirects there.
 app.MapGet("/preview", (SitePreview preview) =>
 {
     var sites = preview.Sites();
@@ -327,6 +327,12 @@ app.MapGet("/preview", (SitePreview preview) =>
 // demand and rewritten per request — never cached, so an edit shows on the next hit.
 static async Task<IResult> ServePreview(string site, string path, SitePreview preview, HttpContext http)
 {
+    // A site has one preview address, its slug; asked for by its id, the browser is sent there.
+    if (preview.SlugForId(site) is { } slug)
+    {
+        return Results.Redirect($"/preview/{Uri.EscapeDataString(slug)}/{path}{http.Request.QueryString}");
+    }
+
     var file = await preview.Serve(site, path);
     if (file is null)
     {

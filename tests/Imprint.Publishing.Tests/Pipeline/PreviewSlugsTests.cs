@@ -45,6 +45,14 @@ public sealed class PreviewSlugsTests
     }
 
     [Fact]
+    public void With_the_first_Assay_site_out_of_the_roster_the_new_one_alone_is_served_at_assay()
+    {
+        var roster = Roster.Where(site => site.Id != "91884b35d86542a898bdc7960fce6f89").ToArray();
+
+        Assert.Equal("assay", PreviewSlugs.Assign(roster)["7330cf66b16e44728f1acc1728558a5e"]);
+    }
+
+    [Fact]
     public void Two_sites_with_the_same_name_fall_back_to_their_ids()
     {
         var slugs = PreviewSlugs.Assign([("aaaa", "Twin Site"), ("bbbb", "Twin Site"), ("cccc", "")]);

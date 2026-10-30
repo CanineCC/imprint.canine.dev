@@ -41,17 +41,84 @@ public sealed class SitePreview(
     /// <summary>
     /// The URL-safe key each site is reachable under (<c>/preview/{slug}</c>): the first
     /// token of the brand name lower-cased (watchdog / cai / assay), or the compact id as
-    /// a stable fallback. A caller may address a site by either its slug or its compact id.
+    /// a stable fallback. A site is served under its slug only; its compact id is a way to
+    /// FIND that slug (<see cref="SlugForId"/>), never a second address of its own.
+    /// ★ ARCHIVED SITES HAVE NO PREVIEW. A retired site kept its address and its first word, so the old Assay site
+    /// held /preview/assay/ and pushed the new one aside to /preview/assaypreview/. Only active sites are keyed and
+    /// served; an archived site's folder is deleted by <see cref="Prune"/>.
     /// </summary>
     public IReadOnlyList<(string Slug, string Name)> Sites()
     {
         var slugs = Slugs();
-        return [.. siteOverview.All.Select(site => (slugs[site.Id.Compact], site.Name))];
+        return [.. siteOverview.Active.Select(site => (slugs[site.Id.Compact], site.Name))];
+    }
+
+    /// <summary>
+    /// The slug of the site whose compact id this is, so a request by id can be sent on to the one address the
+    /// site has; null when no site has that id, or when the id is itself the slug.
+    /// </summary>
+    /// <remarks>
+    /// ★ ONE ADDRESS PER SITE. The id used to serve the site as well, so every preview had two addresses
+    /// (/preview/assaypreview/ and /preview/7330cf66…/), and a link to the id kept working after the site's name, and
+    /// with it the address people were told, had moved on.
+    /// </remarks>
+    public string? SlugForId(string id)
+    {
+        var slugs = Slugs();
+        return slugs.TryGetValue(id.ToLowerInvariant(), out var slug) && !string.Equals(slug, id, StringComparison.OrdinalIgnoreCase)
+            ? slug
+            : null;
+    }
+
+    /// <summary>
+    /// Deletes every preview folder no site is served from any more: the folder of a deleted site, and the old
+    /// folder of a site whose name (and so its slug) changed. Without it the old render stays on disk forever.
+    /// </summary>
+    public async Task Prune()
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            PruneUnderGate();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    private void PruneUnderGate()
+    {
+        if (!Directory.Exists(previewRoot))
+        {
+            return;
+        }
+
+        var current = new HashSet<string>(Slugs().Values, StringComparer.OrdinalIgnoreCase);
+        foreach (var folder in Directory.GetDirectories(previewRoot))
+        {
+            var name = Path.GetFileName(folder);
+            if (current.Contains(name))
+            {
+                continue;
+            }
+
+            try
+            {
+                Directory.Delete(folder, recursive: true);
+                _renderedAt.Remove(name);
+                logger.LogInformation("Deleted the preview folder '{Folder}': no site is served from it.", name);
+            }
+            catch (IOException e)
+            {
+                logger.LogWarning(e, "Could not delete the unused preview folder '{Folder}'.", name);
+            }
+        }
     }
 
     /// <summary>
     /// Resolve and serve one path under a site's preview. <paramref name="site"/> is the
-    /// slug or compact id; <paramref name="path"/> is the in-site request path (e.g.
+    /// slug; <paramref name="path"/> is the in-site request path (e.g.
     /// <c>""</c>, <c>"about/"</c>, <c>"css/site.ab12.css"</c>). Returns null when the site
     /// or file is not found. HTML is rewritten to the <c>/preview/{site}/</c> prefix.
     /// </summary>
@@ -138,6 +205,7 @@ public sealed class SitePreview(
             // then render this one site to its own folder with no BaseUrl (origin-relative
             // output, which the rewrite then re-homes under /preview/{slug}/).
             await projections.CatchUp();
+            PruneUnderGate();
             if (siteOverview.Get(siteId) is { } aggregate)
             {
                 // IncludeDrafts is what makes this a preview rather than a mirror: an author asking
@@ -164,11 +232,10 @@ public sealed class SitePreview(
     private (string Slug, SiteId Id)? Resolve(string site)
     {
         var slugs = Slugs();
-        foreach (var s in siteOverview.All)
+        foreach (var s in siteOverview.Active)
         {
             var slug = slugs[s.Id.Compact];
-            if (string.Equals(slug, site, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(s.Id.Compact, site, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(slug, site, StringComparison.OrdinalIgnoreCase))
             {
                 return (slug, s.Id);
             }
@@ -178,7 +245,7 @@ public sealed class SitePreview(
     }
 
     private IReadOnlyDictionary<string, string> Slugs() =>
-        PreviewSlugs.Assign([.. siteOverview.All.Select(s => (s.Id.Compact, s.Name))]);
+        PreviewSlugs.Assign([.. siteOverview.Active.Select(s => (s.Id.Compact, s.Name))]);
 
     private static string ContentTypeOf(string path) => Path.GetExtension(path).ToLowerInvariant() switch
     {
