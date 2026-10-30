@@ -222,3 +222,6 @@
   display: grid; grid-row: span 4; grid-template-rows: subgrid; row-gap: 0.6rem; align-content: start;
 }
 .ip-site-caninecodeanalyzer .ip-grid > .ip-stack > .ip-widget:first-child :is(cca-scene-card, .csc-card) { height: 100%; box-sizing: border-box; }
+/* A card with its value points beside it (Home, "Six weeks in"): the points use the same heading size as the
+   site's card headings, so a heading never reads smaller than the text under it. */
+.ip-site-caninecodeanalyzer .ip-ap-feature-grid .ip-columns h3 { font-size: 1.2rem; }
