@@ -335,11 +335,3 @@
   font: 600 16px / 1.25 var(--font-ui);
 }
 .ip-site-assaypreview contact-form::part(submit):hover { filter: brightness(1.08); opacity: 1; }
-
-/* ★ TRAFFIC LIGHTS (owner, 2026-10-31; brand document 5.3): the contact form's inline line takes the brand's Problem words
-   colour when a message was not sent, and its Good words colour when it reports one sent without the dialog, in place
-   of the CAI score colours the form borrows by default.
-   The form draws inside its own shadow root and reflects the page theme onto the host as data-theme; without it the
-   form is in its dark look, so the dark values come first. Both pass 4.5:1 on the page and the card in each theme. */
-.ip-site-assaypreview contact-form { --band-exemplary-text: #9ec196; --band-poor-text: #df8e8d; }
-.ip-site-assaypreview contact-form[data-theme="light"] { --band-exemplary-text: #52724b; --band-poor-text: #893f42; }

@@ -225,11 +225,3 @@
 /* A card with its value points beside it (Home, "Six weeks in"): the points use the same heading size as the
    site's card headings, so a heading never reads smaller than the text under it. */
 .ip-site-caninecodeanalyzer .ip-ap-feature-grid .ip-columns h3 { font-size: 1.2rem; }
-
-/* ★ TRAFFIC LIGHTS (owner, 2026-10-31; brand document 5.3): the contact form's inline line takes the brand's Problem words
-   colour when a message was not sent, and its Good words colour when it reports one sent without the dialog, in place
-   of the CAI score colours the form borrows by default.
-   The form draws inside its own shadow root and reflects the page theme onto the host as data-theme; without it the
-   form is in its dark look, so the dark values come first. Both pass 4.5:1 on the page and the card in each theme. */
-.ip-site-caninecodeanalyzer contact-form { --band-exemplary-text: #7dbf8b; --band-poor-text: #ec7d6f; }
-.ip-site-caninecodeanalyzer contact-form[data-theme="light"] { --band-exemplary-text: #347445; --band-poor-text: #983029; }

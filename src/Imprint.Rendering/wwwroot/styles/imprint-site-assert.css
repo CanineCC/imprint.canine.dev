@@ -154,11 +154,3 @@
 .ip-site-assert .ip-brand-logo stop:nth-of-type(1) { stop-color: light-dark(#a7a7ca, #dfdff1); }
 .ip-site-assert .ip-brand-logo stop:nth-of-type(2) { stop-color: light-dark(#56557a, #b6b6d6); }
 .ip-site-assert .ip-brand-logo stop:nth-of-type(3) { stop-color: light-dark(#2d2c4c, #8282a4); }
-
-/* ★ TRAFFIC LIGHTS (owner, 2026-10-31; brand document 5.3): the contact form's inline line takes the brand's Problem words
-   colour when a message was not sent, and its Good words colour when it reports one sent without the dialog, in place
-   of the CAI score colours the form borrows by default.
-   The form draws inside its own shadow root and reflects the page theme onto the host as data-theme; without it the
-   form is in its dark look, so the dark values come first. Both pass 4.5:1 on the page and the card in each theme. */
-.ip-site-assert contact-form { --band-exemplary-text: #89c495; --band-poor-text: #e98880; }
-.ip-site-assert contact-form[data-theme="light"] { --band-exemplary-text: #3e764c; --band-poor-text: #933b36; }
