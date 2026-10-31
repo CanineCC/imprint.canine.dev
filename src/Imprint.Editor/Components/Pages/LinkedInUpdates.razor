@@ -28,53 +28,80 @@
         </p>
     </header>
 
-    @if (_rows.Count == 0)
+    @if (_planned.Count + _posted.Count + _cancelled.Count == 0)
     {
         <p class="dash-sub" data-testid="linkedin-updates-empty">No LinkedIn updates planned for this site.</p>
     }
     else
     {
-        <ol class="li-updates" aria-label="LinkedIn updates" data-testid="linkedin-updates">
-            @foreach (var row in _rows)
+        @* The page opens on what is still to come. What went out, and what was called off, each have a tab of their own,
+           newest first; anything waiting for a person stays with the plan (LinkedInUpdateList.PlannedForSite). *@
+        <div class="post-tabs" role="tablist" aria-label="LinkedIn updates">
+            <button type="button" role="tab" class="post-tab @(_tab == Tab.Planned ? "is-on" : null)"
+                    aria-selected="@(_tab == Tab.Planned ? "true" : "false")" data-testid="linkedin-tab-planned"
+                    @onclick="() => _tab = Tab.Planned">Planned <span>@_planned.Count</span></button>
+            <button type="button" role="tab" class="post-tab @(_tab == Tab.Posted ? "is-on" : null)"
+                    aria-selected="@(_tab == Tab.Posted ? "true" : "false")" data-testid="linkedin-tab-posted"
+                    @onclick="() => _tab = Tab.Posted">Posted <span>@_posted.Count</span></button>
+            <button type="button" role="tab" class="post-tab @(_tab == Tab.Cancelled ? "is-on" : null)"
+                    aria-selected="@(_tab == Tab.Cancelled ? "true" : "false")" data-testid="linkedin-tab-cancelled"
+                    @onclick="() => _tab = Tab.Cancelled">Cancelled <span>@_cancelled.Count</span></button>
+        </div>
+
+        var shown = _tab switch { Tab.Posted => _posted, Tab.Cancelled => _cancelled, _ => _planned };
+        @if (shown.Count == 0)
+        {
+            <p class="dash-sub" data-testid="linkedin-tab-empty">@(_tab switch
             {
-                <li class="li-update" data-testid="linkedin-update" data-state="@row.State">
-                    <div class="li-when">
-                        <time datetime="@row.PublishAt.ToString("O")">@row.PublishAt.ToString("ddd d MMM yyyy, HH:mm") <span class="li-offset">UTC@(row.PublishAt.Offset < TimeSpan.Zero ? "−" : "+")@row.PublishAt.Offset.ToString(@"h\:mm")</span></time>
-                        <span class="post-status li-state li-state-@row.State.ToString().ToLowerInvariant()" data-testid="linkedin-update-state">@Label(row.State)</span>
-                    </div>
-                    <LinkedInUpdatePreview SenderName="@SenderName(row)" Text="@row.Text" Images="@row.Images"
-                                           PublishAt="@row.PublishAt" Library="@Library" />
-                    @if (row.Urn is { } urn)
-                    {
-                        <p class="li-meta"><a href="@($"https://www.linkedin.com/feed/update/{urn}/")" target="_blank" rel="noopener">See it on LinkedIn</a></p>
-                    }
-                    @if (row.Reason is { Length: > 0 } reason)
-                    {
-                        <p class="li-reason" data-testid="linkedin-update-reason">@reason</p>
-                    }
-                    @if (row.State is LinkedInUpdateState.Unknown)
-                    {
-                        <div class="li-actions">
-                            <label class="ed-visually-hidden" for="@($"urn-{row.Id.Compact}")">The post's URN</label>
-                            <input id="@($"urn-{row.Id.Compact}")" class="ed-input li-urn" placeholder="urn:li:share:…"
-                                   @bind="_urns[row.Id]" @bind:event="oninput" />
-                            <button type="button" class="ed-btn" disabled="@(Urn(row).Length == 0)"
-                                    data-testid="linkedin-update-posted" @onclick="() => Resolve(row, Urn(row))">It is on LinkedIn</button>
-                            <button type="button" class="ed-btn" data-testid="linkedin-update-not-posted"
-                                    @onclick="() => Resolve(row, null)">It did not post</button>
+                Tab.Posted => "Nothing has gone out yet.",
+                Tab.Cancelled => "Nothing has been cancelled.",
+                _ => "Nothing is planned. Plan the next one through the MCP tools.",
+            })</p>
+        }
+        else
+        {
+            <ol class="li-updates" aria-label="LinkedIn updates" data-testid="linkedin-updates">
+                @foreach (var row in shown)
+                {
+                    <li class="li-update" data-testid="linkedin-update" data-state="@row.State">
+                        <div class="li-when">
+                            <time datetime="@row.PublishAt.ToString("O")">@row.PublishAt.ToString("ddd d MMM yyyy, HH:mm") <span class="li-offset">UTC@(row.PublishAt.Offset < TimeSpan.Zero ? "−" : "+")@row.PublishAt.Offset.ToString(@"h\:mm")</span></time>
+                            <span class="post-status li-state li-state-@row.State.ToString().ToLowerInvariant()" data-testid="linkedin-update-state">@Label(row.State)</span>
                         </div>
-                    }
-                    else if (row.State is LinkedInUpdateState.Scheduled or LinkedInUpdateState.Missed
-                             || (row.State is LinkedInUpdateState.Failed && !row.Retryable))
-                    {
-                        <div class="li-actions">
-                            <button type="button" class="ed-btn" data-testid="linkedin-update-cancel"
-                                    @onclick="() => Cancel(row)">Cancel</button>
-                        </div>
-                    }
-                </li>
-            }
-        </ol>
+                        <LinkedInUpdatePreview SenderName="@SenderName(row)" Text="@row.Text" Images="@row.Images"
+                                               PublishAt="@row.PublishAt" Library="@Library" />
+                        @if (row.Urn is { } urn)
+                        {
+                            <p class="li-meta"><a href="@($"https://www.linkedin.com/feed/update/{urn}/")" target="_blank" rel="noopener">See it on LinkedIn</a></p>
+                        }
+                        @if (row.Reason is { Length: > 0 } reason)
+                        {
+                            <p class="li-reason" data-testid="linkedin-update-reason">@reason</p>
+                        }
+                        @if (row.State is LinkedInUpdateState.Unknown)
+                        {
+                            <div class="li-actions">
+                                <label class="ed-visually-hidden" for="@($"urn-{row.Id.Compact}")">The post's URN</label>
+                                <input id="@($"urn-{row.Id.Compact}")" class="ed-input li-urn" placeholder="urn:li:share:…"
+                                       @bind="_urns[row.Id]" @bind:event="oninput" />
+                                <button type="button" class="ed-btn" disabled="@(Urn(row).Length == 0)"
+                                        data-testid="linkedin-update-posted" @onclick="() => Resolve(row, Urn(row))">It is on LinkedIn</button>
+                                <button type="button" class="ed-btn" data-testid="linkedin-update-not-posted"
+                                        @onclick="() => Resolve(row, null)">It did not post</button>
+                            </div>
+                        }
+                        else if (row.State is LinkedInUpdateState.Scheduled or LinkedInUpdateState.Missed
+                                 || (row.State is LinkedInUpdateState.Failed && !row.Retryable))
+                        {
+                            <div class="li-actions">
+                                <button type="button" class="ed-btn" data-testid="linkedin-update-cancel"
+                                        @onclick="() => Cancel(row)">Cancel</button>
+                            </div>
+                        }
+                    </li>
+                }
+            </ol>
+        }
     }
 </main>
 
@@ -82,7 +109,12 @@
     [Parameter] public string SiteIdValue { get; set; } = "";
 
     private SiteId _site;
-    private IReadOnlyList<LinkedInUpdateRow> _rows = [];
+    private enum Tab { Planned, Posted, Cancelled }
+
+    private Tab _tab = Tab.Planned;
+    private IReadOnlyList<LinkedInUpdateRow> _planned = [];
+    private IReadOnlyList<LinkedInUpdateRow> _posted = [];
+    private IReadOnlyList<LinkedInUpdateRow> _cancelled = [];
     private readonly Dictionary<LinkedInUpdateId, string> _urns = [];
 
     private IReadOnlyList<Breadcrumbs.Crumb> Trail =>
@@ -117,8 +149,10 @@
 
     private void Reload()
     {
-        _rows = Updates.ForSite(_site);
-        foreach (var row in _rows)
+        _planned = Updates.PlannedForSite(_site);
+        _posted = Updates.PostedForSite(_site);
+        _cancelled = Updates.CancelledForSite(_site);
+        foreach (var row in _planned)
         {
             _urns.TryAdd(row.Id, "");
         }

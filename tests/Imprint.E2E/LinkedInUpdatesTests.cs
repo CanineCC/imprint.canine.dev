@@ -68,8 +68,17 @@ public sealed class LinkedInUpdatesTests(EditorFixture fixture)
         await Expect(preview.GetByText("The hidden part.")).ToBeVisibleAsync();
         await Shot(page, "linkedin-updates.png", "main");
 
+        await Expect(page.Locator("[data-testid='linkedin-tab-planned']")).ToHaveAttributeAsync("aria-selected", "true");
         await row.Locator("[data-testid='linkedin-update-cancel']").ClickAsync();
+        await Expect(row).ToHaveCountAsync(0);
+
+        // Cancelled leaves the plan for a tab of its own, where it is still there to be seen.
+        await page.Locator("[data-testid='linkedin-tab-cancelled']").ClickAsync();
         await Expect(row.Locator("[data-testid='linkedin-update-state']")).ToHaveTextAsync("Cancelled");
+        await Expect(row.Locator("[data-testid='linkedin-update-cancel']")).ToHaveCountAsync(0);
+        await Shot(page, "linkedin-updates-cancelled.png", "main");
+        await page.Locator("[data-testid='linkedin-tab-posted']").ClickAsync();
+        await Expect(page.Locator("[data-testid='linkedin-tab-empty']")).ToHaveTextAsync("Nothing has gone out yet.");
 
         var listed = await mcp.Call("list_linkedin_updates", new JsonObject { ["siteId"] = siteId });
         var mine = listed["updates"]!.AsArray().Single(u => u!["firstLine"]!.GetValue<string>() == text)!;

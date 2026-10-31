@@ -20,7 +20,7 @@
             {
                 var candidate = asset;
                 <button type="button" role="option"
-                        aria-selected="@(candidate.Id == Selected)"
+                        aria-selected="@(candidate.Id == Selected ? "true" : "false")"
                         class="ed-asset-card @(candidate.Id == Selected ? "ed-asset-card-selected" : null)"
                         title="@candidate.Name"
                         @onclick="() => Pick(candidate.Id)">

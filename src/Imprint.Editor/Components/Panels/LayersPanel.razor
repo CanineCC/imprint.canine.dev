@@ -28,7 +28,7 @@
                 var collapsed = _collapsed.Contains(node.Id);
                 var anchor = AnchorFor(node.Id);
                 <div class="row @(selected ? "selected" : null)" role="treeitem" @key="node.Id"
-                     aria-level="@(row.Depth + 1)" aria-selected="@selected"
+                     aria-level="@(row.Depth + 1)" aria-selected="@(selected ? "true" : "false")"
                      aria-expanded="@(row.HasChildren ? (collapsed ? "false" : "true") : null)"
                      style="--indent: @row.Depth">
                     @if (row.HasChildren)

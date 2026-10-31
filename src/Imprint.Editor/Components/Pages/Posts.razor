@@ -74,10 +74,10 @@
            the whole site (the plan); each tab shows its part of it. Drag a row, or use its arrows, to move it. *@
         <div class="post-tabs" role="tablist" aria-label="@Plural">
             <button type="button" role="tab" class="post-tab @(_tab == Tab.Unpublished ? "is-on" : null)"
-                    aria-selected="@(_tab == Tab.Unpublished)" data-testid="posts-tab-unpublished"
+                    aria-selected="@(_tab == Tab.Unpublished ? "true" : "false")" data-testid="posts-tab-unpublished"
                     @onclick="() => _tab = Tab.Unpublished">Unpublished <span>@Unpublished.Count</span></button>
             <button type="button" role="tab" class="post-tab @(_tab == Tab.Published ? "is-on" : null)"
-                    aria-selected="@(_tab == Tab.Published)" data-testid="posts-tab-published"
+                    aria-selected="@(_tab == Tab.Published ? "true" : "false")" data-testid="posts-tab-published"
                     @onclick="() => _tab = Tab.Published">Published <span>@Published.Count</span></button>
         </div>
 

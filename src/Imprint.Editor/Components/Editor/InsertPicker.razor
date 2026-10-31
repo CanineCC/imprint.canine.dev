@@ -34,7 +34,7 @@
                     var at = index++;
                     <button type="button"
                             role="option"
-                            aria-selected="@(at == _highlighted)"
+                            aria-selected="@(at == _highlighted ? "true" : "false")"
                             class="ed-picker-item @(at == _highlighted ? "ed-picker-item-active" : null)"
                             @onclick="() => Choose(item)">
                         <span class="ed-picker-item-name">@item.Name</span>

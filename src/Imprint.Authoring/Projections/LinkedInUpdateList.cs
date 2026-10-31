@@ -31,6 +31,22 @@ public sealed class LinkedInUpdateList : ReadModel
     public IReadOnlyList<LinkedInUpdateRow> ForSite(SiteId site) =>
         [.. _rows.Values.Where(r => r.SiteId == site).OrderBy(r => r.PublishAt)];
 
+    /// <summary>
+    /// What is still to come, soonest first. A refused, unclear or missed update stays here, not with the posted or
+    /// cancelled ones: it waits for a person, and filed away it would be out of sight exactly when it needs to be seen.
+    /// </summary>
+    public IReadOnlyList<LinkedInUpdateRow> PlannedForSite(SiteId site) =>
+        [.. ForSite(site).Where(r => r.State is not (LinkedInUpdateState.Posted or LinkedInUpdateState.Cancelled))];
+
+    /// <summary>A site's posted updates, newest first.</summary>
+    public IReadOnlyList<LinkedInUpdateRow> PostedForSite(SiteId site) => NewestFirst(site, LinkedInUpdateState.Posted);
+
+    /// <summary>A site's cancelled updates, newest first.</summary>
+    public IReadOnlyList<LinkedInUpdateRow> CancelledForSite(SiteId site) => NewestFirst(site, LinkedInUpdateState.Cancelled);
+
+    private IReadOnlyList<LinkedInUpdateRow> NewestFirst(SiteId site, LinkedInUpdateState state) =>
+        [.. _rows.Values.Where(r => r.SiteId == site && r.State == state).OrderByDescending(r => r.PublishAt)];
+
     public IReadOnlyList<LinkedInUpdateRow> All() => [.. _rows.Values.OrderBy(r => r.PublishAt)];
 
     public override void Apply(StoredEvent @event)
