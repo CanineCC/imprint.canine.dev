@@ -287,12 +287,24 @@ internal static partial class PreviewRewrite
         var prefix = "/preview/" + slug + "/";
         // Match href="/…", src="/…", data-island="/…" (single leading slash only). The
         // leading slash is consumed by the pattern, so `url` is the path without it.
-        return AbsoluteUrlAttribute().Replace(html, m =>
+        var rehomed = AbsoluteUrlAttribute().Replace(html, m =>
         {
             var attr = m.Groups["attr"].Value;
             var quote = m.Groups["q"].Value;
             var url = m.Groups["url"].Value;
             return $"{attr}={quote}{prefix}{url}{quote}";
+        });
+
+        // ★ srcset / imagesrcset hold a list ("/a-480.webp 480w, /a-960.webp 960w") and every
+        // root-absolute candidate in it moves too. Only src used to: a browser takes srcset over
+        // src, so every picture on every preview page asked the site root for its file and
+        // drew a broken image (seen 2026-11-01 on the canine.dev draft's portraits).
+        return SrcsetAttribute().Replace(rehomed, m =>
+        {
+            var attr = m.Groups["attr"].Value;
+            var quote = m.Groups["q"].Value;
+            var list = SrcsetCandidate().Replace(m.Groups["list"].Value, c => c.Groups["lead"].Value + prefix);
+            return $"{attr}={quote}{list}{quote}";
         });
     }
 
@@ -316,6 +328,15 @@ internal static partial class PreviewRewrite
     // "//host" or "https://"). The value capture stops at the closing quote.
     [GeneratedRegex("""(?<attr>href|src|data-island)=(?<q>["'])/(?!/)(?<url>[^"']*)\k<q>""", RegexOptions.IgnoreCase)]
     private static partial Regex AbsoluteUrlAttribute();
+
+    // srcset / imagesrcset with its whole candidate list; the list capture stops at the closing quote.
+    [GeneratedRegex("""(?<attr>srcset|imagesrcset)=(?<q>["'])(?<list>[^"']*)\k<q>""", RegexOptions.IgnoreCase)]
+    private static partial Regex SrcsetAttribute();
+
+    // The leading slash of one candidate URL in a srcset list (at its start or after a comma),
+    // never "//host" or "https://". The slash is consumed, as above.
+    [GeneratedRegex("""(?<lead>^|,\s*)/(?!/)""")]
+    private static partial Regex SrcsetCandidate();
 
     // url("/x") / url('/x') in CSS — a single-leading-slash path only (data:/http(s):/
     // protocol-relative and bare url(/…) without quotes are all excluded). The published

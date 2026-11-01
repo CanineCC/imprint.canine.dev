@@ -28,6 +28,28 @@ public sealed class PreviewRewriteTests
         Assert.Contains("src=\"/preview/watchdog/media/x.webp\"", result);
     }
 
+    /// <summary>
+    /// ★ A browser takes srcset over src, so a picture whose srcset still points at the site root is a
+    /// broken image in the preview however right its src is. Every candidate in the list moves.
+    /// </summary>
+    [Fact]
+    public void Html_rehomes_every_root_absolute_srcset_candidate()
+    {
+        const string html =
+            "<img src=\"/assets/a-480.webp\" srcset=\"/assets/a-480.webp 480w, /assets/a-960.webp 960w\">" +
+            "<link rel=\"preload\" as=\"image\" imagesrcset=\"/assets/a-480.webp 480w\">" +
+            "<img srcset=\"https://cdn.example.com/b.webp 1x, //cdn.example.com/b2.webp 2x\">";
+
+        var result = PreviewRewrite.Html(html, "caninepreview");
+
+        Assert.Contains("src=\"/preview/caninepreview/assets/a-480.webp\"", result);
+        Assert.Contains(
+            "srcset=\"/preview/caninepreview/assets/a-480.webp 480w, /preview/caninepreview/assets/a-960.webp 960w\"",
+            result);
+        Assert.Contains("imagesrcset=\"/preview/caninepreview/assets/a-480.webp 480w\"", result);
+        Assert.Contains("srcset=\"https://cdn.example.com/b.webp 1x, //cdn.example.com/b2.webp 2x\"", result);
+    }
+
     [Fact]
     public void Html_leaves_external_protocol_relative_and_non_asset_urls_untouched()
     {
