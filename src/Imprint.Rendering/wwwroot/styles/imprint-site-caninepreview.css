@@ -449,9 +449,9 @@
    approved at laptop size keeps its proportions and fills the screen instead of sitting small in empty space.
    Laptops and smaller screens keep their sizes. The browser enlarges screen-height units along with the page, so
    the full-height bands divide by --big to stay one screen tall, and the top band's cap lifts so it still fills. */
-@media (min-width: 1800px) and (min-height: 900px) { .ip-page.ip-site-caninepreview { --big: 1.1; --big-cap: 72rem; } }
-@media (min-width: 2400px) and (min-height: 1200px) { .ip-page.ip-site-caninepreview { --big: 1.25; --big-cap: 80rem; } }
-@media (min-width: 3600px) and (min-height: 1900px) { .ip-page.ip-site-caninepreview { --big: 1.5; --big-cap: 100rem; } }
+@media (min-width: 1600px) and (min-height: 760px) { .ip-page.ip-site-caninepreview { --big: 1.1; --big-cap: 72rem; } }
+@media (min-width: 2200px) and (min-height: 1000px) { .ip-page.ip-site-caninepreview { --big: 1.25; --big-cap: 80rem; } }
+@media (min-width: 3200px) and (min-height: 1500px) { .ip-page.ip-site-caninepreview { --big: 1.5; --big-cap: 100rem; } }
 body.ip-page.ip-site-caninepreview { zoom: var(--big, 1); }
 
 /* A short page (owner, 1 November 2026): the page is at least one screen tall, so the footer sits at the bottom of
