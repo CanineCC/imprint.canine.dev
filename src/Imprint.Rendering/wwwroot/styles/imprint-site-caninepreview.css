@@ -440,3 +440,7 @@
   min-height: calc(100svh - 62px); justify-content: center; padding-block: clamp(2.5rem, 6svh, 5rem);
 }
 .ip-site-caninepreview .ip-ap-steps .ip-grid > .ip-stack { justify-content: flex-start; }
+
+/* Card text at 15px, as on Assure (owner, 1 November 2026): the text inside the cards of each band is the same size as Assure's. */
+.ip-site-caninepreview :is(.ip-ap-feature-grid, .ip-ap-steps):not(#products) .ip-grid .ip-prose:not(.ip-kicker),
+.ip-site-caninepreview .ip-ap-feature-grid:not(#products) .ip-columns > .ip-stack > .ip-stack > .ip-prose { font-size: 0.9375rem; }
