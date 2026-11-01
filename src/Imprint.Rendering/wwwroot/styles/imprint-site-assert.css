@@ -157,3 +157,11 @@
 .ip-site-assert .ip-brand-logo stop:nth-of-type(1) { stop-color: light-dark(#a7a7ca, #dfdff1); }
 .ip-site-assert .ip-brand-logo stop:nth-of-type(2) { stop-color: light-dark(#56557a, #b6b6d6); }
 .ip-site-assert .ip-brand-logo stop:nth-of-type(3) { stop-color: light-dark(#2d2c4c, #8282a4); }
+
+/* The top band (owner, 1 November 2026): the header and the hero together fill the first screen, so the next
+   band starts just below the fold. svh is the height with a phone's browser bars showing, so the band never
+   hides under them; the floor keeps a short window from squeezing the copy, the cap keeps a tall screen from
+   floating a short hero in a sea of colour. */
+.ip-site-assert main > .ip-page > .ip-ap-hero:first-child {
+  min-height: clamp(30rem, calc(100svh - 62px), 64rem); justify-content: center;
+}

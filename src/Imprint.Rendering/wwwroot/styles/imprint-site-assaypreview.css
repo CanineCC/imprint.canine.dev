@@ -335,3 +335,11 @@
   font: 600 16px / 1.25 var(--font-ui);
 }
 .ip-site-assaypreview contact-form::part(submit):hover { filter: brightness(1.08); opacity: 1; }
+
+/* The top band (owner, 1 November 2026): the header and the hero together fill the first screen, so the next
+   band starts just below the fold. svh is the height with a phone's browser bars showing, so the band never
+   hides under them; the floor keeps a short window from squeezing the copy, the cap keeps a tall screen from
+   floating a short hero in a sea of colour. */
+.ip-site-assaypreview main > .ip-page > .ip-ap-hero:first-child {
+  min-height: clamp(30rem, calc(100svh - 62px), 64rem); justify-content: center;
+}

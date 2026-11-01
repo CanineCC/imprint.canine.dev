@@ -424,3 +424,11 @@
 .ip-site-caninepreview #open-to-read .ip-grid > .ip-stack:has(> .ip-svg) .ip-btn-ghost {
   justify-self: start; color: var(--rc-ink); font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13.5px; font-weight: 500;
 }
+
+/* The top band (owner, 1 November 2026): the header and the hero together fill the first screen, so the next
+   band starts just below the fold. svh is the height with a phone's browser bars showing, so the band never
+   hides under them; the floor keeps a short window from squeezing the copy, the cap keeps a tall screen from
+   floating a short hero in a sea of colour. */
+.ip-site-caninepreview main > .ip-page > .ip-ap-hero:first-child {
+  min-height: clamp(30rem, calc(100svh - 62px), 64rem); justify-content: center;
+}

@@ -211,3 +211,11 @@
 .ip-site-assure .ip-brand-logo stop:nth-of-type(1) { stop-color: light-dark(#f59a5c, #ffc39a); }
 .ip-site-assure .ip-brand-logo stop:nth-of-type(2) { stop-color: light-dark(#c2410c, #fb923c); }
 .ip-site-assure .ip-brand-logo stop:nth-of-type(3) { stop-color: light-dark(#7a2508, #d9661f); }
+
+/* The top band (owner, 1 November 2026): the header and the hero together fill the first screen, so the next
+   band starts just below the fold. svh is the height with a phone's browser bars showing, so the band never
+   hides under them; the floor keeps a short window from squeezing the copy, the cap keeps a tall screen from
+   floating a short hero in a sea of colour. */
+.ip-site-assure main > .ip-page > .ip-ap-hero:first-child {
+  min-height: clamp(30rem, calc(100svh - 62px), 64rem); justify-content: center;
+}
