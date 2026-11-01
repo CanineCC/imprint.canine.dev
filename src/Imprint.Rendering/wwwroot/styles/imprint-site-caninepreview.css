@@ -432,3 +432,11 @@
 .ip-site-caninepreview main > .ip-page > .ip-ap-hero:first-child {
   min-height: clamp(30rem, calc(100svh - 62px), 64rem); justify-content: center;
 }
+
+/* One band, one screen, as on Assure (owner, 1 November 2026): every marketing band below the top band is at least
+   the screen under the 62px header, with its content centred, and its space above and below follows the screen's
+   height. Short bands get air rather than bigger letters. The top band and the document pages keep their own rules. */
+.ip-site-caninepreview main .ip-section[class*="ip-ap-"]:not(.ip-ap-hero, .ip-ap-doc, .ip-ap-prose, .ip-ap-article) {
+  min-height: calc(100svh - 62px); justify-content: center; padding-block: clamp(2.5rem, 6svh, 5rem);
+}
+.ip-site-caninepreview .ip-ap-steps .ip-grid > .ip-stack { justify-content: flex-start; }
