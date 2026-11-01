@@ -341,7 +341,7 @@
    hides under them; the floor keeps a short window from squeezing the copy, the cap keeps a tall screen from
    floating a short hero in a sea of colour. */
 .ip-site-assaypreview main > .ip-page > .ip-ap-hero:first-child {
-  min-height: clamp(30rem, calc(100svh - 62px), 64rem); justify-content: center;
+  min-height: clamp(30rem, calc(100svh / var(--big, 1) - 62px), var(--big-cap, 64rem)); justify-content: center;
 }
 
 /* One band, one screen, as on Assure (owner, 1 November 2026): every marketing band below the top band is at least
@@ -349,7 +349,7 @@
    height. Short bands get air rather than bigger letters. The top band and the document pages keep their own rules;
    the plain-text bands stay in, because on Assay they carry the problem statements, not documents. */
 .ip-site-assaypreview main .ip-section[class*="ip-ap-"]:not(.ip-ap-hero, .ip-ap-doc, .ip-ap-article) {
-  min-height: calc(100svh - 62px); justify-content: center; padding-block: clamp(2.5rem, 6svh, 5rem);
+  min-height: calc(100svh / var(--big, 1) - 62px); justify-content: center; padding-block: clamp(2.5rem, 6svh / var(--big, 1), 5rem);
 }
 .ip-site-assaypreview .ip-ap-steps .ip-grid > .ip-stack { justify-content: flex-start; }
 
@@ -357,3 +357,12 @@
 .ip-site-assaypreview :is(.ip-ap-feature-grid, .ip-ap-steps) .ip-grid .ip-prose,
 .ip-site-assaypreview .ip-ap-feature-grid .ip-columns .ip-prose,
 .ip-site-assaypreview .ip-ap-panels .ip-prose { font-size: 0.9375rem; }
+
+/* Big screens (owner, 1 November 2026): on large monitors the whole page is shown a little larger, so the layout
+   approved at laptop size keeps its proportions and fills the screen instead of sitting small in empty space.
+   Laptops and smaller screens keep their sizes. The browser enlarges screen-height units along with the page, so
+   the full-height bands divide by --big to stay one screen tall, and the top band's cap lifts so it still fills. */
+@media (min-width: 1800px) and (min-height: 900px) { .ip-page.ip-site-assaypreview { --big: 1.1; --big-cap: 72rem; } }
+@media (min-width: 2400px) and (min-height: 1200px) { .ip-page.ip-site-assaypreview { --big: 1.25; --big-cap: 80rem; } }
+@media (min-width: 3600px) and (min-height: 1900px) { .ip-page.ip-site-assaypreview { --big: 1.5; --big-cap: 100rem; } }
+body.ip-page.ip-site-assaypreview { zoom: var(--big, 1); }

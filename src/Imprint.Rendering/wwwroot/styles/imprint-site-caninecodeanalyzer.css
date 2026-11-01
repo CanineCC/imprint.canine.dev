@@ -234,17 +234,26 @@
    hides under them; the floor keeps a short window from squeezing the copy, the cap keeps a tall screen from
    floating a short hero in a sea of colour. */
 .ip-site-caninecodeanalyzer main > .ip-page > .ip-ap-hero:first-child {
-  min-height: clamp(30rem, calc(100svh - 83px), 64rem); justify-content: center; /* CCA's header is 83px with its line */
+  min-height: clamp(30rem, calc(100svh / var(--big, 1) - 83px), var(--big-cap, 64rem)); justify-content: center; /* CCA's header is 83px with its line */
 }
 
 /* One band, one screen, as on Assure (owner, 1 November 2026): every marketing band below the top band is at least
    the screen under the 83px header, with its content centred, and its space above and below follows the screen's
    height. Short bands get air rather than bigger letters. The top band and the document pages keep their own rules. */
 .ip-site-caninecodeanalyzer main .ip-section[class*="ip-ap-"]:not(.ip-ap-hero, .ip-ap-doc, .ip-ap-prose, .ip-ap-article) {
-  min-height: calc(100svh - 83px); justify-content: center; padding-block: clamp(2.5rem, 6svh, 5rem);
+  min-height: calc(100svh / var(--big, 1) - 83px); justify-content: center; padding-block: clamp(2.5rem, 6svh / var(--big, 1), 5rem);
 }
 .ip-site-caninecodeanalyzer .ip-ap-steps .ip-grid > .ip-stack { justify-content: flex-start; }
 
 /* Card text at 15px, as on Assure (owner, 1 November 2026): the text inside the cards of each band is the same size as Assure's. */
 .ip-site-caninecodeanalyzer :is(.ip-ap-feature-grid, .ip-ap-steps) .ip-grid .ip-prose,
 .ip-site-caninecodeanalyzer .ip-ap-feature-grid .ip-columns > .ip-stack > .ip-stack > .ip-prose { font-size: 0.9375rem; }
+
+/* Big screens (owner, 1 November 2026): on large monitors the whole page is shown a little larger, so the layout
+   approved at laptop size keeps its proportions and fills the screen instead of sitting small in empty space.
+   Laptops and smaller screens keep their sizes. The browser enlarges screen-height units along with the page, so
+   the full-height bands divide by --big to stay one screen tall, and the top band's cap lifts so it still fills. */
+@media (min-width: 1800px) and (min-height: 900px) { .ip-page.ip-site-caninecodeanalyzer { --big: 1.1; --big-cap: 72rem; } }
+@media (min-width: 2400px) and (min-height: 1200px) { .ip-page.ip-site-caninecodeanalyzer { --big: 1.25; --big-cap: 80rem; } }
+@media (min-width: 3600px) and (min-height: 1900px) { .ip-page.ip-site-caninecodeanalyzer { --big: 1.5; --big-cap: 100rem; } }
+body.ip-page.ip-site-caninecodeanalyzer { zoom: var(--big, 1); }
