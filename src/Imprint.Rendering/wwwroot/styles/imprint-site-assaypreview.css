@@ -366,3 +366,8 @@
 @media (min-width: 2400px) and (min-height: 1200px) { .ip-page.ip-site-assaypreview { --big: 1.25; --big-cap: 80rem; } }
 @media (min-width: 3600px) and (min-height: 1900px) { .ip-page.ip-site-assaypreview { --big: 1.5; --big-cap: 100rem; } }
 body.ip-page.ip-site-assaypreview { zoom: var(--big, 1); }
+
+/* A short page (owner, 1 November 2026): the page is at least one screen tall, so the footer sits at the bottom of
+   the screen instead of partway up it with blank space below. */
+body.ip-page.ip-site-assaypreview { display: flex; flex-direction: column; min-height: calc(100svh / var(--big, 1)); }
+body.ip-page.ip-site-assaypreview > main { flex: 1 0 auto; }
