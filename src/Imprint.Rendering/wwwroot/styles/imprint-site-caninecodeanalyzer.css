@@ -56,6 +56,9 @@
    color-scheme flips the light-dark() tokens inside them, so their text takes the dark-theme ink; muted text is
    #9aa3b2 (5.7:1 at the lightest point) and labels take lifted titanium (7.4:1). */
 .ip-site-caninecodeanalyzer .ip-site-header { background: #181b21; border-bottom-color: rgb(255 255 255 / 0.08); color-scheme: dark; }
+/* The footer closes the page on graphite, as the header opens it (owner, 2026-11-01): the deepest tone of the
+   graphite run, the dark theme's ink, and the logo's lifted metal through light-dark(). */
+.ip-site-caninecodeanalyzer .ip-site-footer { background: #0a0c0f; color-scheme: dark; color: var(--ink); border-top: 0; --muted: #9aa3b2; }
 .ip-site-caninecodeanalyzer .ip-ap-hero { background: var(--graphite); color-scheme: dark; --muted: #9aa3b2; }
 /* The drawn logo carries the name "CCA" (kit: never retype the name next to the drawn mark), so the typed name the
    chrome adds after it is clipped out of sight in a zero-width column. It stays in the page for screen readers. */
