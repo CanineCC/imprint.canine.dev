@@ -133,6 +133,22 @@
   .ip-site-assure .ip-ap-hero > .ip-stack:not(:has(> .ip-widget:not(contact-form))) > .ip-prose:not(.ip-kicker) { text-align: center; }
 }
 
+/* The face row under the hero's button (owner, 2026-11-01): six small round photos of the people Assure is for,
+   overlapping a little, and one quiet line naming them. Keyed on its shape (a stack holding a stack of images),
+   so a hero without it is untouched. */
+.ip-site-assure .ip-ap-hero > .ip-stack > .ip-stack:has(> .ip-stack > .ip-img) { align-items: center; gap: 12px; margin-top: 12px; }
+.ip-site-assure .ip-ap-hero > .ip-stack > .ip-stack > .ip-stack:has(> .ip-img) { flex-direction: row; gap: 0; padding-left: 12px; }
+.ip-site-assure .ip-ap-hero > .ip-stack > .ip-stack > .ip-stack > .ip-img {
+  width: 54px; height: 54px; margin: 0 0 0 -12px; aspect-ratio: 1; object-fit: cover; object-position: 50% 30%;
+  border-radius: 50%; border: 2px solid #1c1e24;
+}
+.ip-site-assure .ip-ap-hero > .ip-stack > .ip-stack:has(> .ip-stack > .ip-img) > .ip-prose {
+  margin: 0; max-width: none; font-size: 14px; color: var(--muted); text-align: center;
+}
+@media (max-width: 640px) {
+  .ip-site-assure .ip-ap-hero > .ip-stack > .ip-stack > .ip-stack > .ip-img { width: 46px; height: 46px; }
+}
+
 /* The last call: paragraphs after the button row are signposts for other readers, not a second
    message, so they sit quietly under a line at the kit's small size. */
 .ip-site-assure .ip-ap-cta > .ip-stack > .ip-stack ~ .ip-prose {
