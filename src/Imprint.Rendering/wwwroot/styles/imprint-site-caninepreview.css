@@ -158,10 +158,13 @@
 
 /* ── LIGHT SECTIONS: the head sits on the left at the mock's measure; the chooser and the last call stay centred. */
 .ip-site-caninepreview :is(.ip-ap-feature-grid, .ip-ap-steps):not(#products) > .ip-stack { align-items: stretch; }
-.ip-site-caninepreview [class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-article):not(.ip-ap-resource-center):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note):not(#products):not(.ip-ap-cta):not(.ip-ap-contact):not(.ip-ap-table-list) > .ip-stack > :is(h2, h3, .ip-prose) {
+.ip-site-caninepreview [class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-article):not(.ip-ap-resource-center):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note):not(#products):not(.ip-ap-cta):not(.ip-ap-contact) > .ip-stack > :is(h2, h3, .ip-prose) {
   text-align: left; margin-inline: 0; max-width: 860px;
 }
-.ip-site-caninepreview [class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-article):not(.ip-ap-resource-center):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note):not(#products):not(.ip-ap-cta):not(.ip-ap-contact) > .ip-stack > h2 + .ip-prose:not(.ip-kicker) {
+/* The facts list (Press) reads from the left like every other light section: its head was centred over a table that
+   sat on the left. */
+.ip-site-caninepreview .ip-ap-table-list > .ip-stack { align-items: flex-start; }
+.ip-site-caninepreview [class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-article):not(.ip-ap-resource-center):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note):not(#products):not(.ip-ap-cta):not(.ip-ap-contact):not(.ip-ap-table-list) > .ip-stack > h2 + .ip-prose:not(.ip-kicker) {
   font-size: 20px; line-height: 1.55; color: var(--ink-2); max-width: 760px;
 }
 .ip-site-caninepreview [class*="ip-ap-"]:not(.ip-ap-hero) > .ip-stack > :is(h2, .ip-prose:not(.ip-kicker)) + :is(.ip-grid, .ip-columns) { margin-top: 1.75rem; }
@@ -265,6 +268,19 @@
 .ip-site-caninepreview #where-the-work-happens .ip-table tr:last-child td { border-bottom: 0; }
 .ip-site-caninepreview #where-the-work-happens .ip-table td:first-child { width: 230px; padding-right: 16px; color: var(--muted); font-size: 14.5px; font-weight: 600; }
 .ip-site-caninepreview #where-the-work-happens .ip-table a { color: var(--accent-ink); }
+/* The same card for the facts on Press, at the head's measure. That table is a two-column list (one <li> per cell, the
+   first row the bold column names), so the card is drawn on the list: labels muted on the left, values on the right. */
+.ip-site-caninepreview .ip-ap-table-list > .ip-stack > h2 + .ip-prose { margin-top: 0.75rem; }
+.ip-site-caninepreview .ip-ap-table-list .ip-prose ul {
+  grid-template-columns: 230px minmax(0, 1fr); padding: 4px 26px 8px; background: var(--surface); border-radius: 10px;
+}
+.ip-site-caninepreview .ip-ap-table-list .ip-prose ul li { margin: 0; padding: 13px 0; font-size: 16px; line-height: 1.5; color: var(--ink); background: none; }
+.ip-site-caninepreview .ip-ap-table-list .ip-prose ul li:nth-child(odd) { padding-right: 16px; color: var(--muted); font-size: 14.5px; font-weight: 600; }
+.ip-site-caninepreview .ip-ap-table-list .ip-prose ul li:has(> strong:only-child) {
+  padding-block: 12px 10px; background: none; color: var(--muted); font-size: 12px; letter-spacing: 0.12em;
+}
+.ip-site-caninepreview .ip-ap-table-list .ip-prose ul li:nth-last-child(-n + 2) { border-bottom: 0; }
+.ip-site-caninepreview .ip-ap-table-list .ip-prose ul a { color: var(--accent-ink); }
 
 /* ── CONTACT FORM: the shadow-DOM island takes the site's face, garnet and corners from tokens set on its host. */
 .ip-site-caninepreview contact-form {
@@ -282,10 +298,16 @@
   font: 700 16px / 1.25 var(--font-ui);
 }
 .ip-site-caninepreview contact-form::part(submit):hover { filter: brightness(1.08); opacity: 1; }
+/* Press: the form ends "Who to ask", whose last line says "write once using the form below", instead of floating alone
+   in a band of its own: no break above it, and it sits on the left under that line at the form's own width. */
+.ip-site-caninepreview #contact:has(+ .ip-ap-contact) { padding-bottom: 1.75rem; }
+.ip-site-caninepreview #contact + .ip-ap-contact { padding-top: 0; border-top: 0; }
+.ip-site-caninepreview #contact + .ip-ap-contact .ip-widget { margin-inline: 0; max-width: min(44rem, 100%); }
 
 /* Notes are drawn as the same plain card, without the coloured stripe. */
 .ip-site-caninepreview .ip-ap-note > .ip-stack {
   border: 1px solid var(--hairline); border-radius: 10px; background: var(--surface); padding: 26px 24px; gap: 10px; font-size: 16px; line-height: 1.55;
+  margin-inline: 0; max-width: min(860px, 100%);
 }
 .ip-site-caninepreview .ip-ap-note h3 { font-size: 22px; }
 .ip-site-caninepreview .ip-bg-surface.ip-ap-note { background: transparent; }
@@ -316,7 +338,7 @@
 .ip-site-caninepreview .ip-site-footer {
   background: var(--g-low); color-scheme: dark; border-top: 0; margin-top: 0;
   padding: 64px max(1.1rem, calc(50% - 570px)) 40px;
-  display: grid; grid-template-columns: 1.3fr repeat(4, 1fr); column-gap: 28px;
+  display: grid; grid-template-columns: minmax(0, 1fr) repeat(4, max-content); column-gap: clamp(28px, 4.5vw, 72px);
 }
 .ip-site-caninepreview :is(.ip-footer-cols, .ip-footer-fine) { display: contents; }
 .ip-site-caninepreview .ip-footer-brand { grid-column: 1; grid-row: 1; align-self: start; }
@@ -328,7 +350,10 @@
   grid-column: 1 / -1; grid-row: 2; margin-top: 44px; padding-top: 22px; border-top: 1px solid #222930; font-size: 13px; color: var(--g-muted);
 }
 
-/* ── DOCUMENT PAGES (What we never say, Privacy notice): the reading column at the site's weights. */
+/* ── DOCUMENT PAGES (What we never say, Privacy notice): one centred reading column at the site's weights. The text
+   used to stop at 65 characters inside a wider column, so it hung left of centre and the table stuck out past it. */
+.ip-site-caninepreview .ip-ap-doc > .ip-stack { max-width: min(40rem, 100%); }
+.ip-site-caninepreview .ip-ap-doc > .ip-stack > .ip-prose:not(.ip-kicker) { max-width: none; }
 .ip-site-caninepreview .ip-ap-doc h1 { font-size: clamp(2.2rem, 1.4rem + 2.6vw, 3.1rem); line-height: 1.08; }
 .ip-site-caninepreview .ip-ap-doc .ip-prose li strong:first-child { color: var(--heading); }
 .ip-site-caninepreview .ip-ap-doc .ip-prose ul { list-style: none; padding: 0; gap: 0; }
@@ -364,6 +389,10 @@
   .ip-site-caninepreview .ip-ap-timeline .ip-prose ul li::after { left: 0; }
   .ip-site-caninepreview .ip-ap-timeline > .ip-stack > .ip-grid { padding-left: 32px; margin-top: -12px; }
   .ip-site-caninepreview #where-the-work-happens .ip-table td:first-child { width: 42%; }
+  .ip-site-caninepreview .ip-ap-table-list .ip-prose ul { grid-template-columns: minmax(0, 1fr); padding-inline: 18px; }
+  .ip-site-caninepreview .ip-ap-table-list .ip-prose ul li:has(> strong:only-child) { display: none; }
+  .ip-site-caninepreview .ip-ap-table-list .ip-prose ul li:nth-child(odd) { padding-bottom: 2px; border-bottom: 0; }
+  .ip-site-caninepreview .ip-ap-table-list .ip-prose ul li:nth-child(even) { padding-top: 0; }
 }
 
 /* A table in a document page: the reason column wide enough for its few words. */
