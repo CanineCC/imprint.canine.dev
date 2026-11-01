@@ -458,3 +458,8 @@ body.ip-page.ip-site-caninepreview { zoom: var(--big, 1); }
    the screen instead of partway up it with blank space below. */
 body.ip-page.ip-site-caninepreview { display: flex; flex-direction: column; min-height: calc(100svh / var(--big, 1)); }
 body.ip-page.ip-site-caninepreview > main { flex: 1 0 auto; }
+
+/* Supporting lines at 16px and note cards at the card size, as on Assure (owner, 1 November 2026). The long selector
+   outranks the shared body-text rule, which otherwise keeps both at the larger size. */
+.ip-page.ip-site-caninepreview [class*="ip-ap-"]:not(.ip-ap-hero):not(.ip-ap-prose):not(.ip-ap-doc):not(.ip-ap-article):not(.ip-ap-resource-center):not(.ip-ap-docmock):not(.ip-ap-timeline):not(.ip-ap-note) > .ip-stack > .ip-prose.ip-prose-secondary { font-size: 1rem; }
+.ip-page.ip-site-caninepreview .ip-ap-note > .ip-stack, .ip-page.ip-site-caninepreview .ip-ap-note > .ip-stack > .ip-prose { font-size: 0.9375rem; }
