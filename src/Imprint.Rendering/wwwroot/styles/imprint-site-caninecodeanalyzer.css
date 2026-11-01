@@ -234,5 +234,5 @@
    hides under them; the floor keeps a short window from squeezing the copy, the cap keeps a tall screen from
    floating a short hero in a sea of colour. */
 .ip-site-caninecodeanalyzer main > .ip-page > .ip-ap-hero:first-child {
-  min-height: clamp(30rem, calc(100svh - 62px), 64rem); justify-content: center;
+  min-height: clamp(30rem, calc(100svh - 82px), 64rem); justify-content: center; /* CCA's header is 82px */
 }
