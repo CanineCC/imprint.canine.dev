@@ -52,17 +52,17 @@ public sealed class ProductPricingTemplateTests
         Assert.Contains("<h3>Standard</h3>", html);
         Assert.Contains("€20<span class=\"ip-price-unit\">per developer a month</span>", html);
         Assert.Contains("€30", html);
-        Assert.Contains("1,000,000 lines scanned a month for each developer you pay for, shared across your organisation", html);
+        Assert.DoesNotContain("lines", html);   // only CCA is priced in lines, even when an older payload carries the figure
         Assert.Contains("<li>Agent-fix loop</li>", html);
     }
 
     [Fact]
-    public void Assure_renders_its_one_price_with_vat_and_the_size_limit()
+    public void Assure_renders_its_one_price_with_vat_and_never_a_line_figure()
     {
         var html = ProductPricingTemplate.RenderAssure(AssureJson);
         Assert.NotNull(html);
         Assert.Contains("€10<span class=\"ip-price-unit\">a month for each repository we scan, VAT included</span>", html);
-        Assert.Contains("Up to 500,000 lines of code per repository", html);
+        Assert.DoesNotContain("lines", html);
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public sealed class ProductPricingTemplateTests
         var html = ProductPricingTemplate.RenderAssure(AssureJson, "da");
         Assert.NotNull(html);
         Assert.Contains("€10<span class=\"ip-price-unit\">om måneden for hvert projekt, vi scanner, inkl. moms</span>", html);
-        Assert.Contains("Op til 500.000 linjer kode pr. projekt", html);
+        Assert.DoesNotContain("linjer", html);
         Assert.True(PrerenderTemplates.Speaks(ProductPricingTemplate.AssureName, "da"));
         Assert.False(PrerenderTemplates.Speaks(ProductPricingTemplate.AssertName, "da"));
     }

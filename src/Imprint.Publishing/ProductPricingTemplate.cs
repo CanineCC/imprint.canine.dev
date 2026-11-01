@@ -17,6 +17,8 @@ namespace Imprint.Publishing;
 /// <para>A price is printed exactly as the product formatted it (its <c>price</c> text): formatting a
 /// currency twice is how two pages come to disagree about what something costs. A payload with nothing
 /// on sale renders nothing, so the widget's placeholder stays rather than a page reading as free.</para>
+/// <para>★ ONLY CCA IS IN LINES (owner, 2026-11-01). Assert is priced per seat, Assure per repository, Assay per repository's report or
+/// year, so their prices never print a line figure, even when an older payload carries one.</para>
 /// </remarks>
 public static class ProductPricingTemplate
 {
@@ -51,14 +53,7 @@ public static class ProductPricingTemplate
         {
             html.Append("<div class=\"ip-stack\"><h3>").Append(Esc(Str(plan, "name"))).Append("</h3>");
             html.Append("<p class=\"ip-price\">").Append(Esc(Str(plan, "price")))
-                .Append("<span class=\"ip-price-unit\">per developer a month</span>");
-            if (Long(plan, "linesPerAuthorPerMonth") is { } lines and > 0)
-            {
-                html.Append("<span class=\"ip-price-allowance\">Fair use: ").Append(Esc(Lines(lines)))
-                    .Append(" lines scanned a month for each developer you pay for, shared across your organisation</span>");
-            }
-
-            html.Append("</p>");
+                .Append("<span class=\"ip-price-unit\">per developer a month</span></p>");
             if (Str(plan, "tagline") is { Length: > 0 } tagline)
             {
                 html.Append("<div class=\"ip-prose\"><p>").Append(Esc(tagline)).Append("</p></div>");
@@ -92,13 +87,6 @@ public static class ProductPricingTemplate
             .Append("<span class=\"ip-price-unit\">")
             .Append(danish ? "om måneden for hvert projekt, vi scanner" : "a month for each repository we scan")
             .Append(vat ? danish ? ", inkl. moms" : ", VAT included" : "").Append("</span>");
-        if (Long(root, "repositoryLineCap") is { } cap and > 0)
-        {
-            html.Append(danish
-                ? $"<span class=\"ip-price-allowance\">Op til {Esc(cap.ToString("N0", Danish))} linjer kode pr. projekt</span>"
-                : $"<span class=\"ip-price-allowance\">Up to {Esc(Lines(cap))} lines of code per repository</span>");
-        }
-
         html.Append("</p></div>");
         return html.ToString();
     }
@@ -224,10 +212,6 @@ public static class ProductPricingTemplate
 
     /// <summary>A line count as people read it: <c>1,000,000</c>.</summary>
     private static string Lines(long lines) => lines.ToString("N0", CultureInfo.InvariantCulture);
-
-    /// <summary>Danish digit grouping, so a line count reads <c>500.000</c>. Built by hand because the app
-    /// runs with invariant globalization, where no Danish culture exists to ask.</summary>
-    private static readonly NumberFormatInfo Danish = new() { NumberGroupSeparator = ".", NumberDecimalSeparator = "," };
 
     private static string Esc(string s) => WebUtility.HtmlEncode(s);
 }
