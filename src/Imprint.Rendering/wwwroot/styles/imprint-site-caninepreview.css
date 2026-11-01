@@ -194,7 +194,7 @@
 /* Cards beside a head stand in one column: the shared sheet sets a grid's columns by its card count. */
 .ip-site-caninepreview .ip-columns .ip-grid.ip-grid { grid-template-columns: minmax(0, 1fr); gap: 14px; }
 
-/* People. On Home the head runs beside its button, and the portraits stand without a card. */
+/* People. On Home the head runs beside its button, and the portraits stand without a card, kept small (owner, 2026-11-01). */
 .ip-site-caninepreview #people > .ip-stack:has(> .ip-stack > .ip-btn) {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 32px; row-gap: 14px; align-items: end;
 }
@@ -204,15 +204,15 @@
 .ip-site-caninepreview #people:has(.ip-btn) .ip-grid > .ip-stack { background: none; border: 0; padding: 0; }
 .ip-site-caninepreview #people:has(.ip-btn) .ip-grid h3 { font-size: 19px; margin: 14px 0 4px; }
 .ip-site-caninepreview #people:has(.ip-btn) .ip-grid .ip-prose { font-size: 15px; }
-.ip-site-caninepreview #people .ip-grid :is(img, picture) { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: #f4f2ee; }
+.ip-site-caninepreview #people .ip-grid :is(img, picture) { display: block; width: min(140px, 100%); aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: #f4f2ee; }
 /* A person's card reads top to bottom (drawing, name, role, line); it never shares rows with its neighbours, so a
    card without a line keeps its role under the name. */
 .ip-site-caninepreview #people .ip-grid > .ip-stack { display: flex; flex-direction: column; grid-row: auto; grid-template-rows: none; }
-/* On About the people are cards, the drawing full-bleed at the top. */
+/* On About the people are cards, the drawing small at the top (owner, 2026-11-01: the full-width drawings were too loud). */
 .ip-site-caninepreview #people:not(:has(.ip-btn)) .ip-grid > .ip-stack { padding: 0 0 20px; overflow: hidden; }
 .ip-site-caninepreview #people:not(:has(.ip-btn)) .ip-grid > .ip-stack > :not(.ip-image, picture, img) { margin-inline: 18px; }
 .ip-site-caninepreview #people:not(:has(.ip-btn)) .ip-grid > .ip-stack > h3 { margin-top: 16px; margin-bottom: 2px; font-size: 22px; }
-.ip-site-caninepreview #people:not(:has(.ip-btn)) .ip-grid :is(img, picture) { border-radius: 0; }
+.ip-site-caninepreview #people:not(:has(.ip-btn)) .ip-grid :is(img, picture) { margin: 20px 18px 0; }
 .ip-site-caninepreview #people:not(:has(.ip-btn)) .ip-grid .ip-prose:not(.ip-kicker) { font-size: 15px; margin-top: 10px; }
 
 /* Open to read: the Resource Center's mark and the standard's name set as a wordmark. */
