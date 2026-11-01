@@ -175,6 +175,24 @@ public sealed class ThemeCssTests
     }
 
     /// <summary>
+    /// ★ The new canine.dev is built as "Canine Preview" beside the live "Canine" site, which must read and look
+    /// exactly as it does until the owner moves the new one onto its address. Its look is keyed to the preview's
+    /// name, so it cannot reach the live site's sheet, and it uses only the faces every site already carries.
+    /// </summary>
+    [Fact]
+    public void The_new_canine_look_reaches_the_preview_site_and_never_the_live_one()
+    {
+        var css = ThemeCss.SiteCss("Canine Preview");
+
+        Assert.Contains(".ip-site-caninepreview", css);
+        Assert.Contains(".ip-site-caninepreview .ip-h-accent", css);
+        Assert.Contains("forced-colors: active", css);
+        Assert.Equal(string.Empty, ThemeCss.SiteCss("Canine"));
+        Assert.DoesNotContain(".ip-site-caninepreview", ThemeCss.MarketingCss);
+        Assert.Empty(FontAssets.ForSite(ThemeCss.SiteSlug("Canine Preview")));
+    }
+
+    /// <summary>
     /// CCA's Atkinson faces ship to the Canine Code Analyzer site alone, and its sheet names them for headings,
     /// text and labels, so the editor's Theme panel can say which faces the site really uses.
     /// </summary>
