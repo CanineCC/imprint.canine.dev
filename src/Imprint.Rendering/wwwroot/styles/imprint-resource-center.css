@@ -382,3 +382,17 @@ html:not(.rc-search-ready) [data-rc-search] { visibility: hidden; }
   .rc-card > a, .rc-ctx-item, .rc-latest a, .rc-omni, .rc-steps i, .rc-prog i, .rc-toc ol::before { transition: none; }
   .rc-card > a:hover, .rc-ctx-item:hover, .rc-omni:hover { transform: none; }
 }
+
+
+/* The index's bands sized as on Assure (owner, 1 November 2026). The top band fills the first screen under the
+   60px header; the featured row with the filters above it, and each group, is at least a screen, its content
+   centred and its space above and below following the screen's height. A group holding a single card takes only
+   the space it needs, as a note band does, and while a reader filters the index nothing is stretched, so the
+   results sit together. Articles keep their own layout, as Assure's document pages do. */
+.rc-hub > .rc-hero { min-height: calc(100svh - 60px); align-content: center; padding-block: clamp(2.5rem, 6svh, 5rem); }
+.rc-hub > .rc-bento { min-height: calc(100svh - 60px - 82px); display: flex; flex-direction: column; justify-content: center; padding-block: clamp(1.5rem, 4svh, 3rem); }
+.rc-hub > .rc-group:not(:has(> .rc-list > :only-child)) { min-height: calc(100svh - 60px); display: flex; flex-direction: column; justify-content: center; padding-block: clamp(2.5rem, 6svh, 5rem); }
+.rc-hub.rc-filtered > :is(.rc-bento, .rc-group) { min-height: 0; padding-block: 0; }
+@media (max-width: 960px) { .rc-hub > .rc-bento { min-height: 0; } }/* The top band keeps to the screen's width on a phone: its column could not shrink below the search box. */
+.rc-hero-main { grid-template-columns: minmax(0, 1fr); }
+
