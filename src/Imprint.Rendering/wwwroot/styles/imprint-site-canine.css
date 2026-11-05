@@ -223,15 +223,20 @@
 .ip-site-canine #open-to-read .ip-grid > .ip-stack > .ip-svg { align-self: flex-start; }
 .ip-site-canine #open-to-read .ip-grid > .ip-stack > .ip-svg svg { height: 36px; width: auto; display: block; }
 .ip-site-canine #open-to-read .ip-grid .ip-prose.ip-kicker > p > strong {
-  font-size: 22px; font-weight: 900; letter-spacing: -0.01em; text-transform: none; color: var(--heading); line-height: 36px;
+  font-size: 22px; font-weight: 800; letter-spacing: -0.02em; text-transform: none; color: var(--heading); line-height: 36px;
 }
 .ip-site-canine #open-to-read .ip-grid h3 { margin: 0; }
 .ip-site-canine #open-to-read .ip-grid .ip-btn-ghost { margin-top: 8px; font-weight: 700; border-bottom: 0; }
 /* Both cards end on their link (owner, 2026-11-05: "links are not aligned"): each link sits at the foot of its card on
    a line of the same height, so the two links share one line across the row however long the text above them runs. */
 .ip-site-canine #open-to-read .ip-grid > .ip-stack > .ip-btn:last-child { margin-top: auto; min-height: 1.75rem; align-items: center; }
-.ip-site-canine #open-to-read .ip-grid > .ip-stack:has(> .ip-svg) { grid-template-rows: auto auto 1fr; }
+.ip-site-canine #open-to-read .ip-grid > .ip-stack:has(> .ip-svg) { grid-template-rows: 36px auto 1fr; }
 .ip-site-canine #open-to-read .ip-grid > .ip-stack:has(> .ip-svg) > .ip-btn:last-child { align-self: end; }
+/* The two cards read alike (owner, 2026-11-05: "the headers are unaligned"): the Resource Center's name beside its mark
+   and the standard's name share one 36px line in one size and weight, the text below starts on one line in both, and
+   the standard's one-line summary reads as the lead line of its text. */
+.ip-site-canine #open-to-read .ip-grid > .ip-stack:not(:has(> .ip-svg)) > h3 { font-size: 15px; line-height: 23.25px; font-weight: 700; letter-spacing: 0; margin: 12px 0 0; }
+.ip-site-canine #open-to-read .ip-grid > .ip-stack:not(:has(> .ip-svg)) > .ip-prose:has(+ .ip-btn:last-child) { margin-bottom: 12px; }
 
 /* ── TIMELINE (About): a garnet line with a stop at each date, the date right-aligned in its own column. */
 .ip-site-canine .ip-ap-timeline > .ip-stack > .ip-prose:has(ul) { max-width: none; }
@@ -414,8 +419,9 @@
 
 /* ── THE RESOURCE CENTER'S CARD (owner, 2026-10-31: "the resource center has its own logo and style"): it is drawn in the
    Resource Center's own look, never in canine.dev's garnet: its mark beside its name in ink, as in its own header, its
-   paper, line and wider corners, its muted grey for the text and its mono label face for the address. The values are
-   the Resource Center's (imprint-resource-center.css). */
+   paper, line and wider corners and its muted grey for the text. Its link is canine.dev's own link, as on the card beside it
+   (owner, 2026-11-05: "The link is here, so it is Canine's styling for that"). The values are the Resource Center's
+   (imprint-resource-center.css). */
 .ip-site-canine #open-to-read .ip-grid > .ip-stack:has(> .ip-svg) {
   --rc-ink: light-dark(#14171c, #eceef2); --rc-muted: light-dark(#5d6470, #98a0ac);
   --rc-surface: light-dark(#ffffff, #13161b); --rc-line-2: light-dark(rgb(20 23 28 / 0.16), rgb(236 238 242 / 0.15));
@@ -425,12 +431,12 @@
 .ip-site-canine #open-to-read .ip-grid > .ip-stack:has(> .ip-svg) > .ip-svg { grid-column: 1; grid-row: 1; }
 .ip-site-canine #open-to-read .ip-grid > .ip-stack:has(> .ip-svg) > .ip-svg svg { height: 30px; }
 .ip-site-canine #open-to-read .ip-grid > .ip-stack:has(> .ip-svg) > h3 {
-  grid-column: 2; grid-row: 1; margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -0.02em; color: var(--rc-ink);
+  grid-column: 2; grid-row: 1; margin: 0; font-size: 22px; line-height: 36px; font-weight: 800; letter-spacing: -0.02em; color: var(--rc-ink);
 }
 .ip-site-canine #open-to-read .ip-grid > .ip-stack:has(> .ip-svg) > :is(.ip-prose, .ip-btn) { grid-column: 1 / -1; }
 .ip-site-canine #open-to-read .ip-grid > .ip-stack:has(> .ip-svg) > .ip-prose { color: var(--rc-muted); }
 .ip-site-canine #open-to-read .ip-grid > .ip-stack:has(> .ip-svg) .ip-btn-ghost {
-  justify-self: start; color: var(--rc-ink); font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13.5px; font-weight: 500;
+  justify-self: start;
 }
 
 /* The top band (owner, 1 November 2026): the header and the hero together fill the first screen, so the next
