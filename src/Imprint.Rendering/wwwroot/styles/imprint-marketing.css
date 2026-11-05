@@ -916,18 +916,19 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
    that opens with a logo (an SVG) shares one row per child with every other card of the same length through
    subgrid, so each logo, tag line, heading, list and button starts on the same line as its neighbours', and
    a card's last child (its button) sits on the bottom row. Cards of 3 to 8 children; one card per row on a
-   phone is unaffected (a single column has nothing to line up with). */
-.ip-ap-feature-grid .ip-grid > .ip-stack:has(> .ip-svg:first-child):has(> :nth-child(3):last-child) { grid-row: span 3; }
-.ip-ap-feature-grid .ip-grid > .ip-stack:has(> .ip-svg:first-child):has(> :nth-child(4):last-child) { grid-row: span 4; }
-.ip-ap-feature-grid .ip-grid > .ip-stack:has(> .ip-svg:first-child):has(> :nth-child(5):last-child) { grid-row: span 5; }
-.ip-ap-feature-grid .ip-grid > .ip-stack:has(> .ip-svg:first-child):has(> :nth-child(6):last-child) { grid-row: span 6; }
-.ip-ap-feature-grid .ip-grid > .ip-stack:has(> .ip-svg:first-child):has(> :nth-child(7):last-child) { grid-row: span 7; }
-.ip-ap-feature-grid .ip-grid > .ip-stack:has(> .ip-svg:first-child):has(> :nth-child(8):last-child) { grid-row: span 8; }
-.ip-ap-feature-grid .ip-grid > .ip-stack:has(> .ip-svg:first-child):has(> :nth-child(3)) {
+   phone is unaffected (a single column has nothing to line up with). Only a grid whose cards ALL open with a
+   logo: a logo card beside a plain one (canine.dev's Resource Center beside CAI) shares no rows. */
+.ip-ap-feature-grid .ip-grid:not(:has(> .ip-stack > :first-child:not(.ip-svg))) > .ip-stack:has(> .ip-svg:first-child):has(> :nth-child(3):last-child) { grid-row: span 3; }
+.ip-ap-feature-grid .ip-grid:not(:has(> .ip-stack > :first-child:not(.ip-svg))) > .ip-stack:has(> .ip-svg:first-child):has(> :nth-child(4):last-child) { grid-row: span 4; }
+.ip-ap-feature-grid .ip-grid:not(:has(> .ip-stack > :first-child:not(.ip-svg))) > .ip-stack:has(> .ip-svg:first-child):has(> :nth-child(5):last-child) { grid-row: span 5; }
+.ip-ap-feature-grid .ip-grid:not(:has(> .ip-stack > :first-child:not(.ip-svg))) > .ip-stack:has(> .ip-svg:first-child):has(> :nth-child(6):last-child) { grid-row: span 6; }
+.ip-ap-feature-grid .ip-grid:not(:has(> .ip-stack > :first-child:not(.ip-svg))) > .ip-stack:has(> .ip-svg:first-child):has(> :nth-child(7):last-child) { grid-row: span 7; }
+.ip-ap-feature-grid .ip-grid:not(:has(> .ip-stack > :first-child:not(.ip-svg))) > .ip-stack:has(> .ip-svg:first-child):has(> :nth-child(8):last-child) { grid-row: span 8; }
+.ip-ap-feature-grid .ip-grid:not(:has(> .ip-stack > :first-child:not(.ip-svg))) > .ip-stack:has(> .ip-svg:first-child):has(> :nth-child(3)) {
   display: grid; grid-template-rows: subgrid; row-gap: 0.35rem; align-content: start;
 }
-.ip-ap-feature-grid .ip-grid > .ip-stack:has(> .ip-svg:first-child) > .ip-svg { align-self: end; }
-.ip-ap-feature-grid .ip-grid > .ip-stack:has(> .ip-svg:first-child) > .ip-btn:last-child { align-self: end; }
+.ip-ap-feature-grid .ip-grid:not(:has(> .ip-stack > :first-child:not(.ip-svg))) > .ip-stack:has(> .ip-svg:first-child) > .ip-svg { align-self: end; }
+.ip-ap-feature-grid .ip-grid:not(:has(> .ip-stack > :first-child:not(.ip-svg))) > .ip-stack:has(> .ip-svg:first-child) > .ip-btn:last-child { align-self: end; }
 /* the per-card tag (bold-only prose) → mono accent eyebrow */
 .ip-ap-feature-grid .ip-grid .ip-prose.ip-kicker > p > strong {
   font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: 0.05em;
