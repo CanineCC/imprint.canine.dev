@@ -227,6 +227,11 @@
 }
 .ip-site-canine #open-to-read .ip-grid h3 { margin: 0; }
 .ip-site-canine #open-to-read .ip-grid .ip-btn-ghost { margin-top: 8px; font-weight: 700; border-bottom: 0; }
+/* Both cards end on their link (owner, 2026-11-05: "links are not aligned"): each link sits at the foot of its card on
+   a line of the same height, so the two links share one line across the row however long the text above them runs. */
+.ip-site-canine #open-to-read .ip-grid > .ip-stack > .ip-btn:last-child { margin-top: auto; min-height: 1.75rem; align-items: center; }
+.ip-site-canine #open-to-read .ip-grid > .ip-stack:has(> .ip-svg) { grid-template-rows: auto auto 1fr; }
+.ip-site-canine #open-to-read .ip-grid > .ip-stack:has(> .ip-svg) > .ip-btn:last-child { align-self: end; }
 
 /* ── TIMELINE (About): a garnet line with a stop at each date, the date right-aligned in its own column. */
 .ip-site-canine .ip-ap-timeline > .ip-stack > .ip-prose:has(ul) { max-width: none; }
