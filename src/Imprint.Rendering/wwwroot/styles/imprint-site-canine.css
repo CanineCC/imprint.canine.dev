@@ -56,6 +56,9 @@
 .ip-site-canine :is(.ip-brand, .ip-footer-brand) { display: inline-grid; grid-template-columns: auto 0; gap: 0; overflow: hidden; }
 .ip-site-canine .ip-brand span.ip-brand-logo svg { height: 34px; width: auto; }
 .ip-site-canine .ip-footer-brand span.ip-brand-logo svg { height: 32px; width: auto; }
+/* The logo box takes the mark's own height: the base sheet fixes .ip-brand-logo at 24px, and inside the
+   overflow-hidden brand grid a 34px mark was cut along its bottom edge (badge band and the name's foot). */
+.ip-site-canine :is(.ip-brand, .ip-footer-brand) span.ip-brand-logo { height: auto; }
 /* The logo sits on graphite in the header and the footer alike, so it always takes the lifted garnet. */
 .ip-site-canine .ip-brand-logo stop:nth-of-type(1) { stop-color: #f2cdd3; }
 .ip-site-canine .ip-brand-logo stop:nth-of-type(2) { stop-color: #e3aab3; }
