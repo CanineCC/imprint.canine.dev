@@ -912,6 +912,22 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 }
 .ip-ap-feature-grid .ip-grid:has(> .ip-stack > h3:first-child + .ip-prose + .ip-btn:last-child)
   > .ip-stack > .ip-btn { justify-self: start; }
+/* ★ PRODUCT CARDS LINE UP ACROSS A ROW (owner, 2026-11-05: the texts and buttons "jump and dance"). A card
+   that opens with a logo (an SVG) shares one row per child with every other card of the same length through
+   subgrid, so each logo, tag line, heading, list and button starts on the same line as its neighbours', and
+   a card's last child (its button) sits on the bottom row. Cards of 3 to 8 children; one card per row on a
+   phone is unaffected (a single column has nothing to line up with). */
+.ip-ap-feature-grid .ip-grid > .ip-stack:has(> .ip-svg:first-child):has(> :nth-child(3):last-child) { grid-row: span 3; }
+.ip-ap-feature-grid .ip-grid > .ip-stack:has(> .ip-svg:first-child):has(> :nth-child(4):last-child) { grid-row: span 4; }
+.ip-ap-feature-grid .ip-grid > .ip-stack:has(> .ip-svg:first-child):has(> :nth-child(5):last-child) { grid-row: span 5; }
+.ip-ap-feature-grid .ip-grid > .ip-stack:has(> .ip-svg:first-child):has(> :nth-child(6):last-child) { grid-row: span 6; }
+.ip-ap-feature-grid .ip-grid > .ip-stack:has(> .ip-svg:first-child):has(> :nth-child(7):last-child) { grid-row: span 7; }
+.ip-ap-feature-grid .ip-grid > .ip-stack:has(> .ip-svg:first-child):has(> :nth-child(8):last-child) { grid-row: span 8; }
+.ip-ap-feature-grid .ip-grid > .ip-stack:has(> .ip-svg:first-child):has(> :nth-child(3)) {
+  display: grid; grid-template-rows: subgrid; row-gap: 0.35rem; align-content: start;
+}
+.ip-ap-feature-grid .ip-grid > .ip-stack:has(> .ip-svg:first-child) > .ip-svg { align-self: end; }
+.ip-ap-feature-grid .ip-grid > .ip-stack:has(> .ip-svg:first-child) > .ip-btn:last-child { align-self: end; }
 /* the per-card tag (bold-only prose) → mono accent eyebrow */
 .ip-ap-feature-grid .ip-grid .ip-prose.ip-kicker > p > strong {
   font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: 0.05em;
@@ -1112,6 +1128,21 @@ span.ip-brand-logo svg { height: 24px; width: auto; display: block; }
 /* A free lane's allowance is a sentence, not a suffix — on its own line, or it
    pushes the word "Free" off a 230px card. */
 .ip-price-allowance { display: block; font-size: var(--fs-sm); line-height: 1.4; margin-top: 0.2rem; }
+
+/* ★ ONE PRICE AS THE HEADLINE (owner, 2026-11-05: "a very strong price, we must show it off"). Assure has a
+   single price, so it stands centred on its own, with room above it, the numeral large in the product's
+   ink and the words under it on their own line. */
+.ip-widget:has(> .ip-price-hero) { display: block; width: 100%; align-self: stretch; }
+.ip-price-hero {
+  align-items: center; text-align: center; width: 100%;
+  margin-block-start: clamp(2.5rem, 6vw, 4.5rem);
+}
+.ip-price-hero .ip-price {
+  margin: 0; font-size: clamp(3.5rem, 2rem + 6vw, 6rem); line-height: 1; color: var(--accent-ink);
+}
+.ip-price-hero .ip-price-unit {
+  display: block; margin: 0.75rem 0 0; font-size: var(--fs-md); color: var(--muted);
+}
 
 /* The bucket ladder inside a card is reference, not headline: dense, tabular and
    quiet. Its caption is .sr-only — printed, it was the same sentence on all five

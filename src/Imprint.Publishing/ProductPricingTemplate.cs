@@ -82,7 +82,9 @@ public static class ProductPricingTemplate
 
         var danish = language == "da";
         var vat = root.TryGetProperty("vatIncluded", out var v) && v.ValueKind == JsonValueKind.True;
-        var html = new StringBuilder("<div class=\"ip-stack\">");
+        // ★ Assure has one price and it is the headline (owner, 2026-11-05): ip-price-hero centres it,
+        // gives it room above and draws it large.
+        var html = new StringBuilder("<div class=\"ip-stack ip-price-hero\">");
         html.Append("<p class=\"ip-price\">").Append(Esc(price))
             .Append("<span class=\"ip-price-unit\">")
             .Append(danish ? "om måneden for hvert projekt, vi scanner" : "a month for each repository we scan")
