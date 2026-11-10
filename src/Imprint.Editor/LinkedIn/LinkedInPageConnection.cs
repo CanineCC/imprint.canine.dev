@@ -1,5 +1,9 @@
 namespace Imprint.Editor.LinkedIn;
 
+/// <summary>What may be shown about the page connection: whether the page app is set up on this install, when a page
+/// admin connected it (null: never), until when it renews itself, and whether it can give a token now. Never a token.</summary>
+public sealed record LinkedInPageStatus(bool AppSetUp, DateTimeOffset? ConnectedAt, DateTimeOffset? RenewsUntil, bool Usable);
+
 /// <summary>
 /// The page connection: the page app (configuration <c>Imprint:LinkedIn</c>), the tokens a page admin's Connect
 /// stored in <see cref="LinkedInTokenStore"/>, and the refresh that keeps them usable. One instance serves both an
@@ -33,6 +37,14 @@ public sealed class LinkedInPageConnection(
             return stored.AccessExpiresAt > now.AddMinutes(1)
                 || (stored.RefreshToken is { Length: > 0 } && (stored.RefreshExpiresAt is null || stored.RefreshExpiresAt > now));
         }
+    }
+
+    /// <summary>The connection's state, as the site settings show it (renews until: the refresh token's expiry, else
+    /// the access token's).</summary>
+    public LinkedInPageStatus Status()
+    {
+        var stored = tokens.Read();
+        return new LinkedInPageStatus(app.HasApp, stored?.ConnectedAt, stored is null ? null : stored.RefreshExpiresAt ?? stored.AccessExpiresAt, IsUsable);
     }
 
     /// <summary>A usable access token: the stored one while it has a minute left, else a refreshed one. With

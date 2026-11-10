@@ -166,10 +166,11 @@ public sealed class ImprintAuthoringMcpTools
     }
 
     [McpServerTool(Name = "get_site")]
-    [Description("One site's chrome: locales, navigation (with groups and children), footer link groups, the fine-print copy line, the llms.txt preamble and excluded paths, the theme (colour tokens and typography), and the LinkedIn senders (key, name, author URN, whether each is a person or a page, and whether a LinkedIn update as it can be sent now). Read this before set_navigation, set_copy_line, set_llms_preamble, set_llms_excluded_paths, set_typography or set_site_linkedin_senders — each carries the whole value, so you edit what you read back.")]
+    [Description("One site's chrome: locales, navigation (with groups and children), footer link groups, the fine-print copy line, the llms.txt preamble and excluded paths, the theme (colour tokens and typography), the LinkedIn senders (key, name, author URN, whether each is a person or a page, and whether a LinkedIn update as it can be sent now), and the install's LinkedIn page connection that every page sender uses (whether the page app is set up, when a page admin connected it, until when it renews itself). Read this before set_navigation, set_copy_line, set_llms_preamble, set_llms_excluded_paths, set_typography or set_site_linkedin_senders — each carries the whole value, so you edit what you read back.")]
     public static object GetSite(
         [Description("The site id.")] string siteId,
-        SiteOverview sites, PageList pages, Imprint.Authoring.Features.LinkedInUpdates.ILinkedInUpdatePoster linkedIn)
+        SiteOverview sites, PageList pages, Imprint.Authoring.Features.LinkedInUpdates.ILinkedInUpdatePoster linkedIn,
+        Imprint.Editor.LinkedIn.LinkedInPageConnection linkedInPage)
     {
         if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
         var site = sites.Get(sid);
@@ -203,6 +204,10 @@ public sealed class ImprintAuthoringMcpTools
                 kind = s.IsPerson ? "person" : s.OrganizationUrn.StartsWith("urn:li:organization:", StringComparison.Ordinal) ? "page" : "unknown",
                 connected = linkedIn.IsConfiguredFor(s.OrganizationUrn),
             }).ToList(),
+            // The install's one page connection, which every page sender above uses. No token is read out.
+            linkedInPage = linkedInPage.Status() is var page
+                ? new { appSetUp = page.AppSetUp, connectedAt = page.ConnectedAt, renewsUntil = page.RenewsUntil, usable = page.Usable }
+                : null,
             navigation = site.Navigation.Select(item => (object)new
             {
                 label = item.Label is null ? null : Localized(item.Label),

@@ -32,7 +32,7 @@ public sealed class McpSiteLlmsReadTests
 
     private static JsonElement Read(Site site, SiteId id) =>
         JsonSerializer.SerializeToElement(
-            ImprintAuthoringMcpTools.GetSite(id.Compact, OverviewOf(site), new PageList(), new Imprint.Authoring.Features.LinkedInUpdates.NotConfiguredLinkedInUpdatePoster()));
+            ImprintAuthoringMcpTools.GetSite(id.Compact, OverviewOf(site), new PageList(), new Imprint.Authoring.Features.LinkedInUpdates.NotConfiguredLinkedInUpdatePoster(), McpTestPage.NotSetUp));
 
     [Fact]
     public void The_preamble_comes_back_as_it_was_written()

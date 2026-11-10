@@ -124,7 +124,7 @@ public sealed class McpThemeToolsTests
     {
         var (id, sites, _, _) = NewSite();
 
-        var theme = Json(ImprintAuthoringMcpTools.GetSite(id.Compact, sites, new PageList(), new Imprint.Authoring.Features.LinkedInUpdates.NotConfiguredLinkedInUpdatePoster()))
+        var theme = Json(ImprintAuthoringMcpTools.GetSite(id.Compact, sites, new PageList(), new Imprint.Authoring.Features.LinkedInUpdates.NotConfiguredLinkedInUpdatePoster(), McpTestPage.NotSetUp))
             .GetProperty("theme");
 
         Assert.Equal("#3b5bdb", theme.GetProperty("tokens").GetProperty("primary").GetProperty("light").GetString());

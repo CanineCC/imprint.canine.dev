@@ -6,6 +6,7 @@ using Imprint.Authoring.Domain.Sites;
 using Imprint.Authoring.Features.LinkedIn;
 using Imprint.Authoring.Features.LinkedInUpdates;
 using Imprint.Authoring.Projections;
+using Imprint.Editor.LinkedIn;
 using Imprint.Editor.Mcp;
 using Imprint.EventSourcing;
 using Microsoft.Extensions.Configuration;
@@ -152,13 +153,52 @@ public sealed class McpLinkedInUpdateTests
             new LinkedInSender("jimmy", "Jimmy Borch", "urn:li:person:Ab3"),
             new LinkedInSender("canine", "Canine Development", "urn:li:organization:141183954"));
 
-        var senders = Json(ImprintAuthoringMcpTools.GetSite(site.Compact, sites, new PageList(), new Connected("urn:li:person:Ab3")))
-            .GetProperty("linkedInSenders");
+        var json = Json(ImprintAuthoringMcpTools.GetSite(site.Compact, sites, new PageList(), new Connected("urn:li:person:Ab3"), McpTestPage.NotSetUp));
+        var senders = json.GetProperty("linkedInSenders");
 
         Assert.Equal(2, senders.GetArrayLength());
         Assert.Equal(("jimmy", "person", true), (senders[0].GetProperty("key").GetString(), senders[0].GetProperty("kind").GetString(), senders[0].GetProperty("connected").GetBoolean()));
         Assert.Equal(("canine", "page", false, "urn:li:organization:141183954"),
             (senders[1].GetProperty("key").GetString(), senders[1].GetProperty("kind").GetString(), senders[1].GetProperty("connected").GetBoolean(),
              senders[1].GetProperty("organizationUrn").GetString()));
+
+        // An install without the page app: said plainly, and nothing about a connection that does not exist.
+        var page = json.GetProperty("linkedInPage");
+        Assert.Equal((false, false), (page.GetProperty("appSetUp").GetBoolean(), page.GetProperty("usable").GetBoolean()));
+        Assert.False(page.TryGetProperty("connectedAt", out _));
+    }
+
+    [Fact]
+    public void Get_site_says_when_the_page_was_connected_and_until_when_it_renews_without_reading_out_a_token()
+    {
+        var (sites, site) = ASite(new LinkedInSender("canine", "Canine Development", "urn:li:organization:141183954"));
+        var now = new DateTimeOffset(2026, 11, 10, 12, 0, 0, TimeSpan.Zero);
+        var data = Path.Combine(Path.GetTempPath(), $"imprint-mcp-page-{Guid.NewGuid():N}");
+        try
+        {
+            var connection = McpTestPage.Connected(data,
+                new LinkedInTokens("page-access-secret", now.AddDays(50), "page-refresh-secret", now.AddDays(300), now.AddDays(-10)), new FixedClock(now));
+
+            var json = Json(ImprintAuthoringMcpTools.GetSite(site.Compact, sites, new PageList(), new Connected(), connection));
+
+            var page = json.GetProperty("linkedInPage");
+            Assert.True(page.GetProperty("appSetUp").GetBoolean());
+            Assert.True(page.GetProperty("usable").GetBoolean());
+            Assert.Equal(now.AddDays(-10), page.GetProperty("connectedAt").GetDateTimeOffset());
+            Assert.Equal(now.AddDays(300), page.GetProperty("renewsUntil").GetDateTimeOffset());
+            Assert.DoesNotContain("secret", json.GetRawText(), StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (Directory.Exists(data))
+            {
+                Directory.Delete(data, recursive: true);
+            }
+        }
+    }
+
+    private sealed class FixedClock(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
     }
 }
