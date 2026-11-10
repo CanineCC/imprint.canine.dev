@@ -22,8 +22,10 @@ public sealed record LinkedInOptions
 
     public string OAuthBase { get; init; } = "https://www.linkedin.com/oauth/v2";
 
-    /// <summary>The permission to post as a page the authorizing member administers.</summary>
-    public const string Scope = "w_organization_social";
+    /// <summary>The permissions to post as a page the authorizing member administers (<c>w_organization_social</c>,
+    /// which LinkedIn's Posts API names) and to comment as it (<c>w_organization_social_feed</c>, which its Comments
+    /// API names for an organization's comments). Both come with the Community Management API product.</summary>
+    public const string Scope = "w_organization_social w_organization_social_feed";
 
     /// <summary>A member posting under their own name: their id from OpenID Connect, and the right to post.</summary>
     public const string MemberScope = "openid profile w_member_social";

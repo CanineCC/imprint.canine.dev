@@ -83,6 +83,30 @@ public sealed class LinkedInUpdatesTests(EditorFixture fixture)
         var listed = await mcp.Call("list_linkedin_updates", new JsonObject { ["siteId"] = siteId });
         var mine = listed["updates"]!.AsArray().Single(u => u!["firstLine"]!.GetValue<string>() == text)!;
         Assert.Equal("Cancelled", mine["state"]!.GetValue<string>());
+        Assert.Null(mine["firstComment"]);
+
+        // A page's update with a first comment: the comment shows under the post, as the page's, and says it waits
+        // for the post; the MCP list carries it with its state.
+        var pageText = $"Your AI says it is fixed {Guid.NewGuid():N}"[..34];
+        var withComment = await mcp.Call("schedule_linkedin_update", new JsonObject
+        {
+            ["siteId"] = siteId, ["sender"] = "canine", ["text"] = pageText + "\n\nAssure shows you whether it is.",
+            ["images"] = new JsonArray(new JsonObject { ["assetId"] = assetId, ["alt"] = "The Assure board" }),
+            ["publishAt"] = DateTimeOffset.UtcNow.AddDays(4).ToOffset(TimeSpan.FromHours(1)).ToString("yyyy-MM-ddTHH:mm:sszzz"),
+            ["firstComment"] = "Try Assure on your own code: https://assure.canine.dev/",
+        });
+        Assert.True(withComment["ok"]!.GetValue<bool>(), withComment.ToJsonString());
+        await page.Locator("[data-testid='linkedin-tab-planned']").ClickAsync();
+        var pageRow = page.Locator("[data-testid='linkedin-update']", new() { HasText = pageText });
+        var comment = pageRow.Locator("[data-testid='linkedin-update-comment']");
+        await Expect(comment).ToContainTextAsync("Canine Development");
+        await Expect(comment).ToContainTextAsync("Try Assure on your own code: https://assure.canine.dev/");
+        await Expect(pageRow.Locator("[data-testid='linkedin-update-comment-state']")).ToHaveTextAsync("First comment: goes out right after the post.");
+        await Shot(page, "linkedin-update-first-comment.png", "main");
+        var planned = await mcp.Call("list_linkedin_updates", new JsonObject { ["siteId"] = siteId });
+        var theirs = planned["updates"]!.AsArray().Single(u => u!["firstLine"]!.GetValue<string>() == pageText)!;
+        Assert.Equal(("Try Assure on your own code: https://assure.canine.dev/", "Waiting"),
+            (theirs["firstComment"]!["text"]!.GetValue<string>(), theirs["firstComment"]!["state"]!.GetValue<string>()));
 
         await page.GotoAsync("/");
         await page.WaitForInteractive();

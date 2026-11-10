@@ -8,26 +8,38 @@ public sealed record LinkedInUpdateImageFile(byte[] Content, string ContentType,
 /// <summary>A standalone post: who posts it (a member or a page), the text, and its images in order.</summary>
 public sealed record LinkedInUpdateRequest(string AuthorUrn, string Commentary, IReadOnlyList<LinkedInUpdateImageFile> Images);
 
-/// <summary>Sends one update to LinkedIn. The real client lives in the editor host, which holds each member's
-/// connection; tests use a fake. <see cref="IsConfiguredFor"/> false means nothing is sent for that author.</summary>
+/// <summary>A first comment on a post that went out: the same author, the post's URN, and the comment's plain text.</summary>
+public sealed record LinkedInCommentRequest(string AuthorUrn, string PostUrn, string Text);
+
+/// <summary>Sends one update to LinkedIn, and its first comment once the post is out. The real client lives in the
+/// editor host, which holds each member's connection and the page connection; tests use a fake.
+/// <see cref="IsConfiguredFor"/> false means nothing is sent for that author.</summary>
 public interface ILinkedInUpdatePoster
 {
     bool IsConfiguredFor(string authorUrn);
 
     Task<LinkedInSendResult> PostUpdateAsync(LinkedInUpdateRequest request, CancellationToken ct);
+
+    /// <summary>Comments on a post as its author. The result is read as a post's is: only a refusal that proves no
+    /// comment was made may be sent again.</summary>
+    Task<LinkedInSendResult> CommentAsync(LinkedInCommentRequest request, CancellationToken ct);
 }
 
-/// <summary>The default: no member app is set up, so nothing is sent.</summary>
+/// <summary>The default: no LinkedIn app is set up, so nothing is sent.</summary>
 public sealed class NotConfiguredLinkedInUpdatePoster : ILinkedInUpdatePoster
 {
     public bool IsConfiguredFor(string authorUrn) => false;
 
     public Task<LinkedInSendResult> PostUpdateAsync(LinkedInUpdateRequest request, CancellationToken ct) =>
         Task.FromResult(new LinkedInSendResult(LinkedInSendStatus.Refused, Reason: "LinkedIn updates are not set up on this install."));
+
+    public Task<LinkedInSendResult> CommentAsync(LinkedInCommentRequest request, CancellationToken ct) =>
+        Task.FromResult(new LinkedInSendResult(LinkedInSendStatus.Refused, Reason: "LinkedIn updates are not set up on this install."));
 }
 
 /// <summary>How late an update may still go out: one due more than <see cref="MaxLate"/> ago is held back as
-/// missed, so a server that was down on Tuesday does not post Tuesday's text on Friday.</summary>
+/// missed, so a server that was down on Tuesday does not post Tuesday's text on Friday. A first comment keeps to
+/// the same window, counted from when its post went out.</summary>
 public sealed record LinkedInUpdateOptions
 {
     public TimeSpan MaxLate { get; init; } = TimeSpan.FromHours(2);

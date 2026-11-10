@@ -58,6 +58,7 @@ public sealed class LinkedInUpdateReplayTests
         Assert.Equal(new LinkedInUpdateScheduled(
             Id, Site, "jimmy", "En kontrol, som folk lærer at slå fra, beskytter ingen.", [new LinkedInUpdateImage(Image, "Et diagram")],
             PublishAt, At), scheduled);
+        Assert.Null(scheduled.FirstComment);
     }
 
     [Fact]
@@ -68,6 +69,7 @@ public sealed class LinkedInUpdateReplayTests
         Assert.Equal(new LinkedInUpdateEdited(
             "jimmy", "En kontrol, som folk lærer at slå fra, beskytter ingen.", [new LinkedInUpdateImage(Image, "Et diagram")],
             PublishAt, new DateTimeOffset(2026, 11, 5, 10, 0, 0, TimeSpan.Zero)), edited);
+        Assert.Null(edited.FirstComment);
     }
 
     [Fact]
@@ -81,6 +83,11 @@ public sealed class LinkedInUpdateReplayTests
         Assert.Equal(("jimmy", "En kontrol, som folk lærer at slå fra, beskytter ingen.", PublishAt), (update.Sender, update.Text, update.PublishAt));
         Assert.Equal([new LinkedInUpdateImage(Image, "Et diagram")], update.Images);
         Assert.False(update.MaySendAt(PublishAt.AddDays(1)));
+
+        // No first comment: nothing more is ever sent for it.
+        Assert.Null(update.FirstComment);
+        Assert.Null(update.CommentState);
+        Assert.False(update.MayCommentAt(PublishAt.AddMinutes(1)));
     }
 
     [Fact]
@@ -99,5 +106,8 @@ public sealed class LinkedInUpdateReplayTests
             (row.SiteId, row.Sender, row.State, row.Urn, row.PublishAt, row.Images.Count, row.Reason));
         Assert.Equal("En kontrol, som folk lærer at slå fra, beskytter ingen.", row.Text);
         Assert.False(row.MaySendAt(PublishAt.AddDays(1)));
+        Assert.Null(row.FirstComment);
+        Assert.Null(row.CommentState);
+        Assert.False(row.MayCommentAt(PublishAt.AddMinutes(1)));
     }
 }

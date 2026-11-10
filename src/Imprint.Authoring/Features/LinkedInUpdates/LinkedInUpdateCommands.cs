@@ -6,15 +6,17 @@ using Imprint.EventSourcing;
 
 namespace Imprint.Authoring.Features.LinkedInUpdates;
 
-/// <summary>Plan a LinkedIn update on a site: the sender key, the text, the images (media assets with alt text) and
-/// the time it goes out.</summary>
+/// <summary>Plan a LinkedIn update on a site: the sender key, the text, the images (media assets with alt text), the
+/// time it goes out, and optionally a first comment posted under it as the same sender once it is out.</summary>
 public sealed record ScheduleLinkedInUpdate(
     LinkedInUpdateId Id, SiteId SiteId, string Sender, string Text, IReadOnlyList<LinkedInUpdateImage> Images,
-    DateTimeOffset PublishAt) : ICommand;
+    DateTimeOffset PublishAt, string? FirstComment = null) : ICommand;
 
-/// <summary>Change an update that has not gone out (or was missed, or refused for good): it is scheduled again.</summary>
+/// <summary>Change an update that has not gone out (or was missed, or refused for good): it is scheduled again.
+/// Everything is restated, the first comment too (null or blank for none).</summary>
 public sealed record EditLinkedInUpdate(
-    LinkedInUpdateId Id, string Sender, string Text, IReadOnlyList<LinkedInUpdateImage> Images, DateTimeOffset PublishAt) : ICommand;
+    LinkedInUpdateId Id, string Sender, string Text, IReadOnlyList<LinkedInUpdateImage> Images, DateTimeOffset PublishAt,
+    string? FirstComment = null) : ICommand;
 
 public sealed record CancelLinkedInUpdate(LinkedInUpdateId Id) : ICommand;
 
@@ -27,6 +29,13 @@ public sealed record StartLinkedInUpdate(LinkedInUpdateId Id, string TextSha256,
 public sealed record RecordLinkedInUpdateOutcome(LinkedInUpdateId Id, LinkedInSendResult Result, DateTimeOffset At) : ICommand;
 
 public sealed record MissLinkedInUpdate(LinkedInUpdateId Id, string Reason, DateTimeOffset At) : ICommand;
+
+/// <summary>Record that the first comment is about to be sent: always BEFORE the call to LinkedIn.</summary>
+public sealed record StartLinkedInUpdateComment(LinkedInUpdateId Id, string TextSha256, DateTimeOffset At) : ICommand;
+
+public sealed record RecordLinkedInUpdateCommentOutcome(LinkedInUpdateId Id, LinkedInSendResult Result, DateTimeOffset At) : ICommand;
+
+public sealed record MissLinkedInUpdateComment(LinkedInUpdateId Id, string Reason, DateTimeOffset At) : ICommand;
 
 /// <summary>The checks that need read models: the sender is one of the site's, and every image is in the library.
 /// Both may change after the check (a sender removed, an asset deleted); the scheduler checks again when it sends.</summary>
@@ -64,7 +73,7 @@ public sealed class ScheduleLinkedInUpdateHandler(IAggregateStore store, SiteOve
             return Result.Fail(problem);
         }
 
-        var update = LinkedInUpdate.Schedule(cmd.Id, cmd.SiteId, cmd.Sender, cmd.Text, cmd.Images, cmd.PublishAt, TimeProvider.System.GetUtcNow());
+        var update = LinkedInUpdate.Schedule(cmd.Id, cmd.SiteId, cmd.Sender, cmd.Text, cmd.Images, cmd.PublishAt, TimeProvider.System.GetUtcNow(), cmd.FirstComment);
         await store.Save(update, ct);
         return Result.Ok();
     }
@@ -81,7 +90,7 @@ public sealed class EditLinkedInUpdateHandler(IAggregateStore store, SiteOvervie
             return Result.Fail(problem);
         }
 
-        update.Edit(cmd.Sender, cmd.Text, cmd.Images, cmd.PublishAt, TimeProvider.System.GetUtcNow());
+        update.Edit(cmd.Sender, cmd.Text, cmd.Images, cmd.PublishAt, TimeProvider.System.GetUtcNow(), cmd.FirstComment);
         await store.Save(update, ct);
         return Result.Ok();
     }
@@ -152,6 +161,55 @@ public sealed class MissLinkedInUpdateHandler(IAggregateStore store) : ICommandH
     {
         var update = await store.Load<LinkedInUpdate>(cmd.Id.Stream, ct);
         update.Miss(cmd.Reason, cmd.At);
+        await store.Save(update, ct);
+        return Result.Ok();
+    }
+}
+
+public sealed class StartLinkedInUpdateCommentHandler(IAggregateStore store) : ICommandHandler<StartLinkedInUpdateComment>
+{
+    public async Task<Result> Handle(StartLinkedInUpdateComment cmd, CancellationToken ct)
+    {
+        var update = await store.Load<LinkedInUpdate>(cmd.Id.Stream, ct);
+        update.AttemptComment(cmd.TextSha256, cmd.At);
+        await store.Save(update, ct);
+        return Result.Ok();
+    }
+}
+
+/// <summary>Records what LinkedIn said to the first comment. Only the comment's own record changes: the post that
+/// went out stays Posted, whatever the comment's result.</summary>
+public sealed class RecordLinkedInUpdateCommentOutcomeHandler(IAggregateStore store) : ICommandHandler<RecordLinkedInUpdateCommentOutcome>
+{
+    public async Task<Result> Handle(RecordLinkedInUpdateCommentOutcome cmd, CancellationToken ct)
+    {
+        var update = await store.Load<LinkedInUpdate>(cmd.Id.Stream, ct);
+        var result = cmd.Result;
+        switch (result.Status)
+        {
+            case LinkedInSendStatus.Posted when result.Urn is { Length: > 0 } urn:
+                update.CommentPosted(urn, cmd.At);
+                break;
+            case LinkedInSendStatus.Refused:
+                update.CommentFailed(result.Reason ?? "LinkedIn refused the comment.", result.Retryable, cmd.At,
+                    result.RetryAfter is { } wait ? cmd.At + wait : null);
+                break;
+            default:
+                update.CommentUnknown(result.Reason ?? "LinkedIn answered without saying which comment it created.", cmd.At);
+                break;
+        }
+
+        await store.Save(update, ct);
+        return Result.Ok();
+    }
+}
+
+public sealed class MissLinkedInUpdateCommentHandler(IAggregateStore store) : ICommandHandler<MissLinkedInUpdateComment>
+{
+    public async Task<Result> Handle(MissLinkedInUpdateComment cmd, CancellationToken ct)
+    {
+        var update = await store.Load<LinkedInUpdate>(cmd.Id.Stream, ct);
+        update.MissComment(cmd.Reason, cmd.At);
         await store.Save(update, ct);
         return Result.Ok();
     }

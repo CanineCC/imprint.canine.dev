@@ -93,7 +93,7 @@ public sealed class McpSiteMoveToolsTests
             overview.Apply(new StoredEvent(++position, site.StreamId, ++version, @event.GetType().Name, @event, Meta));
         }
 
-        var json = Json(ImprintAuthoringMcpTools.GetSite(id.Compact, overview, new PageList()));
+        var json = Json(ImprintAuthoringMcpTools.GetSite(id.Compact, overview, new PageList(), new Imprint.Authoring.Features.LinkedInUpdates.NotConfiguredLinkedInUpdatePoster()));
 
         var environment = Assert.Single(json.GetProperty("environments").EnumerateArray());
         Assert.Equal("/srv/assaypreview", environment.GetProperty("path").GetString());

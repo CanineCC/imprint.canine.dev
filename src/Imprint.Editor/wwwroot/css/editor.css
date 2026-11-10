@@ -1092,5 +1092,12 @@ button { font: inherit; color: inherit; }
 .li-images-3 > :first-child { grid-column: 1 / -1; }
 .li-images img { display: block; width: 100%; height: auto; }
 .li-image-missing { margin: 0; padding: .75rem .9rem; color: var(--ed-danger); border-top: 1px solid var(--ed-border); }
+/* The first comment, under the post as LinkedIn shows it: the sender's mark, then a bubble with the name and the text. */
+.li-preview-comment { display: flex; gap: .5rem; align-items: flex-start; padding: .65rem .9rem .8rem; border-top: 1px solid var(--ed-border); }
+.li-preview-comment .li-avatar { width: 2rem; height: 2rem; font-size: .75rem; }
+.li-preview-comment p { margin: 0; padding: .45rem .7rem; border-radius: 0 .6rem .6rem .6rem; background: light-dark(#f2f2f2, #262b31);
+                        white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.4; }
+.li-preview-comment strong { display: block; font-size: .8rem; line-height: 1.3; }
+.li-comment-state { margin: .4rem 0 0; color: var(--ed-text-muted); font-size: .85rem; }
 .li-member { display: flex; gap: .5rem; align-items: baseline; flex-wrap: wrap; }
 .li-member code { font-size: .8rem; }

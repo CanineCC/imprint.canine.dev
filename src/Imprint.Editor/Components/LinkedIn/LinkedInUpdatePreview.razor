@@ -1,6 +1,7 @@
 @* An update as it will look in the LinkedIn feed: the sender, the text cut where the feed cuts it with "…more" to
    open the rest, and the images laid out as the feed lays them out (one wide; two side by side; three or more as one
-   wide over a row). An image that is no longer in the library is said out loud: the update would fail to send. *@
+   wide over a row). An image that is no longer in the library is said out loud: the update would fail to send. A
+   first comment shows under the post, as the sender's comment, the way LinkedIn shows it. *@
 @using System.Text.RegularExpressions
 @using Imprint.Authoring.Domain.Assets
 @using Imprint.Authoring.Domain.LinkedIn
@@ -48,6 +49,13 @@
             }
         </div>
     }
+    @if (FirstComment is { Length: > 0 } comment)
+    {
+        <div class="li-preview-comment" data-testid="linkedin-update-comment" aria-label="First comment">
+            <span class="li-avatar" aria-hidden="true">@Initials</span>
+            <p><strong>@SenderName</strong>@comment</p>
+        </div>
+    }
 </article>
 
 @code {
@@ -60,6 +68,9 @@
     [Parameter, EditorRequired] public IReadOnlyList<LinkedInUpdateImage> Images { get; set; } = [];
     [Parameter, EditorRequired] public DateTimeOffset PublishAt { get; set; }
     [Parameter, EditorRequired] public AssetLibrary Library { get; set; } = null!;
+
+    /// <summary>The first comment, posted under the update as the same sender; null for none.</summary>
+    [Parameter] public string? FirstComment { get; set; }
 
     private bool _open;
 

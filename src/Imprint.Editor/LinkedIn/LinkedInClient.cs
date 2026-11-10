@@ -15,12 +15,15 @@ namespace Imprint.Editor.LinkedIn;
 /// </summary>
 public sealed class LinkedInClient(
     HttpClient http, LinkedInOptions options, LinkedInTokenStore tokens, ILogger<LinkedInClient> logger, TimeProvider? clock = null,
-    LinkedInOptions? memberApp = null, LinkedInMemberTokenStore? members = null)
+    LinkedInOptions? memberApp = null, LinkedInMemberTokenStore? members = null, LinkedInPageConnection? page = null)
     : ILinkedInPoster
 {
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
 
-    public bool IsConfigured => options.HasApp && tokens.Read() is not null;
+    // The page app's tokens and their refresh, shared with the update client (Program.cs passes the one instance).
+    private readonly LinkedInPageConnection _page = page ?? new LinkedInPageConnection(http, options, tokens, logger, clock);
+
+    public bool IsConfigured => _page.IsConnected;
 
     public bool IsConfiguredFor(string authorUrn) => IsPerson(authorUrn) ? MemberToken(authorUrn) is not null : IsConfigured;
 
@@ -38,7 +41,7 @@ public sealed class LinkedInClient(
             return await Interpret(answer, ct);
         }
 
-        if (await AccessToken(forceRefresh: false, ct) is not { } token)
+        if (await _page.AccessToken(rejected: null, ct) is not { } token)
         {
             return Refused("LinkedIn is not connected, or its authorization has expired: connect it again in the editor.");
         }
@@ -48,7 +51,7 @@ public sealed class LinkedInClient(
         {
             // A 401 proves nothing was posted, so one refresh and one more try is safe.
             response.Dispose();
-            if (await AccessToken(forceRefresh: true, ct) is not { } fresh)
+            if (await _page.AccessToken(rejected: token, ct) is not { } fresh)
             {
                 return Refused("LinkedIn refused the authorization and it could not be refreshed: connect it again in the editor.");
             }
@@ -131,42 +134,4 @@ public sealed class LinkedInClient(
         LinkedInAnswers.Interpret(response, _clock.GetUtcNow(), ct);
 
     private static LinkedInSendResult Refused(string reason) => new(LinkedInSendStatus.Refused, Reason: reason);
-
-    /// <summary>A usable access token: the stored one while it has a minute left, else a refreshed one.</summary>
-    private async Task<string?> AccessToken(bool forceRefresh, CancellationToken ct)
-    {
-        if (tokens.Read() is not { } stored)
-        {
-            return null;
-        }
-
-        var now = _clock.GetUtcNow();
-        if (!forceRefresh && stored.AccessExpiresAt > now.AddMinutes(1))
-        {
-            return stored.AccessToken;
-        }
-
-        if (stored.RefreshToken is not { Length: > 0 } refresh || stored.RefreshExpiresAt is { } dies && dies <= now)
-        {
-            return null;
-        }
-
-        var exchanged = await LinkedInOAuth.Exchange(http, options, new Dictionary<string, string>
-        {
-            ["grant_type"] = "refresh_token",
-            ["refresh_token"] = refresh,
-        }, stored.ConnectedAt, now, ct);
-        if (exchanged is null)
-        {
-            logger.LogWarning("LinkedIn token refresh was refused.");
-            return null;
-        }
-
-        // LinkedIn may not return a new refresh token on refresh: the old one stays valid until it expires.
-        var next = exchanged.RefreshToken is null
-            ? exchanged with { RefreshToken = stored.RefreshToken, RefreshExpiresAt = stored.RefreshExpiresAt }
-            : exchanged;
-        tokens.Write(next);
-        return next.AccessToken;
-    }
 }

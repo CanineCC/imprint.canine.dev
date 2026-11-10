@@ -166,10 +166,10 @@ public sealed class ImprintAuthoringMcpTools
     }
 
     [McpServerTool(Name = "get_site")]
-    [Description("One site's chrome: locales, navigation (with groups and children), footer link groups, the fine-print copy line, the llms.txt preamble and excluded paths, and the theme (colour tokens and typography). Read this before set_navigation, set_copy_line, set_llms_preamble, set_llms_excluded_paths or set_typography — each carries the whole value, so you edit what you read back.")]
+    [Description("One site's chrome: locales, navigation (with groups and children), footer link groups, the fine-print copy line, the llms.txt preamble and excluded paths, the theme (colour tokens and typography), and the LinkedIn senders (key, name, author URN, whether each is a person or a page, and whether a LinkedIn update as it can be sent now). Read this before set_navigation, set_copy_line, set_llms_preamble, set_llms_excluded_paths, set_typography or set_site_linkedin_senders — each carries the whole value, so you edit what you read back.")]
     public static object GetSite(
         [Description("The site id.")] string siteId,
-        SiteOverview sites, PageList pages)
+        SiteOverview sites, PageList pages, Imprint.Authoring.Features.LinkedInUpdates.ILinkedInUpdatePoster linkedIn)
     {
         if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
         var site = sites.Get(sid);
@@ -192,6 +192,17 @@ public sealed class ImprintAuthoringMcpTools
             // Read back for the same reason: set_site_environments replaces the whole list, and moving a site
             // to another address means reusing the folder the old site published into.
             environments = site.Environments.Select(e => (object)new { name = e.Name, path = e.Path, baseUrl = e.BaseUrl }).ToList(),
+            // Read back because set_site_linkedin_senders replaces the whole list. "connected" is the scheduler's own
+            // check: whether a LinkedIn update as this sender would be sent now (a person's own connection, or the
+            // page connection). No token or secret is read out.
+            linkedInSenders = site.LinkedInSenders.Select(s => (object)new
+            {
+                key = s.Key,
+                name = s.Name,
+                organizationUrn = s.OrganizationUrn,
+                kind = s.IsPerson ? "person" : s.OrganizationUrn.StartsWith("urn:li:organization:", StringComparison.Ordinal) ? "page" : "unknown",
+                connected = linkedIn.IsConfiguredFor(s.OrganizationUrn),
+            }).ToList(),
             navigation = site.Navigation.Select(item => (object)new
             {
                 label = item.Label is null ? null : Localized(item.Label),
@@ -1108,7 +1119,7 @@ public sealed class ImprintAuthoringMcpTools
     }
 
     [McpServerTool(Name = "set_site_linkedin_senders")]
-    [Description("Replace the LinkedIn organization pages a site's articles may post as. Each sender has a key (lowercase letters, digits, hyphens; what an article names), a display name, and the page's organization URN (urn:li:organization:{id}; a showcase page is one too). An empty list removes them all.")]
+    [Description("Replace the LinkedIn senders a site's articles and LinkedIn updates may post as: the WHOLE list, so read it first with get_site and send back every sender you keep. Each sender has a key (lowercase letters, digits, hyphens; what an article or update names), a display name, and the author URN: a page's organization URN (urn:li:organization:{id}; a showcase page is one too) or a member's person URN (urn:li:person:{id}). An empty list removes them all.")]
     public static async Task<object> SetSiteLinkedInSenders(
         [Description("The site id.")] string siteId,
         [Description("The senders: objects with key, name and organizationUrn.")] IReadOnlyList<AuthoringApi.SiteLinkedInSenderRequest>? senders,
@@ -1123,38 +1134,42 @@ public sealed class ImprintAuthoringMcpTools
     }
 
     [McpServerTool(Name = "schedule_linkedin_update")]
-    [Description("Plan a LinkedIn post of its own (not an article's announcement) to go out at a date and time, as one of the site's LinkedIn senders (see set_site_linkedin_senders; a member sender, urn:li:person:{id}, posts under that person's name once they have connected LinkedIn in the editor's site settings). Text at most 3,000 characters (hashtags written as #word stay hashtags); 0 to 9 images, each a media asset id (upload_asset first) with alt text. The scheduler sends it once at its time; one more than two hours late is held back as missed. Returns the update id.")]
+    [Description("Plan a LinkedIn post of its own (not an article's announcement) to go out at a date and time, as one of the site's LinkedIn senders (see get_site and set_site_linkedin_senders). A member sender, urn:li:person:{id}, posts under that person's name once they have connected LinkedIn in the editor's site settings; a page sender, urn:li:organization:{id}, posts as the page once a page admin has connected the page there. Text at most 3,000 characters (hashtags written as #word stay hashtags); 0 to 9 images, each a media asset id (upload_asset first) with alt text; optionally a first comment (plain text, at most 1,250 characters, usually the link), posted under the post as the same sender right after it goes out. The scheduler sends it once at its time; one more than two hours late is held back as missed. A comment that fails never undoes or repeats the post. Returns the update id.")]
     public static async Task<object> ScheduleLinkedInUpdate(
         [Description("The site id.")] string siteId,
-        [Description("The sender's key, e.g. 'jimmy'.")] string sender,
+        [Description("The sender's key, e.g. 'jimmy' or 'canine'.")] string sender,
         [Description("The post text.")] string text,
         [Description("The images in order: objects with assetId and alt.")] IReadOnlyList<LinkedInUpdateImageRequest>? images,
         [Description("When it goes out, ISO 8601 with offset, e.g. 2026-11-03T08:15:00+01:00.")] string publishAt,
-        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+        ICommandDispatcher dispatcher, IConfiguration config,
+        [Description("Optional: the first comment, plain text (at most 1,250 characters), posted under the post as the same sender right after it goes out. Leave it out for none.")] string? firstComment = null,
+        CancellationToken ct = default)
     {
         if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
         if (!DateTimeOffset.TryParse(publishAt, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var at)) return Fail("publishAt is not an ISO 8601 time with offset");
         if (UpdateImages(images) is not { } pictures) return Fail("every image needs an assetId (a GUID)");
         var id = Imprint.Authoring.Domain.LinkedInUpdateId.New();
-        return await Dispatch(dispatcher, config, new Imprint.Authoring.Features.LinkedInUpdates.ScheduleLinkedInUpdate(id, sid, sender, text, pictures, at), ct,
-            () => new { ok = true, updateId = id.Compact, publishAt = at, images = pictures.Count });
+        return await Dispatch(dispatcher, config, new Imprint.Authoring.Features.LinkedInUpdates.ScheduleLinkedInUpdate(id, sid, sender, text, pictures, at, firstComment), ct,
+            () => new { ok = true, updateId = id.Compact, publishAt = at, images = pictures.Count, firstComment = !string.IsNullOrWhiteSpace(firstComment) });
     }
 
     [McpServerTool(Name = "edit_linkedin_update")]
-    [Description("Change a LinkedIn update that has not gone out (or was missed, or refused for good): the sender, text, images and time, all restated. It is scheduled again for the given time.")]
+    [Description("Change a LinkedIn update that has not gone out (or was missed, or refused for good): the sender, text, images, time and first comment, all restated (leave firstComment out to have none). It is scheduled again for the given time.")]
     public static async Task<object> EditLinkedInUpdate(
         [Description("The update id.")] string updateId,
         [Description("The sender's key.")] string sender,
         [Description("The post text.")] string text,
         [Description("The images in order: objects with assetId and alt.")] IReadOnlyList<LinkedInUpdateImageRequest>? images,
         [Description("When it goes out, ISO 8601 with offset.")] string publishAt,
-        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+        ICommandDispatcher dispatcher, IConfiguration config,
+        [Description("Optional: the first comment, restated like the rest (plain text, at most 1,250 characters). Leave it out for none: an update that had one then has none.")] string? firstComment = null,
+        CancellationToken ct = default)
     {
         if (!TryUpdateId(updateId, out var id)) return Fail("invalid updateId");
         if (!DateTimeOffset.TryParse(publishAt, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var at)) return Fail("publishAt is not an ISO 8601 time with offset");
         if (UpdateImages(images) is not { } pictures) return Fail("every image needs an assetId (a GUID)");
-        return await Dispatch(dispatcher, config, new Imprint.Authoring.Features.LinkedInUpdates.EditLinkedInUpdate(id, sender, text, pictures, at), ct,
-            () => new { ok = true, updateId = id.Compact, publishAt = at });
+        return await Dispatch(dispatcher, config, new Imprint.Authoring.Features.LinkedInUpdates.EditLinkedInUpdate(id, sender, text, pictures, at, firstComment), ct,
+            () => new { ok = true, updateId = id.Compact, publishAt = at, firstComment = !string.IsNullOrWhiteSpace(firstComment) });
     }
 
     [McpServerTool(Name = "cancel_linkedin_update")]
@@ -1181,7 +1196,7 @@ public sealed class ImprintAuthoringMcpTools
     }
 
     [McpServerTool(Name = "list_linkedin_updates")]
-    [Description("A site's LinkedIn updates, soonest first: id, sender, publish time, state (Scheduled, Attempting, Posted, Failed, Unknown, Missed, Cancelled), the post's URN once posted, the reason when it failed or was missed, the image count and the first line of the text.")]
+    [Description("A site's LinkedIn updates, soonest first: id, sender, publish time, state (Scheduled, Attempting, Posted, Failed, Unknown, Missed, Cancelled), the post's URN once posted, the reason when it failed or was missed, the image count and the first line of the text; and, when it has one, the first comment: its text, its state (Waiting for the post, Attempting, Posted, Failed, Unknown, Missed), its URN once posted and the reason when it failed or was missed.")]
     public static object ListLinkedInUpdates(
         [Description("The site id.")] string siteId,
         SiteOverview sites, Imprint.Authoring.Projections.LinkedInUpdateList updates)
@@ -1195,6 +1210,10 @@ public sealed class ImprintAuthoringMcpTools
             {
                 updateId = u.Id.Compact, u.Sender, u.PublishAt, state = u.State.ToString(), u.Urn, u.Reason,
                 images = u.Images.Count, firstLine = u.Text.Split('\n')[0],
+                firstComment = u.FirstComment is null ? null : new
+                {
+                    text = u.FirstComment, state = u.CommentState?.ToString(), urn = u.CommentUrn, reason = u.CommentReason,
+                },
             }).ToList(),
         };
     }

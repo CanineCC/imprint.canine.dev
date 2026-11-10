@@ -40,8 +40,37 @@ falls out of the design at no extra cost, but nothing beyond that is built for i
    with cancel and resolve; and in site settings, "Connect my LinkedIn" for the signed-in member, showing who is
    connected and until when.
 
+## Added 2026-11-10: page senders and a first comment
+
+Owner request: the company page posts three times a week from 11 Nov 2026, scheduled in Imprint like the owner's
+own posts, and the owner's posts must not change at all.
+
+1. **A page as an update's sender.** An update whose sender is `urn:li:organization:{id}` goes out through the page
+   connection (`LinkedInPageConnection`: the page app `Imprint:LinkedIn`, the tokens in `secrets/linkedin-token.json`,
+   and their refresh), which article posts now share, so the refresh lives in one place and two senders never
+   refresh at once. The images are owned by the page, the post's author is the page, and a 401 is answered by one
+   refresh and one more try (a 401 proves nothing was posted). A member sender goes out exactly as before: the same
+   token store, calls and bodies, pinned byte for byte by `LinkedInUpdateMemberRequestTests`.
+2. **A first comment** (`FirstComment`, plain text, at most 1,250 characters, usually the link) posted under the
+   update as the same sender once the post is out (`POST /rest/socialActions/{post}/comments`, Comments API, with
+   the sender's app's `Linkedin-Version`). It has its own states (Waiting, Attempting, Posted, Failed, Unknown,
+   Missed) and events (`linkedin-update.comment-*`), recorded the post's way: the attempt before the call, an
+   unknown result never retried, a refusal retried only when LinkedIn says wait. Nothing the comment does touches
+   the post: a post that went out stays Posted and is never sent again. A comment that cannot go out within
+   `MaxLate` (2 hours) of its post is missed, for a person to add by hand. After a person resolves an unclear post
+   as posted, its comment goes out then. The comment rides on `linkedin-update.scheduled` and `.edited` as an
+   optional last field, so every update stored before reads with none.
+3. **Permissions.** The page app now asks for `w_organization_social w_organization_social_feed`: LinkedIn's Posts
+   API names the first, its Comments API names the second for an organization's comments, and the Community
+   Management API product grants both. A page connected before this asked only for the first, so a first comment
+   needs the page connected again. The member app's request is unchanged.
+4. **MCP:** `schedule_linkedin_update` and `edit_linkedin_update` take an optional `firstComment`;
+   `list_linkedin_updates` shows it and its state (an update without one reads exactly as before); `get_site`
+   reads back the LinkedIn senders, which `set_site_linkedin_senders` replaces whole, with whether an update as
+   each would be sent now. **Editor:** the LinkedIn page shows the comment under the preview and where it stands.
+
 ## Not added
 
 A calendar of best times, slot rules or a mix per product (they live with the author: `STRATEGI.md` and the
-`linkedin` skill), analytics, comments, editing a post after it is on LinkedIn, organization updates without an
-article (the page sender works for an update too, but no one has asked for it).
+`linkedin` skill), analytics, polls (the owner skipped them, 2026-11-10), comments other than an update's first,
+editing a post after it is on LinkedIn.

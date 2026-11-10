@@ -67,27 +67,36 @@ builder.Services.AddSingleton(new LinkedInTokenStore(dataDirectory));
 builder.Services.AddSingleton(new LinkedInPostingOptions());
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHttpClient("linkedin", client => client.Timeout = TimeSpan.FromSeconds(30));
-// LinkedIn updates: standalone posts (text, images, a time) sent by the scheduler as a member under their own
-// name. A separate app (Imprint:LinkedInMember) because the page product may have to sit alone on its app; each
-// member connects once, and their token lives in secrets/linkedin-members/, never in the event stream. An article
-// may name a member as its sender too, and then goes out through the same connection.
+// LinkedIn updates: standalone posts (text, images, a time, an optional first comment) sent by the scheduler as
+// their sender: a member under their own name, or a page through the page connection above. A separate app
+// (Imprint:LinkedInMember) for members because the page product may have to sit alone on its app; each member
+// connects once, and their token lives in secrets/linkedin-members/, never in the event stream. An article may name
+// a member as its sender too, and then goes out through the same connection. The page connection is one instance
+// for articles and updates alike, so its token is refreshed in one place.
 builder.Services.AddSingleton(new LinkedInMemberApp(LinkedInOptions.ForMembers(
     builder.Configuration.GetSection("Imprint:LinkedInMember").Get<LinkedInOptions>() ?? new LinkedInOptions())));
 builder.Services.AddSingleton(new LinkedInMemberTokenStore(dataDirectory));
+builder.Services.AddSingleton(provider => new LinkedInPageConnection(
+    provider.GetRequiredService<IHttpClientFactory>().CreateClient("linkedin"),
+    provider.GetRequiredService<LinkedInOptions>(),
+    provider.GetRequiredService<LinkedInTokenStore>(),
+    provider.GetRequiredService<ILogger<LinkedInPageConnection>>()));
 builder.Services.AddSingleton<ILinkedInPoster>(provider => new LinkedInClient(
     provider.GetRequiredService<IHttpClientFactory>().CreateClient("linkedin"),
     provider.GetRequiredService<LinkedInOptions>(),
     provider.GetRequiredService<LinkedInTokenStore>(),
     provider.GetRequiredService<ILogger<LinkedInClient>>(),
     memberApp: provider.GetRequiredService<LinkedInMemberApp>().Options,
-    members: provider.GetRequiredService<LinkedInMemberTokenStore>()));
+    members: provider.GetRequiredService<LinkedInMemberTokenStore>(),
+    page: provider.GetRequiredService<LinkedInPageConnection>()));
 builder.Services.AddHostedService<DueLinkedInPoster>();
 builder.Services.AddSingleton(new LinkedInUpdateOptions());
 builder.Services.AddSingleton<ILinkedInUpdatePoster>(provider => new LinkedInUpdateClient(
     provider.GetRequiredService<IHttpClientFactory>().CreateClient("linkedin"),
     provider.GetRequiredService<LinkedInMemberApp>().Options,
     provider.GetRequiredService<LinkedInMemberTokenStore>(),
-    provider.GetRequiredService<ILogger<LinkedInUpdateClient>>()));
+    provider.GetRequiredService<ILogger<LinkedInUpdateClient>>(),
+    page: provider.GetRequiredService<LinkedInPageConnection>()));
 builder.Services.AddHostedService<DueLinkedInUpdatePoster>();
 builder.Services.AddHostedService<ReviewMailer>();
 builder.Services.AddImprintPublishing(new PublishingOptions

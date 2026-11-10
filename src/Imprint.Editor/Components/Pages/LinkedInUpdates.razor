@@ -22,8 +22,8 @@
     <header class="dash-head">
         <h1>LinkedIn updates</h1>
         <p class="dash-sub">
-            Posts of their own, each sent once at its time as its sender. One more than two hours late is held back
-            as missed instead of posted late. They are planned through the MCP tools; here you see the plan, cancel
+            Posts of their own, each sent once at its time as its sender, and its first comment, if it has one,
+            right after it. One more than two hours late is held back as missed instead of posted late. They are planned through the MCP tools; here you see the plan, cancel
             what should not go out, and say what happened when LinkedIn's answer was unclear.
         </p>
     </header>
@@ -69,7 +69,7 @@
                             <span class="post-status li-state li-state-@row.State.ToString().ToLowerInvariant()" data-testid="linkedin-update-state">@Label(row.State)</span>
                         </div>
                         <LinkedInUpdatePreview SenderName="@SenderName(row)" Text="@row.Text" Images="@row.Images"
-                                               PublishAt="@row.PublishAt" Library="@Library" />
+                                               PublishAt="@row.PublishAt" Library="@Library" FirstComment="@row.FirstComment" />
                         @if (row.Urn is { } urn)
                         {
                             <p class="li-meta"><a href="@($"https://www.linkedin.com/feed/update/{urn}/")" target="_blank" rel="noopener">See it on LinkedIn</a></p>
@@ -77,6 +77,14 @@
                         @if (row.Reason is { Length: > 0 } reason)
                         {
                             <p class="li-reason" data-testid="linkedin-update-reason">@reason</p>
+                        }
+                        @if (row.CommentState is { } commentState)
+                        {
+                            <p class="li-comment-state" data-testid="linkedin-update-comment-state" data-state="@commentState">@CommentLabel(row)</p>
+                            @if (row.CommentReason is { Length: > 0 } why && commentState is not LinkedInUpdateCommentState.Posted)
+                            {
+                                <p class="li-reason" data-testid="linkedin-update-comment-reason">@why</p>
+                            }
                         }
                         @if (row.State is LinkedInUpdateState.Unknown)
                         {
@@ -172,6 +180,21 @@
 
     private string SenderName(LinkedInUpdateRow row) =>
         Sites.Get(_site)?.LinkedInSenders.FirstOrDefault(s => s.Key == row.Sender)?.Name ?? row.Sender;
+
+    // Where the first comment stands, in the words a person acts on.
+    private static string CommentLabel(LinkedInUpdateRow row) => row.CommentState switch
+    {
+        LinkedInUpdateCommentState.Waiting => row.State is LinkedInUpdateState.Posted
+            ? "First comment: goes out within a minute."
+            : "First comment: goes out right after the post.",
+        LinkedInUpdateCommentState.Attempting => "First comment: being sent.",
+        LinkedInUpdateCommentState.Posted => "First comment: posted under the post.",
+        LinkedInUpdateCommentState.Failed when row.CommentRetryable =>
+            $"First comment: LinkedIn asked us to wait; it is sent again after {row.CommentRetryAfter:g} UTC.",
+        LinkedInUpdateCommentState.Failed => "First comment: LinkedIn refused it. The post is out; add the comment by hand under it.",
+        LinkedInUpdateCommentState.Unknown => "First comment: not known whether it went out. Look under the post on LinkedIn before adding it by hand.",
+        _ => "First comment: not sent. The post is out; add the comment by hand under it if it should be there.",
+    };
 
     private static string Label(LinkedInUpdateState state) => state switch
     {
