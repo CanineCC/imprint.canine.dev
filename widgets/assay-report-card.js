@@ -137,6 +137,15 @@ const RESULTS = {
   'no usable evidence': ['No usable evidence', 'arc-none'],
 };
 
+// A CAI score as the product writes it: one decimal, always, rounded half to even (ADR-0027 in kennel.canine.dev),
+// so this example card reads 78.0 where the product's own card reads 78.0, never 78.
+const cai = (score) => {
+  const scaled = score * 10;
+  const floor = Math.floor(scaled);
+  const tenths = (scaled - floor === 0.5 ? (floor % 2 === 0 ? floor : floor + 1) : Math.round(scaled)) / 10;
+  return (tenths === 0 ? 0 : tenths).toFixed(1);
+};
+
 const parse = (value, fallback) => {
   try {
     const parsed = JSON.parse(value ?? '');
@@ -335,14 +344,14 @@ customElements.define('assay-report-card', class extends HTMLElement {
       block.append(el('span', 'arc-label', 'Against your bar'));
       const scale = el('div', 'arc-scale');
       scale.setAttribute('role', 'img');
-      scale.setAttribute('aria-label', `Score ${score} against your bar of ${bar}, on a scale from 0 to 100`);
+      scale.setAttribute('aria-label', `Score ${cai(score)} against your bar of ${bar}, on a scale from 0 to 100`);
       const at = (node, n) => { node.style.left = `${clamp(n)}%`; return node; };
       const fill = el('div', 'arc-scale-fill');
       fill.style.width = `${clamp(score)}%`;
       scale.append(
         el('div', 'arc-scale-track'), fill, at(el('div', 'arc-scale-bar'), bar),
         at(el('span', 'arc-scale-barlabel', `your bar ${bar}`), bar), at(el('div', 'arc-scale-dot'), score),
-        at(el('span', 'arc-scale-score', String(score)), score));
+        at(el('span', 'arc-scale-score', cai(score)), score));
       scale.querySelectorAll('span').forEach((s) => s.setAttribute('aria-hidden', 'true'));
       const ends = el('div', 'arc-scale-ends');
       ends.setAttribute('aria-hidden', 'true');

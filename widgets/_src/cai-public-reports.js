@@ -20,6 +20,7 @@ import {
   escapeHtml,
 } from "./tokens.js";
 import { fetchPublicReports } from "./live.js";
+import { caiText } from "./cai.js";
 
 // A few common language codes → display labels; anything else renders as-is (the census already
 // stores readable names, so this is only a safety net for code-style values).
@@ -86,7 +87,7 @@ function cardHtml(c, api) {
   return `<a class="mk-rep-card" style="--b:${escapeHtml(c.bandHex || "")}" href="${escapeHtml(href)}" target="_blank" rel="noopener">
       <div class="mk-rep-top">
         <span class="mk-rep-name"><span class="mk-rep-owner">${escapeHtml(owner)}/</span>${escapeHtml(name)}</span>
-        <span class="mk-rep-score">${escapeHtml(String(c.score))}<small>/100</small></span>
+        <span class="mk-rep-score">${escapeHtml(caiText(c.score))}<small>/100</small></span>
       </div>
       <div class="mk-rep-chips">${langChips.join("")}${lensChips.join("")}</div>
       <span class="mk-rep-read">Read the survey →</span>

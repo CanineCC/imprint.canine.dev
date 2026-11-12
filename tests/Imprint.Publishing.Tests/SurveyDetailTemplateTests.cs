@@ -33,22 +33,19 @@ public sealed class SurveyDetailTemplateTests
 
         Assert.Contains("<span class=\"ip-survey-repo\">auth</span>", html, StringComparison.Ordinal);
         Assert.Contains("<span class=\"ip-survey-by\">by ruben-rasmussen</span>", html, StringComparison.Ordinal);
-        // ★★ 98, NOT 97.6. This feed carries `bestScore: 97.6` where /api/public/reports carries
-        //    `score: 98` for the same run, and the strip and the hero sat one section apart printing
-        //    both. The published figure is the whole number.
-        Assert.Contains(">98</span>", html, StringComparison.Ordinal);
-        // Not ">97.6<": the tenth survives in the bar GEOMETRY, which is a drawing rather than a
-        // figure. What must not appear is a printed 97.6 anywhere a reader reads a number.
-        Assert.DoesNotContain(">97.6", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("97.6 out of", html, StringComparison.Ordinal);
+        // ★★ 97.6: one decimal, as the product writes every CAI (ADR-0027 in kennel.canine.dev); the reports
+        //    feed now carries the measured score too, so no section prints 98 for this run.
+        Assert.Contains(">97.6</span>", html, StringComparison.Ordinal);
+        Assert.Contains("97.6 out of 100", html, StringComparison.Ordinal);
+        Assert.DoesNotContain(">98</span>", html, StringComparison.Ordinal);
         Assert.Contains("Exemplary", html, StringComparison.Ordinal);
         // ★ A BAR AND ITS NUMBER, not a number alone. The bar is what makes "one lens is dragging
         //   this down" visible without reading five figures — which is why the widget drew them and
         //   why the bake looked so much poorer than the island it replaced.
         Assert.Contains("<th scope=\"row\">Code health</th>", html, StringComparison.Ordinal);
-        Assert.Contains(">98</td>", html, StringComparison.Ordinal);
+        Assert.Contains(">98.2</td>", html, StringComparison.Ordinal);
         Assert.Contains("<th scope=\"row\">Security</th>", html, StringComparison.Ordinal);
-        Assert.Contains(">100</td>", html, StringComparison.Ordinal);
+        Assert.Contains(">100.0</td>", html, StringComparison.Ordinal);
         Assert.Contains("Domain modelling", html, StringComparison.Ordinal);
 
         // Every measured lens gets a bar, and the fill is the score.
@@ -128,8 +125,8 @@ public sealed class SurveyDetailTemplateTests
         // ★ THE DELTA IS THE DIFFERENCE BETWEEN THE TWO NUMBERS THE READER CAN SEE. Taking it from
         //   the raw values printed "62 → 98 … up 35.6", which is an arithmetic error to anyone who
         //   checks it, and the arc is printed precisely so that it will be checked.
-        Assert.Contains(">62</span>", html, StringComparison.Ordinal);
-        Assert.Contains("up 36 over 18 scans", html, StringComparison.Ordinal);
+        Assert.Contains(">62.0</span>", html, StringComparison.Ordinal);
+        Assert.Contains("up 35.6 over 18 scans", html, StringComparison.Ordinal);   // 62.0 → 97.6
     }
 
     [Fact]
@@ -141,13 +138,24 @@ public sealed class SurveyDetailTemplateTests
         Assert.DoesNotContain("ip-trend", html, StringComparison.Ordinal);
     }
 
+    /// <summary>ADR-0027: a move that shows as 0.0 is no move. 97.63 against 97.6 reads 97.6 → 97.6, which said "up 0" once.</summary>
+    [Fact]
+    public void A_score_that_shows_the_same_figure_says_unchanged_never_up_zero()
+    {
+        var html = SurveyDetailTemplate.Render(
+            Payload.Replace("\"firstScore\": 62", "\"firstScore\": 97.63", StringComparison.Ordinal), Origin)!;
+
+        Assert.Contains("unchanged over 18 scans", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("up 0.0", html, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void A_falling_score_says_down_rather_than_up_a_negative_number()
     {
         var html = SurveyDetailTemplate.Render(
             Payload.Replace("\"firstScore\": 62", "\"firstScore\": 99", StringComparison.Ordinal), Origin)!;
 
-        Assert.Contains("down 1 over 18 scans", html, StringComparison.Ordinal);
+        Assert.Contains("down 1.4 over 18 scans", html, StringComparison.Ordinal);   // 99.0 → 97.6
         Assert.DoesNotContain("up -", html, StringComparison.Ordinal);
     }
 

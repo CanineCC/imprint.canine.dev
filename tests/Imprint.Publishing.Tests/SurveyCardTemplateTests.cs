@@ -31,16 +31,14 @@ public sealed class SurveyCardTemplateTests
     {
         var html = SurveyCardTemplate.Render(Payload, Origin)!;
 
-        // ★★ 87, NOT 86.8 — the whole number the product publishes, the same on every card. This
-        //    file is the third to assert a tenth that the gallery, the report and the island card all
-        //    round away; a repository read 98 in one section and 97.6 in the next because of it.
-        Assert.Contains(">87</span>", html, StringComparison.Ordinal);
+        // ★★ 86.8: one decimal, as the product writes every CAI (ADR-0027 in kennel.canine.dev).
+        Assert.Contains(">86.8</span>", html, StringComparison.Ordinal);
         Assert.Contains("Code health", html, StringComparison.Ordinal);
 
         // ★ THE LENSES ARE BARS NOW, not a list of numbers — the same body every other card draws.
         //   A bar is what makes one weak lens visible beside five strong ones.
         Assert.Contains("ip-lens-fill", html, StringComparison.Ordinal);
-        Assert.Contains(">95</td>", html, StringComparison.Ordinal);
+        Assert.Contains(">94.8</td>", html, StringComparison.Ordinal);
         Assert.Contains("13,014 lines", html, StringComparison.Ordinal);
         Assert.Contains("~€550,000", html, StringComparison.Ordinal);
         Assert.Contains("rubric-2026.09.15", html, StringComparison.Ordinal);
@@ -94,7 +92,7 @@ public sealed class SurveyCardTemplateTests
     {
         var html = SurveyCardTemplate.Render("{\"headlineScore\":72}", Origin)!;
 
-        Assert.Contains(">72</span>", html, StringComparison.Ordinal);
+        Assert.Contains(">72.0</span>", html, StringComparison.Ordinal);
         Assert.DoesNotContain("Rebuild cost", html, StringComparison.Ordinal);
         Assert.DoesNotContain("Projects", html, StringComparison.Ordinal);
         Assert.DoesNotContain("0 lines", html, StringComparison.Ordinal);

@@ -97,7 +97,7 @@ public static class BandScaleTemplate
                 // Not tinted: the band word beside it already carries the colour, and `.ink-*` would
                 // be silently outranked by `.ip-cai-score` anyway (same specificity, defined later).
                 html.Append("<span class=\"ip-cai-score ip-rung-score\">")
-                    .Append(Esc(Score(score))).Append("</span></p>");
+                    .Append(Esc(CaiScoreText.Shown(score))).Append("</span></p>");
             }
             else
             {

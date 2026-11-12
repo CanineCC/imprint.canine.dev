@@ -86,7 +86,7 @@ import {
 import { SCORECARD_CSS } from "./scorecard.js";
 import { HINT_CSS } from "./hint.js";
 import { RAIL_CSS, railHtml, headBelowRailHtml } from "./rail.js";
-import { bandFor } from "./cai.js";
+import { bandFor, caiText } from "./cai.js";
 
 // The band cutlines. A snapped axis picks the pair of these that brackets the data.
 const CUTS = [0, 25, 50, 70, 90, 100];
@@ -257,7 +257,7 @@ function snapDomain(values) {
 }
 
 function fmt(n) {
-  return (Math.round(n * 10) / 10).toFixed(1);
+  return caiText(n);
 }
 
 customElements.define(

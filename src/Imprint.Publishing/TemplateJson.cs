@@ -69,23 +69,16 @@ internal static class TemplateJson
         [.. Array(e, name).Where(x => x.ValueKind == JsonValueKind.String)
             .Select(x => x.GetString() ?? "").Where(s => s.Length > 0)];
 
-    /// <summary>A 0–100 figure with at most one decimal, and no trailing ".0" on a whole number.</summary>
+    /// <summary>A 0–100 figure that is not a score (a band line, a bar's width, a flex share), with at most one decimal and
+    /// no trailing ".0" on a whole number.</summary>
+    /// <remarks>★★ A SCORE IS NOT WRITTEN HERE (owner, 12 November 2026; ADR-0027 in kennel.canine.dev). Two feeds once
+    /// rounded differently and the same repository read 98 and 97.6 on one page: <c>/api/public/reports</c> carried
+    /// <c>score: 98</c> where <c>/api/public/verdicts</c> carried <c>bestScore: 97.6</c>. That was once settled on the whole
+    /// number; the product now writes every CAI with one decimal, the reports feed carries the measured score, and every
+    /// score on the websites is written by <see cref="CaiScoreText"/>, which IMP0001 enforces.</remarks>
+    [NotACaiScore("a line on the scale or a drawing's geometry (a band floor, a bar's width, a flex share), never a reading")]
     public static string Score(double value) =>
         value.ToString(Math.Abs(value - Math.Round(value)) < 0.05 ? "0" : "0.0", CultureInfo.InvariantCulture);
-
-    /// <summary>
-    /// A CAI as the product publishes it: a whole number.
-    /// </summary>
-    /// <remarks>
-    /// ★★ TWO FEEDS ROUND DIFFERENTLY AND THE SAME REPOSITORY READ 98 AND 97.6 ON ONE PAGE.
-    /// <c>/api/public/reports</c> carries <c>score: 98</c>; <c>/api/public/verdicts</c> carries
-    /// <c>bestScore: 97.6</c> for the same run. The strip and the hero sat one section apart and
-    /// disagreed, which reads as two measurements rather than one shown twice. The published figure
-    /// is the whole number — that is what the gallery, the report and the island card all print —
-    /// so every card prints it, and the tenth is not a precision this index claims.
-    /// </remarks>
-    public static string Cai(double value) =>
-        Math.Round(value, MidpointRounding.AwayFromZero).ToString("0", CultureInfo.InvariantCulture);
 
     public static string Group(double value) => value.ToString("#,##0", CultureInfo.InvariantCulture);
 

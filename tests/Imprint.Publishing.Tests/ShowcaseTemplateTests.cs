@@ -38,28 +38,25 @@ public sealed class ShowcaseTemplateTests
         //   below its neighbours'. Both facts are still text, which is what this test is for.
         Assert.Contains("<span class=\"ip-survey-repo\">auth</span>", html, StringComparison.Ordinal);
         Assert.Contains("<span class=\"ip-survey-by\">by ruben-rasmussen</span>", html, StringComparison.Ordinal);
-        Assert.Contains(">98</span>", html, StringComparison.Ordinal);
+        Assert.Contains(">98.0</span>", html, StringComparison.Ordinal);
         Assert.Contains("Exemplary", html, StringComparison.Ordinal);
         Assert.Contains("2 lenses measured · C#", html, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void The_headline_score_is_the_whole_number_the_product_publishes()
+    public void The_headline_score_has_one_decimal_as_the_product_writes_it()
     {
-        // ★★ THIS TEST USED TO ASSERT THE OPPOSITE, AND THE OPPOSITE PUT TWO NUMBERS FOR ONE
-        //    REPOSITORY ON ONE PAGE. /api/public/reports carries `score: 98` where
-        //    /api/public/verdicts carries `bestScore: 97.6` for the same run, so the strip and the
-        //    hero — one section apart — printed 98 and 97.6 and read as two measurements. The
-        //    published figure is the whole number: the gallery, the report and the island card all
-        //    print it, and the tenth is not a precision this index claims.
+        // ★★ ONE DECIMAL ON EVERY FACE (owner, 12 November 2026; ADR-0027 in kennel.canine.dev). This test
+        //    once asserted the whole number, to stop one repository reading 98 in one section and 97.6 in
+        //    the next. The product now writes every CAI with one decimal and /api/public/reports carries the
+        //    measured score, so both sections print the same figure with its tenth: 98.0 and 61.5.
         var html = ScoreCardTemplate.Render(Reports, Origin)!;
 
-        Assert.Contains(">98</span>", html, StringComparison.Ordinal);
-        Assert.Contains(">62</span>", html, StringComparison.Ordinal);
-        // Not "61.5": the tenth survives in the bar GEOMETRY, a drawing rather than a figure.
-        Assert.DoesNotContain(">61.5", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("61.5 out of", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("98.0", html, StringComparison.Ordinal);
+        Assert.Contains(">98.0</span>", html, StringComparison.Ordinal);
+        Assert.Contains(">61.5</span>", html, StringComparison.Ordinal);
+        Assert.Contains("61.5 out of 100", html, StringComparison.Ordinal);
+        Assert.DoesNotContain(">98</span>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain(">62</span>", html, StringComparison.Ordinal);
     }
 
     [Fact]

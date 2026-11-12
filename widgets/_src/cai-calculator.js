@@ -10,6 +10,7 @@
 // standard — which is the one thing a reference scorer exists to prevent.
 
 import { CaiIsland, TOKENS_CSS, BASE_CSS, sectionHeadHtml, SECTION_HEAD_CSS } from "./tokens.js";
+import { caiText } from "./cai.js";
 
 const CSS =
   TOKENS_CSS +
@@ -189,7 +190,7 @@ class CaiCalculator extends CaiIsland {
       .map(
         (l) => `<tr>
             <td>${esc(l.lens)}</td>
-            <td class="n">${esc((l.score ?? 0).toFixed(1))}</td>
+            <td class="n">${esc(caiText(l.score ?? 0))}</td>
             <td>${esc(l.band ?? "")}</td>
             <td class="n">${esc((l.weight ?? 0).toFixed(3))}</td>
           </tr>`,
@@ -208,7 +209,7 @@ class CaiCalculator extends CaiIsland {
     if (d.verification && typeof d.verification.reproduced === "boolean") {
       const v = d.verification;
       verify = v.reproduced
-        ? this.#note("ok", "✓ Reproduced", `The published headline ${esc((v.claimed ?? 0).toFixed(1))} follows from this evidence.`)
+        ? this.#note("ok", "✓ Reproduced", `The published headline ${esc(caiText(v.claimed ?? 0))} follows from this evidence.`)
         : this.#note(
             "bad",
             "✗ Does not reproduce",
@@ -220,7 +221,7 @@ class CaiCalculator extends CaiIsland {
 
     return `
       <div class="mk-head">
-        <span class="mk-cai">${esc((headline ?? 0).toFixed(1))}</span>
+        <span class="mk-cai">${esc(caiText(headline ?? 0))}</span>
         <span class="mk-band">${esc(d.band ?? "")}</span>
       </div>
       <p class="mk-hint">The headline is the worst-first ordered-weighted average of the lens scores${

@@ -16,4 +16,16 @@
     <RepositoryUrl>https://github.com/CanineCC/imprint.canine.dev</RepositoryUrl>
   </PropertyGroup>
 
+  <!-- IMP0001/IMP0002 (ADR-0027 in kennel.canine.dev): a CAI score on the websites is written by
+       Imprint.Publishing.CaiScoreText, with one decimal, always. Every src/ project loads the rule as an analyzer, never as a
+       library. -p:ImpCollectScoreText=true demotes it to warnings for one build that lists every hit. -->
+  <ItemGroup Condition="$(MSBuildProjectDirectory.StartsWith('$(MSBuildThisFileDirectory)src')) and '$(MSBuildProjectName)' != 'Imprint.Analyzers'">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src\Imprint.Analyzers\Imprint.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <CompilerVisibleProperty Include="ImpCollectScoreText" />
+  </ItemGroup>
+
 </Project>

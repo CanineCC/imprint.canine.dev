@@ -25,7 +25,7 @@ import {
   renderInline,
 } from "./tokens.js";
 import { SCORECARD_CSS } from "./scorecard.js";
-import { bandFor } from "./cai.js";
+import { bandFor, caiText } from "./cai.js";
 
 const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + `
 .mk-gauges { max-width: 46rem; margin: 0 auto; display: grid; gap: 2px;
@@ -67,7 +67,7 @@ customElements.define(
         html += `<span class="mk-gauge-name">${escapeHtml(lens.label)}</span>`;
         html += value == null
           ? `<span class="mk-gauge-num cai-muted">—</span>`
-          : `<span class="mk-gauge-num ink-${band.key}">${value.toFixed(1)}</span>`;
+          : `<span class="mk-gauge-num ink-${band.key}">${caiText(value)}</span>`;
         html += `<span class="cai-lens-bar">`;
         if (value != null) {
           html += `<span class="cai-lens-fill fill-${band.key}" style="width:${Math.max(2, Math.round(value))}%"></span>`;

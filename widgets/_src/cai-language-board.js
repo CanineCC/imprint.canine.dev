@@ -42,7 +42,7 @@ import {
   escapeHtml,
 } from "./tokens.js";
 import { SCORECARD_CSS } from "./scorecard.js";
-import { bandFor } from "./cai.js";
+import { bandFor, caiText } from "./cai.js";
 
 // The parked cutlines, drawn behind the distribution so a score can be read as a band and not
 // just a number.
@@ -238,7 +238,7 @@ customElements.define(
         html += `<span class="mk-row-name">${escapeHtml(l.name)}`
           + `<span class="mk-row-n">${n} project${n === 1 ? "" : "s"}</span></span>`;
         html += this.distribution(l, median, band);
-        html += `<span class="mk-row-med ink-${band.key}">${median.toFixed(1)}`
+        html += `<span class="mk-row-med ink-${band.key}">${caiText(median)}`
           + this.spread(l)
           + `</span>`;
         if (this._hasDepth) {
@@ -259,9 +259,9 @@ customElements.define(
       const high = num(l.high);
 
       // What a screen reader is told is the same claim the picture makes, in words.
-      let label = `median ${median.toFixed(1)}, ${band.label}`;
+      let label = `median ${caiText(median)}, ${band.label}`;
       if (low !== null && high !== null) {
-        label += `; half of them between ${low.toFixed(1)} and ${high.toFixed(1)}`;
+        label += `; half of them between ${caiText(low)} and ${caiText(high)}`;
       }
 
       let html = `<span class="mk-dist" role="img" aria-label="${escapeHtml(label)}">`;
@@ -303,7 +303,7 @@ customElements.define(
       const high = num(l.high);
       return low === null || high === null
         ? ""
-        : `<span class="mk-row-iqr">${low.toFixed(0)}–${high.toFixed(0)}</span>`;
+        : `<span class="mk-row-iqr">${caiText(low)}–${caiText(high)}</span>`;
     }
 
     /** Survey depth: dimensions resolved, or an em dash where none has been recorded yet. */

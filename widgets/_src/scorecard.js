@@ -3,7 +3,7 @@
 // class name and geometry matches the source component byte-close so the
 // island reads identically to the CMS card.
 
-import { CAI_BANDS, bandFor, markerFor } from "./cai.js";
+import { CAI_BANDS, bandFor, markerFor, caiText, caiTenths, caiChange, caiMove } from "./cai.js";
 import { escapeHtml } from "./tokens.js";
 
 // A monotonically increasing id source so each sparkline's gradient is unique
@@ -31,7 +31,7 @@ export function ladderHtml(score, { variant = "diamond", caps = false, className
   } else {
     marker =
       `<div class="cai-mk cai-pin" style="left:${left}">` +
-      `<span class="cai-pin-badge">${Math.round(score)}</span>` +
+      `<span class="cai-pin-badge">${caiText(score)}</span>` +
       `<span class="cai-pin-line"></span>` +
       `<span class="cai-pin-foot"></span></div>`;
   }
@@ -42,7 +42,7 @@ export function ladderHtml(score, { variant = "diamond", caps = false, className
     "cai-ladder" + (caps ? "" : " compact") + (className ? ` ${className}` : "");
   return (
     `<div class="${cls}">` +
-    `<div class="cai-rail" role="img" aria-label="${Math.round(score)} of 100 on a fixed worst-to-best scale">` +
+    `<div class="cai-rail" role="img" aria-label="${caiText(score)} of 100 on a fixed worst-to-best scale">` +
     `<div class="cai-segs">${segs}</div>${marker}</div>${capsHtml}</div>`
   );
 }
@@ -51,12 +51,13 @@ export function ladderHtml(score, { variant = "diamond", caps = false, className
 function trendText(series) {
   const first = series[0];
   const last = series[series.length - 1];
-  const delta = Math.round(last) - Math.round(first);
+  // One decimal, read off the shown figures (ADR-0027): a 0.4 rise is "up 0.4", and only the same figure is steady.
+  const move = caiMove(first, last);
   const dir =
-    delta >= 1
-      ? `improving (up ${delta})`
-      : delta <= -1
-        ? `declining (down ${-delta})`
+    move === "up"
+      ? `improving (up ${caiChange(first, last)})`
+      : move === "down"
+        ? `declining (down ${caiChange(first, last)})`
         : "steady";
   return `Trend: ${dir} over the last ${series.length} scans.`;
 }
@@ -138,7 +139,7 @@ export function scoreCardBodyHtml(data) {
     Number.isFinite(Number(data.arcFirst)) &&
     Number.isFinite(Number(data.arcBest));
   const delta = hasArc
-    ? Math.round(Number(data.arcBest)) - Math.round(Number(data.arcFirst))
+    ? caiTenths(Number(data.arcBest)) - caiTenths(Number(data.arcFirst))
     : 0;
   const lenses = (data.lenses || []).filter((l) => l && l.label);
   const rows = (data.rows || []).filter((r) => r && r.label);
@@ -152,17 +153,17 @@ export function scoreCardBodyHtml(data) {
     `</span><span class="cai-chip band-${b.key}">${escapeHtml(b.label)}</span></div>`;
   h +=
     `<div class="cai-scoreline"><span class="cai-cai">CAI</span>` +
-    `<span class="cai-score ink-${b.key}">${Math.round(score)}</span>` +
+    `<span class="cai-score ink-${b.key}">${caiText(score)}</span>` +
     `<span class="cai-unit"> / 100</span></div>`;
   h += ladderHtml(score, { variant: "diamond" });
   if (series) h += sparkHtml(series);
   if (hasArc) {
     h +=
       `<div class="cai-arc">` +
-      `<span class="cai-arc-from">${Math.round(Number(data.arcFirst))}</span>` +
+      `<span class="cai-arc-from">${caiText(data.arcFirst)}</span>` +
       `<span class="cai-arc-arrow" aria-hidden="true">→</span>` +
-      `<span class="cai-arc-to ink-${b.key}">${Math.round(Number(data.arcBest))}</span>` +
-      (delta >= 1 ? `<span class="cai-arc-up">↑ +${delta}</span>` : "") +
+      `<span class="cai-arc-to ink-${b.key}">${caiText(data.arcBest)}</span>` +
+      (delta >= 0.05 ? `<span class="cai-arc-up">↑ +${caiChange(data.arcFirst, data.arcBest)}</span>` : "") +
       `</div>`;
   }
   if (lenses.length > 0) {
@@ -179,7 +180,7 @@ export function scoreCardBodyHtml(data) {
       if (v == null || !lb) {
         h += `<span class="cai-lens-num cai-muted">—</span>`;
       } else {
-        h += `<span class="cai-lens-num ink-${lb.key}">${Math.round(v)}</span>`;
+        h += `<span class="cai-lens-num ink-${lb.key}">${caiText(v)}</span>`;
       }
       h += `</div>`;
     }

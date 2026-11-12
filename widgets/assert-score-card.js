@@ -102,6 +102,15 @@ const number = (value) => {
   return Number.isNaN(n) || n < 0 ? 0 : n;
 };
 
+// A CAI score as the product writes it: one decimal, always, rounded half to even (ADR-0027 in kennel.canine.dev),
+// so this example card reads 78.0 where the product's own card reads 78.0, never 78.
+const cai = (score) => {
+  const scaled = score * 10;
+  const floor = Math.floor(scaled);
+  const tenths = (scaled - floor === 0.5 ? (floor % 2 === 0 ? floor : floor + 1) : Math.round(scaled)) / 10;
+  return (tenths === 0 ? 0 : tenths).toFixed(1);
+};
+
 const parseList = (value) => {
   try {
     const items = JSON.parse(value ?? '[]');
@@ -175,7 +184,7 @@ customElements.define('assert-score-card', class extends HTMLElement {
     const repo = text('repo') || 'your-product';
     const label = text('example-label') || 'Example';
     const score = number(text('score'));
-    const shown = String(Math.round(score));
+    const shown = cai(score);
 
     const card = el('div', 'asc-card');
     card.setAttribute('role', 'group');
@@ -217,7 +226,7 @@ customElements.define('assert-score-card', class extends HTMLElement {
       const spark = el('div', 'asc-spark');
       spark.append(sparkline(series));
       const trend = el('p', 'asc-trend');
-      const arc = el('span', 'asc-arc', `${Math.round(series[0])} → `);
+      const arc = el('span', 'asc-arc', `${cai(series[0])} → `);
       arc.append(el('strong', '', shown));
       trend.append(arc, el('span', 'asc-note', text('trend-note')));
       card.append(spark, trend);
@@ -237,7 +246,7 @@ customElements.define('assert-score-card', class extends HTMLElement {
         fill.style.width = `${Math.min(value, 100)}%`;
         bar.append(fill);
         barCell.append(bar);
-        tr.append(th, barCell, el('td', 'asc-value', String(Math.round(value))));
+        tr.append(th, barCell, el('td', 'asc-value', cai(value)));
         return tr;
       })));
     }

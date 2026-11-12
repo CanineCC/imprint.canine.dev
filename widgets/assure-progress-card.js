@@ -106,6 +106,15 @@ const number = (value) => {
   return Number.isNaN(n) || n < 0 ? 0 : n;
 };
 
+// A CAI score as the product writes it: one decimal, always, rounded half to even (ADR-0027 in kennel.canine.dev),
+// so this example card reads 78.0 where the product's own card reads 78.0, never 78.
+const cai = (score) => {
+  const scaled = score * 10;
+  const floor = Math.floor(scaled);
+  const tenths = (scaled - floor === 0.5 ? (floor % 2 === 0 ? floor : floor + 1) : Math.round(scaled)) / 10;
+  return (tenths === 0 ? 0 : tenths).toFixed(1);
+};
+
 const parseList = (value) => {
   try {
     const items = JSON.parse(value ?? '[]');
@@ -192,7 +201,7 @@ customElements.define('assure-progress-card', class extends HTMLElement {
     const label = text('example-label') || words.example;
     const bandKey = BAND_KEYS.includes(text('band-key')) ? text('band-key') : 'healthy';
     const score = number(text('score'));
-    const shown = String(Math.round(score));
+    const shown = cai(score);
 
     const card = el('div', 'ip-stack ip-survey ip-survey-detail');
     card.setAttribute('role', 'group');
@@ -235,7 +244,7 @@ customElements.define('assure-progress-card', class extends HTMLElement {
       const arrow = el('span', 'ip-trend-arrow', '→');
       arrow.setAttribute('aria-hidden', 'true');
       trend.append(
-        el('span', 'ip-trend-from', String(Math.round(series[0]))),
+        el('span', 'ip-trend-from', cai(series[0])),
         arrow,
         el('span', `ip-trend-to ink-${bandKey}`, shown),
         el('span', 'ip-trend-note', text('trend-note')),
@@ -258,7 +267,7 @@ customElements.define('assure-progress-card', class extends HTMLElement {
         fill.style.width = `${Math.min(value, 100)}%`;
         bar.append(fill);
         barCell.append(bar);
-        row.append(th, barCell, el('td', `ip-lens-value ink-${key}`, String(Math.round(value))));
+        row.append(th, barCell, el('td', `ip-lens-value ink-${key}`, cai(value)));
         return row;
       })));
     }

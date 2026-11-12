@@ -12,6 +12,35 @@ export const CAI_BANDS = [
   { label: "Exemplary", key: "exemplary", floor: 90 },
 ];
 
+/**
+ * A CAI score as the product writes it (owner, 12 November 2026; ADR-0027 in kennel.canine.dev): one decimal,
+ * always — "97.6", and "98.0" when it lands on a whole number — rounded half to even as the CAI standard states
+ * (§7), the same tenth TemplateJson.Cai and the app write. Never "-0.0"; a value that is not a number is "—".
+ */
+export function caiText(score) {
+  const n = Number(score);
+  return Number.isFinite(n) ? caiTenths(n).toFixed(1) : "—";
+}
+
+/** The shown tenth of a score as a number: half to even on the scaled value, as .NET's Math.Round(x, 1) does. */
+export function caiTenths(score) {
+  const scaled = Number(score) * 10;
+  const floor = Math.floor(scaled);
+  const tenths = (scaled - floor === 0.5 ? (floor % 2 === 0 ? floor : floor + 1) : Math.round(scaled)) / 10;
+  return tenths === 0 ? 0 : tenths;
+}
+
+/** The size of a change between two scores as the reader sees them: the difference of the two shown figures. */
+export function caiChange(from, to) {
+  return Math.abs(caiTenths(to) - caiTenths(from)).toFixed(1);
+}
+
+/** "up", "down" or "same", read off the two shown figures, so a move that shows as 0.0 has no direction. */
+export function caiMove(from, to) {
+  const d = caiTenths(to) - caiTenths(from);
+  return Math.abs(d) < 0.05 ? "same" : d > 0 ? "up" : "down";
+}
+
 /** The band for a 0–100 score via the parked cutlines (CaiBands.FromScore). */
 export function bandFor(score) {
   return score >= 90

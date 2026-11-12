@@ -80,7 +80,7 @@ public static class ScoreVisuals
     public static string ScoreLine(double score, string? key, string style) =>
         "<p class=\"ip-cai\"><span class=\"ip-cai-kicker\">CAI</span>"
         + "<span class=\"ip-cai-score" + (key is not null ? $" ink-{key}" : "") + "\"" + style + ">"
-        + Esc(Cai(score)) + "</span><span class=\"ip-cai-unit\">/ 100</span></p>";
+        + Esc(CaiScoreText.Shown(score)) + "</span><span class=\"ip-cai-unit\">/ 100</span></p>";
 
     /// <summary>
     /// The band table: the subject's own, or the context's, or none.
@@ -114,7 +114,7 @@ public static class ScoreVisuals
         var pin = Math.Clamp(score, 0, 100);
         // ★ THE LABEL SAYS WHAT THE PAGE SAYS. It read "97.6 out of 100" beside a printed 98, so a
         //   screen-reader user and a sighted one were given two different numbers for one score.
-        var label = $"{Cai(score)} out of 100";
+        var label = $"{CaiScoreText.Shown(score)} out of 100";
 
         var bands = Array(root, "bands")
             .Select(b => (Key: Str(b, "key"), Floor: Number(b, "floor")))
@@ -183,7 +183,7 @@ public static class ScoreVisuals
                 .Append(Esc(Score(v))).Append('%')
                 .Append(key is null && hex is not null ? $";background:{hex}" : "").Append("\"></span></span></td>")
                 .Append("<td class=\"ip-lens-value").Append(key is not null ? $" ink-{key}" : "")
-                .Append("\">").Append(Esc(Cai(value))).Append("</td></tr>");
+                .Append("\">").Append(Esc(CaiScoreText.Shown(value))).Append("</td></tr>");
         }
 
         return html.Append("</tbody></table>").ToString();
@@ -193,7 +193,9 @@ public static class ScoreVisuals
     /// <remarks>
     /// ★ THE DELTA IS THE DIFFERENCE BETWEEN THE TWO NUMBERS THE READER CAN SEE. Taking it from the
     /// raw values printed "62 → 98 … up 35.6", which is an arithmetic error to anyone who checks it —
-    /// and the arc is printed precisely so that it will be checked.
+    /// and the arc is printed precisely so that it will be checked. With one decimal on both figures
+    /// (ADR-0027) it reads "62.0 → 97.6 … up 35.6", and a move that shows as 0.0 is "unchanged",
+    /// never "up 0.0".
     /// </remarks>
     public static string Trend(JsonElement item, double score, string? key)
     {
@@ -204,14 +206,15 @@ public static class ScoreVisuals
             return "";
         }
 
-        var delta = Math.Round(score, MidpointRounding.AwayFromZero) - Math.Round(first, MidpointRounding.AwayFromZero);
-        return "<p class=\"ip-trend\"><span class=\"ip-trend-from\">" + Esc(Cai(first))
+        var delta = CaiScoreText.Tenths(score) - CaiScoreText.Tenths(first);
+        var note = Math.Abs(delta) < 0.05
+            ? $"unchanged over {Group(scans)} scans"
+            : $"{(delta > 0 ? "up" : "down")} {CaiScoreText.Change(first, score)} over {Group(scans)} scans";
+        return "<p class=\"ip-trend\"><span class=\"ip-trend-from\">" + Esc(CaiScoreText.Shown(first))
              + "</span><span class=\"ip-trend-arrow\" aria-hidden=\"true\">→</span>"
              + "<span class=\"ip-trend-to" + (key is not null ? " ink-" + key : "") + "\">"
-             + Esc(Cai(score)) + "</span><span class=\"ip-trend-note\">"
-             + Esc(delta >= 0
-                 ? $"up {Cai(delta)} over {Group(scans)} scans"
-                 : $"down {Cai(Math.Abs(delta))} over {Group(scans)} scans")
+             + Esc(CaiScoreText.Shown(score)) + "</span><span class=\"ip-trend-note\">"
+             + Esc(note)
              + "</span></p>";
     }
 

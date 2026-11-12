@@ -26,7 +26,7 @@ import {
   escapeHtml,
 } from "./tokens.js";
 import { SCORECARD_CSS } from "./scorecard.js";
-import { CAI_BANDS, bandFor } from "./cai.js";
+import { CAI_BANDS, bandFor, caiText } from "./cai.js";
 
 const CSS = TOKENS_CSS + BASE_CSS + SECTION_HEAD_CSS + SCORECARD_CSS + `
 .mk-list { max-width: 60rem; margin: 0 auto; }
@@ -233,7 +233,7 @@ customElements.define(
         html += `<span class="mk-card-name">`;
         if (r.owner) { html += `<span class="mk-card-owner">${escapeHtml(r.owner)}/</span>`; }
         html += `${escapeHtml(r.name)}</span>`;
-        html += `<span class="mk-card-score ink-${band.key}">${score.toFixed(1)}</span>`;
+        html += `<span class="mk-card-score ink-${band.key}">${caiText(score)}</span>`;
         html += `</span>`;
         // A closed-source entry is marked IN THE LIST, so a reader can tell the two apart while scanning rather
         // than only after clicking through. It is a fact about what they can go and check, not a quality mark:

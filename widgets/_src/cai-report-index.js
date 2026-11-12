@@ -13,6 +13,7 @@
 
 import { CaiIsland, TOKENS_CSS, BASE_CSS, sectionHeadHtml, SECTION_HEAD_CSS } from "./tokens.js";
 import { fetchGallery, reportUrl } from "./live.js";
+import { caiText } from "./cai.js";
 
 const CSS =
   TOKENS_CSS +
@@ -173,7 +174,7 @@ class CaiReportIndex extends CaiIsland {
         return `<tr>
             <td><span class="mk-repo">${esc(c.display || c.name)}</span><br><span class="mk-owner">${esc(c.owner)}/${esc(c.name)}</span></td>
             <td>${langHtml}</td>
-            <td class="mk-cai">${esc((c.headlineScore ?? 0).toFixed(1))}</td>
+            <td class="mk-cai">${esc(caiText(c.headlineScore ?? 0))}</td>
             <td>${esc(c.band ?? "")}</td>
             <td>${href ? `<a href="${esc(href)}" target="_blank" rel="noopener">Read the survey →</a>` : ""}</td>
           </tr>`;
