@@ -59,7 +59,7 @@ public static class ProductPricingTemplate
                 html.Append("<div class=\"ip-prose\"><p>").Append(Esc(tagline)).Append("</p></div>");
             }
 
-            AppendList(html, plan, "features");
+            // No feature list: the payload's features are the catalogue's module names, and the page says what each plan includes.
             html.Append("</div>");
         }
 
@@ -182,28 +182,6 @@ public static class ProductPricingTemplate
         {
             return null;
         }
-    }
-
-    private static void AppendList(StringBuilder html, JsonElement element, string property)
-    {
-        if (!element.TryGetProperty(property, out var list) || list.ValueKind != JsonValueKind.Array)
-        {
-            return;
-        }
-
-        var items = list.EnumerateArray().Select(static i => i.ValueKind == JsonValueKind.String ? i.GetString() ?? "" : "").Where(static i => i.Length > 0).ToList();
-        if (items.Count == 0)
-        {
-            return;
-        }
-
-        html.Append("<div class=\"ip-prose\"><ul>");
-        foreach (var item in items)
-        {
-            html.Append("<li>").Append(Esc(item)).Append("</li>");
-        }
-
-        html.Append("</ul></div>");
     }
 
     private static string Str(JsonElement e, string name) =>
