@@ -1,4 +1,4 @@
-var b=`
+var p=`
 :host {
   /* neutrals \u2014 dark "graphite" */
   --bg: #15191e;
@@ -106,7 +106,21 @@ var b=`
   --accent-strong: #1c4f41;
   --on-accent: #ffffff;
 }
-`;function d(r){return String(r??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function f(r){if(r==null||r==="")return"";let e=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,t="",n=0,a;for(;(a=e.exec(r))!==null;){a.index>n&&(t+=d(r.slice(n,a.index)));let s=a[0];if(s.startsWith("**"))t+=`<strong>${d(s.slice(2,-2))}</strong>`;else if(s.startsWith("`"))t+=`<code>${d(s.slice(1,-1))}</code>`;else{let c=/^\[([^\]]+)\]\(([^)]+)\)$/.exec(s);c?t+=`<a href="${d(c[2])}">${d(c[1])}</a>`:t+=d(s)}n=a.index+s.length}return n<r.length&&(t+=d(r.slice(n))),t}var p=`
+:host([data-brand="assert"]) {
+  --accent: #b6b6d6;
+  --accent-ink: #cbcbe5;
+  --accent-wash: #262635;
+  --accent-strong: #dfdff1;
+  --on-accent: #15191e;
+}
+:host([data-brand="assert"][data-theme="light"]) {
+  --accent: #56557a;
+  --accent-ink: #444367;
+  --accent-wash: #efeff9;
+  --accent-strong: #3d3b5d;
+  --on-accent: #ffffff;
+}
+`;function d(a){return String(a??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function b(a){if(a==null||a==="")return"";let e=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,t="",n=0,r;for(;(r=e.exec(a))!==null;){r.index>n&&(t+=d(a.slice(n,r.index)));let i=r[0];if(i.startsWith("**"))t+=`<strong>${d(i.slice(2,-2))}</strong>`;else if(i.startsWith("`"))t+=`<code>${d(i.slice(1,-1))}</code>`;else{let c=/^\[([^\]]+)\]\(([^)]+)\)$/.exec(i);c?t+=`<a href="${d(c[2])}">${d(c[1])}</a>`:t+=d(i)}n=r.index+i.length}return n<a.length&&(t+=d(a.slice(n))),t}var u=`
 :host { display: block; color: var(--ink); font: 400 var(--fs-md)/1.5 var(--font-ui); }
 * { box-sizing: border-box; }
 a { color: var(--accent-ink); text-decoration: none; }
@@ -114,12 +128,12 @@ a:hover { text-decoration: underline; }
 code { background: var(--surface-2); padding: 1px 5px; border-radius: var(--r-sm); font: 500 var(--fs-xs) var(--font-mono); }
 strong { font-weight: 600; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-`;function u(r){let e=r.getAttribute("kicker"),t=r.getAttribute("heading"),n=r.getAttribute("lede");if(!e&&!t&&!n)return"";let a='<div class="mk-section-head">';return e&&(a+=`<span class="mk-kicker">${d(e)}</span>`),t&&(a+=`<h2>${f(t)}</h2>`),n&&(a+=`<p>${f(n)}</p>`),a+="</div>",a}var g=`
+`;function g(a){let e=a.getAttribute("kicker"),t=a.getAttribute("heading"),n=a.getAttribute("lede");if(!e&&!t&&!n)return"";let r='<div class="mk-section-head">';return e&&(r+=`<span class="mk-kicker">${d(e)}</span>`),t&&(r+=`<h2>${b(t)}</h2>`),n&&(r+=`<p>${b(n)}</p>`),r+="</div>",r}var x=`
 .mk-section-head { margin-bottom: 1.5rem; }
 .mk-section-head h2 { font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.1rem); line-height: 1.2; margin: 0.3rem 0 0; color: var(--heading); font-weight: 600; letter-spacing: -0.01em; }
 .mk-section-head p { color: var(--muted); font-size: var(--fs-lg); line-height: 1.6; margin: 0.55rem 0 0; }
 .mk-kicker { display: inline-flex; align-items: center; gap: 0.55rem; font-size: var(--fs-2xs); font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
-`,h=class extends HTMLElement{#t;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#a(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#t=new MutationObserver(()=>{let e=this.dataset.theme;this.#a(),this.dataset.theme!==e&&this.render(this.shadowRoot)}),this.#t.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#t?.disconnect()}#a(){let e=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=e;let t=(this.getAttribute("brand")||"").trim().toLowerCase();t==="assay"||t==="cai"||t==="watchdog"?this.dataset.brand=t:delete this.dataset.brand}json(e,t){let n=this.getAttribute(e);if(n==null||n.trim()==="")return t;try{return JSON.parse(n)}catch{return t}}};var x=b+p+g+`
+`,h=class extends HTMLElement{#t;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#a(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#t=new MutationObserver(()=>{let e=this.dataset.theme;this.#a(),this.dataset.theme!==e&&this.render(this.shadowRoot)}),this.#t.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#t?.disconnect()}#a(){let e=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=e;let t=(this.getAttribute("brand")||"").trim().toLowerCase();t==="assay"||t==="cai"||t==="watchdog"||t==="assert"?this.dataset.brand=t:delete this.dataset.brand}json(e,t){let n=this.getAttribute(e);if(n==null||n.trim()==="")return t;try{return JSON.parse(n)}catch{return t}}};function f(a){let e=Number(a);return Number.isFinite(e)?v(y(e).toFixed(1)):"\u2014"}function k(){return typeof document<"u"&&/^da(-|$)/i.test(document.documentElement?.lang??"")}function v(a){return k()?a.replace(".",","):a}function y(a){let e=Number(a)*10,t=Math.floor(e),n=(e-t===.5?t%2===0?t:t+1:Math.round(e))/10;return n===0?0:n}var w=p+u+x+`
 .mk-calc { display: grid; gap: 0.9rem; }
 .mk-calc textarea {
   width: 100%; min-height: 11rem; padding: 0.7rem 0.8rem; border-radius: 8px;
@@ -147,7 +161,7 @@ strong { font-weight: 600; }
 .mk-note.bad { border-left-color: var(--crit, #d05353); }
 .mk-note h4 { margin: 0 0 0.3rem; font-size: 0.95rem; }
 .mk-note p { margin: 0; color: var(--muted); font-size: 0.88rem; }
-`,k=`{
+`,S=`{
   "rubricVersion": "rubric-2026.08.15",
   "qualityBar": "production",
   "analyzableProjects": 3,
@@ -190,8 +204,8 @@ strong { font-weight: 600; }
       "confidence": 0.9
     }
   ]
-}`,o=r=>String(r??"").replace(/[<>&"]/g,e=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"})[e]),m=class extends h{static get observedAttributes(){return["api-base","kicker","heading","lede","brand"]}#t(){let e=u(this);return e||'<div class="mk-section-head"><h2>Score an evidence bundle</h2><p>Paste an evidence bundle \u2014 the measured dimensions \u2014 and the open scorer folds them into the lens scores and the CAI, worst-first, in the open. If the bundle also states a published headline, it is checked against it.</p></div>'}render(e){e.innerHTML=`
-      <style>${x}</style>
+}`,s=a=>String(a??"").replace(/[<>&"]/g,e=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"})[e]),m=class extends h{static get observedAttributes(){return["api-base","kicker","heading","lede","brand"]}#t(){let e=g(this);return e||'<div class="mk-section-head"><h2>Score an evidence bundle</h2><p>Paste an evidence bundle \u2014 the measured dimensions \u2014 and the open scorer folds them into the lens scores and the CAI, worst-first, in the open. If the bundle also states a published headline, it is checked against it.</p></div>'}render(e){e.innerHTML=`
+      <style>${w}</style>
       ${this.#t()}
       <div class="mk-calc">
         <label class="mk-hint" for="ev">Evidence bundle (JSON) \u2014 dimensions, each scored 0\u201310</label>
@@ -203,19 +217,19 @@ strong { font-weight: 600; }
         </div>
         <div id="out"></div>
       </div>
-    `,e.getElementById("go").addEventListener("click",()=>this.#a(e)),e.getElementById("sample").addEventListener("click",()=>{e.getElementById("ev").value=k,e.getElementById("out").innerHTML='<p class="mk-hint">Sample bundle loaded \u2014 a labelled example, not a real survey. Press \u201CCompute the CAI\u201D.</p>'})}async#a(e){let t=this.apiBase().replace(/\/$/,""),n=e.getElementById("ev").value.trim(),a=e.getElementById("out"),s=e.getElementById("status"),c=e.getElementById("go");if(!n){a.innerHTML=this.#e("bad","Nothing to score","Paste an evidence bundle, or load the sample.");return}if(!t){a.innerHTML=this.#e("bad","Not configured","This widget has no API base set, so it cannot score anything.");return}c.disabled=!0,s.textContent="Folding\u2026",a.innerHTML="";try{let i=await fetch(`${t}/api/score`,{method:"POST",headers:{"Content-Type":"application/json"},body:n}),l=await i.json().catch(()=>null);if(i.status===429){a.innerHTML=this.#e("bad","Rate limited","The open API is busy right now \u2014 wait a moment and try again.");return}if(!i.ok||!l){a.innerHTML=this.#e("bad","That bundle could not be scored",l&&(l.error||l.title)||"It could not be read as an evidence bundle.");return}a.innerHTML=this.#n(l)}catch{a.innerHTML=this.#e("bad","Could not reach the scorer","The standard's API did not respond. Nothing about your bundle is implied.")}finally{c.disabled=!1,s.textContent=""}}#n(e){let t=typeof e.headline=="number"?e.headline:e.cai,a=(Array.isArray(e.lenses)?e.lenses:[]).slice().sort((i,l)=>(l.contribution??0)-(i.contribution??0)).map(i=>`<tr>
-            <td>${o(i.lens)}</td>
-            <td class="n">${o((i.score??0).toFixed(1))}</td>
-            <td>${o(i.band??"")}</td>
-            <td class="n">${o((i.weight??0).toFixed(3))}</td>
-          </tr>`).join(""),s=a?`<table class="mk-lenses">
+    `,e.getElementById("go").addEventListener("click",()=>this.#a(e)),e.getElementById("sample").addEventListener("click",()=>{e.getElementById("ev").value=S,e.getElementById("out").innerHTML='<p class="mk-hint">Sample bundle loaded \u2014 a labelled example, not a real survey. Press \u201CCompute the CAI\u201D.</p>'})}async#a(e){let t=this.apiBase().replace(/\/$/,""),n=e.getElementById("ev").value.trim(),r=e.getElementById("out"),i=e.getElementById("status"),c=e.getElementById("go");if(!n){r.innerHTML=this.#e("bad","Nothing to score","Paste an evidence bundle, or load the sample.");return}if(!t){r.innerHTML=this.#e("bad","Not configured","This widget has no API base set, so it cannot score anything.");return}c.disabled=!0,i.textContent="Folding\u2026",r.innerHTML="";try{let o=await fetch(`${t}/api/score`,{method:"POST",headers:{"Content-Type":"application/json"},body:n}),l=await o.json().catch(()=>null);if(o.status===429){r.innerHTML=this.#e("bad","Rate limited","The open API is busy right now \u2014 wait a moment and try again.");return}if(!o.ok||!l){r.innerHTML=this.#e("bad","That bundle could not be scored",l&&(l.error||l.title)||"It could not be read as an evidence bundle.");return}r.innerHTML=this.#n(l)}catch{r.innerHTML=this.#e("bad","Could not reach the scorer","The standard's API did not respond. Nothing about your bundle is implied.")}finally{c.disabled=!1,i.textContent=""}}#n(e){let t=typeof e.headline=="number"?e.headline:e.cai,r=(Array.isArray(e.lenses)?e.lenses:[]).slice().sort((o,l)=>(l.contribution??0)-(o.contribution??0)).map(o=>`<tr>
+            <td>${s(o.lens)}</td>
+            <td class="n">${s(f(o.score??0))}</td>
+            <td>${s(o.band??"")}</td>
+            <td class="n">${s((o.weight??0).toFixed(3))}</td>
+          </tr>`).join(""),i=r?`<table class="mk-lenses">
            <thead><tr><th>Lens</th><th class="n">Score</th><th>Band</th><th class="n">Weight</th></tr></thead>
-           <tbody>${a}</tbody>
-         </table>`:"",c="";if(e.verification&&typeof e.verification.reproduced=="boolean"){let i=e.verification;c=i.reproduced?this.#e("ok","\u2713 Reproduced",`The published headline ${o((i.claimed??0).toFixed(1))} follows from this evidence.`):this.#e("bad","\u2717 Does not reproduce",`This evidence folds to ${o((i.computed??0).toFixed(2))}, but the bundle claims ${o((i.claimed??0).toFixed(2))}. That is falsifiable proof the published number does not follow from the evidence.`)}return`
+           <tbody>${r}</tbody>
+         </table>`:"",c="";if(e.verification&&typeof e.verification.reproduced=="boolean"){let o=e.verification;c=o.reproduced?this.#e("ok","\u2713 Reproduced",`The published headline ${s(f(o.claimed??0))} follows from this evidence.`):this.#e("bad","\u2717 Does not reproduce",`This evidence folds to ${s((o.computed??0).toFixed(2))}, but the bundle claims ${s((o.claimed??0).toFixed(2))}. That is falsifiable proof the published number does not follow from the evidence.`)}return`
       <div class="mk-head">
-        <span class="mk-cai">${o((t??0).toFixed(1))}</span>
-        <span class="mk-band">${o(e.band??"")}</span>
+        <span class="mk-cai">${s(f(t??0))}</span>
+        <span class="mk-band">${s(e.band??"")}</span>
       </div>
-      <p class="mk-hint">The headline is the worst-first ordered-weighted average of the lens scores${e.rubricVersion?` under <code>${o(e.rubricVersion)}</code>`:""}.</p>
-      ${s}
-      ${c}`}#e(e,t,n){return`<div class="mk-note ${e}"><h4>${o(t)}</h4><p>${o(n)}</p></div>`}};customElements.get("cai-calculator")||customElements.define("cai-calculator",m);
+      <p class="mk-hint">The headline is the worst-first ordered-weighted average of the lens scores${e.rubricVersion?` under <code>${s(e.rubricVersion)}</code>`:""}.</p>
+      ${i}
+      ${c}`}#e(e,t,n){return`<div class="mk-note ${e}"><h4>${s(t)}</h4><p>${s(n)}</p></div>`}};customElements.get("cai-calculator")||customElements.define("cai-calculator",m);

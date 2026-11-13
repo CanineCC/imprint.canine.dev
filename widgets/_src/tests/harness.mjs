@@ -69,9 +69,10 @@ export async function serveWidgets() {
  * Render one or more islands on a page of a given width and hand the caller the page.
  *
  * `elements` is a list of { tag, attrs }. The page carries the same 1120px content column the
- * corpus sheet uses, so a width measured here is the width a reader gets.
+ * corpus sheet uses, so a width measured here is the width a reader gets. `lang` sets the page's
+ * language (`<html lang>`), which a CAI score reads for its decimal sign (ADR-0028: a comma in Danish).
  */
-export async function withIslands(elements, { width = 1280, height = 900, theme = "light" } = {}) {
+export async function withIslands(elements, { width = 1280, height = 900, theme = "light", lang = "" } = {}) {
   const { chromium } = resolvePlaywright();
   const site = await serveWidgets();
   const browser = await chromium.launch();
@@ -88,7 +89,7 @@ export async function withIslands(elements, { width = 1280, height = 900, theme 
 
   const tags = [...new Set(elements.map((e) => e.tag))];
   await page.setContent(
-    `<!doctype html><html data-theme="${theme}"><head><style>
+    `<!doctype html><html data-theme="${theme}"${lang ? ` lang="${lang}"` : ""}><head><style>
        html, body { margin: 0; }
        .column { max-width: 1120px; margin: 0 auto; padding: 24px 16px; }
      </style></head><body><div class="column">${markup}</div>

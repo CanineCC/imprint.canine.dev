@@ -1,4 +1,4 @@
-var m=`
+var h=`
 :host {
   /* neutrals \u2014 dark "graphite" */
   --bg: #15191e;
@@ -106,7 +106,21 @@ var m=`
   --accent-strong: #1c4f41;
   --on-accent: #ffffff;
 }
-`;function o(t){return String(t??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function l(t){if(t==null||t==="")return"";let r=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,e="",a=0,n;for(;(n=r.exec(t))!==null;){n.index>a&&(e+=o(t.slice(a,n.index)));let i=n[0];if(i.startsWith("**"))e+=`<strong>${o(i.slice(2,-2))}</strong>`;else if(i.startsWith("`"))e+=`<code>${o(i.slice(1,-1))}</code>`;else{let s=/^\[([^\]]+)\]\(([^)]+)\)$/.exec(i);s?e+=`<a href="${o(s[2])}">${o(s[1])}</a>`:e+=o(i)}a=n.index+i.length}return a<t.length&&(e+=o(t.slice(a))),e}var h=`
+:host([data-brand="assert"]) {
+  --accent: #b6b6d6;
+  --accent-ink: #cbcbe5;
+  --accent-wash: #262635;
+  --accent-strong: #dfdff1;
+  --on-accent: #15191e;
+}
+:host([data-brand="assert"][data-theme="light"]) {
+  --accent: #56557a;
+  --accent-ink: #444367;
+  --accent-wash: #efeff9;
+  --accent-strong: #3d3b5d;
+  --on-accent: #ffffff;
+}
+`;function o(e){return String(e??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function l(e){if(e==null||e==="")return"";let n=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,t="",a=0,r;for(;(r=n.exec(e))!==null;){r.index>a&&(t+=o(e.slice(a,r.index)));let i=r[0];if(i.startsWith("**"))t+=`<strong>${o(i.slice(2,-2))}</strong>`;else if(i.startsWith("`"))t+=`<code>${o(i.slice(1,-1))}</code>`;else{let s=/^\[([^\]]+)\]\(([^)]+)\)$/.exec(i);s?t+=`<a href="${o(s[2])}">${o(s[1])}</a>`:t+=o(i)}a=r.index+i.length}return a<e.length&&(t+=o(e.slice(a))),t}var u=`
 :host { display: block; color: var(--ink); font: 400 var(--fs-md)/1.5 var(--font-ui); }
 * { box-sizing: border-box; }
 a { color: var(--accent-ink); text-decoration: none; }
@@ -114,12 +128,12 @@ a:hover { text-decoration: underline; }
 code { background: var(--surface-2); padding: 1px 5px; border-radius: var(--r-sm); font: 500 var(--fs-xs) var(--font-mono); }
 strong { font-weight: 600; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-`;function u(t){let r=t.getAttribute("kicker"),e=t.getAttribute("heading"),a=t.getAttribute("lede");if(!r&&!e&&!a)return"";let n='<div class="mk-section-head">';return r&&(n+=`<span class="mk-kicker">${o(r)}</span>`),e&&(n+=`<h2>${l(e)}</h2>`),a&&(n+=`<p>${l(a)}</p>`),n+="</div>",n}var b=`
+`;function b(e){let n=e.getAttribute("kicker"),t=e.getAttribute("heading"),a=e.getAttribute("lede");if(!n&&!t&&!a)return"";let r='<div class="mk-section-head">';return n&&(r+=`<span class="mk-kicker">${o(n)}</span>`),t&&(r+=`<h2>${l(t)}</h2>`),a&&(r+=`<p>${l(a)}</p>`),r+="</div>",r}var g=`
 .mk-section-head { margin-bottom: 1.5rem; }
 .mk-section-head h2 { font-size: clamp(1.5rem, 1.1rem + 1.4vw, 2.1rem); line-height: 1.2; margin: 0.3rem 0 0; color: var(--heading); font-weight: 600; letter-spacing: -0.01em; }
 .mk-section-head p { color: var(--muted); font-size: var(--fs-lg); line-height: 1.6; margin: 0.55rem 0 0; }
 .mk-kicker { display: inline-flex; align-items: center; gap: 0.55rem; font-size: var(--fs-2xs); font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
-`,d=class extends HTMLElement{#a;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#e(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#a=new MutationObserver(()=>{let r=this.dataset.theme;this.#e(),this.dataset.theme!==r&&this.render(this.shadowRoot)}),this.#a.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#a?.disconnect()}#e(){let r=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=r;let e=(this.getAttribute("brand")||"").trim().toLowerCase();e==="assay"||e==="cai"||e==="watchdog"?this.dataset.brand=e:delete this.dataset.brand}json(r,e){let a=this.getAttribute(r);if(a==null||a.trim()==="")return e;try{return JSON.parse(a)}catch{return e}}};var c=[{label:"Critical",key:"critical",floor:0},{label:"Weak",key:"poor",floor:25},{label:"Adequate",key:"fair",floor:50},{label:"Strong",key:"healthy",floor:70},{label:"Exemplary",key:"exemplary",floor:90}];function p(t){return t>=90?c[4]:t>=70?c[3]:t>=50?c[2]:t>=25?c[1]:c[0]}var g=`
+`,d=class extends HTMLElement{#a;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#e(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#a=new MutationObserver(()=>{let n=this.dataset.theme;this.#e(),this.dataset.theme!==n&&this.render(this.shadowRoot)}),this.#a.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#a?.disconnect()}#e(){let n=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=n;let t=(this.getAttribute("brand")||"").trim().toLowerCase();t==="assay"||t==="cai"||t==="watchdog"||t==="assert"?this.dataset.brand=t:delete this.dataset.brand}json(n,t){let a=this.getAttribute(n);if(a==null||a.trim()==="")return t;try{return JSON.parse(a)}catch{return t}}};var c=[{label:"Critical",key:"critical",floor:0},{label:"Weak",key:"poor",floor:25},{label:"Adequate",key:"fair",floor:50},{label:"Strong",key:"healthy",floor:70},{label:"Exemplary",key:"exemplary",floor:90}];function p(e){let n=Number(e);return Number.isFinite(n)?w(x(n).toFixed(1)):"\u2014"}function k(){return typeof document<"u"&&/^da(-|$)/i.test(document.documentElement?.lang??"")}function w(e){return k()?e.replace(".",","):e}function x(e){let n=Number(e)*10,t=Math.floor(n),a=(n-t===.5?t%2===0?t:t+1:Math.round(n))/10;return a===0?0:a}function f(e){return e>=90?c[4]:e>=70?c[3]:e>=50?c[2]:e>=25?c[1]:c[0]}var v=`
 .ink-exemplary { color: var(--band-exemplary-text); }
 .ink-healthy { color: var(--band-healthy-text); }
 .ink-fair { color: var(--band-fair-text); }
@@ -220,7 +234,7 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
 .cai-row:last-child { border-bottom: 0; }
 .cai-row b { color: var(--heading); font-weight: 600; text-align: right; }
 .cai-row .mono { font-family: var(--font-mono); font-size: var(--fs-xs); }
-`;var x=m+h+b+g+`
+`;var y=h+u+g+v+`
 .mk-gauges { max-width: 46rem; margin: 0 auto; display: grid; gap: 2px;
   border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--border); }
 .mk-gauge { background: var(--surface); padding: 13px 16px;
@@ -232,4 +246,4 @@ a.cai-card:hover { text-decoration: none; border-color: var(--accent-strong); }
 .mk-gauge-note { grid-column: 1 / -1; font-size: var(--fs-xs); color: var(--muted); line-height: 1.5; }
 .mk-gauges-foot { max-width: 46rem; margin: 0.9rem auto 0; font-size: var(--fs-xs);
   color: var(--muted); line-height: 1.6; }
-`;customElements.define("cai-lens-gauges",class extends d{render(t){let r=(this.json("lenses",[])||[]).filter(n=>n&&n.label),e=this.getAttribute("footnote"),a=`<style>${x}</style>`;if(a+=u(this),r.length===0){t.innerHTML=a;return}a+='<div class="mk-gauges">';for(let n of r){let i=n.value==null?null:Number(n.value),s=i!=null&&Number.isFinite(i)?i:null,f=s==null?null:p(s);a+='<div class="mk-gauge">',a+=`<span class="mk-gauge-name">${o(n.label)}</span>`,a+=s==null?'<span class="mk-gauge-num cai-muted">\u2014</span>':`<span class="mk-gauge-num ink-${f.key}">${s.toFixed(1)}</span>`,a+='<span class="cai-lens-bar">',s!=null&&(a+=`<span class="cai-lens-fill fill-${f.key}" style="width:${Math.max(2,Math.round(s))}%"></span>`),a+="</span>",n.note&&(a+=`<span class="mk-gauge-note">${l(String(n.note))}</span>`),a+="</div>"}a+="</div>",e&&(a+=`<p class="mk-gauges-foot">${l(e)}</p>`),t.innerHTML=a}});
+`;customElements.define("cai-lens-gauges",class extends d{render(e){let n=(this.json("lenses",[])||[]).filter(r=>r&&r.label),t=this.getAttribute("footnote"),a=`<style>${y}</style>`;if(a+=b(this),n.length===0){e.innerHTML=a;return}a+='<div class="mk-gauges">';for(let r of n){let i=r.value==null?null:Number(r.value),s=i!=null&&Number.isFinite(i)?i:null,m=s==null?null:f(s);a+='<div class="mk-gauge">',a+=`<span class="mk-gauge-name">${o(r.label)}</span>`,a+=s==null?'<span class="mk-gauge-num cai-muted">\u2014</span>':`<span class="mk-gauge-num ink-${m.key}">${p(s)}</span>`,a+='<span class="cai-lens-bar">',s!=null&&(a+=`<span class="cai-lens-fill fill-${m.key}" style="width:${Math.max(2,Math.round(s))}%"></span>`),a+="</span>",r.note&&(a+=`<span class="mk-gauge-note">${l(String(r.note))}</span>`),a+="</div>"}a+="</div>",t&&(a+=`<p class="mk-gauges-foot">${l(t)}</p>`),e.innerHTML=a}});

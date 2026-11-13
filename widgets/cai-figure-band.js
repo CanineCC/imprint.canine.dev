@@ -106,6 +106,20 @@ var b=`
   --accent-strong: #1c4f41;
   --on-accent: #ffffff;
 }
+:host([data-brand="assert"]) {
+  --accent: #b6b6d6;
+  --accent-ink: #cbcbe5;
+  --accent-wash: #262635;
+  --accent-strong: #dfdff1;
+  --on-accent: #15191e;
+}
+:host([data-brand="assert"][data-theme="light"]) {
+  --accent: #56557a;
+  --accent-ink: #444367;
+  --accent-wash: #efeff9;
+  --accent-strong: #3d3b5d;
+  --on-accent: #ffffff;
+}
 `;function a(o){return String(o??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function p(o){if(o==null||o==="")return"";let r=/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g,t="",n=0,d;for(;(d=r.exec(o))!==null;){d.index>n&&(t+=a(o.slice(n,d.index)));let s=d[0];if(s.startsWith("**"))t+=`<strong>${a(s.slice(2,-2))}</strong>`;else if(s.startsWith("`"))t+=`<code>${a(s.slice(1,-1))}</code>`;else{let c=/^\[([^\]]+)\]\(([^)]+)\)$/.exec(s);c?t+=`<a href="${a(c[2])}">${a(c[1])}</a>`:t+=a(s)}n=d.index+s.length}return n<o.length&&(t+=a(o.slice(n))),t}var g=`
 :host { display: block; color: var(--ink); font: 400 var(--fs-md)/1.5 var(--font-ui); }
 * { box-sizing: border-box; }
@@ -114,7 +128,7 @@ a:hover { text-decoration: underline; }
 code { background: var(--surface-2); padding: 1px 5px; border-radius: var(--r-sm); font: 500 var(--fs-xs) var(--font-mono); }
 strong { font-weight: 600; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-`;var f=class extends HTMLElement{#e;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#t(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#e=new MutationObserver(()=>{let r=this.dataset.theme;this.#t(),this.dataset.theme!==r&&this.render(this.shadowRoot)}),this.#e.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#e?.disconnect()}#t(){let r=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=r;let t=(this.getAttribute("brand")||"").trim().toLowerCase();t==="assay"||t==="cai"||t==="watchdog"?this.dataset.brand=t:delete this.dataset.brand}json(r,t){let n=this.getAttribute(r);if(n==null||n.trim()==="")return t;try{return JSON.parse(n)}catch{return t}}};var x=`
+`;var f=class extends HTMLElement{#e;connectedCallback(){this.shadowRoot||this.attachShadow({mode:"open"}),this.#t(),this.render(this.shadowRoot),typeof this.liveLoad=="function"&&Promise.resolve(this.liveLoad()).catch(()=>{}),this.#e=new MutationObserver(()=>{let r=this.dataset.theme;this.#t(),this.dataset.theme!==r&&this.render(this.shadowRoot)}),this.#e.observe(document.documentElement,{attributes:!0,attributeFilter:["data-theme"]})}apiBase(){return(this.getAttribute("api-base")||"").trim()}disconnectedCallback(){this.#e?.disconnect()}#t(){let r=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");this.dataset.theme=r;let t=(this.getAttribute("brand")||"").trim().toLowerCase();t==="assay"||t==="cai"||t==="watchdog"||t==="assert"?this.dataset.brand=t:delete this.dataset.brand}json(r,t){let n=this.getAttribute(r);if(n==null||n.trim()==="")return t;try{return JSON.parse(n)}catch{return t}}};var x=`
 .ink-exemplary { color: var(--band-exemplary-text); }
 .ink-healthy { color: var(--band-healthy-text); }
 .ink-fair { color: var(--band-fair-text); }
