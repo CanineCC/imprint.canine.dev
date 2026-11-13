@@ -71,7 +71,7 @@ internal static class TemplateJson
 
     /// <summary>A 0–100 figure that is not a score (a band line, a bar's width, a flex share), with at most one decimal and
     /// no trailing ".0" on a whole number.</summary>
-    /// <remarks>★★ A SCORE IS NOT WRITTEN HERE (owner, 12 November 2026; ADR-0027 in kennel.canine.dev). Two feeds once
+    /// <remarks>★★ A SCORE IS NOT WRITTEN HERE (owner, 12 November 2026; ADR-0028 in kennel.canine.dev). Two feeds once
     /// rounded differently and the same repository read 98 and 97.6 on one page: <c>/api/public/reports</c> carried
     /// <c>score: 98</c> where <c>/api/public/verdicts</c> carried <c>bestScore: 97.6</c>. That was once settled on the whole
     /// number; the product now writes every CAI with one decimal, the reports feed carries the measured score, and every

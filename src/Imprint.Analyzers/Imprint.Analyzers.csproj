@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- IMP0001/IMP0002: a CAI score on the websites is written by Imprint.Publishing.CaiScoreText, with one decimal, always
-       (ADR-0027 in kennel.canine.dev). A copy of the app's Kennel.Analyzers.CaiScoreTextAnalyzer; change them together. -->
+       (ADR-0028 in kennel.canine.dev). A copy of the app's Kennel.Analyzers.CaiScoreTextAnalyzer; change them together. -->
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <IsRoslynComponent>true</IsRoslynComponent>

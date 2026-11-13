@@ -3,7 +3,7 @@ using System.Globalization;
 namespace Imprint.Publishing;
 
 /// <summary>
-/// ★ The one way a CAI score becomes text on the websites (owner, 12 November 2026; ADR-0027 in kennel.canine.dev): one
+/// ★ The one way a CAI score becomes text on the websites (owner, 12 November 2026; ADR-0028 in kennel.canine.dev): one
 /// decimal, always — <c>97.6</c>, and <c>98.0</c> when it lands on a whole number — rounded half to even as the CAI
 /// standard states (§7), the same tenth the product writes, never <c>-0.0</c>. IMP0001 fails the build when a score is
 /// written any other way, and IMP0002 when one is carried under a name that hides it.

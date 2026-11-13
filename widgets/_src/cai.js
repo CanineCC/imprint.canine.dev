@@ -13,13 +13,24 @@ export const CAI_BANDS = [
 ];
 
 /**
- * A CAI score as the product writes it (owner, 12 November 2026; ADR-0027 in kennel.canine.dev): one decimal,
+ * A CAI score as the product writes it (owner, 12 November 2026; ADR-0028 in kennel.canine.dev): one decimal,
  * always — "97.6", and "98.0" when it lands on a whole number — rounded half to even as the CAI standard states
- * (§7), the same tenth TemplateJson.Cai and the app write. Never "-0.0"; a value that is not a number is "—".
+ * (§7), the same tenth CaiScoreText and the app write. Never "-0.0"; a value that is not a number is "—". On a Danish
+ * page (<html lang="da">) with the Danish decimal comma, "97,6" (owner, 13 November 2026: "use comma in danish").
  */
 export function caiText(score) {
   const n = Number(score);
-  return Number.isFinite(n) ? caiTenths(n).toFixed(1) : "—";
+  return Number.isFinite(n) ? local(caiTenths(n).toFixed(1)) : "—";
+}
+
+/** True on a Danish page: the document says lang="da" (or "da-DK"). False where there is no document. */
+export function danishPage() {
+  return typeof document !== "undefined" && /^da(-|$)/i.test(document.documentElement?.lang ?? "");
+}
+
+/** A one-decimal figure in the page's language: the decimal comma on a Danish page. */
+function local(text) {
+  return danishPage() ? text.replace(".", ",") : text;
 }
 
 /** The shown tenth of a score as a number: half to even on the scaled value, as .NET's Math.Round(x, 1) does. */
@@ -32,7 +43,7 @@ export function caiTenths(score) {
 
 /** The size of a change between two scores as the reader sees them: the difference of the two shown figures. */
 export function caiChange(from, to) {
-  return Math.abs(caiTenths(to) - caiTenths(from)).toFixed(1);
+  return local(Math.abs(caiTenths(to) - caiTenths(from)).toFixed(1));
 }
 
 /** "up", "down" or "same", read off the two shown figures, so a move that shows as 0.0 has no direction. */

@@ -33,7 +33,7 @@ public sealed class SurveyDetailTemplateTests
 
         Assert.Contains("<span class=\"ip-survey-repo\">auth</span>", html, StringComparison.Ordinal);
         Assert.Contains("<span class=\"ip-survey-by\">by ruben-rasmussen</span>", html, StringComparison.Ordinal);
-        // ★★ 97.6: one decimal, as the product writes every CAI (ADR-0027 in kennel.canine.dev); the reports
+        // ★★ 97.6: one decimal, as the product writes every CAI (ADR-0028 in kennel.canine.dev); the reports
         //    feed now carries the measured score too, so no section prints 98 for this run.
         Assert.Contains(">97.6</span>", html, StringComparison.Ordinal);
         Assert.Contains("97.6 out of 100", html, StringComparison.Ordinal);
@@ -138,7 +138,7 @@ public sealed class SurveyDetailTemplateTests
         Assert.DoesNotContain("ip-trend", html, StringComparison.Ordinal);
     }
 
-    /// <summary>ADR-0027: a move that shows as 0.0 is no move. 97.63 against 97.6 reads 97.6 → 97.6, which said "up 0" once.</summary>
+    /// <summary>ADR-0028: a move that shows as 0.0 is no move. 97.63 against 97.6 reads 97.6 → 97.6, which said "up 0" once.</summary>
     [Fact]
     public void A_score_that_shows_the_same_figure_says_unchanged_never_up_zero()
     {

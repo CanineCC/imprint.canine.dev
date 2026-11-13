@@ -51,7 +51,7 @@ export function ladderHtml(score, { variant = "diamond", caps = false, className
 function trendText(series) {
   const first = series[0];
   const last = series[series.length - 1];
-  // One decimal, read off the shown figures (ADR-0027): a 0.4 rise is "up 0.4", and only the same figure is steady.
+  // One decimal, read off the shown figures (ADR-0028): a 0.4 rise is "up 0.4", and only the same figure is steady.
   const move = caiMove(first, last);
   const dir =
     move === "up"

@@ -3,7 +3,7 @@ using Imprint.Publishing;
 namespace Imprint.Publishing.Tests;
 
 /// <summary>
-/// ★ A CAI score on the websites is written as the product writes it (owner, 12 November 2026; ADR-0027 in
+/// ★ A CAI score on the websites is written as the product writes it (owner, 12 November 2026; ADR-0028 in
 /// kennel.canine.dev): one decimal, always, rounded half to even as the CAI standard states (§7). The same repository
 /// must never read 98 on a site card and 97.6 in the app.
 /// </summary>

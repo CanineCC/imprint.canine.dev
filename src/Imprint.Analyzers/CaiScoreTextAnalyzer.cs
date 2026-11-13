@@ -11,7 +11,7 @@ using Microsoft.CodeAnalysis.Operations;
 namespace Imprint.Analyzers;
 
 /// <summary>
-/// IMP0001 and IMP0002 (ADR-0027 in kennel.canine.dev): on the websites a CAI score becomes text only through
+/// IMP0001 and IMP0002 (ADR-0028 in kennel.canine.dev): on the websites a CAI score becomes text only through
 /// <c>Imprint.Publishing.CaiScoreText</c>, and a score keeps a name that says what it is, so the first rule can follow it.
 /// <para>★ IMPRINT'S COPY of the app's <c>Kennel.Analyzers.CaiScoreTextAnalyzer</c> (KNL0201/KNL0202), like the engine's
 /// CHA0007/CHA0008: a separate repository cannot share the app's source. Only the settings differ (the formatter, the
@@ -50,12 +50,12 @@ public sealed class CaiScoreTextAnalyzer : DiagnosticAnalyzer
 
     public const string NotAScoreAttributeMetadataName = "Imprint.Publishing.NotACaiScoreAttribute";
 
-    private const string HelpLink = "https://github.com/CanineCC/kennel.canine.dev/blob/main/docs/adr/0027-a-cai-score-is-written-with-one-decimal.md";
+    private const string HelpLink = "https://github.com/CanineCC/kennel.canine.dev/blob/main/docs/adr/0028-a-cai-score-is-written-with-one-decimal.md";
 
     private static readonly DiagnosticDescriptor TextRule = new(
         TextId,
         "A score becomes text only through CaiScoreText",
-        "{0} writes the score '{1}' as text itself, but a CAI score is written only by CaiScoreText, with one decimal, always (ADR-0027), so pass it to CaiScoreText.Shown or Change, or mark machine text no reader sees [NotACaiScore(\"why\")]",
+        "{0} writes the score '{1}' as text itself, but a CAI score is written only by CaiScoreText, with one decimal, always (ADR-0028), so pass it to CaiScoreText.Shown or Change, or mark machine text no reader sees [NotACaiScore(\"why\")]",
         "Presentation",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
@@ -65,7 +65,7 @@ public sealed class CaiScoreTextAnalyzer : DiagnosticAnalyzer
     private static readonly DiagnosticDescriptor NameRule = new(
         NameId,
         "A score keeps its name",
-        "The score '{0}' goes into {1}, whose name does not say it holds a score, so IMP0001 cannot follow it there (ADR-0027); name it for the score (…Score, …Cai, …Headline), mark it [CaiScore], or mark it [NotACaiScore(\"why\")] if it is not one",
+        "The score '{0}' goes into {1}, whose name does not say it holds a score, so IMP0001 cannot follow it there (ADR-0028); name it for the score (…Score, …Cai, …Headline), mark it [CaiScore], or mark it [NotACaiScore(\"why\")] if it is not one",
         "Presentation",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
@@ -75,7 +75,7 @@ public sealed class CaiScoreTextAnalyzer : DiagnosticAnalyzer
     private static readonly DiagnosticDescriptor BlankReasonRule = new(
         NameId,
         "An exemption gives its reason",
-        "[NotACaiScore] on {0} gives no reason, so it exempts nothing (ADR-0027); say why the number is not a CAI or dimension score, or why no reader sees the text",
+        "[NotACaiScore] on {0} gives no reason, so it exempts nothing (ADR-0028); say why the number is not a CAI or dimension score, or why no reader sees the text",
         "Presentation",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,

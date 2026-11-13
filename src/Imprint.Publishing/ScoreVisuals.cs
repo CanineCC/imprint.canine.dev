@@ -194,7 +194,7 @@ public static class ScoreVisuals
     /// ★ THE DELTA IS THE DIFFERENCE BETWEEN THE TWO NUMBERS THE READER CAN SEE. Taking it from the
     /// raw values printed "62 → 98 … up 35.6", which is an arithmetic error to anyone who checks it —
     /// and the arc is printed precisely so that it will be checked. With one decimal on both figures
-    /// (ADR-0027) it reads "62.0 → 97.6 … up 35.6", and a move that shows as 0.0 is "unchanged",
+    /// (ADR-0028) it reads "62.0 → 97.6 … up 35.6", and a move that shows as 0.0 is "unchanged",
     /// never "up 0.0".
     /// </remarks>
     public static string Trend(JsonElement item, double score, string? key)

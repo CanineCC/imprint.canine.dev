@@ -81,7 +81,7 @@ public sealed class BandScaleTemplateTests
 
         Assert.Contains("https://app.watchdog.canine.dev/api/oss/a/top/report", html, StringComparison.Ordinal);
         Assert.Contains("a/top", html, StringComparison.Ordinal);
-        Assert.Contains(">98.0</span>", html, StringComparison.Ordinal);   // one decimal (ADR-0027)
+        Assert.Contains(">98.0</span>", html, StringComparison.Ordinal);   // one decimal (ADR-0028)
     }
 
     [Fact]

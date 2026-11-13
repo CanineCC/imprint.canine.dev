@@ -46,7 +46,7 @@ public sealed class ShowcaseTemplateTests
     [Fact]
     public void The_headline_score_has_one_decimal_as_the_product_writes_it()
     {
-        // ★★ ONE DECIMAL ON EVERY FACE (owner, 12 November 2026; ADR-0027 in kennel.canine.dev). This test
+        // ★★ ONE DECIMAL ON EVERY FACE (owner, 12 November 2026; ADR-0028 in kennel.canine.dev). This test
         //    once asserted the whole number, to stop one repository reading 98 in one section and 97.6 in
         //    the next. The product now writes every CAI with one decimal and /api/public/reports carries the
         //    measured score, so both sections print the same figure with its tenth: 98.0 and 61.5.

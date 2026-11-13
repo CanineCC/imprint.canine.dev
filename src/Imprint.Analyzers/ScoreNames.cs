@@ -4,12 +4,12 @@ using System.Collections.Generic;
 namespace Imprint.Analyzers;
 
 /// <summary>
-/// ADR-0027: when a NAME says it holds a score. A name is split into its words (<c>HeadlineScoreZeroToTen</c> is
+/// ADR-0028: when a NAME says it holds a score. A name is split into its words (<c>HeadlineScoreZeroToTen</c> is
 /// headline, score, zero, to, ten) and names a score when one word is <c>score</c>, <c>cai</c> or <c>headline</c> (or their
 /// plurals) and its LAST word is not a different quantity: <c>scoreCount</c> counts scores, <c>caiVersion</c> is a
 /// version, <c>headlineText</c> is already text. Whole words only, so <c>ScoredFiles</c> and <c>encaissement</c> are not scores.
 /// </summary>
-/// <remarks>Imprint's copy of <c>Kennel.Analyzers.ScoreNames</c> (ADR-0027), used by IMP0001/IMP0002. Change the copies together.</remarks>
+/// <remarks>Imprint's copy of <c>Kennel.Analyzers.ScoreNames</c> (ADR-0028), used by IMP0001/IMP0002. Change the copies together.</remarks>
 internal static class ScoreNames
 {
     private static readonly HashSet<string> ScoreWords = new(StringComparer.Ordinal)

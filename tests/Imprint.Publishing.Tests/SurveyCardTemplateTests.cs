@@ -31,7 +31,7 @@ public sealed class SurveyCardTemplateTests
     {
         var html = SurveyCardTemplate.Render(Payload, Origin)!;
 
-        // ★★ 86.8: one decimal, as the product writes every CAI (ADR-0027 in kennel.canine.dev).
+        // ★★ 86.8: one decimal, as the product writes every CAI (ADR-0028 in kennel.canine.dev).
         Assert.Contains(">86.8</span>", html, StringComparison.Ordinal);
         Assert.Contains("Code health", html, StringComparison.Ordinal);
 
