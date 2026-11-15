@@ -106,7 +106,7 @@ const number = (value) => {
   return Number.isNaN(n) || n < 0 ? 0 : n;
 };
 
-// A CAI score as the product writes it: one decimal, always, rounded half to even (ADR-0028 in kennel.canine.dev),
+// A CAI score as the product writes it: one decimal, always, rounded half to even (ADR-0029 in kennel.canine.dev),
 // so this example card reads 78.0 where the product's own card reads 78.0, never 78; on a Danish page (<html lang="da">)
 // with the Danish decimal comma, 78,0 (owner, 13 November 2026: "use comma in danish").
 const cai = (score) => {

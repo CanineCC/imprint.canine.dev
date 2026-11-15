@@ -1,4 +1,4 @@
-// The one way a widget writes a CAI score (ADR-0028 in kennel.canine.dev): one decimal, always, rounded half to even
+// The one way a widget writes a CAI score (ADR-0029 in kennel.canine.dev): one decimal, always, rounded half to even
 // as the app does, and the Danish decimal comma on a Danish page (owner, 13 November 2026: "use comma in danish").
 // A pure function, so no browser is needed.
 //

@@ -1,4 +1,4 @@
-// ADR-0028 on the websites, as a reader sees it: the score card, rendered by Chromium from the BUILT bundle in
+// ADR-0029 on the websites, as a reader sees it: the score card, rendered by Chromium from the BUILT bundle in
 // widgets/, writes every CAI score with one decimal, and a Danish page (<html lang="da">) writes the Danish comma.
 // cai-text.test.mjs proves the formatter in the source; this proves the shipped bundle carries it, so a source edit
 // that was never rebuilt fails here rather than on the live page.
@@ -42,7 +42,7 @@ async function scoresOn(lang) {
   }
 }
 
-describe("cai-score-card: every CAI score has one decimal (ADR-0028)", () => {
+describe("cai-score-card: every CAI score has one decimal (ADR-0029)", () => {
   test("an English page writes a point", async () => {
     assert.deepEqual(await scoresOn(""), {
       score: ["72.4"],

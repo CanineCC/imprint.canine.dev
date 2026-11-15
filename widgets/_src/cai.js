@@ -13,7 +13,7 @@ export const CAI_BANDS = [
 ];
 
 /**
- * A CAI score as the product writes it (owner, 12 November 2026; ADR-0028 in kennel.canine.dev): one decimal,
+ * A CAI score as the product writes it (owner, 12 November 2026; ADR-0029 in kennel.canine.dev): one decimal,
  * always — "97.6", and "98.0" when it lands on a whole number — rounded half to even as the CAI standard states
  * (§7), the same tenth CaiScoreText and the app write. Never "-0.0"; a value that is not a number is "—". On a Danish
  * page (<html lang="da">) with the Danish decimal comma, "97,6" (owner, 13 November 2026: "use comma in danish").

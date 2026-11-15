@@ -70,7 +70,7 @@ export async function serveWidgets() {
  *
  * `elements` is a list of { tag, attrs }. The page carries the same 1120px content column the
  * corpus sheet uses, so a width measured here is the width a reader gets. `lang` sets the page's
- * language (`<html lang>`), which a CAI score reads for its decimal sign (ADR-0028: a comma in Danish).
+ * language (`<html lang>`), which a CAI score reads for its decimal sign (ADR-0029: a comma in Danish).
  */
 export async function withIslands(elements, { width = 1280, height = 900, theme = "light", lang = "" } = {}) {
   const { chromium } = resolvePlaywright();
