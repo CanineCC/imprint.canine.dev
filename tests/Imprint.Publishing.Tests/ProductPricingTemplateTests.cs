@@ -45,7 +45,7 @@ public sealed class ProductPricingTemplateTests
     }
 
     [Fact]
-    public void Assert_renders_each_plan_per_developer_with_its_fair_use_and_features()
+    public void Assert_renders_each_plan_per_developer_with_its_tagline_and_never_the_catalogue_s_module_names()
     {
         var html = ProductPricingTemplate.RenderAssert(AssertJson);
         Assert.NotNull(html);
@@ -53,7 +53,10 @@ public sealed class ProductPricingTemplateTests
         Assert.Contains("€20<span class=\"ip-price-unit\">per developer a month</span>", html);
         Assert.Contains("€30", html);
         Assert.DoesNotContain("lines", html);   // only CCA is priced in lines, even when an older payload carries the figure
-        Assert.Contains("<li>Agent-fix loop</li>", html);
+        // The payload's features are the catalogue's module names ("Core survey", "VIP queue"); the page states what each plan
+        // includes in its own table, so the widget prints none (owner, 13 November 2026: one list, in the customer's words).
+        Assert.DoesNotContain("Agent-fix loop", html);
+        Assert.DoesNotContain("<li>", html);
     }
 
     [Fact]
