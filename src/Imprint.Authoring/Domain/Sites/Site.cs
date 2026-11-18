@@ -37,6 +37,9 @@ public sealed class Site : AggregateRoot
     // publisher would be filtering every page against all of them on every pass.
     public const int MaxLlmsExcludedPaths = 20;
 
+    // A crawl policy is a few lines; more than this is a site map written backwards.
+    public const int MaxRobotsDisallowedPaths = 20;
+
     private readonly List<Locale> _locales = [];
     private readonly List<string> _collaborators = [];
     private IReadOnlyList<NavigationItem> _navigation = [];
@@ -93,6 +96,11 @@ public sealed class Site : AggregateRoot
     // trying to learn what the site is — and only the site knows which those are, because
     // nothing about how a page was produced says whether it is worth reading.
     public IReadOnlyList<string> LlmsExcludedPaths { get; private set; } = [];
+
+    // robots.txt path patterns (RFC 9309: from the root, '*' anywhere, a query string allowed) this site asks crawlers
+    // to skip. Owner 2026-11-18: cca.canine.dev shares its host with a public survey gallery served by another
+    // application, and a crawler fetched every old run and raw file of it. Empty is the normal case: allow everything.
+    public IReadOnlyList<string> RobotsDisallowedPaths { get; private set; } = [];
 
     /// <summary>Old addresses on this site and where each now lives (see <see cref="SetRedirects"/>).</summary>
     public IReadOnlyList<SiteRedirect> Redirects { get; private set; } = [];
@@ -682,6 +690,48 @@ public sealed class Site : AggregateRoot
         Raise(new SiteLlmsExcludedPathsChanged(cleaned));
     }
 
+    public void SetRobotsDisallowedPaths(IReadOnlyList<string>? paths)
+    {
+        var cleaned = new List<string>();
+        foreach (var path in paths ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                continue;
+            }
+
+            var trimmed = path.Trim();
+            if (!trimmed.StartsWith('/') || trimmed.Any(c => char.IsControl(c) || char.IsWhiteSpace(c)) || trimmed.Contains('#'))
+            {
+                throw new DomainException(
+                    $"'{path}' is not a robots.txt path: start at the root with '/', one line, no spaces or '#', e.g. '/api/oss/*/artifacts/'.");
+            }
+
+            if (trimmed.TrimEnd('*', '$') == "/")
+            {
+                throw new DomainException(
+                    $"'{path}' would ask robots to skip the whole site, which takes it out of every search index; unpublish instead.");
+            }
+
+            if (!cleaned.Contains(trimmed, StringComparer.Ordinal))
+            {
+                cleaned.Add(trimmed);
+            }
+        }
+
+        if (cleaned.Count > MaxRobotsDisallowedPaths)
+        {
+            throw new DomainException($"At most {MaxRobotsDisallowedPaths} robots.txt paths are allowed.");
+        }
+
+        if (RobotsDisallowedPaths.SequenceEqual(cleaned, StringComparer.Ordinal))
+        {
+            return;
+        }
+
+        Raise(new SiteRobotsDisallowedPathsChanged(cleaned));
+    }
+
     private static bool IsPathPrefixShaped(string path)
     {
         // One trailing wildcard, on the last segment only. Anything richer would be a glob
@@ -1015,6 +1065,9 @@ public sealed class Site : AggregateRoot
                 break;
             case SiteLlmsExcludedPathsChanged e:
                 LlmsExcludedPaths = [.. e.Paths];
+                break;
+            case SiteRobotsDisallowedPathsChanged e:
+                RobotsDisallowedPaths = [.. e.Paths];
                 break;
             case SiteLinkedInSendersChanged e:
                 LinkedInSenders = [.. e.Senders];

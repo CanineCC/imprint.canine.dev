@@ -66,6 +66,30 @@ public sealed class AuxiliaryOutputTests
     }
 
     [Fact]
+    public async Task Robots_asks_crawlers_to_skip_the_paths_the_site_declares()
+    {
+        await using var host = new PublishingTestHost();
+        var scenario = await TemplatedSiteScenario.Build(host);
+        await host.SetRobotsDisallowedPaths(scenario.SiteId, "/api/oss/*/report?run=", "/api/oss/*/artifacts/");
+        await host.Publisher.Synchronize();
+
+        Assert.Equal(
+            "User-agent: *\nAllow: /\nDisallow: /api/oss/*/report?run=\nDisallow: /api/oss/*/artifacts/\n\nSitemap: /sitemap.xml\n",
+            host.ReadText("robots.txt"));
+    }
+
+    [Fact]
+    public async Task Robots_without_a_policy_is_unchanged_byte_for_byte()
+    {
+        // No site republishes for this change: the file every site serves today stays exactly as it is.
+        await using var host = new PublishingTestHost();
+        await TemplatedSiteScenario.Build(host);
+        await host.Publisher.Synchronize();
+
+        Assert.Equal("User-agent: *\nAllow: /\n\nSitemap: /sitemap.xml\n", host.ReadText("robots.txt"));
+    }
+
+    [Fact]
     public async Task NotFound_page_is_themed_in_the_default_locale_and_links_home()
     {
         await using var host = new PublishingTestHost();

@@ -162,6 +162,7 @@ public sealed class SitePublisher(
         private string? _socialImageUrl;
         private string? _llmsPreamble;
         private IReadOnlyList<string> _llmsExcludedPaths = [];
+        private IReadOnlyList<string> _robotsDisallowedPaths = [];
 
         // Bounded so llms.txt stays a map a model reads whole, not a corpus dump.
         private const int MaxLlmsPages = 200;
@@ -343,6 +344,7 @@ public sealed class SitePublisher(
             _socialImageAssetId = site.SocialImageAssetId;
             _llmsPreamble = site.LlmsPreamble;
             _llmsExcludedPaths = [.. site.LlmsExcludedPaths];
+            _robotsDisallowedPaths = [.. site.RobotsDisallowedPaths];
             // Only THIS site's published pages — a target folder holds exactly one site. Pages
             // syndicated from another system join them here and are otherwise indistinguishable:
             // same views, same chrome, same sitemap, same sweep. Everything the renderer learns,
@@ -2379,8 +2381,10 @@ public sealed class SitePublisher(
             return PageId.From(new Guid(seed.AsSpan(0, 16)));
         }
 
+        // The site's declared crawl policy (Site.SetRobotsDisallowedPaths) after the allow-all line; with none, the file is
+        // exactly what every site served before the policy existed.
         private string BuildRobots() =>
-            $"User-agent: *\nAllow: /\n\nSitemap: {Absolute("/sitemap.xml")}\n";
+            $"User-agent: *\nAllow: /\n{string.Concat(_robotsDisallowedPaths.Select(p => $"Disallow: {p}\n"))}\nSitemap: {Absolute("/sitemap.xml")}\n";
 
         /// <summary>
         /// The llms.txt index: what this site is, and every page with the words its own author gave

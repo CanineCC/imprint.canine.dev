@@ -160,6 +160,28 @@ public sealed record SiteLlmsExcludedPathsChanged(IReadOnlyList<string> Paths)
     }
 }
 
+// robots.txt path patterns the site asks crawlers to skip, stored exactly as written in the file (RFC 9309 patterns are
+// case-sensitive). An empty list is the normal case: allow everything.
+[EventType("site.robots-disallowed-paths-changed", 1)]
+public sealed record SiteRobotsDisallowedPathsChanged(IReadOnlyList<string> Paths)
+{
+    // Same list-equality reasoning as SiteNavigationChanged: the set of prefixes is the
+    // value, and a positional list member would otherwise compare by reference.
+    public bool Equals(SiteRobotsDisallowedPathsChanged? other) =>
+        other is not null && Paths.SequenceEqual(other.Paths, StringComparer.Ordinal);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        foreach (var path in Paths)
+        {
+            hash.Add(path, StringComparer.Ordinal);
+        }
+
+        return hash.ToHashCode();
+    }
+}
+
 [EventType("site.linkedin-senders-changed", 1)]
 public sealed record SiteLinkedInSendersChanged(IReadOnlyList<LinkedInSender> Senders)
 {

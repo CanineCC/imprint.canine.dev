@@ -94,6 +94,8 @@ public sealed class SiteEventSamples : IEventSampleProvider
             yield return new SiteLinkedInSendersChanged([new LinkedInSender("canine", "Canine Development", "urn:li:organization:12345")]);
             yield return new SiteLlmsExcludedPathsChanged(["surveys/github", "surveys/gitlab"]);
             yield return new SiteLlmsExcludedPathsChanged([]);
+            yield return new SiteRobotsDisallowedPathsChanged(["/api/oss/*/report?run=", "/api/oss/*/artifacts/"]);
+            yield return new SiteRobotsDisallowedPathsChanged([]);
 
             yield return new SiteOwnershipClaimed();
             yield return new SiteArchived();

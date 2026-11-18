@@ -47,6 +47,7 @@ using SetFaviconCmd = Imprint.Authoring.Features.Sites.SetFavicon.SetFavicon;
 using SetHomePageCmd = Imprint.Authoring.Features.Sites.SetHomePage.SetHomePage;
 using SetSocialImageCmd = Imprint.Authoring.Features.Sites.SetSocialImage.SetSocialImage;
 using SetLlmsExcludedPathsCmd = Imprint.Authoring.Features.Sites.SetLlmsExcludedPaths.SetLlmsExcludedPaths;
+using SetRobotsDisallowedPathsCmd = Imprint.Authoring.Features.Sites.SetRobotsDisallowedPaths.SetRobotsDisallowedPaths;
 using SetLlmsPreambleCmd = Imprint.Authoring.Features.Sites.SetLlmsPreamble.SetLlmsPreamble;
 using SetHeaderLogoCmd = Imprint.Authoring.Features.Sites.SetHeaderLogo.SetHeaderLogo;
 using ChangePostBodyCmd = Imprint.Authoring.Features.Posts.ChangePostBody.ChangePostBody;
@@ -190,6 +191,7 @@ public sealed class ImprintAuthoringMcpTools
             // footer are returned whole — you edit what you read back.
             llmsPreamble = site.LlmsPreamble,
             llmsExcludedPaths = site.LlmsExcludedPaths.ToList(),
+            robotsDisallowedPaths = site.RobotsDisallowedPaths.ToList(),
             // Read back for the same reason: set_site_environments replaces the whole list, and moving a site
             // to another address means reusing the folder the old site published into.
             environments = site.Environments.Select(e => (object)new { name = e.Name, path = e.Path, baseUrl = e.BaseUrl }).ToList(),
@@ -1437,6 +1439,18 @@ public sealed class ImprintAuthoringMcpTools
         if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
         return await Dispatch(dispatcher, config, new SetLlmsExcludedPathsCmd(sid, paths), ct,
             () => new { ok = true, siteId = sid.Compact, prefixes = paths?.Length ?? 0 });
+    }
+
+    [McpServerTool(Name = "set_robots_disallowed_paths")]
+    [Description("Declare which paths this site's robots.txt asks crawlers to skip, one 'Disallow:' line each, written exactly as given. Each is a robots.txt path pattern (RFC 9309): it starts at the root with '/', may use '*' anywhere and may end in a query string, e.g. '/api/oss/*/report?run=' or '/api/oss/*/artifacts/'. Use it for paths on the site's host that are not worth crawling (old versions, raw files, an application sharing the host); the site's own pages stay in sitemap.xml. '/' (the whole site) is refused: that is de-indexing, not a crawl policy. Pass an empty array to clear. Max 20. Read get_site first: this replaces the whole list. Publish the site afterwards for robots.txt to change.")]
+    public static async Task<object> SetRobotsDisallowedPaths(
+        [Description("The site id.")] string siteId,
+        [Description("robots.txt path patterns, e.g. ['/api/oss/*/report?run=','/api/oss/*/artifacts/']. Empty clears the policy.")] string[]? paths,
+        ICommandDispatcher dispatcher, IConfiguration config, CancellationToken ct = default)
+    {
+        if (!TrySiteId(siteId, out var sid)) return Fail("invalid siteId");
+        return await Dispatch(dispatcher, config, new SetRobotsDisallowedPathsCmd(sid, paths), ct,
+            () => new { ok = true, siteId = sid.Compact, paths = paths?.Length ?? 0 });
     }
 
     [McpServerTool(Name = "set_social_image")]
