@@ -52,6 +52,8 @@ using SetLlmsPreambleCmd = Imprint.Authoring.Features.Sites.SetLlmsPreamble.SetL
 using SetHeaderLogoCmd = Imprint.Authoring.Features.Sites.SetHeaderLogo.SetHeaderLogo;
 using ChangePostBodyCmd = Imprint.Authoring.Features.Posts.ChangePostBody.ChangePostBody;
 using ChangePostMetaCmd = Imprint.Authoring.Features.Posts.ChangePostMeta.ChangePostMeta;
+using ChangePostTitleCmd = Imprint.Authoring.Features.Posts.ChangePostTitle.ChangePostTitle;
+using ChangePostSlugCmd = Imprint.Authoring.Features.Posts.ChangePostSlug.ChangePostSlug;
 using CreatePostCmd = Imprint.Authoring.Features.Posts.CreatePost.CreatePost;
 using ClassifyPostCmd = Imprint.Authoring.Features.Posts.ClassifyPost.ClassifyPost;
 using SetPostControlNotesCmd = Imprint.Authoring.Features.Posts.SetPostControlNotes.SetPostControlNotes;
@@ -1269,6 +1271,37 @@ public sealed class ImprintAuthoringMcpTools
         var tag = locale is { Length: > 0 } given ? given : sites.Get(post.SiteId)?.DefaultLocale.Value ?? "en";
         return await Dispatch(dispatcher, config, new ChangePostMetaCmd(pid, tag, metaTitle, metaDescription), ct,
             () => new { ok = true, postId = pid.Compact, locale = tag });
+    }
+
+    [McpServerTool(Name = "set_post_title")]
+    [Description("Change a post's title for one locale: the name shown on the article and in post listings. The search title is separate: set it with set_post_meta.")]
+    public static async Task<object> SetPostTitle(
+        [Description("The post id.")] string postId,
+        [Description("The new title.")] string title,
+        [Description("Optional locale tag; the site's default when omitted.")] string? locale,
+        ICommandDispatcher dispatcher, IConfiguration config, PostList posts, SiteOverview sites, CancellationToken ct = default)
+    {
+        if (!AuthoringApi.TryPostIdPublic(postId, out var pid)) return Fail("invalid postId");
+        if (posts.Get(pid) is not { } post) return Fail("unknown post");
+        if (string.IsNullOrWhiteSpace(title)) return Fail("title is required");
+        var tag = locale is { Length: > 0 } given ? given : sites.Get(post.SiteId)?.DefaultLocale.Value ?? "en";
+        return await Dispatch(dispatcher, config, new ChangePostTitleCmd(pid, tag, title), ct,
+            () => new { ok = true, postId = pid.Compact, title, locale = tag });
+    }
+
+    [McpServerTool(Name = "set_post_slug")]
+    [Description("Move a post to a different web address (its slug: lower-case letters, digits and hyphens). Refused when another post on the same site already uses that slug. For a post that is already live, add a redirect from the old address with set_site_redirects so existing links keep working.")]
+    public static async Task<object> SetPostSlug(
+        [Description("The post id.")] string postId,
+        [Description("The new slug, e.g. 'my-new-address'.")] string slug,
+        ICommandDispatcher dispatcher, IConfiguration config, PostList posts, CancellationToken ct = default)
+    {
+        if (!AuthoringApi.TryPostIdPublic(postId, out var pid)) return Fail("invalid postId");
+        if (posts.Get(pid) is null) return Fail("unknown post");
+        var address = slug?.Trim() ?? "";
+        if (address.Length == 0) return Fail("slug is required");
+        return await Dispatch(dispatcher, config, new ChangePostSlugCmd(pid, address), ct,
+            () => new { ok = true, postId = pid.Compact, slug = address });
     }
 
     [McpServerTool(Name = "submit_post_for_review")]
